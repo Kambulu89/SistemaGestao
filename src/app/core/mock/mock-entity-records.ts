@@ -68,6 +68,7 @@ export const MOCK_ENTITY_RECORDS: readonly EntityRecord[] = [
     nifSecundario: '501234567',
     categoriaCliente: 'A',
     dataRenovacao: '2027-01-15',
+    gestorComercial: 'u-escola',
   }),
   customer(ESCOLA, { nome: 'Clínica do Parque', sectorActividade: 'saude', categoriaCliente: 'B' }),
   customer(ESCOLA, {

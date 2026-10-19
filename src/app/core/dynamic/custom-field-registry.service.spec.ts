@@ -40,9 +40,10 @@ describe('Custom fields: registo e isolamento (caso A)', () => {
       'nifSecundario',
       'categoriaCliente',
       'dataRenovacao',
+      'gestorComercial',
     ]);
     const custom = registry.find('customer')!.fields.filter((f) => f.origin === 'custom');
-    expect(custom).toHaveLength(4);
+    expect(custom).toHaveLength(5);
   });
 
   it('Tenant B gets different fields and never sees those of tenant A', async () => {
@@ -188,5 +189,43 @@ describe('Custom fields: servidor mock', () => {
       firstValueFrom(api.create('customer', { data: { nome: 'Z', categoriaCliente: 'Q' } })),
     );
     expect(bad.status).toBe(422);
+  });
+});
+
+describe('Referência a utilizador (servidor mock)', () => {
+  beforeEach(() => setupMockBackend());
+
+  it('lists only the members of the active tenant, with id and name only', async () => {
+    const { api } = await enter('escola@demo.pt', 'escola-horizonte');
+    const users = await firstValueFrom(api.lookup('@user', {}));
+    expect(users.map((u) => u.label).sort()).toEqual([
+      'Ana Plataforma',
+      'Marta Escola',
+      'Rui Multi-tenant',
+    ]);
+    for (const u of users) expect(Object.keys(u).sort()).toEqual(['id', 'label']);
+    expect(users.some((u) => u.label.includes('Paulo'))).toBe(false); // membro de outro tenant
+  });
+
+  it('resolves ids to names and filters by search', async () => {
+    const { api } = await enter('escola@demo.pt', 'escola-horizonte');
+    expect(await firstValueFrom(api.lookup('@user', { ids: ['u-escola'] }))).toEqual([
+      { id: 'u-escola', label: 'Marta Escola' },
+    ]);
+    expect((await firstValueFrom(api.lookup('@user', { search: 'rui' }))).map((u) => u.id)).toEqual(
+      ['u-multi'],
+    );
+  });
+
+  it('accepts a member and rejects a user of another tenant', async () => {
+    const { api } = await enter('escola@demo.pt', 'escola-horizonte');
+    const ok = await firstValueFrom(
+      api.create('customer', { data: { nome: 'A', gestorComercial: 'u-multi' } }),
+    );
+    expect(ok.data['gestorComercial']).toBe('u-multi');
+    const foreign = await fails(
+      firstValueFrom(api.create('customer', { data: { nome: 'B', gestorComercial: 'u-frota' } })),
+    );
+    expect(foreign.status).toBe(422);
   });
 });

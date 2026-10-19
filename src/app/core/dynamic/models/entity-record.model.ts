@@ -61,6 +61,12 @@ export interface ReferenceLookupQuery {
   readonly ids?: readonly string[];
 }
 
+/**
+ * Alvo especial de `lookup`: o directório de utilizadores do tenant. Devolve só o identificador
+ * e o nome (nunca email nem papéis), e só os membros do tenant activo.
+ */
+export const USER_DIRECTORY_KEY = '@user';
+
 export interface ReferenceOption {
   readonly id: string;
   readonly label: string;

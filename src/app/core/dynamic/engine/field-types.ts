@@ -152,8 +152,8 @@ export const FIELD_TYPE_CATALOG: readonly FieldTypeDefinition[] = [
     'user-reference',
     'Referência a utilizador',
     'Aponta para um utilizador do tenant.',
-    'preview',
-    { filterable: true },
+    'ready',
+    {},
   ),
   def('formula', 'Fórmula', 'Valor calculado por uma expressão declarativa.', 'preview', {
     writable: false,
@@ -182,8 +182,36 @@ export const FIELD_TYPE_CATALOG: readonly FieldTypeDefinition[] = [
 
 const byType = new Map(FIELD_TYPE_CATALOG.map((t) => [t.type, t]));
 
+/** Um tipo que o catálogo não conhece (ex.: um tipo novo de um servidor mais recente). */
+const UNKNOWN_CAPABILITIES: FieldCapabilities = {
+  writable: false,
+  defaultValue: false,
+  required: false,
+  unique: false,
+  searchable: false,
+  filterable: false,
+  sortable: false,
+  listable: true,
+  exportable: false,
+  options: false,
+};
+
+export const isKnownFieldType = (type: string): type is FieldType => byType.has(type as FieldType);
+
+/**
+ * Definição do tipo. Um tipo desconhecido não rebenta a aplicação: é tratado como só de leitura,
+ * sem capacidades, e a verificação de integridade assinala-o.
+ */
 export function fieldTypeDefinition(type: FieldType): FieldTypeDefinition {
-  return byType.get(type)!;
+  return (
+    byType.get(type) ?? {
+      type,
+      label: String(type),
+      description: 'Tipo de campo desconhecido.',
+      status: 'preview',
+      capabilities: UNKNOWN_CAPABILITIES,
+    }
+  );
 }
 
 export function fieldCapabilities(type: FieldType): FieldCapabilities {

@@ -64,6 +64,11 @@ export const MOCK_CUSTOM_FIELDS: readonly CustomFieldDefinition[] = [
     ],
   }),
   custom('t-escola', 4, { type: 'date', key: 'dataRenovacao', label: 'Data de renovação' }),
+  custom('t-escola', 6, {
+    type: 'user-reference',
+    key: 'gestorComercial',
+    label: 'Gestor comercial',
+  }),
   custom(
     't-escola',
     5,

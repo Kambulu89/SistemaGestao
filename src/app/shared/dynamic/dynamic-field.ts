@@ -6,7 +6,8 @@ import {
   type FieldValue,
   hasOptions,
 } from '../../core/dynamic/models/field-definition.model';
-import { fieldTypeDefinition } from '../../core/dynamic/engine/field-types';
+import { FIELD_TYPE_CATALOG } from '../../core/dynamic/engine/field-types';
+import { USER_DIRECTORY_KEY } from '../../core/dynamic/models/entity-record.model';
 import { Checkbox } from '../ui/checkbox/checkbox';
 import { CheckboxGroup } from '../ui/checkbox-group/checkbox-group';
 import { FileInput } from '../ui/file-input/file-input';
@@ -46,6 +47,7 @@ const SUPPORTED_TYPES: ReadonlySet<FieldDefinition['type']> = new Set([
   'file',
   'image',
   'entity-reference',
+  'user-reference',
 ]);
 
 /**
@@ -172,6 +174,15 @@ const SUPPORTED_TYPES: ReadonlySet<FieldDefinition['type']> = new Set([
           </p>
         </div>
       }
+      @case ('user-reference') {
+        <app-dynamic-reference-field
+          [control]="control()"
+          [entityKey]="userDirectoryKey"
+          [label]="field().label"
+          [hint]="field().description"
+          [required]="state().required"
+        />
+      }
       @case ('entity-reference') {
         <app-dynamic-reference-field
           [control]="control()"
@@ -188,6 +199,8 @@ export class DynamicField {
   readonly field = input.required<FieldDefinition>();
   readonly control = input.required<FormControl<FieldValue>>();
   readonly state = input.required<FieldState>();
+
+  protected readonly userDirectoryKey = USER_DIRECTORY_KEY;
 
   protected readonly kind = computed(() => {
     const type = this.field().type;
@@ -227,7 +240,9 @@ export class DynamicField {
     return value === null || value === undefined || value === '' ? null : String(value);
   });
 
-  protected readonly typeLabel = computed(() => fieldTypeDefinition(this.field().type).label);
+  protected readonly typeLabel = computed(
+    () => FIELD_TYPE_CATALOG.find((t) => t.type === this.field().type)?.label ?? this.field().type,
+  );
 
   protected readonly multiple = computed(() => {
     const f = this.field();

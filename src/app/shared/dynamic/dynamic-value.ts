@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { rxResource } from '@angular/core/rxjs-interop';
 import { EntityRecordsGateway } from '../../core/dynamic/data-access/entity-records.gateway';
 import { formatFieldValue } from '../../core/dynamic/engine/format-value';
+import { referenceTarget } from './reference-target';
 import type { FieldDefinition, FieldValue } from '../../core/dynamic/models/field-definition.model';
 
 /** Valor de um campo em modo de leitura. Referências mostram o rótulo do registo, não o id. */
@@ -19,9 +20,8 @@ export class DynamicValue {
   private readonly referenceId = computed(() => {
     const f = this.field();
     const v = this.value();
-    return f.type === 'entity-reference' && typeof v === 'string' && v
-      ? { entityKey: f.entityKey, id: v }
-      : null;
+    const target = referenceTarget(f);
+    return target && typeof v === 'string' && v ? { entityKey: target, id: v } : null;
   });
 
   private readonly label = rxResource({

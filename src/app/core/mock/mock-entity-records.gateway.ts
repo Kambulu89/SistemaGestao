@@ -23,6 +23,7 @@ import {
   type RecordQuery,
   type ReferenceLookupQuery,
   type ReferenceOption,
+  USER_DIRECTORY_KEY,
   type UpdateRecordInput,
 } from '../dynamic/models/entity-record.model';
 import {
@@ -38,6 +39,7 @@ import type {
 import { TenantModulesService } from '../modules/tenant-modules.service';
 import { PermissionService } from '../permissions/permission.service';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
+import { MOCK_MEMBERSHIPS, MOCK_USERS } from './mock-data';
 import { MockMetadataStore } from './mock-metadata-store';
 import { MOCK_ENTITY_RECORDS } from './mock-entity-records';
 import { mockSettings } from './mock-helpers';
@@ -247,15 +249,34 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
 
   lookup(entityKey: string, query: ReferenceLookupQuery): Observable<readonly ReferenceOption[]> {
     return this.respond(() => {
+      const needle = query.search ? normalize(query.search) : null;
+      if (entityKey === USER_DIRECTORY_KEY) return this.lookupUsers(needle, query.ids);
       const { tenantId, entity } = this.resolve(entityKey);
       this.require(entity, 'read');
-      const needle = query.search ? normalize(query.search) : null;
       return this.bucket(tenantId, entityKey)
         .filter((r) => !query.ids || query.ids.includes(r.id))
         .map((r) => ({ id: r.id, label: recordLabel(entity, r) }))
         .filter((o) => !needle || normalize(o.label).includes(needle))
         .slice(0, MAX_LOOKUP);
     });
+  }
+
+  /** Directório de utilizadores: só membros do tenant activo, só identificador e nome. */
+  private lookupUsers(needle: string | null, ids?: readonly string[]): ReferenceOption[] {
+    return this.members()
+      .filter((u) => !ids || ids.includes(u.id))
+      .map((u) => ({ id: u.id, label: u.name }))
+      .filter((o) => !needle || normalize(o.label).includes(needle))
+      .slice(0, MAX_LOOKUP);
+  }
+
+  private members() {
+    const tenantId = this.tenantContext.tenant()?.id;
+    if (!tenantId) throw fail(403, 'Sem tenant activo.');
+    const ids = new Set(
+      MOCK_MEMBERSHIPS.filter((m) => m.tenantId === tenantId).map((m) => m.userId),
+    );
+    return MOCK_USERS.filter((u) => ids.has(u.id));
   }
 
   // ------------------------------------------------------------ "servidor" interno
@@ -476,6 +497,8 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
         !this.bucket(tenantId, field.entityKey).some((r) => r.id === value)
       ) {
         add(key, 'server', 'A referência não existe.');
+      } else if (field.type === 'user-reference' && !this.members().some((u) => u.id === value)) {
+        add(key, 'server', 'O utilizador não pertence a este tenant.');
       }
     }
 

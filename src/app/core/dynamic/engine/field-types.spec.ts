@@ -1,5 +1,10 @@
 import type { FieldType } from '../models/field-definition.model';
-import { fieldCapabilities, FIELD_TYPE_CATALOG, fieldTypeDefinition } from './field-types';
+import {
+  fieldCapabilities,
+  FIELD_TYPE_CATALOG,
+  fieldTypeDefinition,
+  isKnownFieldType,
+} from './field-types';
 
 /** Verificado em compilação: se `FieldType` ganhar um tipo, esta lista tem de o incluir. */
 const ALL_TYPES: Record<FieldType, true> = {
@@ -68,7 +73,7 @@ describe('catálogo de tipos de campo', () => {
 
   it('assinala os tipos ainda em preparação', () => {
     const preview = FIELD_TYPE_CATALOG.filter((t) => t.status === 'preview').map((t) => t.type);
-    expect(preview).toEqual(['user-reference', 'formula', 'lookup']);
+    expect(preview).toEqual(['formula', 'lookup']);
     expect(fieldTypeDefinition('text').status).toBe('ready');
   });
 
@@ -78,5 +83,20 @@ describe('catálogo de tipos de campo', () => {
       'multiselect',
       'radio',
     ]);
+  });
+});
+
+describe('tipos desconhecidos', () => {
+  it('não rebentam: ficam só de leitura e sem capacidades', () => {
+    const caps = fieldCapabilities('hologram' as never);
+    expect(caps).toMatchObject({
+      writable: false,
+      searchable: false,
+      filterable: false,
+      sortable: false,
+    });
+    expect(fieldTypeDefinition('hologram' as never).label).toBe('hologram');
+    expect(isKnownFieldType('hologram')).toBe(false);
+    expect(isKnownFieldType('text')).toBe(true);
   });
 });

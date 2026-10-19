@@ -80,10 +80,10 @@ describe('Campos personalizados: página e designer', () => {
     button(el, 'Novo campo')!.click();
     await settle(fixture);
 
-    type(el, 'Nome', 'Gestor comercial');
+    type(el, 'Nome', 'Próximo contacto');
     await settle(fixture);
     const code = [...el.querySelectorAll<HTMLInputElement>('input')].find(
-      (i) => i.value === 'gestorComercial',
+      (i) => i.value === 'proximoContacto',
     );
     expect(code).toBeDefined();
 
@@ -106,7 +106,7 @@ describe('Campos personalizados: página e designer', () => {
     await settle(fixture);
     await settle(fixture);
 
-    expect(registry.find('customer')!.fields.map((f) => f.key)).toContain('gestorComercial');
+    expect(registry.find('customer')!.fields.map((f) => f.key)).toContain('proximoContacto');
     expect(el.textContent).toContain('Campo guardado');
   });
 

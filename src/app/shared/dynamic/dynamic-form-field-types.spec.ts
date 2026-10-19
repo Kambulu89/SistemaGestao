@@ -99,12 +99,33 @@ describe('Dynamic form: novos tipos de campo', () => {
     );
   });
 
-  it('shows computed types as read-only and unsupported types as a clear notice', async () => {
-    const { el } = await render();
-    expect(el.querySelector('[data-testid=computed-field]')?.textContent).toContain('Código');
-    expect(el.querySelector('[data-testid=unsupported-field]')?.textContent).toContain(
-      'ainda não disponível',
+  it('shows server-assigned types as read-only with the assigned value, and user references as a picker', async () => {
+    const { el } = await render({ codigo: 'EQ-0007' });
+    expect(el.querySelector('[data-testid=computed-field]')?.textContent).toContain('EQ-0007');
+    const labels = [...el.querySelectorAll('label')].map((l) =>
+      l.textContent?.replace('*', '').trim(),
     );
+    expect(labels).toContain('Responsável'); // o selector de utilizadores
+  });
+
+  it('shows a clear notice for a type without a control instead of failing silently', async () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: EntityRecordsGateway, useValue: { lookup: () => of([]) } }],
+    });
+    const fixture = TestBed.createComponent(Host);
+    fixture.componentInstance.entity = defineEntity({
+      key: 'x',
+      scope: 'tenant',
+      tenantId: 't',
+      names: { singular: 'X', plural: 'Xs' },
+      icon: 'cube',
+      fields: [{ type: 'hologram', key: 'h', label: 'Holograma' } as never],
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid=unsupported-field]')?.textContent,
+    ).toContain('ainda não disponível');
   });
 
   it('never submits server-assigned fields and requires the checkbox to be checked', async () => {

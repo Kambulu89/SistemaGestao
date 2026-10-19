@@ -3,7 +3,7 @@ import { STATUS_KEY } from '../models/condition.model';
 import { SYSTEM_COLUMNS, type EntityDefinition } from '../models/entity-definition.model';
 import { activeOptions, hasOptions, type FieldDefinition } from '../models/field-definition.model';
 import { validateAutoNumber } from './auto-number';
-import { fieldCapabilities } from './field-types';
+import { fieldCapabilities, isKnownFieldType } from './field-types';
 import type { FormItem } from '../models/form-definition.model';
 import type { ValidationRule } from '../models/validation-rule.model';
 import { conditionDepth, conditionFields, MAX_CONDITION_DEPTH } from './condition';
@@ -77,6 +77,8 @@ export function validateEntityDefinition(
     if (seen.has(field.key)) error(path, 'Chave de campo duplicada.');
     seen.add(field.key);
     if (!field.label.trim()) error(path, 'O campo precisa de um rótulo.');
+
+    if (!isKnownFieldType(field.type)) error(path, `Tipo de campo desconhecido "${field.type}".`);
 
     // O tipo decide o que o campo pode fazer (pesquisar, ordenar, ter valor por omissão…).
     const caps = fieldCapabilities(field.type);

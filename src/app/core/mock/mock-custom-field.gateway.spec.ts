@@ -50,14 +50,14 @@ describe('Mock backend: gestão de campos personalizados', () => {
   it('publishes a new field and merges it into the entity for that tenant only', async () => {
     const { registry, api } = await enter('escola@demo.pt', 'escola-horizonte');
     const saved = await firstValueFrom(
-      api.save(input({ type: 'text', key: 'gestorComercial', label: 'Gestor comercial' })),
+      api.save(input({ type: 'text', key: 'proximoContacto', label: 'Próximo contacto' })),
     );
     expect(saved).toMatchObject({ version: 1, state: 'active', tenantId: 't-escola' });
     expect(saved.field.origin).toBe('custom');
 
     TestBed.inject(CustomFieldRegistryService).reload();
     await firstValueFrom(registry.ensureLoaded());
-    expect(registry.find('customer')!.fields.map((f) => f.key)).toContain('gestorComercial');
+    expect(registry.find('customer')!.fields.map((f) => f.key)).toContain('proximoContacto');
   });
 
   it('keeps a draft out of the entity until it is published', async () => {

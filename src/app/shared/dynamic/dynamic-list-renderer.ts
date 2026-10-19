@@ -13,6 +13,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { forkJoin, map } from 'rxjs';
 import type { Page } from '../../core/api/pagination.model';
 import { EntityRecordsGateway } from '../../core/dynamic/data-access/entity-records.gateway';
+import { referenceTarget } from './reference-target';
 import { formatFieldValue } from '../../core/dynamic/engine/format-value';
 import { statusOf } from '../../core/dynamic/engine/workflow';
 import type { EntityDefinition } from '../../core/dynamic/models/entity-definition.model';
@@ -313,7 +314,8 @@ export class DynamicListRenderer {
     const items = this.result()?.items ?? [];
     return this.entity().list.columns.flatMap((c) => {
       const field = this.fields().get(c.field);
-      if (field?.type !== 'entity-reference') return [];
+      const target = field ? referenceTarget(field) : null;
+      if (!target) return [];
       const ids = [
         ...new Set(
           items
@@ -321,7 +323,7 @@ export class DynamicListRenderer {
             .filter((v): v is string => typeof v === 'string' && v !== ''),
         ),
       ];
-      return ids.length > 0 ? [{ entityKey: field.entityKey, ids } satisfies ReferenceTarget] : [];
+      return ids.length > 0 ? [{ entityKey: target, ids } satisfies ReferenceTarget] : [];
     });
   });
 
@@ -348,8 +350,9 @@ export class DynamicListRenderer {
     const field = this.fields().get(key);
     if (!field) return '—';
     const value = record.data[key];
-    if (field.type === 'entity-reference' && typeof value === 'string' && value) {
-      return this.referenceLabels.value()?.get(`${field.entityKey}:${value}`) ?? '…';
+    const target = referenceTarget(field);
+    if (target && typeof value === 'string' && value) {
+      return this.referenceLabels.value()?.get(`${target}:${value}`) ?? '…';
     }
     return formatFieldValue(field, value);
   }
