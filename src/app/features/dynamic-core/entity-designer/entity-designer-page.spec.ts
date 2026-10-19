@@ -174,6 +174,9 @@ describe('Designer de entidades (caso D: Equipamento só por metadados)', () => 
   it('blocks publishing with a clear message while the entity is incomplete', async () => {
     const m = await open('frota@demo.pt', 'transportes-atlas');
     expect((button(m.el, 'Publicar') as HTMLButtonElement).disabled).toBe(true);
+    expect(m.el.querySelector('[data-testid=entity-issues]')).toBeNull(); // ainda nada preenchido
+    type(m.el, 'Nome (singular)', 'Item');
+    m.fixture.detectChanges();
     expect(m.el.querySelector('[data-testid=entity-issues]')?.textContent).toContain(
       'pelo menos um campo',
     );

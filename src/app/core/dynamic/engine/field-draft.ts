@@ -81,6 +81,22 @@ export function codeFromName(name: string): string {
       : '';
 }
 
+/** Chave de uma entidade (minúsculas, números e hífen), alinhada com a regra de integridade. */
+export const ENTITY_KEY_PATTERN = /^[a-z][a-z0-9-]{1,29}$/;
+
+/** `Ordem de serviço` → `ordem-de-servico`. */
+export function entityKeyFromName(name: string): string {
+  const slug = name
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 30)
+    .replace(/-+$/, '');
+  return /^[a-z]/.test(slug) ? slug : slug ? `e-${slug}`.slice(0, 30) : '';
+}
+
 /** Permissões de leitura/escrita de um campo sensível: `entities.<entidade>.sensitive.*`. */
 export const sensitivePermissions = (entityKey: string) => ({
   read: `entities.${entityKey}.sensitive.read`,

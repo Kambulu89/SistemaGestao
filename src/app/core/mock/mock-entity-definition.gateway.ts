@@ -9,6 +9,7 @@ import {
 } from '../dynamic/data-access/entity-definition.gateway';
 import { checkPublishable } from '../dynamic/engine/definition-compat';
 import type { DefinitionIssue } from '../dynamic/engine/definition-integrity';
+import { ENTITY_KEY_PATTERN } from '../dynamic/engine/field-draft';
 import { defineEntity, generateDefaultList } from '../dynamic/engine/define-entity';
 import type { EntityDefinition } from '../dynamic/models/entity-definition.model';
 import { moduleId } from '../modules/define-module';
@@ -18,7 +19,6 @@ import { mockError, respond } from './mock-helpers';
 import { MockMetadataStore } from './mock-metadata-store';
 
 const MANAGE = 'configuration.forms.manage';
-const KEY = /^[a-z][A-Za-z0-9]{1,29}$/;
 
 const unprocessable = (message: string, issues: readonly DefinitionIssue[]): ApiError => ({
   status: 422,
@@ -52,9 +52,9 @@ export class MockEntityDefinitionGateway extends EntityDefinitionGateway {
       this.requireManage();
 
       const issues: DefinitionIssue[] = [];
-      if (!KEY.test(input.key))
+      if (!ENTITY_KEY_PATTERN.test(input.key))
         issues.push(
-          error('key', 'O código começa por minúscula e tem 2 a 30 letras ou dígitos (camelCase).'),
+          error('key', 'O código começa por minúscula e tem 2 a 30 minúsculas, números ou hífens.'),
         );
       if (!input.names.singular.trim() || !input.names.plural.trim())
         issues.push(error('names', 'Indique o nome no singular e no plural.'));

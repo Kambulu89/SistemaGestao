@@ -183,7 +183,7 @@ describe('Entidades do tenant: ciclo de vida (caso D)', () => {
     const bad = await fails(
       firstValueFrom(registry.saveDraft({ ...EQUIPAMENTO, key: 'Equipamento 1' })),
     );
-    expect(messages(bad).join(' ')).toContain('camelCase');
+    expect(messages(bad).join(' ')).toContain('minúsculas, números ou hífens');
     const platform = await fails(
       firstValueFrom(registry.saveDraft({ ...EQUIPAMENTO, key: 'customer' })),
     );

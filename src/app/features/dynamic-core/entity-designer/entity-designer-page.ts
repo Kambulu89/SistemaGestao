@@ -20,7 +20,7 @@ import {
   type DefinitionIssue,
   validateEntityDefinition,
 } from '../../../core/dynamic/engine/definition-integrity';
-import { codeFromName } from '../../../core/dynamic/engine/field-draft';
+import { ENTITY_KEY_PATTERN, entityKeyFromName } from '../../../core/dynamic/engine/field-draft';
 import { fieldAccessFromPermissions } from '../../../core/dynamic/engine/field-state';
 import { fieldTypeDefinition } from '../../../core/dynamic/engine/field-types';
 import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
@@ -128,7 +128,7 @@ type Editing = number | null;
                 <app-input
                   formControlName="key"
                   label="Código"
-                  hint="Identificador técnico estável. Não muda depois de criada."
+                  hint="Identificador técnico estável (minúsculas e hífens). Não muda depois de criada."
                   [required]="true"
                   (input)="keyTouched.set(true)"
                 />
@@ -211,7 +211,7 @@ type Editing = number | null;
               }
             </app-card>
 
-            @if (issues().length > 0) {
+            @if (touched() && issues().length > 0) {
               <app-alert tone="danger" title="Corrija antes de publicar">
                 <ul class="list-disc ps-4" data-testid="entity-issues">
                   @for (issue of issues(); track $index) {
@@ -280,6 +280,8 @@ export class EntityDesignerPage {
   private readonly value = toSignal(this.form.valueChanges.pipe(startWith(null)), {
     initialValue: null,
   });
+  /** Os problemas só se mostram depois de o utilizador começar a preencher. */
+  protected readonly touched = computed(() => this.value() !== null || this.fields().length > 0);
   protected readonly plural = computed(() => (this.value(), this.form.controls.plural.value));
 
   protected readonly currentKey = computed(() => this.entityKey() ?? this.savedKey());
@@ -313,7 +315,7 @@ export class EntityDesignerPage {
     this.value();
     const v = this.form.getRawValue();
     return defineEntity({
-      key: v.key || 'novaEntidade',
+      key: v.key || 'nova-entidade',
       scope: 'tenant',
       tenantId: this.tenant()?.id ?? null,
       moduleId: moduleId('configuration.forms'),
@@ -339,11 +341,11 @@ export class EntityDesignerPage {
         path: 'names',
         message: 'Indique o nome no singular e no plural.',
       });
-    if (!/^[a-z][A-Za-z0-9]{1,29}$/.test(v.key))
+    if (!ENTITY_KEY_PATTERN.test(v.key))
       local.push({
         severity: 'error',
         path: 'key',
-        message: 'O código começa por minúscula e tem 2 a 30 letras ou dígitos (camelCase).',
+        message: 'O código começa por minúscula e tem 2 a 30 minúsculas, números ou hífens.',
       });
     if (this.activeFieldCount() === 0 && this.fields().length === 0)
       local.push({
@@ -361,7 +363,7 @@ export class EntityDesignerPage {
 
   protected readonly canSaveDraft = computed(() => {
     const v = (this.value(), this.form.getRawValue());
-    return !!v.singular.trim() && !!v.plural.trim() && /^[a-z][A-Za-z0-9]{1,29}$/.test(v.key);
+    return !!v.singular.trim() && !!v.plural.trim() && ENTITY_KEY_PATTERN.test(v.key);
   });
   protected readonly canPublish = computed(
     () => this.canManage() && !this.saving() && this.issues().length === 0,
@@ -392,7 +394,7 @@ export class EntityDesignerPage {
     // O código acompanha o nome (singular) enquanto a entidade é nova e o código não foi tocado.
     this.form.controls.singular.valueChanges.subscribe((name) => {
       if (!this.currentKey() && !this.keyTouched())
-        this.form.controls.key.setValue(codeFromName(name));
+        this.form.controls.key.setValue(entityKeyFromName(name));
     });
 
     effect(() => {

@@ -1,4 +1,12 @@
-import { buildField, codeFromName, draftOf, EMPTY_DRAFT, type FieldDraft } from './field-draft';
+import {
+  buildField,
+  codeFromName,
+  ENTITY_KEY_PATTERN,
+  entityKeyFromName,
+  draftOf,
+  EMPTY_DRAFT,
+  type FieldDraft,
+} from './field-draft';
 
 const draft = (overrides: Partial<FieldDraft>): FieldDraft => ({
   ...EMPTY_DRAFT,
@@ -133,5 +141,22 @@ describe('buildField: campo existente e referências', () => {
     const field = buildField(draft({ type: 'entity-reference', referenceEntity: 'vehicle' }), ctx);
     expect(field).toMatchObject({ type: 'entity-reference', entityKey: 'vehicle' });
     expect(draftOf(field).referenceEntity).toBe('vehicle');
+  });
+});
+
+describe('entityKeyFromName', () => {
+  it('builds a lowercase hyphenated key that satisfies the integrity rule', () => {
+    expect(entityKeyFromName('Equipamento')).toBe('equipamento');
+    expect(entityKeyFromName('Ordem de serviço')).toBe('ordem-de-servico');
+    expect(entityKeyFromName('  Viatura (frota)! ')).toBe('viatura-frota');
+    expect(entityKeyFromName('3D')).toBe('e-3d');
+    expect(entityKeyFromName('')).toBe('');
+    for (const name of ['Equipamento', 'Ordem de serviço', 'Viatura (frota)']) {
+      expect(ENTITY_KEY_PATTERN.test(entityKeyFromName(name))).toBe(true);
+    }
+  });
+
+  it('never produces a trailing hyphen after truncating', () => {
+    expect(entityKeyFromName('a'.repeat(29) + ' bbb')).not.toMatch(/-$/);
   });
 });
