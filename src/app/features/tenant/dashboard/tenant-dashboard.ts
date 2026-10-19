@@ -1,128 +1,134 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { AppConfigService } from '../../../core/config/app-config.service';
-import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
-import type { ModuleAccessStatus, ModuleGroup } from '../../../core/modules/module.model';
+import { SUBSCRIPTION_LABELS, TENANT_STATUS_LABELS } from '../../../core/modules/module-labels';
+import { TenantModulesService } from '../../../core/modules/tenant-modules.service';
 import { TenantContextService } from '../../../core/tenant-context/tenant-context.service';
-import type { TenantStatus } from '../../../core/tenant-context/tenant.model';
-import { Badge, type Tone } from '../../../shared/ui/badge/badge';
+import { Badge } from '../../../shared/ui/badge/badge';
 import { Card } from '../../../shared/ui/card/card';
 import { PageHeader } from '../../../shared/ui/page-header/page-header';
-import { Table, type TableColumn } from '../../../shared/ui/table/table';
 
-const STATUS_UI: Record<TenantStatus, { label: string; tone: Tone }> = {
-  active: { label: 'Activo', tone: 'success' },
-  trial: { label: 'Teste', tone: 'brand' },
-  suspended: { label: 'Suspenso', tone: 'danger' },
-};
-
-const ACCESS_UI: Record<ModuleAccessStatus, { label: string; tone: Tone }> = {
-  accessible: { label: 'Acessível', tone: 'success' },
-  'not-contracted': { label: 'Não contratado', tone: 'neutral' },
-  inactive: { label: 'Desactivado no tenant', tone: 'warning' },
-  'missing-dependency': { label: 'Dependência em falta', tone: 'warning' },
-  'flag-disabled': { label: 'Funcionalidade desligada', tone: 'neutral' },
-  forbidden: { label: 'Sem permissão', tone: 'danger' },
-};
-
-const GROUP_LABELS: Record<ModuleGroup, string> = {
-  general: 'Geral',
-  dynamic: 'Personalização',
-  vertical: 'Vertical',
-};
-
-interface ModuleRow {
-  readonly name: string;
-  readonly group: string;
-  readonly contracted: string;
-  readonly active: string;
-  readonly access: ModuleAccessStatus;
-}
-
-/** Painel do tenant: mostra a resolução módulo a módulo para o utilizador actual. */
+/** Painel do tenant: subscrição, limites do plano e resumo dos módulos. */
 @Component({
   selector: 'app-tenant-dashboard',
-  imports: [PageHeader, Card, Badge, Table],
+  imports: [PageHeader, Card, Badge, DatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <app-page-header
       [title]="tenant()?.name ?? ''"
-      description="Área de trabalho da organização. O menu lateral só mostra o que está contratado, activado, permitido e autorizado para si."
+      description="Área de trabalho da organização. O menu lateral só mostra o que está contratado, activado e autorizado para si."
     />
 
-    <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Resumo da organização">
-      <app-card title="Plano e estado">
-        <p class="text-2xl font-semibold">{{ tenant()?.planName }}</p>
-        @if (tenant(); as t) {
-          <app-badge class="mt-2" [tone]="status(t.status).tone">{{
-            status(t.status).label
+    <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Resumo da organização">
+      <app-card title="Subscrição">
+        <p class="text-2xl font-semibold capitalize">{{ subscription()?.planCode }}</p>
+        @if (subscription(); as sub) {
+          <app-badge class="mt-2" [tone]="subscriptionStatus().tone">{{
+            subscriptionStatus().label
           }}</app-badge>
+          @if (sub.renewsAt) {
+            <p class="mt-2 text-sm text-fg-muted">
+              Renova a {{ sub.renewsAt | date: 'mediumDate' }}
+            </p>
+          }
         }
       </app-card>
+
       <app-card title="O meu papel">
         <p class="text-2xl font-semibold">{{ context()?.roleName }}</p>
         <p class="mt-1 text-sm text-fg-muted">
-          {{ context()?.permissions?.length }} permissões atribuídas
+          {{ permissionSummary() }}
         </p>
       </app-card>
-      <app-card title="Preferências regionais">
+
+      <app-card title="Módulos">
+        <p class="text-2xl font-semibold">
+          {{ summary().accessible }} / {{ summary().contracted }}
+        </p>
+        <p class="mt-1 text-sm text-fg-muted">acessíveis a si / contratados</p>
+      </app-card>
+
+      <app-card title="Região">
         <p class="text-lg font-semibold">{{ config.locale() }} · {{ config.currency() }}</p>
         <p class="mt-1 text-sm text-fg-muted">{{ config.timeZone() }}</p>
+        @if (tenant(); as t) {
+          <app-badge class="mt-2" [tone]="tenantStatus(t.status).tone">{{
+            tenantStatus(t.status).label
+          }}</app-badge>
+        }
       </app-card>
     </section>
 
-    <h2 class="mb-3 mt-8 text-lg font-semibold">Módulos neste tenant</h2>
-    <app-card [flush]="true">
-      <app-table
-        caption="Estado de cada módulo do catálogo neste tenant"
-        [columns]="columns"
-        [rows]="rows()"
-      >
-        <ng-template let-row let-column="column">
-          @if (column.key === 'access') {
-            <app-badge [tone]="access(row.access).tone">{{ access(row.access).label }}</app-badge>
-          } @else {
-            {{ row[column.key] }}
-          }
-        </ng-template>
-      </app-table>
+    <h2 class="mb-3 mt-8 text-lg font-semibold">Limites do plano</h2>
+    <app-card>
+      <ul class="space-y-4">
+        @for (limit of usage(); track limit.key) {
+          <li>
+            <div class="mb-1 flex justify-between text-sm">
+              <span class="font-medium">{{ limit.label }}</span>
+              <span class="text-fg-muted">
+                {{ limit.used }} / {{ limit.limit === null ? 'ilimitado' : limit.limit }}
+                {{ limit.unit }}
+              </span>
+            </div>
+            @if (limit.limit !== null) {
+              <div
+                class="h-2 overflow-hidden rounded-full bg-surface-muted"
+                role="progressbar"
+                [attr.aria-label]="limit.label"
+                aria-valuemin="0"
+                [attr.aria-valuemax]="limit.limit"
+                [attr.aria-valuenow]="limit.used"
+              >
+                <div
+                  class="h-full rounded-full"
+                  [class.bg-brand-600]="limit.percent < 90"
+                  [class.bg-red-500]="limit.percent >= 90"
+                  [style.width.%]="limit.percent"
+                ></div>
+              </div>
+            }
+          </li>
+        }
+      </ul>
     </app-card>
   `,
 })
 export class TenantDashboard {
   private readonly tenantContext = inject(TenantContextService);
-  private readonly registry = inject(ModuleRegistryService);
+  private readonly modules = inject(TenantModulesService);
   protected readonly config = inject(AppConfigService);
 
   protected readonly tenant = this.tenantContext.tenant;
   protected readonly context = this.tenantContext.active;
+  protected readonly subscription = computed(() => this.context()?.subscription ?? null);
 
-  protected readonly columns: readonly TableColumn[] = [
-    { key: 'name', label: 'Módulo' },
-    { key: 'group', label: 'Grupo' },
-    { key: 'contracted', label: 'Contratado' },
-    { key: 'active', label: 'Activado' },
-    { key: 'access', label: 'Resultado' },
-  ];
-
-  protected readonly rows = computed<readonly ModuleRow[]>(() => {
-    const states = this.context()?.modules ?? [];
-    return this.registry.resolved().map(({ manifest, access }) => {
-      const state = states.find((s) => s.moduleId === manifest.id);
-      return {
-        name: manifest.name,
-        group: GROUP_LABELS[manifest.group],
-        contracted: state?.contracted ? 'Sim' : 'Não',
-        active: state?.active ? 'Sim' : 'Não',
-        access,
-      };
-    });
+  protected readonly permissionSummary = computed(() => {
+    const permissions = this.context()?.permissions ?? [];
+    if (permissions.includes('*')) return 'Acesso total à organização';
+    return permissions.length === 1
+      ? '1 regra de permissão'
+      : `${permissions.length} regras de permissão`;
   });
 
-  protected status(status: TenantStatus) {
-    return STATUS_UI[status];
-  }
+  protected readonly subscriptionStatus = computed(
+    () => SUBSCRIPTION_LABELS[this.subscription()?.status ?? 'active'],
+  );
 
-  protected access(access: ModuleAccessStatus) {
-    return ACCESS_UI[access];
+  protected readonly usage = computed(() =>
+    (this.subscription()?.limits ?? []).map((l) => ({
+      ...l,
+      percent: l.limit ? Math.min(100, Math.round((l.used / l.limit) * 100)) : 0,
+    })),
+  );
+
+  protected readonly summary = computed(() => ({
+    contracted: this.modules.resolved().filter((m) => m.contracted).length,
+    accessible: this.modules.accessible().length,
+  }));
+
+  protected tenantStatus(status: keyof typeof TENANT_STATUS_LABELS) {
+    return TENANT_STATUS_LABELS[status];
   }
 }

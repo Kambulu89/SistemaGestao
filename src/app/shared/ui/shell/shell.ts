@@ -14,7 +14,7 @@ import { Icon } from '../icon/icon';
   selector: 'app-shell',
   imports: [Button, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(document:keydown.escape)': 'close()' },
+  host: { class: 'block', '(document:keydown.escape)': 'close()' },
   template: `
     <a
       href="#conteudo"

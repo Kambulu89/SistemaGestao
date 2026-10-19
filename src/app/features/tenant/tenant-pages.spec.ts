@@ -1,0 +1,63 @@
+import { type Type } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { firstValueFrom } from 'rxjs';
+import { TenantContextService } from '../../core/tenant-context/tenant-context.service';
+import { loginAs, setupMockBackend } from '../../core/testing/test-backend';
+import { TenantDashboard } from './dashboard/tenant-dashboard';
+import { TenantModulesPage } from './modules/tenant-modules-page';
+import { TenantPermissionsPage } from './permissions/tenant-permissions-page';
+
+async function render(component: Type<unknown>, email: string, slug: string): Promise<HTMLElement> {
+  await loginAs(email);
+  await firstValueFrom(TestBed.inject(TenantContextService).activate(slug));
+  const fixture = TestBed.createComponent(component);
+  await fixture.whenStable();
+  return fixture.nativeElement as HTMLElement;
+}
+
+describe('tenant pages', () => {
+  beforeEach(() => setupMockBackend());
+
+  it('dashboard shows subscription, role and plan limits', async () => {
+    const el = await render(TenantDashboard, 'multi@demo.pt', 'escola-horizonte');
+    expect(el.querySelector('h1')?.textContent).toContain('Escola Horizonte');
+    expect(el.textContent).toContain('business');
+    expect(el.textContent).toContain('Secretário');
+    expect(el.textContent).toContain('7 regras de permissão');
+    expect(el.textContent).toContain('62 / 100');
+    expect(el.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('62');
+  });
+
+  it('dashboard summarises full access for an admin', async () => {
+    const el = await render(TenantDashboard, 'escola@demo.pt', 'escola-horizonte');
+    expect(el.textContent).toContain('Acesso total à organização');
+  });
+
+  it('modules page lists every group with the resolution of each module', async () => {
+    const el = await render(TenantModulesPage, 'multi@demo.pt', 'escola-horizonte');
+    expect(el.querySelectorAll('table')).toHaveLength(el.querySelectorAll('section').length);
+    expect(el.textContent).toContain('Clientes e contactos');
+    expect(el.textContent).toContain('Acessível');
+    expect(el.textContent).toContain('Sem permissão');
+    expect(el.textContent).toContain('Não contratado');
+    expect(el.textContent).toContain('Desactivado');
+  });
+
+  it('permissions page shows which permissions the current role grants', async () => {
+    const el = await render(TenantPermissionsPage, 'multi@demo.pt', 'escola-horizonte');
+    expect(el.textContent).toContain('Secretário');
+    const row = [...el.querySelectorAll('tr')].find((r) =>
+      r.textContent?.includes('crm.customers.read'),
+    );
+    expect(row?.textContent).toContain('Concedida');
+    const denied = [...el.querySelectorAll('tr')].find((r) =>
+      r.textContent?.includes('finance.cash-banks.read'),
+    );
+    expect(denied?.textContent).toContain('Não concedida');
+  });
+
+  it('permissions page only lists tenant-scope capabilities', async () => {
+    const el = await render(TenantPermissionsPage, 'escola@demo.pt', 'escola-horizonte');
+    expect(el.textContent).not.toContain('platform.tenants.read');
+  });
+});

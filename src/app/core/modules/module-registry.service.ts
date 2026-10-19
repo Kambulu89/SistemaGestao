@@ -1,50 +1,61 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { type Observable, of, tap } from 'rxjs';
-import { FeatureFlagService } from '../config/feature-flag.service';
-import { PermissionService } from '../permissions/permission.service';
-import { TenantContextService } from '../tenant-context/tenant-context.service';
-import { ModuleCatalogGateway } from './module-catalog.gateway';
-import { resolveModuleAccess } from './module-access';
-import type { ModuleAccessStatus, ModuleManifest, ResolvedModule } from './module.model';
+import { inject, Injectable } from '@angular/core';
+import type { PermissionDefinition } from '../permissions/permission.model';
+import { MODULE_GROUPS } from './catalog/module-groups';
+import { validateCatalog } from './catalog-validation';
+import { MODULE_MANIFESTS } from './module-manifests.token';
+import type { ModuleGroup, ModuleManifest } from './module.model';
 
-/** Catálogo de módulos e a sua resolução para o tenant activo. */
+export interface CatalogPermission extends PermissionDefinition {
+  readonly moduleId: string;
+}
+
+/**
+ * Registo central e estático de grupos e módulos (o catálogo). Não sabe nada de tenants:
+ * a resolução para um tenant é feita por `TenantModulesService`.
+ */
 @Injectable({ providedIn: 'root' })
 export class ModuleRegistryService {
-  private readonly gateway = inject(ModuleCatalogGateway);
-  private readonly tenantContext = inject(TenantContextService);
-  private readonly permissions = inject(PermissionService);
-  private readonly flags = inject(FeatureFlagService);
+  readonly groups: readonly ModuleGroup[] = [...MODULE_GROUPS].sort((a, b) => a.order - b.order);
 
-  private readonly _catalog = signal<readonly ModuleManifest[] | null>(null);
+  /** Ordenados por grupo e depois por `order` (a ordem de declaração desempata). */
+  readonly modules: readonly ModuleManifest[];
 
-  readonly catalog = computed(() => this._catalog() ?? []);
+  /** Problemas de integridade do catálogo; vazio quando está tudo coerente. */
+  readonly issues: readonly string[];
 
-  /** Todos os módulos do catálogo com o respectivo estado de acesso no tenant activo. */
-  readonly resolved = computed<readonly ResolvedModule[]>(() => {
-    const tenantModules = this.tenantContext.active()?.modules ?? [];
-    return this.catalog().map((manifest) => ({
-      manifest,
-      access: resolveModuleAccess(manifest, {
-        tenantModules,
-        isFlagEnabled: (f) => this.flags.isEnabled(f),
-        can: (p) => this.permissions.can(p),
-      }),
-    }));
-  });
+  private readonly byId: ReadonlyMap<string, ModuleManifest>;
 
-  readonly accessible = computed(() => this.resolved().filter((m) => m.access === 'accessible'));
+  constructor() {
+    const manifests = inject(MODULE_MANIFESTS);
+    const groupOrder = new Map(this.groups.map((g) => [g.id, g.order]));
 
-  ensureCatalog(): Observable<readonly ModuleManifest[]> {
-    const cached = this._catalog();
-    if (cached) return of(cached);
-    return this.gateway.loadCatalog().pipe(tap((list) => this._catalog.set(list)));
+    this.modules = manifests
+      .map((manifest, index) => ({ manifest, index }))
+      .sort(
+        (a, b) =>
+          (groupOrder.get(a.manifest.groupId) ?? 0) - (groupOrder.get(b.manifest.groupId) ?? 0) ||
+          a.manifest.order - b.manifest.order ||
+          a.index - b.index,
+      )
+      .map(({ manifest }) => manifest);
+
+    this.byId = new Map(this.modules.map((m) => [m.id, m]));
+    this.issues = validateCatalog(this.groups, manifests);
+    if (this.issues.length > 0) {
+      console.error('Catálogo de módulos inválido:\n' + this.issues.join('\n'));
+    }
   }
 
   find(moduleId: string): ModuleManifest | undefined {
-    return this.catalog().find((m) => m.id === moduleId);
+    return this.byId.get(moduleId);
   }
 
-  accessOf(moduleId: string): ModuleAccessStatus | null {
-    return this.resolved().find((m) => m.manifest.id === moduleId)?.access ?? null;
+  inGroup(groupId: string): readonly ModuleManifest[] {
+    return this.modules.filter((m) => m.groupId === groupId);
+  }
+
+  /** Todas as permissões declaradas pelo catálogo, para ecrãs de gestão de perfis. */
+  permissionCatalog(): readonly CatalogPermission[] {
+    return this.modules.flatMap((m) => m.permissions.map((p) => ({ ...p, moduleId: m.id })));
   }
 }

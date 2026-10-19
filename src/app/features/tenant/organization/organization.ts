@@ -7,6 +7,7 @@ import { PageHeader } from '../../../shared/ui/page-header/page-header';
   selector: 'app-tenant-organization',
   imports: [PageHeader, Card, EmptyState],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <app-page-header
       title="Organização"

@@ -13,6 +13,7 @@ const THEME_UI: Record<ThemePreference, { icon: string; label: string }> = {
   selector: 'app-theme-toggle',
   imports: [Button, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <app-button
       variant="ghost"

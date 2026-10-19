@@ -37,6 +37,7 @@ const TONES: Record<SidebarTone, { item: string; active: string; label: string }
   selector: 'app-sidebar-nav',
   imports: [RouterLink, RouterLinkActive, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <nav aria-label="Principal" class="space-y-6 p-3">
       @for (group of groups(); track group.id) {

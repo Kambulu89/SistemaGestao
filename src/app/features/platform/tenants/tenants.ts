@@ -2,9 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { rxResource } from '@angular/core/rxjs-interop';
 import type { ApiError } from '../../../core/api/api-error.model';
 import type { PageRequest } from '../../../core/api/pagination.model';
+import { TENANT_STATUS_LABELS } from '../../../core/modules/module-labels';
 import type { TenantStatus } from '../../../core/tenant-context/tenant.model';
 import { Alert } from '../../../shared/ui/alert/alert';
-import { Badge, type Tone } from '../../../shared/ui/badge/badge';
+import { Badge } from '../../../shared/ui/badge/badge';
 import { Card } from '../../../shared/ui/card/card';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { LoadingState } from '../../../shared/ui/loading-state/loading-state';
@@ -15,16 +16,11 @@ import { TenantsGateway } from './tenants.gateway';
 
 const PAGE_SIZE = 8;
 
-const STATUS_UI: Record<TenantStatus, { label: string; tone: Tone }> = {
-  active: { label: 'Activo', tone: 'success' },
-  trial: { label: 'Teste', tone: 'brand' },
-  suspended: { label: 'Suspenso', tone: 'danger' },
-};
-
 @Component({
   selector: 'app-tenants',
   imports: [Alert, Badge, Card, EmptyState, LoadingState, PageHeader, Pagination, Table],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <app-page-header
       title="Tenants"
@@ -107,6 +103,6 @@ export class Tenants {
   }
 
   protected status(status: TenantStatus) {
-    return STATUS_UI[status];
+    return TENANT_STATUS_LABELS[status];
   }
 }

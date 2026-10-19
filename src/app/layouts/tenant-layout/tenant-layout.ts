@@ -16,6 +16,7 @@ import { TenantSwitcher } from './tenant-switcher/tenant-switcher';
   selector: 'app-tenant-layout',
   imports: [RouterOutlet, Shell, SidebarNav, Breadcrumb, ThemeToggle, UserMenu, TenantSwitcher],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <app-shell>
       <div shellBrand class="flex min-w-0 items-center gap-2">

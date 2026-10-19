@@ -21,6 +21,7 @@ const ITEM =
   selector: 'app-user-menu',
   imports: [Dropdown, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <app-dropdown label="Menu do utilizador" align="end">
       <span dropdownTrigger class="flex items-center gap-2">

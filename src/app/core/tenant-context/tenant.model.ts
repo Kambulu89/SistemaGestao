@@ -1,3 +1,5 @@
+import type { Subscription } from '../subscription/subscription.model';
+
 export type TenantStatus = 'active' | 'trial' | 'suspended';
 
 export interface Tenant {
@@ -6,7 +8,6 @@ export interface Tenant {
   readonly slug: string;
   readonly name: string;
   readonly status: TenantStatus;
-  readonly planName: string;
   readonly locale: string;
   readonly currency: string;
   readonly timeZone: string;
@@ -18,11 +19,19 @@ export interface TenantMembership {
   readonly roleName: string;
 }
 
-/** Estado de um módulo num tenant: contratado (plano) e activado (decisão do tenant). */
-export interface TenantModuleState {
+export type ModuleSettingValue = boolean | number | string;
+
+/**
+ * Relação entre um tenant e um módulo: a **decisão do tenant** de o activar,
+ * as funcionalidades que tem disponíveis e os seus parâmetros.
+ * Estar na subscrição (contratado) é outra coisa; ver `Subscription.moduleIds`.
+ */
+export interface TenantModule {
   readonly moduleId: string;
-  readonly contracted: boolean;
   readonly active: boolean;
+  /** Ids das funcionalidades (`ModuleFeature.id`) disponibilizadas neste tenant. */
+  readonly features: readonly string[];
+  readonly settings: Readonly<Record<string, ModuleSettingValue>>;
 }
 
 /**
@@ -33,6 +42,7 @@ export interface TenantContext {
   readonly tenant: Tenant;
   readonly roleName: string;
   readonly permissions: readonly string[];
-  readonly modules: readonly TenantModuleState[];
+  readonly subscription: Subscription;
+  readonly modules: readonly TenantModule[];
   readonly featureFlags: Readonly<Record<string, boolean>>;
 }

@@ -23,11 +23,49 @@ Angular 22 · Tailwind CSS 4 · TypeScript estrito · Signals · RxJS · Reactiv
 
 ### Contas de demonstração (palavra-passe `demo1234`)
 
-| Email                | O que demonstra                                                                         |
-| -------------------- | --------------------------------------------------------------------------------------- |
-| `plataforma@demo.pt` | Administração global (`/platform`) + suporte na Escola Horizonte                        |
-| `multi@demo.pt`      | Dois tenants, papéis diferentes: **Secretário** na Escola, **Administrador** na Clínica |
-| `escola@demo.pt`     | Administrador da Escola Horizonte (sem acesso à plataforma)                             |
+| Email                | O que demonstra                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `plataforma@demo.pt` | Platform Admin (`/platform`) + suporte na Escola Horizonte                                       |
+| `multi@demo.pt`      | **Secretário** na Escola (menu reduzido) e **Administrador** na Clínica (plano Starter em teste) |
+| `escola@demo.pt`     | Administrador da Escola Horizonte (plano Business, funcionalidades e parâmetros activos)         |
+
+## O catálogo: 46 capacidades
+
+O catálogo oficial tem **19 grupos** e **46 capacidades**, divididas em dois tipos:
+
+| Tipo         | Qtd | O que é                                                                                                                                                                                                                                                            |
+| ------------ | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Fundação** | 11  | Estrutural: Multi-Tenancy, Tenant Management, Subscription, Feature Flags, Module Registry, Autenticação, Utilizadores, RBAC/ABAC, Empresa e unidades, Notificações, Auditoria. Sempre activas, **não se contratam nem se desactivam**; só dependem de permissões. |
+| **Módulo**   | 35  | Unidade funcional contratável e activável por tenant (CRM, Comercial, Compras, Inventário, Financeiro, RH, Projectos, Atendimento, Documentos, Agenda, Workflow, Reporting, Integrações, Governance, Configuração, Equipas, Centros de custo).                     |
+
+Nenhum dos 35 módulos tem lógica de negócio: usam um ecrã provisório (`ModuleScaffold`) que mostra o que a arquitectura já resolve para eles.
+
+### Os sete conceitos
+
+| Conceito        | Contrato                                    | Onde vive                                              |
+| --------------- | ------------------------------------------- | ------------------------------------------------------ |
+| Grupo funcional | `ModuleGroup`                               | `core/modules/catalog/module-groups.ts`                |
+| Módulo          | `ModuleManifest`                            | manifesto junto de cada feature                        |
+| Funcionalidade  | `ModuleFeature` (no manifesto)              | por módulo; disponibilizada por tenant                 |
+| Permissão       | `PermissionDefinition`                      | declarada no manifesto do módulo                       |
+| Feature Flag    | `FeatureFlagService` + `flag`/`featureFlag` | contexto do tenant; liga módulo ou funcionalidade      |
+| Tenant Module   | `TenantModule`                              | decisão do tenant: activo, funcionalidades, parâmetros |
+| Subscription    | `Subscription` + `Plan`                     | `core/subscription`: módulos incluídos e limites       |
+
+### Contratado ≠ activado ≠ autorizado
+
+`resolveModuleAccess` (função pura, `core/modules/module-access.ts`) avalia por esta ordem:
+
+1. **ciclo de vida** — `retired` nunca fica acessível
+2. **subscrição utilizável** — `trial`, `active`, `past_due`; `suspended`/`cancelled` bloqueiam
+3. **contratado** — o módulo está em `Subscription.moduleIds`? (`not-contracted`)
+4. **activado** — o tenant activou-o? (`inactive`)
+5. **dependências** — contratadas **e** activas? (`missing-dependency`; não recursivo)
+6. **feature flag** do módulo (`flag-disabled`)
+7. **autorizado** — o utilizador tem a `accessPermission`? (`forbidden`)
+
+Só `accessible` aparece no menu. A página **Módulos** do tenant mostra todos, com o motivo.
+Uma funcionalidade (`resolveFeatureAccess`) exige ainda: módulo acessível + disponibilizada no `TenantModule` + flag + permissão própria.
 
 ## Arquitectura
 
@@ -37,74 +75,69 @@ Plataforma SaaS → Core Empresarial → Módulos Gerais → Motor de Personaliz
 
 ```
 src/app/
-├── core/                 infraestrutura transversal (não conhece UI nem features)
-│   ├── auth/             sessão: AuthService + AuthGateway (contrato)
-│   ├── tenant-context/   tenant activo e memberships: TenantContextService + TenantGateway
-│   ├── permissions/      catálogo de permissões e PermissionService
-│   ├── modules/          manifesto, ModuleRegistryService, resolveModuleAccess
-│   ├── navigation/       NavigationService (menus) e BreadcrumbService
-│   ├── config/           AppConfigService, FeatureFlagService, ThemeService, ambiente
-│   ├── api/              ApiService, paginação/ordenação/filtros, ApiError
-│   ├── guards/           auth, guest, platform, tenant, permission, module, home-redirect
-│   ├── interceptors/     auth (token + tenant) e error (ApiError, 401)
-│   ├── mock/             adapters mock — a única pasta a apagar ao ligar o backend
-│   └── testing/          utilitários de teste
-├── shared/ui/            design system (sem dependência de core): button, input, table, shell…
-├── layouts/              auth-layout · platform-layout · tenant-layout (+ componentes de layout)
+├── module-catalog.ts       raiz de composição: lista de todos os manifestos
+├── module-routes.ts        gera as rotas lazy dos módulos a partir dos manifestos
+├── core/                   infraestrutura transversal (não importa de features/layouts/shared)
+│   ├── modules/            ModuleManifest, defineModule, ModuleRegistryService,
+│   │                       TenantModulesService, resolveModuleAccess, validação do catálogo
+│   │   └── catalog/        grupos e capacidades de fundação
+│   ├── subscription/       Plan, Subscription, limites
+│   ├── tenant-context/     tenant activo, memberships, TenantContext
+│   ├── permissions/        catálogo/isolamento de permissões, PermissionService
+│   ├── navigation/         NavigationService (menus) e BreadcrumbService
+│   ├── auth/ config/ api/ guards/ interceptors/
+│   ├── mock/               adapters mock — a única pasta a apagar ao ligar o backend
+│   └── testing/
+├── shared/ui/              design system (independente de core)
+├── layouts/                auth-layout · platform-layout · tenant-layout
 └── features/
-    ├── auth/             login, recuperação de palavra-passe
-    ├── system/           404 e "sem acesso"
-    ├── platform/         administração global (painel, tenants, planos, subscrições)
-    ├── tenant/           administração de uma organização (painel, organização, utilizadores, configurações)
-    ├── business/         módulos gerais (CRM, financeiro, RH…)     — vazio
-    ├── dynamic/          motor de personalização e workflows       — vazio
-    └── verticals/        módulos por sector                        — vazio
+    ├── auth/  system/      login, recuperação, 404, sem acesso
+    ├── platform/           painel, tenants, catálogo de módulos, planos, subscrições, configurações
+    ├── tenant/             painel, módulos, permissões, utilizadores, organização, configurações,
+    │                       module-scaffold  (+ manifestos: equipas, governance)
+    ├── business/           manifestos: organização, crm, sales, procurement, inventory, finance,
+    │                       hr, projects, support, documents, calendar
+    ├── dynamic/            manifestos: workflow, reporting, integrations, configuration
+    └── verticals/          módulos por sector (vazio)
 ```
 
-Dependências permitidas: `features → layouts/shared/core`; `layouts → shared/core`; `shared` não importa de `core`; `core` não importa de `features` nem de `layouts`. Features de negócio não se importam entre si: partilham-se contratos em `core`.
+Dependências permitidas: `features → layouts/shared/core`; `layouts → shared/core`; `shared` não importa de `core`; `core` não importa de `features` nem de `layouts`. Só `module-catalog.ts`/`module-routes.ts` (raiz de composição) conhecem todas as features. Features de negócio não se importam entre si.
 
 ### Rotas
 
-| URL                                     | Layout           | Protecção                           |
-| --------------------------------------- | ---------------- | ----------------------------------- |
-| `/`                                     | —                | decide: login / plataforma / tenant |
-| `/auth/login`, `/auth/forgot-password`  | `AuthLayout`     | `guestGuard`                        |
-| `/platform/**`                          | `PlatformLayout` | `authGuard`, `platformGuard`        |
-| `/t/:tenantSlug/**`                     | `TenantLayout`   | `authGuard`, `tenantGuard`          |
-| `/t/:slug/modules/:moduleId[/:section]` | `TenantLayout`   | `moduleGuard`                       |
+| URL                                            | Layout           | Protecção                           |
+| ---------------------------------------------- | ---------------- | ----------------------------------- |
+| `/`                                            | —                | decide: login / plataforma / tenant |
+| `/auth/login`, `/auth/forgot-password`         | `AuthLayout`     | `guestGuard`                        |
+| `/platform/**`                                 | `PlatformLayout` | `authGuard`, `platformGuard`        |
+| `/t/:tenantSlug/**`                            | `TenantLayout`   | `authGuard`, `tenantGuard`          |
+| `/t/:slug/<code com / >` (ex. `crm/customers`) | `TenantLayout`   | `moduleGuard` + permissão da rota   |
 
-O tenant vai no URL: deep links funcionam, vários separadores podem ter tenants diferentes e não existe estado "escondido" a dessincronizar.
-
-### Módulo instalado ≠ contratado ≠ activado ≠ autorizado
-
-`resolveModuleAccess` (função pura em `core/modules/module-access.ts`) avalia, por ordem:
-**catálogo** (manifesto) → **contratado** (plano) → **activado** (decisão do tenant) → **dependências** → **feature flag** → **permissões**.
-O resultado é um estado explícito (`accessible`, `not-contracted`, `inactive`, `missing-dependency`, `flag-disabled`, `forbidden`).
-A navegação do tenant mostra apenas `accessible`; o painel do tenant mostra todos, com o motivo.
-
-O estado de activação **não** vive no manifesto (que é global) mas em `TenantModuleState`.
-Dependências avaliam-se de forma não recursiva (basta estarem contratadas e activadas).
+O tenant vai no URL (deep links, vários separadores, sem estado escondido). As rotas dos módulos são geradas dos manifestos, em lazy loading.
 
 ### Integração com o backend
 
-Cada domínio define um `*Gateway` abstracto (o contrato) e `core/mock/` fornece adapters mock, ligados em `provideMockBackend()` (`app.config.ts`).
-Para ligar a uma API real: criar adapters HTTP sobre `ApiService` e trocar os providers. Nenhum componente muda.
+Cada domínio define um `*Gateway` abstracto e `core/mock/` fornece os adapters mock (`provideMockBackend()`). Para ligar a uma API real: adapters HTTP sobre `ApiService` e trocar os providers; nenhum componente muda. Os manifestos **não** vêm da API (referenciam código: rotas lazy); o backend só diz o que o tenant contratou e activou.
 
-Pressupostos **provisórios** a confirmar com o backend (nenhum endpoint está inventado):
-cabeçalho `X-Tenant-Id` (`core/api/api.constants.ts`), `Authorization: Bearer`, parâmetros de listagem `page/pageSize/sort=chave:dir` (`pageRequestToParams`), e a forma de `TenantContext` devolvida ao activar um tenant.
-O token guarda-se em `sessionStorage` só para a demonstração; com backend, preferir cookie `httpOnly`.
+Pressupostos **provisórios** a confirmar com o backend (nenhum endpoint está inventado): cabeçalho `X-Tenant-Id`, `Authorization: Bearer`, parâmetros de listagem `page/pageSize/sort=chave:dir`, e a forma de `TenantContext` (permissões, subscrição, tenant modules, flags). O token fica em `sessionStorage` só para a demonstração; com backend, preferir cookie `httpOnly`.
 
-### Design system
+Isolamento de âmbitos: `platform.*` só pode vir da sessão da plataforma; nem `*` num papel de tenant a concede.
 
-Tailwind 4 sem `tailwind.config.js`: tokens em `src/styles.css` (`@theme`). Cores semânticas (`bg-surface`, `text-fg`, `border-line`…) mudam com o tema claro/escuro/sistema, evitando `dark:` repetido. A administração global usa sidebar escura e etiqueta "Administração global" para não se confundir com a de um tenant.
-Componentes actuais: Button, Input (Reactive Forms), Badge, Alert, Card, PageHeader, EmptyState, LoadingState, Breadcrumb, Dropdown, Table, Pagination, SidebarNav, Shell, Icon, Spinner.
+## Acrescentar um módulo (sem tocar no core)
 
-## Adicionar um módulo
+1. Criar `features/<área>/<módulo>/<módulo>.manifest.ts` com `defineModule({ code, name, group, dependencies, features, settings, … })`.
+   Permissões por omissão: `<code>.read` e `<code>.manage`; `accessPermission` por omissão: `<code>.read`.
+2. Acrescentá-lo ao array em `module-catalog.ts`.
+3. Sem `routes`, usa o `ModuleScaffold`. Para o implementar, declarar `routes: [{ path, title, permission?, loadComponent }]` no manifesto.
+4. O backend passa a poder incluí-lo em planos/subscrições (`moduleId(code)`) e activá-lo por tenant.
 
-1. Registar o `ModuleManifest` no catálogo (backend; em dev, `core/mock/mock-data.ts`).
-2. Implementar o módulo em `features/business|dynamic|verticals/<módulo>/` com as suas rotas lazy.
-3. Ligar as rotas em `features/tenant/tenant.routes.ts` (substituindo o `ModulePlaceholder`) com `moduleGuard`.
+O teste `module-catalog.spec.ts` valida o catálogo (ids/códigos únicos, grupos, dependências, ciclos) e que planos e dados mock só referenciam módulos existentes.
 
-## Fora do âmbito desta etapa
+## Design system
 
-Auditoria, motor de personalização (formulários/workflows/regras), CRUD de utilizadores/organização, Select/Checkbox/Dialog e os módulos de negócio e verticais.
+Tailwind 4 sem `tailwind.config.js`: tokens em `src/styles.css` (`@theme`). Cores semânticas (`bg-surface`, `text-fg`, `border-line`…) mudam com o tema claro/escuro/sistema. Platform Admin usa sidebar escura e etiqueta "Administração global".
+Componentes: Button, Input (Reactive Forms), Badge, Alert, Card, PageHeader, EmptyState, LoadingState, Breadcrumb, Dropdown, Table, Pagination, SidebarNav, Shell, Icon, Spinner. Select, Checkbox e Dialog só serão criados quando houver uso concreto.
+
+## Fora do âmbito desta fase
+
+Lógica de negócio dos 35 módulos, CRUD real (utilizadores, organização, activação de módulos), motor de personalização, auditoria, e adapters HTTP.

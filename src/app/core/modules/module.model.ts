@@ -1,46 +1,89 @@
-import type { Permission } from '../permissions/permission.model';
+import type { Type } from '@angular/core';
+import type { Permission, PermissionDefinition } from '../permissions/permission.model';
+import type { ModuleSettingValue } from '../tenant-context/tenant.model';
 
-/** Agrupamento na navegação. */
-export type ModuleGroup = 'general' | 'dynamic' | 'vertical';
-
-/** Secção interna de um módulo. */
-export interface ModuleRoute {
-  readonly path: string;
-  readonly label: string;
-  readonly permission?: Permission;
-}
-
-/**
- * Manifesto de um módulo no catálogo da plataforma. É independente do tenant:
- * o estado "contratado/activado" vive em `TenantModuleState`.
- */
-export interface ModuleManifest {
+/** Categoria que organiza módulos relacionados (ex.: CRM, Financeiro). */
+export interface ModuleGroup {
   readonly id: string;
   readonly name: string;
   readonly description: string;
   readonly icon: string;
-  readonly group: ModuleGroup;
-  readonly routes: readonly ModuleRoute[];
-  /** Permissões que o utilizador tem de possuir (todas) para ver o módulo. */
-  readonly permissions: readonly Permission[];
-  /** Módulos que têm de estar contratados e activados no tenant. */
-  readonly dependencies: readonly string[];
-  readonly featureFlag?: string;
+  readonly order: number;
 }
 
 /**
- * Resultado da resolução, pela ordem de verificação:
- * contratado → activado → dependências → feature flag → permissões.
+ * - `foundation`: capacidade estrutural da plataforma (ex.: autenticação). Sempre activa,
+ *   não se contrata nem se desactiva; só depende de permissões.
+ * - `module`: unidade funcional contratável e activável por tenant.
  */
-export type ModuleAccessStatus =
-  | 'not-contracted'
-  | 'inactive'
-  | 'missing-dependency'
-  | 'flag-disabled'
-  | 'forbidden'
-  | 'accessible';
+export type ModuleKind = 'foundation' | 'module';
 
-export interface ResolvedModule {
-  readonly manifest: ModuleManifest;
-  readonly access: ModuleAccessStatus;
+/** Onde a capacidade vive: administração global ou área do tenant. */
+export type ModuleScope = 'platform' | 'tenant';
+
+/**
+ * - `planned`: registado no catálogo; ecrãs ainda provisórios.
+ * - `beta` / `stable`: em evolução / estável.
+ * - `deprecated`: ainda funciona, a abandonar.
+ * - `retired`: já não pode ser usado.
+ */
+export type ModuleLifecycle = 'planned' | 'beta' | 'stable' | 'deprecated' | 'retired';
+
+/** Capacidade específica de um módulo, que pode ser ligada/desligada por tenant e por flag. */
+export interface ModuleFeature {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  /** Feature flag que também tem de estar ligada. */
+  readonly flag?: string;
+  /** Permissão adicional necessária para usar a funcionalidade. */
+  readonly permission?: Permission;
+}
+
+/** Parâmetro configurável por tenant. */
+export interface ModuleSetting {
+  readonly key: string;
+  readonly label: string;
+  readonly type: 'boolean' | 'number' | 'text';
+  readonly defaultValue: ModuleSettingValue;
+}
+
+/** Rota Angular de um módulo, relativa ao seu `basePath`. Sempre lazy. */
+export interface ModuleRouteDef {
+  readonly path: string;
+  readonly title: string;
+  readonly permission?: Permission;
+  readonly loadComponent: () => Promise<Type<unknown>>;
+}
+
+/** Manifesto tipado: tudo o que a plataforma precisa de saber sobre um módulo. */
+export interface ModuleManifest {
+  /** Identificador único e estável; é o que o backend referencia (ver `moduleId`). */
+  readonly id: string;
+  /** Código técnico legível, ex.: `crm.customers`. Prefixo das permissões e base do URL. */
+  readonly code: string;
+  readonly name: string;
+  readonly description: string;
+  readonly groupId: string;
+  readonly kind: ModuleKind;
+  readonly scope: ModuleScope;
+  readonly version: string;
+  readonly lifecycle: ModuleLifecycle;
+  /** Ids de módulos que têm de estar contratados e activos. */
+  readonly dependencies: readonly string[];
+  readonly permissions: readonly PermissionDefinition[];
+  /** Permissão mínima para entrar no módulo. */
+  readonly accessPermission: Permission;
+  readonly features: readonly ModuleFeature[];
+  readonly settings: readonly ModuleSetting[];
+  /** Vazio = ecrã provisório (scaffold) até o módulo ser implementado. */
+  readonly routes: readonly ModuleRouteDef[];
+  readonly icon: string;
+  /** Posição dentro do grupo (menor primeiro). */
+  readonly order: number;
+  readonly showInNavigation: boolean;
+  /** Feature flag que liga o módulo inteiro. */
+  readonly featureFlag?: string;
+  /** Segmento de URL dentro do tenant: `/t/:slug/<basePath>`. */
+  readonly basePath: string;
 }

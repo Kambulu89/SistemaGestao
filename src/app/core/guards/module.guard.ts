@@ -1,23 +1,11 @@
 import { inject } from '@angular/core';
 import { type CanActivateFn, Router } from '@angular/router';
-import { ModuleRegistryService } from '../modules/module-registry.service';
-import { PermissionService } from '../permissions/permission.service';
+import { TenantModulesService } from '../modules/tenant-modules.service';
 
-/** Só deixa entrar em `modules/:moduleId[/:section]` se o módulo estiver acessível. */
+/** Só deixa entrar numa rota de módulo (`data.moduleId`) se esse módulo estiver acessível. */
 export const moduleGuard: CanActivateFn = (route) => {
-  const registry = inject(ModuleRegistryService);
-  const permissions = inject(PermissionService);
-  const moduleId = route.paramMap.get('moduleId') ?? '';
-  const section = route.paramMap.get('section');
-
-  const manifest = registry.find(moduleId);
-  const sectionPermission = section
-    ? manifest?.routes.find((r) => r.path === section)?.permission
-    : undefined;
-
+  const moduleId = route.data['moduleId'] as string | undefined;
   const allowed =
-    registry.accessOf(moduleId) === 'accessible' &&
-    (!sectionPermission || permissions.can(sectionPermission));
-
+    moduleId !== undefined && inject(TenantModulesService).accessOf(moduleId) === 'accessible';
   return allowed || inject(Router).createUrlTree(['/auth/no-access']);
 };

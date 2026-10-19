@@ -1,21 +1,17 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TenantContextService } from '../../../core/tenant-context/tenant-context.service';
+import { TENANT_STATUS_LABELS } from '../../../core/modules/module-labels';
 import type { TenantStatus } from '../../../core/tenant-context/tenant.model';
-import { Badge, type Tone } from '../../../shared/ui/badge/badge';
+import { Badge } from '../../../shared/ui/badge/badge';
 import { Dropdown } from '../../../shared/ui/dropdown/dropdown';
-
-const STATUS_UI: Record<TenantStatus, { label: string; tone: Tone }> = {
-  active: { label: 'Activo', tone: 'success' },
-  trial: { label: 'Teste', tone: 'brand' },
-  suspended: { label: 'Suspenso', tone: 'danger' },
-};
 
 /** Alterna entre as organizações a que o utilizador pertence. */
 @Component({
   selector: 'app-tenant-switcher',
   imports: [Dropdown, RouterLink, Badge],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <app-dropdown label="Alterar organização" align="start">
       <span dropdownTrigger class="flex items-center gap-2">
@@ -61,6 +57,6 @@ export class TenantSwitcher {
   protected readonly memberships = this.tenantContext.memberships;
 
   protected status(status: TenantStatus) {
-    return STATUS_UI[status];
+    return TENANT_STATUS_LABELS[status];
   }
 }

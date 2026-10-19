@@ -15,6 +15,7 @@ import { UserMenu } from '../components/user-menu/user-menu';
   selector: 'app-platform-layout',
   imports: [RouterOutlet, Shell, SidebarNav, Breadcrumb, Badge, ThemeToggle, UserMenu],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <app-shell tone="inverse">
       <div shellBrand class="flex min-w-0 items-center gap-2">

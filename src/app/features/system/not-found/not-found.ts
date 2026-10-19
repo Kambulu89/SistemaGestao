@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
   selector: 'app-not-found',
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <section class="py-8 text-center">
       <p class="text-sm font-semibold text-brand-600 dark:text-brand-400">404</p>

@@ -1,60 +1,84 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
-import { ModuleRegistryService } from '../modules/module-registry.service';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
 import { loginAs, setupMockBackend } from '../testing/test-backend';
 import { NavigationService } from './navigation.service';
 
-async function labelsFor(slug: string): Promise<string[]> {
-  await firstValueFrom(TestBed.inject(ModuleRegistryService).ensureCatalog());
+async function nav(slug: string) {
   await firstValueFrom(TestBed.inject(TenantContextService).activate(slug));
-  return TestBed.inject(NavigationService)
-    .tenantNav()
-    .flatMap((g) => g.items.map((i) => i.label));
+  return TestBed.inject(NavigationService).tenantNav();
 }
+const labels = (groups: readonly { items: readonly { label: string }[] }[]) =>
+  groups.flatMap((g) => g.items.map((i) => i.label));
 
 describe('NavigationService', () => {
   beforeEach(() => setupMockBackend());
 
-  it('limits a Secretário to what is contracted, active, enabled AND permitted', async () => {
+  it('builds the Secretário menu from accessible modules only', async () => {
     await loginAs('multi@demo.pt');
-    // Escola: Financeiro está contratado mas o papel não o permite; RH está desactivado.
-    expect(await labelsFor('escola-horizonte')).toEqual([
+    expect(labels(await nav('escola-horizonte'))).toEqual([
       'Painel',
+      'Módulos',
       'Organização',
-      'CRM',
-      'Educação',
+      'Configurações',
+      'Clientes e contactos',
+      'Leads e oportunidades',
+      'Colaboradores e contratos',
+      'DMS e anexos',
+      'Calendário e agendamentos',
     ]);
   });
 
-  it('hides inactive modules and flagged-off features for an admin', async () => {
+  it('builds a different menu for the same user in another tenant', async () => {
     await loginAs('multi@demo.pt');
-    // Clínica: Financeiro inactivo; Formulários dinâmicos com a flag desligada.
-    expect(await labelsFor('clinica-vida')).toEqual([
+    expect(labels(await nav('clinica-vida'))).toEqual([
       'Painel',
+      'Módulos',
       'Organização',
       'Utilizadores',
+      'Permissões',
       'Configurações',
-      'CRM',
-      'Workflows',
-      'Saúde',
+      'Clientes e contactos',
+      'Leads e oportunidades',
+      'DMS e anexos',
+      'Calendário e agendamentos',
+      'Dashboards e KPI',
     ]);
   });
 
-  it('builds tenant links under /t/:slug', async () => {
+  it('groups module entries under the catalog groups, in catalog order', async () => {
     await loginAs('multi@demo.pt');
-    await labelsFor('escola-horizonte');
-    const paths = TestBed.inject(NavigationService)
-      .tenantNav()
-      .flatMap((g) => g.items.map((i) => i.path));
-    expect(paths).toContain('/t/escola-horizonte/modules/crm');
+    const groups = await nav('clinica-vida');
+    expect(groups.map((g) => g.label).filter(Boolean)).toEqual([
+      'CRM',
+      'Documentos',
+      'Agenda',
+      'Reporting',
+    ]);
+  });
+
+  it('links modules under /t/:slug/<basePath>', async () => {
+    await loginAs('multi@demo.pt');
+    const paths = (await nav('escola-horizonte')).flatMap((g) => g.items.map((i) => i.path));
+    expect(paths).toContain('/t/escola-horizonte/crm/customers');
+  });
+
+  it('never lists foundation capabilities as module entries', async () => {
+    await loginAs('escola@demo.pt');
+    const all = labels(await nav('escola-horizonte'));
+    expect(all).not.toContain('Autenticação');
+    expect(all).not.toContain('Auditoria e logs');
   });
 
   it('shows the platform menu to platform admins', async () => {
     await loginAs('plataforma@demo.pt');
-    const labels = TestBed.inject(NavigationService)
-      .platformNav()
-      .flatMap((g) => g.items.map((i) => i.label));
-    expect(labels).toEqual(['Painel', 'Tenants', 'Planos', 'Subscrições']);
+    expect(labels(TestBed.inject(NavigationService).platformNav())).toEqual([
+      'Painel',
+      'Tenants',
+      'Catálogo de módulos',
+      'Planos',
+      'Subscrições',
+      'Configurações',
+    ]);
   });
 });

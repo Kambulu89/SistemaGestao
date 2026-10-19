@@ -19,6 +19,7 @@ function safeReturnUrl(url: string | undefined): string {
   selector: 'app-login',
   imports: [ReactiveFormsModule, RouterLink, Alert, Button, Input],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <h1 class="text-xl font-bold tracking-tight">Entrar</h1>
     <p class="mt-1 text-sm text-fg-muted">Aceda à sua conta para continuar.</p>

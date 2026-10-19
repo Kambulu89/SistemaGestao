@@ -9,6 +9,7 @@ import { ThemeToggle } from '../components/theme-toggle/theme-toggle';
   selector: 'app-auth-layout',
   imports: [RouterOutlet, Card, ThemeToggle],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <div class="relative flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div class="absolute end-4 top-4"><app-theme-toggle /></div>

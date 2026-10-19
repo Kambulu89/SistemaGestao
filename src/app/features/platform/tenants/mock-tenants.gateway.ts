@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
 import type { Observable } from 'rxjs';
 import type { Page, PageRequest } from '../../../core/api/pagination.model';
-import { MOCK_TENANTS } from '../../../core/mock/mock-data';
+import { MOCK_SUBSCRIPTIONS, MOCK_TENANTS } from '../../../core/mock/mock-data';
 import { respond } from '../../../core/mock/mock-helpers';
-import type { Tenant, TenantStatus } from '../../../core/tenant-context/tenant.model';
-import { TenantsGateway } from './tenants.gateway';
+import type { TenantStatus } from '../../../core/tenant-context/tenant.model';
+import { TenantsGateway, type TenantSummary } from './tenants.gateway';
 
 const STATUSES: readonly TenantStatus[] = ['active', 'active', 'trial', 'suspended'];
 const PLANS = ['Starter', 'Business', 'Enterprise'] as const;
 
-const GENERATED: readonly Tenant[] = Array.from({ length: 24 }, (_, i) => {
+const GENERATED: readonly TenantSummary[] = Array.from({ length: 24 }, (_, i) => {
   const n = i + 1;
   return {
     id: `t-demo-${n}`,
@@ -26,9 +26,13 @@ const GENERATED: readonly Tenant[] = Array.from({ length: 24 }, (_, i) => {
 /** Ordenação e paginação em memória, a fazer no servidor quando houver backend. */
 @Injectable()
 export class MockTenantsGateway extends TenantsGateway {
-  list({ page, pageSize, sort }: PageRequest): Observable<Page<Tenant>> {
+  list({ page, pageSize, sort }: PageRequest): Observable<Page<TenantSummary>> {
     return respond(() => {
-      const all = [...MOCK_TENANTS, ...GENERATED];
+      const real = MOCK_TENANTS.map((t) => ({
+        ...t,
+        planName: MOCK_SUBSCRIPTIONS.find((s) => s.tenantId === t.id)?.planCode ?? '—',
+      }));
+      const all = [...real, ...GENERATED];
       if (sort) {
         const factor = sort.direction === 'asc' ? 1 : -1;
         all.sort(

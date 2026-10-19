@@ -7,6 +7,7 @@ import { Button } from '../../../shared/ui/button/button';
   selector: 'app-no-access',
   imports: [RouterLink, Button],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <section class="py-4 text-center">
       <h1 class="text-xl font-bold tracking-tight">Sem acesso</h1>

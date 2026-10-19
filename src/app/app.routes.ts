@@ -3,6 +3,8 @@ import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { homeRedirectGuard } from './core/guards/home-redirect.guard';
 import { platformGuard } from './core/guards/platform.guard';
 import { tenantGuard } from './core/guards/tenant.guard';
+import { ALL_MODULE_MANIFESTS } from './module-catalog';
+import { buildModuleRoutes } from './module-routes';
 
 const authLayout = () => import('./layouts/auth-layout/auth-layout').then((m) => m.AuthLayout);
 const notFound = () => import('./features/system/not-found/not-found').then((m) => m.NotFound);
@@ -53,7 +55,13 @@ export const routes: Routes = [
     runGuardsAndResolvers: 'paramsChange',
     loadComponent: () =>
       import('./layouts/tenant-layout/tenant-layout').then((m) => m.TenantLayout),
-    loadChildren: () => import('./features/tenant/tenant.routes').then((m) => m.TENANT_ROUTES),
+    // Páginas de administração + rotas lazy dos módulos geradas a partir dos manifestos.
+    loadChildren: () =>
+      import('./features/tenant/tenant.routes').then((m) => [
+        ...m.TENANT_ROUTES,
+        ...buildModuleRoutes(ALL_MODULE_MANIFESTS),
+        { path: '**', title: 'Página não encontrada', loadComponent: notFound },
+      ]),
   },
 
   {

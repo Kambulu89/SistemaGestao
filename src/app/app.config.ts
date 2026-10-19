@@ -19,7 +19,9 @@ import { PageTitleStrategy } from './core/config/page-title.strategy';
 import { ThemeService } from './core/config/theme.service';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
+import { MODULE_MANIFESTS } from './core/modules/module-manifests.token';
 import { provideMockBackend } from './core/mock/provide-mock-backend';
+import { ALL_MODULE_MANIFESTS } from './module-catalog';
 
 registerLocaleData(localePt);
 
@@ -35,6 +37,7 @@ export const appConfig: ApplicationConfig = {
     { provide: TitleStrategy, useClass: PageTitleStrategy },
     { provide: LOCALE_ID, useValue: 'pt-PT' },
     // Enquanto não houver backend, os contratos do core são servidos por adapters mock.
+    { provide: MODULE_MANIFESTS, useValue: ALL_MODULE_MANIFESTS },
     provideMockBackend(),
     // Instancia o tema no arranque para aplicar a classe `dark` de imediato.
     provideAppInitializer(() => {

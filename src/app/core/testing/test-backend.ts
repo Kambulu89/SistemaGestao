@@ -5,13 +5,21 @@ import { mockSettings } from '../mock/mock-helpers';
 import { MOCK_PASSWORD } from '../mock/mock-data';
 import { provideMockBackend } from '../mock/provide-mock-backend';
 import { provideRouter } from '@angular/router';
+import { ALL_MODULE_MANIFESTS } from '../../module-catalog';
+import { MODULE_MANIFESTS } from '../modules/module-manifests.token';
 
 /** Configura o TestBed com os adapters mock sem latência. */
 export function setupMockBackend(): void {
   mockSettings.latencyMs = 0;
   sessionStorage.clear();
   localStorage.clear();
-  TestBed.configureTestingModule({ providers: [provideRouter([]), provideMockBackend()] });
+  TestBed.configureTestingModule({
+    providers: [
+      provideRouter([]),
+      { provide: MODULE_MANIFESTS, useValue: ALL_MODULE_MANIFESTS },
+      provideMockBackend(),
+    ],
+  });
 }
 
 export async function loginAs(email: string): Promise<void> {

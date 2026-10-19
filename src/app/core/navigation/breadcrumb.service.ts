@@ -24,7 +24,9 @@ export class BreadcrumbService {
     for (let route: ActivatedRouteSnapshot | null = root; route; route = route.firstChild) {
       const segment = route.url.map((s) => s.path).join('/');
       if (segment) path += `/${segment}`;
-      const label = route.data['breadcrumb'] as string | undefined;
+      // Dados declarados na própria rota: `route.data` também inclui o herdado do pai (rotas filhas
+      // de caminho vazio), o que duplicaria a migalha.
+      const label = route.routeConfig?.data?.['breadcrumb'] as string | undefined;
       if (label) crumbs.push({ label, path });
     }
     return crumbs;

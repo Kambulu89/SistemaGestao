@@ -12,6 +12,7 @@ import { Input } from '../../../shared/ui/input/input';
   selector: 'app-forgot-password',
   imports: [ReactiveFormsModule, RouterLink, Alert, Button, Input],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
   template: `
     <h1 class="text-xl font-bold tracking-tight">Recuperar palavra-passe</h1>
     <p class="mt-1 text-sm text-fg-muted">
