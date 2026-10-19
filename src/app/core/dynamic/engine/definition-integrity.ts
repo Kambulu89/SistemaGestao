@@ -1,12 +1,13 @@
 import type { Condition } from '../models/condition.model';
 import { STATUS_KEY } from '../models/condition.model';
 import { SYSTEM_COLUMNS, type EntityDefinition } from '../models/entity-definition.model';
-import { hasOptions, type FieldDefinition } from '../models/field-definition.model';
+import { activeOptions, hasOptions, type FieldDefinition } from '../models/field-definition.model';
+import { fieldCapabilities } from './field-types';
 import type { FormItem } from '../models/form-definition.model';
 import type { ValidationRule } from '../models/validation-rule.model';
 import { conditionDepth, conditionFields, MAX_CONDITION_DEPTH } from './condition';
 import { ENTITY_OPERATIONS } from './entity-permissions';
-import { safeRegExp } from './validation';
+import { isMimePattern, safeRegExp } from './validation';
 
 export interface DefinitionIssue {
   readonly severity: 'error' | 'warning';
@@ -20,6 +21,7 @@ export interface IntegrityOptions {
   readonly knownEntityKeys?: ReadonlySet<string>;
 }
 
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ENTITY_KEY = /^[a-z][a-z0-9-]*$/;
 const FIELD_KEY = /^[a-z][a-zA-Z0-9]*$/;
 const CODE = /^[a-z][a-z0-9_-]*$/;
@@ -75,6 +77,25 @@ export function validateEntityDefinition(
     seen.add(field.key);
     if (!field.label.trim()) error(path, 'O campo precisa de um rótulo.');
 
+    // O tipo decide o que o campo pode fazer (pesquisar, ordenar, ter valor por omissão…).
+    const caps = fieldCapabilities(field.type);
+    if (field.defaultValue !== undefined && !caps.defaultValue)
+      error(path, `O tipo "${field.type}" não admite valor por omissão.`);
+    if (field.required && !caps.required)
+      error(path, `O tipo "${field.type}" não pode ser obrigatório.`);
+    if (field.searchable && !caps.searchable)
+      error(path, `O tipo "${field.type}" não suporta pesquisa.`);
+    if (field.filterable && !caps.filterable)
+      error(path, `O tipo "${field.type}" não suporta filtro.`);
+    if (field.sortable && !caps.sortable)
+      error(path, `O tipo "${field.type}" não suporta ordenação.`);
+    if (
+      field.sensitivity === 'sensitive' &&
+      !(field.permissions?.read && field.permissions?.write)
+    ) {
+      error(path, 'Dados sensíveis exigem permissões explícitas de leitura e de escrita.');
+    }
+
     if (hasOptions(field)) {
       if (field.options.length === 0) error(path, 'Indique pelo menos uma opção.');
       const values = field.options.map((o) => o.value);
@@ -89,7 +110,7 @@ export function validateEntityDefinition(
       if (defaults.some((d) => !values.includes(d)))
         error(path, 'O valor por omissão não é uma das opções.');
     }
-    if (field.type === 'reference') {
+    if (field.type === 'entity-reference') {
       if (!field.entityKey) error(path, 'Indique a entidade referenciada.');
       else if (options.knownEntityKeys && !options.knownEntityKeys.has(field.entityKey)) {
         error(path, `A entidade referenciada "${field.entityKey}" não existe.`);
@@ -135,15 +156,18 @@ export function validateEntityDefinition(
     if (!listable(c.field)) error(`list.columns[${i}]`, `Coluna desconhecida "${c.field}".`);
   });
   entity.list.searchFields.forEach((k) => {
-    if (!fieldKeys.has(k)) error('list.searchFields', `Campo de pesquisa desconhecido "${k}".`);
+    const f = fieldByKey.get(k);
+    if (!f) error('list.searchFields', `Campo de pesquisa desconhecido "${k}".`);
+    else if (!fieldCapabilities(f.type).searchable)
+      error('list.searchFields', `O campo "${k}" (${f.type}) não suporta pesquisa.`);
   });
   entity.list.filters.forEach((k) => {
     const field = fieldByKey.get(k);
     if (k === STATUS_KEY) {
       if (statusCodes.size === 0) error('list.filters', 'Filtro por estado sem estados definidos.');
     } else if (!field) error('list.filters', `Filtro desconhecido "${k}".`);
-    else if (!hasOptions(field) && field.type !== 'boolean')
-      error('list.filters', `O campo "${k}" não suporta filtro (use select ou boolean).`);
+    else if (!hasOptions(field) && field.type !== 'boolean' && field.type !== 'checkbox')
+      error('list.filters', `O campo "${k}" não suporta filtro (use lista, opções ou sim/não).`);
   });
   const sort = entity.list.defaultSort;
   if (sort && !listable(sort.field))
@@ -252,8 +276,8 @@ export function validateEntityDefinition(
           error(path, `${rule.type} só se aplica a campos numéricos.`);
         break;
       case 'unique':
-        if (!['text', 'email', 'phone', 'number'].includes(field.type))
-          error(path, 'unique só se aplica a texto, email, telefone ou número.');
+        if (!fieldCapabilities(field.type).unique)
+          error(path, `unique não se aplica ao tipo "${field.type}".`);
         break;
       default:
         break;

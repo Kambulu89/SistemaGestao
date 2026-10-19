@@ -1,4 +1,5 @@
 import type { Permission } from '../../permissions/permission.model';
+import type { DefinitionAudit } from './custom-definition.model';
 import type { Condition } from './condition.model';
 import type { FieldDefinition } from './field-definition.model';
 import type { FormDefinition } from './form-definition.model';
@@ -84,4 +85,11 @@ export interface EntityDefinition {
   readonly permissions: EntityPermissions;
   readonly audit: AuditConfig;
   readonly publishedAt?: string;
+  /**
+   * Só nas entidades nativas: aceita campos personalizados dos tenants. Os campos personalizados
+   * nunca alteram a definição nativa; são fundidos por tenant (ver `mergeCustomFields`).
+   */
+  readonly extensible?: boolean;
+  /** Rasto de criação/alteração (entidades personalizadas). */
+  readonly meta?: DefinitionAudit;
 }

@@ -101,7 +101,7 @@ const INPUT_TYPES: Partial<Record<FieldDefinition['type'], InputType>> = {
           [accept]="accept()"
         />
       }
-      @case ('reference') {
+      @case ('entity-reference') {
         <app-dynamic-reference-field
           [control]="control()"
           [entityKey]="referenceKey()"
@@ -156,6 +156,6 @@ export class DynamicField {
 
   protected readonly referenceKey = computed(() => {
     const f = this.field();
-    return f.type === 'reference' ? f.entityKey : '';
+    return f.type === 'entity-reference' ? f.entityKey : '';
   });
 }

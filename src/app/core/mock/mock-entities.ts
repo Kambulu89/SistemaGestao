@@ -9,6 +9,34 @@ import { moduleId } from '../modules/define-module';
 const DYNAMIC_MODULE = moduleId('configuration.forms');
 export const ATLAS_TENANT_ID = 't-atlas';
 
+// ------------------------------------------------------------ Cliente (nativa)
+
+/**
+ * Entidade nativa da plataforma (módulo CRM). É `extensible`: cada tenant pode acrescentar-lhe
+ * campos personalizados sem alterar esta definição, que é a mesma para todos.
+ */
+export const CUSTOMER_V1 = defineEntity({
+  key: 'customer',
+  scope: 'global',
+  tenantId: null,
+  moduleId: moduleId('crm.customers'),
+  version: 1,
+  extensible: true,
+  names: { singular: 'Cliente', plural: 'Clientes' },
+  description: 'Clientes e contactos (entidade nativa do CRM).',
+  icon: 'users',
+  fields: [
+    { type: 'text', key: 'nome', label: 'Nome', required: true, searchable: true },
+    { type: 'email', key: 'email', label: 'Email', searchable: true },
+    { type: 'phone', key: 'telefone', label: 'Telefone' },
+  ],
+  list: {
+    columns: [{ field: 'nome' }, { field: 'email' }, { field: 'telefone' }],
+    defaultSort: { field: 'nome', direction: 'asc' },
+    pageSize: 8,
+  },
+});
+
 // ------------------------------------------------------------------ Viatura
 
 const VEHICLE_FIELDS_V1: readonly FieldInput[] = [
@@ -220,7 +248,7 @@ export const DRIVER_V1 = defineEntity({
     { type: 'phone', key: 'telefone', label: 'Telefone' },
     { type: 'email', key: 'email', label: 'Email' },
     {
-      type: 'reference',
+      type: 'entity-reference',
       key: 'viatura',
       label: 'Viatura atribuída',
       entityKey: 'vehicle',

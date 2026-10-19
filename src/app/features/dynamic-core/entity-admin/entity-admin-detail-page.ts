@@ -307,7 +307,7 @@ export class EntityAdminDetailPage {
         );
         const extra = hasOptions(f)
           ? [`Opções: ${f.options.map((o) => o.label).join(', ')}`]
-          : f.type === 'reference'
+          : f.type === 'entity-reference'
             ? [`Referência a «${f.entityKey}»`]
             : [];
         const required = f.requiredWhen

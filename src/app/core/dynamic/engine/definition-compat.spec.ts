@@ -52,7 +52,10 @@ describe('definition versioning', () => {
     const messages = diffDefinitions(v1, v2)
       .filter((c) => c.severity === 'breaking')
       .map((c) => c.message);
-    expect(messages).toEqual(['Opções retiradas: b.', 'O tipo mudou de text para number.']);
+    expect(messages).toEqual([
+      'Opções retiradas: b. Desactive-as em vez de as remover.',
+      'O tipo mudou de text para number.',
+    ]);
   });
 
   it('warns when a field becomes required or a required field is added without default', () => {

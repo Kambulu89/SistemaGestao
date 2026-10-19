@@ -392,7 +392,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       if (value === null || value === undefined) continue;
       if (!this.hasValidType(field, value)) add(key, 'server', 'Valor inválido.');
       else if (
-        field.type === 'reference' &&
+        field.type === 'entity-reference' &&
         !this.bucket(tenantId, field.entityKey).some((r) => r.id === value)
       ) {
         add(key, 'server', 'A referência não existe.');
@@ -415,22 +415,20 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
     if (issues.length > 0) throw unprocessable(issues);
   }
 
+  /** Só o tipo do valor; a pertença às opções, o formato e os limites são do motor de validação. */
   private hasValidType(field: FieldDefinition, value: FieldValue): boolean {
     switch (field.type) {
       case 'number':
       case 'decimal':
       case 'currency':
+      case 'formula':
         return typeof value === 'number' && Number.isFinite(value);
       case 'boolean':
+      case 'checkbox':
         return typeof value === 'boolean';
       case 'multiselect':
-        return (
-          Array.isArray(value) &&
-          (value as readonly unknown[]).every((v) => field.options.some((o) => o.value === v))
-        );
-      case 'select':
-        return typeof value === 'string' && field.options.some((o) => o.value === value);
       case 'file':
+      case 'image':
         return Array.isArray(value);
       default:
         return typeof value === 'string';

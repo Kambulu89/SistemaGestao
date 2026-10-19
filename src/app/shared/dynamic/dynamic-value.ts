@@ -19,7 +19,7 @@ export class DynamicValue {
   private readonly referenceId = computed(() => {
     const f = this.field();
     const v = this.value();
-    return f.type === 'reference' && typeof v === 'string' && v
+    return f.type === 'entity-reference' && typeof v === 'string' && v
       ? { entityKey: f.entityKey, id: v }
       : null;
   });

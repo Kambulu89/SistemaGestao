@@ -186,7 +186,7 @@ describe('mock backend: validação de servidor (422)', () => {
       issuesOf(error)
         .map((i) => `${i.fieldKey}:${i.rule}`)
         .sort(),
-    ).toEqual(['combustivel:server', 'quilometragem:min', 'segredo:server']);
+    ).toEqual(['combustivel:type', 'quilometragem:min', 'segredo:server']);
 
     const driver = { nome: 'Rui', numeroCarta: 'L-9', categoria: 'B', validadeCarta: '2030-01-01' };
     expect(

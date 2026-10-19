@@ -57,6 +57,6 @@ describe('describeRule', () => {
   });
 
   it('labels every field type', () => {
-    expect(Object.keys(FIELD_TYPE_LABELS)).toHaveLength(14);
+    expect(Object.keys(FIELD_TYPE_LABELS)).toHaveLength(22);
   });
 });

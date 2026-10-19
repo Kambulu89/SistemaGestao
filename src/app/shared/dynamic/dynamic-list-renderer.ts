@@ -313,7 +313,7 @@ export class DynamicListRenderer {
     const items = this.result()?.items ?? [];
     return this.entity().list.columns.flatMap((c) => {
       const field = this.fields().get(c.field);
-      if (field?.type !== 'reference') return [];
+      if (field?.type !== 'entity-reference') return [];
       const ids = [
         ...new Set(
           items
@@ -348,7 +348,7 @@ export class DynamicListRenderer {
     const field = this.fields().get(key);
     if (!field) return '—';
     const value = record.data[key];
-    if (field.type === 'reference' && typeof value === 'string' && value) {
+    if (field.type === 'entity-reference' && typeof value === 'string' && value) {
       return this.referenceLabels.value()?.get(`${field.entityKey}:${value}`) ?? '…';
     }
     return formatFieldValue(field, value);

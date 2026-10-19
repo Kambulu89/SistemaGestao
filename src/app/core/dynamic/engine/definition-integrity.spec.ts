@@ -79,7 +79,7 @@ describe('validateEntityDefinition', () => {
 
   it('checks reference targets only when the known keys are given', () => {
     const entity = base({
-      fields: [{ type: 'reference', key: 'r', label: 'R', entityKey: 'ghost' }],
+      fields: [{ type: 'entity-reference', key: 'r', label: 'R', entityKey: 'ghost' }],
     });
     expect(validateEntityDefinition(entity)).toEqual([]);
     expect(
@@ -146,7 +146,7 @@ describe('validateEntityDefinition', () => {
           fields: [{ type: 'boolean', key: 'a', label: 'A', validations: [{ type: 'unique' }] }],
         }),
       ),
-    ).toContain('unique só se aplica');
+    ).toContain('unique não se aplica');
   });
 
   it('checks forms, list and audit references', () => {

@@ -12,7 +12,7 @@ export function recordLabel(
 ): string {
   for (const column of entity.list.columns) {
     const field = entity.fields.find((f) => f.key === column.field);
-    if (field && field.type !== 'reference') {
+    if (field && field.type !== 'entity-reference') {
       const text = formatFieldValue(field, record.data[field.key]);
       if (text !== '—') return text;
     }

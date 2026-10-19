@@ -12,6 +12,7 @@ import type { SemanticColor, StatusDefinition } from '../models/status.model';
 import type { EntityValidationRule } from '../models/validation-rule.model';
 import type { WorkflowDefinition } from '../models/workflow.model';
 import { defaultEntityPermissions } from './entity-permissions';
+import { fieldCapabilities } from './field-types';
 
 type Defaulted =
   | 'required'
@@ -65,6 +66,9 @@ export interface EntityInput {
   readonly policies?: readonly EntityPolicy[];
   readonly audit?: AuditConfig;
   readonly publishedAt?: string;
+  /** Entidade nativa que aceita campos personalizados dos tenants. */
+  readonly extensible?: boolean;
+  readonly meta?: EntityDefinition['meta'];
 }
 
 /** Listagem gerada a partir dos campos: primeiras colunas, pesquisáveis e filtráveis. */
@@ -107,7 +111,7 @@ export function defineEntity(input: EntityInput): EntityDefinition {
         validations: [],
         searchable: false,
         filterable: false,
-        sortable: true,
+        sortable: fieldCapabilities(f.type).sortable,
         ...f,
         order: f.order ?? (index + 1) * 10,
       }) as FieldDefinition,
@@ -155,5 +159,7 @@ export function defineEntity(input: EntityInput): EntityDefinition {
     },
     audit: input.audit ?? { enabled: true, trackedFields: 'all' },
     publishedAt: input.publishedAt,
+    extensible: input.extensible,
+    meta: input.meta,
   };
 }

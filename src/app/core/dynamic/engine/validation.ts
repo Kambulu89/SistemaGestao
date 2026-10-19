@@ -1,6 +1,10 @@
 import type { CompareOperator, ValidationRule } from '../models/validation-rule.model';
 import type { EntityDefinition } from '../models/entity-definition.model';
-import type { FieldDefinition, FieldValue } from '../models/field-definition.model';
+import {
+  type FieldDefinition,
+  type FieldValue,
+  type FileValue,
+} from '../models/field-definition.model';
 import type { FormMode } from '../models/form-definition.model';
 import type { ValidationIssue } from '../models/validation-issue.model';
 import {
@@ -90,6 +94,84 @@ function compareHolds(operator: CompareOperator, cmp: number): boolean {
   }
 }
 
+/** Número de casas decimais de um número, sem erros de vírgula flutuante (usa a forma textual). */
+export function decimalPlaces(value: number): number {
+  const text = String(value);
+  if (text.includes('e-'))
+    return Number(text.split('e-')[1]) + (text.split('e-')[0]!.split('.')[1]?.length ?? 0);
+  return text.split('.')[1]?.length ?? 0;
+}
+
+const MIME = /^[a-z0-9.+-]+\/([a-z0-9.+-]+|\*)$/i;
+
+export const isMimePattern = (pattern: string): boolean => MIME.test(pattern);
+
+/** `image/*` aceita qualquer `image/…`; `application/pdf` só esse tipo. */
+export function mimeAccepted(contentType: string, accept: readonly string[]): boolean {
+  return accept.some((pattern) =>
+    pattern.endsWith('/*') ? contentType.startsWith(pattern.slice(0, -1)) : contentType === pattern,
+  );
+}
+
+const DEFAULT_IMAGE_ACCEPT = ['image/*'] as const;
+
+function fileIssues(field: FieldDefinition, files: readonly FileValue[]): string[] {
+  if (field.type !== 'file' && field.type !== 'image') return [];
+  const accept = field.accept ?? (field.type === 'image' ? DEFAULT_IMAGE_ACCEPT : undefined);
+  const messages: string[] = [];
+  if (!field.multiple && files.length > 1) messages.push('Só é permitido um ficheiro.');
+  for (const file of files) {
+    if (accept && !mimeAccepted(file.contentType, accept)) {
+      messages.push(`"${file.name}": tipo de ficheiro não permitido.`);
+    }
+    if (field.maxSizeBytes !== undefined && file.size > field.maxSizeBytes) {
+      messages.push(`"${file.name}": excede o tamanho máximo permitido.`);
+    }
+  }
+  return messages;
+}
+
+/** Validações inerentes ao tipo do campo (formato, precisão, opções, ficheiros). */
+function typeIssues(field: FieldDefinition, value: FieldValue): string[] {
+  switch (field.type) {
+    case 'url':
+      try {
+        const url = new URL(String(value));
+        return url.protocol === 'http:' || url.protocol === 'https:'
+          ? []
+          : ['O endereço tem de começar por http:// ou https://.'];
+      } catch {
+        return ['Introduza um endereço web válido.'];
+      }
+    case 'decimal':
+    case 'currency': {
+      const scale = field.type === 'currency' ? (field.scale ?? 2) : field.scale;
+      return typeof value === 'number' && scale !== undefined && decimalPlaces(value) > scale
+        ? [`No máximo ${scale} casas decimais.`]
+        : [];
+    }
+    case 'number':
+      return typeof value === 'number' && !Number.isInteger(value)
+        ? ['Indique um número inteiro.']
+        : [];
+    case 'select':
+    case 'radio':
+      return typeof value === 'string' && !field.options.some((o) => o.value === value)
+        ? ['Opção inválida.']
+        : [];
+    case 'multiselect':
+      return Array.isArray(value) &&
+        (value as readonly string[]).some((v) => !field.options.some((o) => o.value === v))
+        ? ['Opção inválida.']
+        : [];
+    case 'file':
+    case 'image':
+      return Array.isArray(value) ? fileIssues(field, value as readonly FileValue[]) : [];
+    default:
+      return [];
+  }
+}
+
 export interface ValidateFieldOptions {
   /** Obrigatoriedade já resolvida (estática ou condicional). */
   readonly required: boolean;
@@ -111,6 +193,13 @@ export function validateField(
     rule: rule.type,
     message: rule.message ?? fallback,
   });
+
+  // Numa caixa de marcação, "obrigatório" significa "tem de estar marcada".
+  if (field.type === 'checkbox') {
+    return options.required && value !== true
+      ? [{ fieldKey: field.key, rule: 'required', message: 'Tem de marcar esta opção.' }]
+      : [];
+  }
 
   if (isEmptyValue(value)) {
     const explicit = applicable.find((r) => r.type === 'required');
@@ -175,6 +264,9 @@ export function validateField(
       case 'unique':
         break;
     }
+  }
+  for (const message of typeIssues(field, value as FieldValue)) {
+    issues.push({ fieldKey: field.key, rule: 'type', message });
   }
   return issues;
 }

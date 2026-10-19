@@ -34,12 +34,14 @@ export function formatFieldValue(
 
   switch (field.type) {
     case 'boolean':
+    case 'checkbox':
       return value === true ? 'Sim' : 'Não';
     case 'number':
       return typeof value === 'number'
         ? new Intl.NumberFormat(locale).format(value)
         : String(value);
     case 'decimal':
+    case 'formula':
       return typeof value === 'number'
         ? new Intl.NumberFormat(locale, {
             minimumFractionDigits: field.scale ?? 0,
@@ -65,6 +67,7 @@ export function formatFieldValue(
           )
         : String(value);
     case 'file':
+    case 'image':
       return (value as readonly { name: string }[]).map((f) => f.name).join(', ');
     default:
       return String(value);

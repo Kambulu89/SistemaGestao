@@ -2,24 +2,13 @@ import type { Condition, ConditionScalar } from '../models/condition.model';
 import { STATUS_KEY } from '../models/condition.model';
 import type { EntityDefinition } from '../models/entity-definition.model';
 import { hasOptions, type FieldType } from '../models/field-definition.model';
+import { FIELD_TYPE_CATALOG } from './field-types';
 import type { CompareOperator, ValidationRule } from '../models/validation-rule.model';
 
-export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
-  text: 'Texto',
-  textarea: 'Texto longo',
-  number: 'Número',
-  decimal: 'Decimal',
-  boolean: 'Sim/Não',
-  date: 'Data',
-  datetime: 'Data e hora',
-  email: 'Email',
-  phone: 'Telefone',
-  select: 'Lista',
-  multiselect: 'Lista múltipla',
-  currency: 'Moeda',
-  file: 'Ficheiro',
-  reference: 'Referência',
-};
+/** Rótulos dos tipos, derivados do catálogo de tipos (única fonte de verdade). */
+export const FIELD_TYPE_LABELS = Object.fromEntries(
+  FIELD_TYPE_CATALOG.map((t) => [t.type, t.label]),
+) as Record<FieldType, string>;
 
 const OPERATOR_SYMBOLS = { eq: '=', neq: '≠', gt: '>', gte: '≥', lt: '<', lte: '≤' } as const;
 const COMPARE_TEXT: Record<CompareOperator, string> = {
