@@ -26,7 +26,7 @@ describe('tenant pages', () => {
     expect(el.querySelector('h1')?.textContent).toContain('Escola Horizonte');
     expect(el.textContent).toContain('business');
     expect(el.textContent).toContain('Secretário');
-    expect(el.textContent).toContain('7 regras de permissão');
+    expect(el.textContent).toContain('10 regras de permissão');
     expect(el.textContent).toContain('62 / 100');
     expect(el.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('62');
   });

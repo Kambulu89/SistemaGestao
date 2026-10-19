@@ -8,7 +8,6 @@ import { compareScalars, isEmptyValue } from '../dynamic/engine/condition';
 import { evaluateOperation } from '../dynamic/engine/entity-permissions';
 import { fieldAccessFromPermissions } from '../dynamic/engine/field-state';
 import { formatFieldValue } from '../dynamic/engine/format-value';
-import { resolvePublished } from '../dynamic/engine/resolve-definitions';
 import { recordLabel } from '../dynamic/engine/record-label';
 import { validateRecordData } from '../dynamic/engine/validation';
 import { applyTransition, initialStatus } from '../dynamic/engine/workflow';
@@ -36,7 +35,7 @@ import type {
 import { TenantModulesService } from '../modules/tenant-modules.service';
 import { PermissionService } from '../permissions/permission.service';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
-import { MOCK_ENTITY_DEFINITIONS } from './mock-entities';
+import { MockMetadataStore } from './mock-metadata-store';
 import { MOCK_ENTITY_RECORDS } from './mock-entity-records';
 import { mockSettings } from './mock-helpers';
 
@@ -69,6 +68,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
   private readonly auth = inject(AuthService);
   private readonly permissions = inject(PermissionService);
   private readonly modules = inject(TenantModulesService);
+  private readonly store = inject(MockMetadataStore);
 
   private readonly records = new Map<string, EntityRecord[]>(); // `${tenantId}:${entityKey}`
   private readonly audits = new Map<string, AuditEntry[]>(); // `${tenantId}:${entityKey}:${id}`
@@ -89,11 +89,17 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       const { tenantId, entity } = this.resolve(entityKey);
       this.require(entity, 'read');
 
+      this.assertQueryable(entity, query);
       let items = [...this.bucket(tenantId, entityKey)];
       if (query.search?.trim()) {
         const needle = normalize(query.search);
+        const access = fieldAccessFromPermissions((p) => this.permissions.can(p));
+        const searchable = entity.list.searchFields.filter((k) => {
+          const f = entity.fields.find((x) => x.key === k);
+          return !!f && access.canRead(f);
+        });
         items = items.filter((r) =>
-          entity.list.searchFields.some((k) => normalize(String(r.data[k] ?? '')).includes(needle)),
+          searchable.some((k) => normalize(String(r.data[k] ?? '')).includes(needle)),
         );
       }
       for (const [key, value] of Object.entries(query.filters ?? {})) {
@@ -166,7 +172,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
         changed: Object.keys(input.data),
       });
 
-      const data = this.clean(entity, merged);
+      const data = { ...this.preserved(entity, record.data), ...this.clean(entity, merged) };
       const changes = this.diff(entity, record.data, data);
       if (changes.length === 0) return record;
 
@@ -259,13 +265,23 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
     const tenantId = this.tenantContext.tenant()?.id;
     if (!tenantId) throw fail(403, 'Sem tenant activo.');
 
-    const entity = resolvePublished(MOCK_ENTITY_DEFINITIONS, tenantId).find(
-      (d) => d.key === entityKey,
-    );
+    const entity = this.store.effective(tenantId).find((d) => d.key === entityKey);
     if (!entity || (entity.moduleId !== null && !this.modules.isAvailable(entity.moduleId))) {
       throw fail(404, 'Entidade não encontrada.');
     }
     return { tenantId, entity };
+  }
+
+  /** Filtros e ordenação só podem usar campos que o utilizador pode ler (não vazam valores). */
+  private assertQueryable(entity: EntityDefinition, query: RecordQuery): void {
+    const access = fieldAccessFromPermissions((p) => this.permissions.can(p));
+    const builtin = new Set(['status', 'createdAt', 'updatedAt']);
+    const keys = [...Object.keys(query.filters ?? {}), ...(query.sort ? [query.sort.key] : [])];
+    for (const key of keys) {
+      if (builtin.has(key)) continue;
+      const field = entity.fields.find((f) => f.key === key);
+      if (!field || !access.canRead(field)) throw fail(403, 'Sem permissão para este campo.');
+    }
   }
 
   private find(entityKey: string, id: string) {
@@ -312,7 +328,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
     const data = Object.fromEntries(
       Object.entries(record.data).filter(([key]) => {
         const field = entity.fields.find((f) => f.key === key);
-        return !field || access.canRead(field);
+        return !!field && access.canRead(field);
       }),
     );
     return { ...record, data };
@@ -323,6 +339,12 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
     return Object.fromEntries(
       Object.entries(data).filter(([k, v]) => known.has(k) && v !== undefined),
     );
+  }
+
+  /** Dados de campos que já não estão em vigor (arquivados): nunca se perdem ao gravar. */
+  private preserved(entity: EntityDefinition, data: RecordData): RecordData {
+    const known = new Set(entity.fields.map((f) => f.key));
+    return Object.fromEntries(Object.entries(data).filter(([k]) => !known.has(k)));
   }
 
   private matches(record: EntityRecord, key: string, value: string): boolean {

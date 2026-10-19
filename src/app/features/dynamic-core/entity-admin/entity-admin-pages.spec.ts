@@ -35,15 +35,15 @@ describe('Core Dinâmico: administração (só leitura)', () => {
     const rows = [...el.querySelectorAll('tbody tr')].map((r) =>
       r.textContent?.replace(/\s+/g, ' ').trim(),
     );
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     expect(rows.find((r) => r?.startsWith('Viaturas'))).toContain('v2');
     expect(rows.find((r) => r?.startsWith('Notas'))).toContain('Global');
     expect(rows.every((r) => r?.includes('Íntegra'))).toBe(true);
   });
 
-  it('another tenant only sees the global entity', async () => {
+  it('another tenant only sees the global entities', async () => {
     const el = await render(EntityAdminListPage, 'escola@demo.pt', 'escola-horizonte');
-    expect([...el.querySelectorAll('tbody tr')]).toHaveLength(1);
+    expect([...el.querySelectorAll('tbody tr')]).toHaveLength(2); // Clientes + Notas
     expect(el.textContent).toContain('Notas');
     expect(el.textContent).not.toContain('Viaturas');
   });

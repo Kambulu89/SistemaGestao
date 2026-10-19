@@ -71,6 +71,21 @@ export interface EntityInput {
   readonly meta?: EntityDefinition['meta'];
 }
 
+/** Completa um campo com os valores por omissão do tipo (visível, editável, ordenável se o tipo o permite…). */
+export function defineField(input: FieldInput, index = 0): FieldDefinition {
+  return {
+    required: false,
+    visible: true,
+    editable: true,
+    validations: [],
+    searchable: false,
+    filterable: false,
+    sortable: fieldCapabilities(input.type).sortable,
+    ...input,
+    order: input.order ?? (index + 1) * 10,
+  } as FieldDefinition;
+}
+
 /** Listagem gerada a partir dos campos: primeiras colunas, pesquisáveis e filtráveis. */
 export function generateDefaultList(
   fields: readonly FieldDefinition[],
@@ -102,20 +117,7 @@ export function defineEntity(input: EntityInput): EntityDefinition {
   const tenantId = input.tenantId ?? null;
   const version = input.version ?? 1;
 
-  const fields = input.fields.map(
-    (f, index) =>
-      ({
-        required: false,
-        visible: true,
-        editable: true,
-        validations: [],
-        searchable: false,
-        filterable: false,
-        sortable: fieldCapabilities(f.type).sortable,
-        ...f,
-        order: f.order ?? (index + 1) * 10,
-      }) as FieldDefinition,
-  );
+  const fields = input.fields.map((f, index) => defineField(f, index));
 
   const statuses: StatusDefinition[] = (input.statuses ?? []).map((s, index) => ({
     id: `${input.key}:status:${s.code}`,

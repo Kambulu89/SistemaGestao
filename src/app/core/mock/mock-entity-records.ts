@@ -57,7 +57,32 @@ const vehicle = (
     { status, definitionVersion: numeroChassis ? 2 : 1 },
   );
 
+const customer = (tenantId: string, data: RecordData) =>
+  seed(tenantId, 'customer', data, { definitionVersion: 1, actor: 'u-admin' });
+
 export const MOCK_ENTITY_RECORDS: readonly EntityRecord[] = [
+  customer(ESCOLA, {
+    nome: 'Colégio Santa Maria',
+    email: 'geral@santamaria.example',
+    sectorActividade: 'educacao',
+    nifSecundario: '501234567',
+    categoriaCliente: 'A',
+    dataRenovacao: '2027-01-15',
+  }),
+  customer(ESCOLA, { nome: 'Clínica do Parque', sectorActividade: 'saude', categoriaCliente: 'B' }),
+  customer(ESCOLA, {
+    nome: 'Papelaria Central',
+    telefone: '+351 213 000 111',
+    sectorActividade: 'comercio',
+    faxAntigo: '213 000 112',
+  }),
+  customer(ESCOLA, { nome: 'Academia Delta', sectorActividade: 'educacao', categoriaCliente: 'C' }),
+  customer(ATLAS, { nome: 'Logística Norte', regiaoComercial: 'norte', codigoInterno: 'LN-01' }),
+  customer(ATLAS, { nome: 'Armazéns do Sul', regiaoComercial: 'sul', codigoInterno: 'AS-02' }),
+  customer(ATLAS, { nome: 'Cimentos Centro', regiaoComercial: 'centro' }),
+  customer('t-clinica', { nome: 'Paciente Exemplo', email: 'paciente@example.pt' }),
+  customer('t-clinica', { nome: 'Seguradora Vida' }),
+
   vehicle('AA-11-BB', 'Volvo', 'FH 500', 'gasoleo', 12500, 'available', 'YV2RT40A9KB123456'),
   vehicle('CC-22-DD', 'Scania', 'R450', 'gasoleo', 88000, 'maintenance'),
   vehicle('EE-33-FF', 'MAN', 'TGX', 'gasoleo', 150000, 'available'),

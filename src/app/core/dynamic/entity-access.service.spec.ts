@@ -46,11 +46,16 @@ describe('EntityAccessService', () => {
 
   it('lists only the entities the user may read', async () => {
     const operator = await enter('operador@demo.pt', 'transportes-atlas');
-    expect(operator.access.readable().map((e) => e.key)).toEqual(['driver', 'note', 'vehicle']);
+    expect(operator.access.readable().map((e) => e.key)).toEqual([
+      'customer',
+      'driver',
+      'note',
+      'vehicle',
+    ]);
   });
 
   it('shows nothing to a user whose role has no entity permissions', async () => {
-    const { access } = await enter('multi@demo.pt', 'escola-horizonte'); // Secretário
+    const { access } = await enter('plataforma@demo.pt', 'escola-horizonte'); // suporte, sem entidades
     expect(access.readable()).toEqual([]);
   });
 
@@ -59,11 +64,11 @@ describe('EntityAccessService', () => {
     const note = registry.find('note')!;
     expect(access.isAvailable(note)).toBe(false);
     expect(access.check(note, 'read')).toEqual({ allowed: false, denied: 'module' });
-    expect(access.readable()).toEqual([]);
+    expect(access.readable().map((e) => e.key)).toEqual(['customer']); // o módulo CRM está contratado
   });
 
   it('shares global entities with tenants that have the module', async () => {
     const { access } = await enter('escola@demo.pt', 'escola-horizonte');
-    expect(access.readable().map((e) => e.key)).toEqual(['note']);
+    expect(access.readable().map((e) => e.key)).toEqual(['customer', 'note']);
   });
 });

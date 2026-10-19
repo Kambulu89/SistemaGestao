@@ -21,6 +21,7 @@ describe('DynamicEntityRegistryService', () => {
   it('resolves the published definitions of the active tenant (global + own)', async () => {
     const registry = await enter('frota@demo.pt', 'transportes-atlas');
     expect(registry.published().map((d) => d.names.plural)).toEqual([
+      'Clientes',
       'Condutores',
       'Notas',
       'Viaturas',
@@ -38,7 +39,7 @@ describe('DynamicEntityRegistryService', () => {
 
   it('isolates tenants: another tenant only gets the global entities', async () => {
     const registry = await enter('escola@demo.pt', 'escola-horizonte');
-    expect(registry.published().map((d) => d.key)).toEqual(['note']);
+    expect(registry.published().map((d) => d.key)).toEqual(['customer', 'note']);
     expect(registry.find('vehicle')).toBeUndefined();
     expect(registry.versionsOf('vehicle')).toEqual([]);
   });
@@ -50,12 +51,12 @@ describe('DynamicEntityRegistryService', () => {
 
     await firstValueFrom(ctx.activate('escola-horizonte'));
     await firstValueFrom(registry.ensureLoaded());
-    expect(registry.published()).toHaveLength(1);
+    expect(registry.published()).toHaveLength(2);
 
     await firstValueFrom(ctx.activate('clinica-vida'));
     expect(registry.published()).toEqual([]); // ainda não carregadas para este tenant
     await firstValueFrom(registry.ensureLoaded());
-    expect(registry.published().map((d) => d.key)).toEqual(['note']);
+    expect(registry.published().map((d) => d.key)).toEqual(['customer', 'note']);
   });
 
   it('ignores definitions of another tenant even if the server returns them', async () => {

@@ -24,6 +24,7 @@ describe('NavigationService', () => {
       'Módulos',
       'Organização',
       'Configurações',
+      'Clientes',
       'Clientes e contactos',
       'Leads e oportunidades',
       'Colaboradores e contratos',
@@ -41,6 +42,7 @@ describe('NavigationService', () => {
       'Utilizadores',
       'Permissões',
       'Configurações',
+      'Clientes',
       'Clientes e contactos',
       'Leads e oportunidades',
       'DMS e anexos',
@@ -53,6 +55,7 @@ describe('NavigationService', () => {
     await loginAs('multi@demo.pt');
     const groups = await nav('clinica-vida');
     expect(groups.map((g) => g.label).filter(Boolean)).toEqual([
+      'Dados',
       'CRM',
       'Documentos',
       'Agenda',
@@ -79,6 +82,7 @@ describe('NavigationService', () => {
     const data = groups.find((g) => g.id === 'data');
     expect(data?.label).toBe('Dados');
     expect(data?.items.map((i) => [i.label, i.path])).toEqual([
+      ['Clientes', '/t/transportes-atlas/data/customer'],
       ['Condutores', '/t/transportes-atlas/data/driver'],
       ['Notas', '/t/transportes-atlas/data/note'],
       ['Viaturas', '/t/transportes-atlas/data/vehicle'],
@@ -86,7 +90,7 @@ describe('NavigationService', () => {
   });
 
   it('shows no "Dados" group when the role grants no entity access', async () => {
-    await loginAs('multi@demo.pt');
+    await loginAs('plataforma@demo.pt');
     expect((await nav('escola-horizonte')).some((g) => g.id === 'data')).toBe(false);
   });
 

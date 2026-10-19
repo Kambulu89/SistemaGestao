@@ -316,4 +316,10 @@ export const NOTE_V1 = defineEntity({
 });
 
 /** Todas as definições do "servidor" mock. O gateway filtra por tenant, como faria o backend. */
-export const MOCK_ENTITY_DEFINITIONS = [NOTE_V1, VEHICLE_V1, VEHICLE_V2, DRIVER_V1] as const;
+export const MOCK_ENTITY_DEFINITIONS = [
+  CUSTOMER_V1,
+  NOTE_V1,
+  VEHICLE_V1,
+  VEHICLE_V2,
+  DRIVER_V1,
+] as const;
