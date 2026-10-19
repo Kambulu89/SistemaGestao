@@ -137,7 +137,7 @@ core/mock/         definições e repositório mock (simula o BACKEND, não o fr
 
 | Peça                                                                                                                             | Responsabilidade                                                                                                                                 |
 | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `EntityDefinition`, `FieldDefinition` (união discriminada, 14 tipos), `FormDefinition`, `StatusDefinition`, `WorkflowDefinition` | metadados versionados (`draft → published → archived`), âmbito `global` ou `tenant`                                                              |
+| `EntityDefinition`, `FieldDefinition` (união discriminada, 22 tipos), `FormDefinition`, `StatusDefinition`, `WorkflowDefinition` | metadados versionados (`draft → published → archived`), âmbito `global` ou `tenant`                                                              |
 | `Condition`                                                                                                                      | gramática declarativa única (`eq/in/and/or/not…`) para visibilidade, obrigatoriedade, validações, transições e políticas. Nunca código do tenant |
 | motor de validação                                                                                                               | regras executáveis no cliente; `unique` é decidida só pelo servidor; padrões protegidos contra ReDoS                                             |
 | `evaluateOperation`                                                                                                              | RBAC (permissões `entities.<chave>.<op>` do IAM existente) + ABAC (políticas "negar quando…")                                                    |
@@ -153,9 +153,21 @@ core/mock/         definições e repositório mock (simula o BACKEND, não o fr
 
 Híbrida: tabelas relacionais para o estrutural; definições versionadas em tabela própria; atributos configuráveis em `JSONB` com índices GIN/expressão nos campos pesquisáveis; `tenant_id` em todas as linhas com row-level security; auditoria append-only. A stack do backend tem de ser decidida antes de implementar.
 
+### Custom Fields e entidades dinâmicas
+
+Extensão do mesmo núcleo (sem segundo motor, registo ou sistema de permissões); documentação completa, contratos de API e DDL PostgreSQL em [`docs/custom-fields-e-entidades.md`](docs/custom-fields-e-entidades.md).
+
+- **Campos personalizados por tenant** em entidades nativas `extensible` (ex.: Cliente): `CustomFieldDefinition` → `mergeCustomFields` → o registo devolve uma `EntityDefinition` normal; um tenant nunca vê os campos de outro.
+- **Entidades criadas pelo tenant** só com metadados (designer em Configuração → Core Dinâmico → *Nova entidade*): formulários, listagens, pesquisa, filtros, permissões `entities.<chave>.*`, auditoria e menu «Dados» são gerados.
+- **22 tipos** com capacidades por tipo (`FIELD_TYPE_CATALOG`): inclui moeda com precisão, fórmulas declarativas (aritmética decimal exacta, sem JS, ciclos detectados), valores relacionados com as permissões do alvo, numeração automática atribuída pelo servidor, referência a entidade/utilizador, ficheiro/imagem.
+- **Versões**: rascunho → publicado → arquivado; alterações destrutivas bloqueiam a publicação; arquivar nunca apaga dados.
+- **Permissões** `configuration.forms.read | manage | publish`; campos `sensitive` exigem permissões explícitas de leitura/escrita e o servidor nunca devolve o que o utilizador não pode ler.
+
+Demonstração: `escola@demo.pt` (admin da Escola Horizonte) e `frota@demo.pt` (Transportes Atlas) têm campos personalizados **diferentes** em *Clientes*; em *Core Dinâmico → Nova entidade* cria-se, por exemplo, um *Equipamento* e aparece logo em «Dados».
+
 ### Demonstração
 
-`frota@demo.pt` (admin) e `operador@demo.pt` (permissões limitadas) nos Transportes Atlas: Viaturas (v1→v2), Condutores (regras condicionais, referência) e Notas (global). A Escola vê só Notas.
+`frota@demo.pt` (admin) e `operador@demo.pt` (permissões limitadas) nos Transportes Atlas: Viaturas (v1→v2), Condutores (regras condicionais, referência) e Notas (global). A Escola vê Clientes (com os seus campos personalizados) e Notas.
 
 ## Acrescentar um módulo (sem tocar no core)
 

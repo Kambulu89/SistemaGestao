@@ -614,3 +614,122 @@ describe('Fórmulas e dados sensíveis', () => {
     expect(denied.status).toBe(403);
   });
 });
+
+describe('Casos B e C: Viatura criada e alterada só por metadados', () => {
+  beforeEach(() => setupMockBackend());
+
+  const VIATURA_V1: SaveEntityDraftInput = {
+    key: 'viatura',
+    names: { singular: 'Viatura', plural: 'Viaturas' },
+    icon: 'cube',
+    expectedVersion: null,
+    fields: [
+      defineField({
+        type: 'text',
+        key: 'matricula',
+        label: 'Matrícula',
+        required: true,
+        searchable: true,
+        validations: [{ type: 'unique' }, { type: 'maxLength', value: 15 }],
+      }),
+      defineField({ type: 'text', key: 'marca', label: 'Marca', required: true, searchable: true }),
+      defineField({ type: 'text', key: 'modelo', label: 'Modelo' }),
+      defineField({
+        type: 'select',
+        key: 'combustivel',
+        label: 'Combustível',
+        filterable: true,
+        options: [
+          { value: 'gasoleo', label: 'Gasóleo' },
+          { value: 'eletrico', label: 'Eléctrico' },
+        ],
+      }),
+      defineField({
+        type: 'number',
+        key: 'quilometragem',
+        label: 'Quilometragem',
+        validations: [{ type: 'min', value: 0 }],
+      }),
+      defineField({
+        type: 'select',
+        key: 'estado',
+        label: 'Estado',
+        filterable: true,
+        options: [
+          { value: 'disponivel', label: 'Disponível' },
+          { value: 'manutencao', label: 'Em manutenção' },
+        ],
+      }),
+    ],
+  };
+
+  it('caso B: the platform generates form, list and validations from the metadata', async () => {
+    const { registry, records } = await enter('escola@demo.pt', 'escola-horizonte'); // um tenant sem viaturas
+    expect(registry.find('viatura')).toBeUndefined();
+    await firstValueFrom(registry.saveDraft(VIATURA_V1));
+    await firstValueFrom(registry.publish('viatura'));
+
+    const viatura = registry.find('viatura')!;
+    expect(viatura.list.columns.map((c) => c.field)).toEqual([
+      'matricula',
+      'marca',
+      'modelo',
+      'combustivel',
+      'quilometragem',
+    ]);
+    expect(viatura.list.filters).toEqual(['combustivel', 'estado']);
+
+    await firstValueFrom(
+      records.create('viatura', {
+        data: { matricula: 'AA-11-BB', marca: 'Volvo', quilometragem: 10, estado: 'disponivel' },
+      }),
+    );
+    const invalid = await fails(
+      firstValueFrom(
+        records.create('viatura', {
+          data: { matricula: 'AA-11-BB', quilometragem: -5, combustivel: 'vapor' },
+        }),
+      ),
+    );
+    const fieldsWithIssues = (invalid.details as { issues: { fieldKey: string }[] }).issues.map(
+      (i) => i.fieldKey,
+    );
+    expect(fieldsWithIssues).toEqual(
+      expect.arrayContaining(['marca', 'matricula', 'quilometragem', 'combustivel']),
+    );
+  });
+
+  it('caso C: adding numeroChassis creates a new version and keeps the previous records', async () => {
+    const { registry, records } = await enter('escola@demo.pt', 'escola-horizonte');
+    await firstValueFrom(registry.saveDraft(VIATURA_V1));
+    await firstValueFrom(registry.publish('viatura'));
+    const antiga = await firstValueFrom(
+      records.create('viatura', { data: { matricula: 'CC-22-DD', marca: 'Scania' } }),
+    );
+
+    await firstValueFrom(
+      registry.saveDraft({
+        ...VIATURA_V1,
+        expectedVersion: 1,
+        fields: [
+          ...VIATURA_V1.fields,
+          defineField({ type: 'text', key: 'numeroChassis', label: 'Nº de chassis' }),
+        ],
+      }),
+    );
+    await firstValueFrom(registry.publish('viatura'));
+
+    expect(registry.find('viatura')!.version).toBe(2);
+    expect(registry.find('viatura')!.fields.map((f) => f.key)).toContain('numeroChassis');
+    expect((await firstValueFrom(records.list('viatura', Q))).total).toBe(1); // nada se perdeu
+    const lida = await firstValueFrom(records.get('viatura', antiga.id));
+    expect(lida.definitionVersion).toBe(1); // continua a ser um registo da v1…
+    expect(lida.data['matricula']).toBe('CC-22-DD'); // …com todos os dados
+    const nova = await firstValueFrom(
+      records.create('viatura', {
+        data: { matricula: 'EE-33-FF', marca: 'MAN', numeroChassis: 'ABC123' },
+      }),
+    );
+    expect(nova.definitionVersion).toBe(2);
+  });
+});
