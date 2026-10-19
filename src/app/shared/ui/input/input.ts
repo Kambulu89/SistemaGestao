@@ -3,7 +3,7 @@ import { FieldChrome } from '../form-field/field-chrome';
 import { FormFieldBase } from '../form-field/form-field-base';
 
 export type InputType =
-  'text' | 'email' | 'password' | 'number' | 'tel' | 'date' | 'datetime-local';
+  'text' | 'email' | 'url' | 'password' | 'number' | 'tel' | 'date' | 'datetime-local';
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 

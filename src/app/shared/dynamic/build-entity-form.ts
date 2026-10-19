@@ -1,6 +1,7 @@
 import { FormControl, FormGroup, type ValidatorFn } from '@angular/forms';
 import { conditionFields } from '../../core/dynamic/engine/condition';
 import { type FieldAccess, resolveFieldState } from '../../core/dynamic/engine/field-state';
+import { fieldCapabilities } from '../../core/dynamic/engine/field-types';
 import { rulesForField, validateField } from '../../core/dynamic/engine/validation';
 import type { EntityDefinition } from '../../core/dynamic/models/entity-definition.model';
 import type { FieldDefinition, FieldValue } from '../../core/dynamic/models/field-definition.model';
@@ -33,6 +34,7 @@ function engineValidator(
     if (!group) return null; // ainda não está no grupo
     const values = (group as EntityFormGroup).getRawValue();
     const context = { values, status: ctx.status() };
+    if (!fieldCapabilities(field.type).writable) return null; // atribuído pelo servidor
     const state = resolveFieldState(field, context, ctx.mode(), ctx.access());
     if (!state.visible || !state.editable) return null;
 
@@ -94,6 +96,7 @@ export function collectSubmitValues(
   const context = { values: raw, status: ctx.status() };
   const out: Record<string, FieldValue> = {};
   for (const field of activeFields(entity)) {
+    if (!fieldCapabilities(field.type).writable) continue;
     const state = resolveFieldState(field, context, ctx.mode(), ctx.access());
     if (!state.visible || !state.editable) continue;
     const value = raw[field.key];

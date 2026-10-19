@@ -7,6 +7,7 @@ import { EntityRecordsGateway } from '../dynamic/data-access/entity-records.gate
 import { compareScalars, isEmptyValue } from '../dynamic/engine/condition';
 import { evaluateOperation } from '../dynamic/engine/entity-permissions';
 import { fieldAccessFromPermissions } from '../dynamic/engine/field-state';
+import { fieldCapabilities } from '../dynamic/engine/field-types';
 import { formatFieldValue } from '../dynamic/engine/format-value';
 import { recordLabel } from '../dynamic/engine/record-label';
 import { validateRecordData } from '../dynamic/engine/validation';
@@ -407,6 +408,10 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       const field = fields.get(key);
       if (!field || field.archived) {
         add(key, 'server', 'Campo desconhecido.');
+        continue;
+      }
+      if (!fieldCapabilities(field.type).writable) {
+        add(key, 'server', 'Este campo é atribuído pelo servidor.');
         continue;
       }
       if (!access.canWrite(field)) add(key, 'server', 'Sem permissão para editar este campo.');
