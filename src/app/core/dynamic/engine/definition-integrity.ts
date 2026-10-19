@@ -3,6 +3,7 @@ import { STATUS_KEY } from '../models/condition.model';
 import { SYSTEM_COLUMNS, type EntityDefinition } from '../models/entity-definition.model';
 import { activeOptions, hasOptions, type FieldDefinition } from '../models/field-definition.model';
 import { validateAutoNumber } from './auto-number';
+import { orderFormulas, parseFormula } from './formula';
 import { fieldCapabilities, isKnownFieldType } from './field-types';
 import type { FormItem } from '../models/form-definition.model';
 import type { ValidationRule } from '../models/validation-rule.model';
@@ -52,6 +53,50 @@ export function validateEntityDefinition(
   const fieldKeys = new Set(entity.fields.map((f) => f.key));
   const statusCodes = new Set(entity.statuses.map((s) => s.code));
   const fieldByKey = new Map(entity.fields.map((f) => [f.key, f]));
+
+  const NUMERIC = new Set(['number', 'decimal', 'currency', 'formula']);
+  const cyclic = orderFormulas(entity.fields).cyclic;
+
+  /** Valida uma fórmula: sintaxe, referências, tipos, ciclos, moedas e dados sensíveis. */
+  const checkFormula = (field: Extract<FieldDefinition, { type: 'formula' }>): void => {
+    const path = `fields.${field.key}`;
+    if (!Number.isInteger(field.scale) || field.scale < 0 || field.scale > 10)
+      error(path, 'As casas decimais do resultado têm de ser um inteiro entre 0 e 10.');
+    const parsed = parseFormula(field.formula.source);
+    if (!parsed.ok) {
+      error(path, `Fórmula inválida: ${parsed.message}`);
+      return;
+    }
+    const currencies = new Set<string>();
+    for (const ref of parsed.refs) {
+      const target = fieldByKey.get(ref);
+      if (ref === field.key) continue; // o ciclo é assinalado abaixo
+      if (!target) error(path, `A fórmula refere o campo desconhecido "${ref}".`);
+      else if (target.archived) error(path, `A fórmula refere o campo arquivado "${ref}".`);
+      else if (!NUMERIC.has(target.type))
+        error(path, `A fórmula só aceita campos numéricos; "${ref}" é do tipo ${target.type}.`);
+      else {
+        if (target.type === 'currency') currencies.add(target.currency);
+        // O resultado não pode revelar o que o utilizador não pode ler.
+        if (
+          target.sensitivity === 'sensitive' &&
+          (field.sensitivity !== 'sensitive' ||
+            field.permissions?.read !== target.permissions?.read)
+        )
+          error(
+            path,
+            `A fórmula usa o campo sensível "${ref}": tem de ser sensível e exigir a mesma permissão de leitura.`,
+          );
+      }
+    }
+    if (currencies.size > 1)
+      error(path, `A fórmula mistura moedas diferentes (${[...currencies].join(', ')}).`);
+    if (cyclic.has(field.key))
+      error(
+        path,
+        'Dependência circular: a fórmula depende, directa ou indirectamente, de si própria.',
+      );
+  };
 
   // --- identidade
   if (!ENTITY_KEY.test(entity.key))
@@ -139,6 +184,7 @@ export function validateEntityDefinition(
     ) {
       error(path, 'As casas decimais têm de ser um inteiro entre 0 e 10.');
     }
+    if (field.type === 'formula') checkFormula(field);
     if (field.type === 'auto-number') {
       for (const message of validateAutoNumber(field.autoNumber)) error(path, message);
       if (field.required) error(path, 'Uma numeração automática não pode ser obrigatória.');

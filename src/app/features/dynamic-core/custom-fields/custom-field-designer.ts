@@ -186,6 +186,31 @@ const optionGroup = (value = '', label = '', active = true) =>
                   [options]="referenceOptions()"
                 />
               }
+              @if (type() === 'formula') {
+                <div class="sm:col-span-2">
+                  <app-textarea
+                    formControlName="formulaSource"
+                    label="Expressão"
+                    hint="Operadores + - * / e parênteses; funções round(x, 2), min(a, b), max(a, b), abs(x). Só campos numéricos."
+                    [rows]="2"
+                    [required]="true"
+                  />
+                  <p class="mt-2 text-sm text-fg-muted" data-testid="formula-fields">
+                    Campos disponíveis:
+                    @for (key of formulaFields(); track key) {
+                      <code class="me-1 rounded bg-surface-muted px-1 text-xs">{{ key }}</code>
+                    } @empty {
+                      nenhum campo numérico nesta entidade.
+                    }
+                  </p>
+                </div>
+                <app-input
+                  formControlName="formulaScale"
+                  type="number"
+                  label="Casas decimais do resultado"
+                  hint="Arredondamento exacto, sem vírgula flutuante."
+                />
+              }
               @if (type() === 'auto-number') {
                 <app-input formControlName="autoPrefix" label="Prefixo" hint="Ex.: EQ- → EQ-0001" />
                 <app-input formControlName="autoPadding" type="number" label="Dígitos" />
@@ -325,6 +350,21 @@ export class CustomFieldDesigner {
   readonly cancelled = output<void>();
 
   protected readonly previewTypes = PREVIEW_TYPES;
+  /** Campos numéricos que uma fórmula pode referir (nativos e personalizados, sem o próprio). */
+  protected readonly formulaFields = computed(() => {
+    const own = this.baseField()?.key;
+    const numeric = new Set(['number', 'decimal', 'currency', 'formula']);
+    const custom = this.owned()
+      ? []
+      : this.registry
+          .forEntity(entityRefOf(this.entity()))
+          .filter((c) => c.state !== 'archived')
+          .map((c) => c.field);
+    return [...this.entity().fields, ...custom]
+      .filter((f) => !f.archived && numeric.has(f.type) && f.key !== own)
+      .map((f) => f.key);
+  });
+
   protected readonly resetOptions: readonly SelectOption[] = [
     { value: 'never', label: 'Nunca' },
     { value: 'yearly', label: 'Todos os anos' },
@@ -364,6 +404,8 @@ export class CustomFieldDesigner {
     autoPadding: new FormControl<number | null>(4),
     autoStart: new FormControl<number | null>(1),
     autoReset: new FormControl<AutoNumberDefinition['reset']>('never', { nonNullable: true }),
+    formulaSource: new FormControl('', { nonNullable: true }),
+    formulaScale: new FormControl<number | null>(2),
   });
   protected readonly options = this.form.controls.options;
 
@@ -411,7 +453,8 @@ export class CustomFieldDesigner {
       this.isText() ||
       this.isFile() ||
       this.type() === 'entity-reference' ||
-      this.type() === 'auto-number',
+      this.type() === 'auto-number' ||
+      this.type() === 'formula',
   );
 
   private readonly draft = computed<FieldDraft>(() => {

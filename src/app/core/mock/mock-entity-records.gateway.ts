@@ -8,6 +8,7 @@ import { compareScalars, isEmptyValue } from '../dynamic/engine/condition';
 import { evaluateOperation } from '../dynamic/engine/entity-permissions';
 import { fieldAccessFromPermissions } from '../dynamic/engine/field-state';
 import { autoNumberPeriod, formatAutoNumber } from '../dynamic/engine/auto-number';
+import { computeFormulas } from '../dynamic/engine/formula';
 import { fieldCapabilities } from '../dynamic/engine/field-types';
 import { formatFieldValue } from '../dynamic/engine/format-value';
 import { recordLabel } from '../dynamic/engine/record-label';
@@ -96,7 +97,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       this.require(entity, 'read');
 
       this.assertQueryable(entity, query);
-      let items = [...this.bucket(tenantId, entityKey)];
+      let items = this.bucket(tenantId, entityKey).map((r) => this.materialize(entity, r));
       if (query.search?.trim()) {
         const needle = normalize(query.search);
         const access = fieldAccessFromPermissions((p) => this.permissions.can(p));
@@ -127,7 +128,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
     return this.respond(() => {
       const { entity, record } = this.find(entityKey, id);
       this.require(entity, 'read', record);
-      return this.visible(entity, record);
+      return this.visible(entity, this.materialize(entity, record));
     });
   }
 
@@ -146,7 +147,10 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
         tenantId,
         definitionVersion: entity.version,
         status,
-        data: this.withAutoNumbers(entity, tenantId, this.clean(entity, input.data), new Date(now)),
+        data: this.withDerived(
+          entity,
+          this.withAutoNumbers(entity, tenantId, this.clean(entity, input.data), new Date(now)),
+        ),
         rowVersion: 1,
         createdAt: now,
         createdBy: this.actorId(),
@@ -155,7 +159,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       };
       this.bucket(tenantId, entityKey).push(record);
       this.pushAudit(record, 'create', this.diff(entity, {}, record.data));
-      return record;
+      return this.visible(entity, record);
     });
   }
 
@@ -178,9 +182,12 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
         changed: Object.keys(input.data),
       });
 
-      const data = { ...this.preserved(entity, record.data), ...this.clean(entity, merged) };
+      const data = this.withDerived(entity, {
+        ...this.preserved(entity, record.data),
+        ...this.clean(entity, merged),
+      });
       const changes = this.diff(entity, record.data, data);
-      if (changes.length === 0) return record;
+      if (changes.length === 0) return this.visible(entity, record);
 
       const updated: EntityRecord = {
         ...record,
@@ -192,7 +199,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       };
       this.replace(updated);
       this.pushAudit(updated, 'update', changes);
-      return updated;
+      return this.visible(entity, updated);
     });
   }
 
@@ -235,7 +242,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
         { field: 'status', from: record.status, to: result.status },
         ...this.diff(entity, record.data, result.data),
       ]);
-      return updated;
+      return this.visible(entity, updated);
     });
   }
 
@@ -420,6 +427,19 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       highest = Math.max(highest ?? -1, Number(tail));
     }
     return highest;
+  }
+
+  /** Fórmulas calculadas sobre os dados completos do registo (nunca sobre o que o utilizador vê). */
+  private withDerived(entity: EntityDefinition, data: RecordData): RecordData {
+    return entity.fields.some((f) => f.type === 'formula')
+      ? { ...data, ...computeFormulas(entity.fields, data) }
+      : data;
+  }
+
+  /** Um registo com as fórmulas recalculadas: reflecte sempre a definição em vigor. */
+  private materialize(entity: EntityDefinition, record: EntityRecord): EntityRecord {
+    const data = this.withDerived(entity, record.data);
+    return data === record.data ? record : { ...record, data };
   }
 
   private matches(record: EntityRecord, key: string, value: string): boolean {

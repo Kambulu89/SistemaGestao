@@ -77,6 +77,36 @@ export function diffField(
   ) {
     add('breaking', 'A moeda mudou: os valores existentes ficariam com outro significado.');
   }
+  if (
+    before.type === 'formula' &&
+    after.type === 'formula' &&
+    (after.formula.source !== before.formula.source || after.scale !== before.scale)
+  )
+    add('warning', 'A fórmula mudou: os valores calculados são recalculados em todos os registos.');
+  if (
+    before.type === 'auto-number' &&
+    after.type === 'auto-number' &&
+    JSON.stringify(after.autoNumber) !== JSON.stringify(before.autoNumber)
+  )
+    add(
+      'warning',
+      'A numeração mudou: só afecta os registos novos; os números atribuídos mantêm-se.',
+    );
+  if (
+    before.type === 'entity-reference' &&
+    after.type === 'entity-reference' &&
+    after.entityKey !== before.entityKey
+  )
+    add('breaking', 'A entidade referenciada mudou: as referências existentes ficariam inválidas.');
+  if (
+    before.type === 'lookup' &&
+    after.type === 'lookup' &&
+    JSON.stringify(after.lookup) !== JSON.stringify(before.lookup)
+  )
+    add(
+      'warning',
+      'O valor relacionado mudou: passa a mostrar outro campo do registo referenciado.',
+    );
   if (before.sensitivity !== 'sensitive' && after.sensitivity === 'sensitive')
     add('warning', 'Passou a dados sensíveis: reveja quem tem acesso.');
   const unique = (f: FieldDefinition) => f.validations.some((v) => v.type === 'unique');

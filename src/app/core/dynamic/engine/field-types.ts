@@ -155,7 +155,7 @@ export const FIELD_TYPE_CATALOG: readonly FieldTypeDefinition[] = [
     'ready',
     {},
   ),
-  def('formula', 'Fórmula', 'Valor calculado por uma expressão declarativa.', 'preview', {
+  def('formula', 'Fórmula', 'Valor calculado por uma expressão declarativa.', 'ready', {
     writable: false,
     required: false,
     listable: true,

@@ -109,11 +109,10 @@ describe('Mock backend: gestão de campos personalizados', () => {
       firstValueFrom(
         api.save(
           input({
-            type: 'formula',
+            type: 'lookup',
             key: 'numero',
             label: 'Nº',
-            formula: { source: '1 + 1' },
-            scale: 0,
+            lookup: { relationField: 'nome', sourceField: 'nome', onMissing: 'empty' },
           }),
         ),
       ),

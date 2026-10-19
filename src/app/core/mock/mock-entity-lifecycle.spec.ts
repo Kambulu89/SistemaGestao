@@ -4,6 +4,7 @@ import type { ApiError } from '../api/api-error.model';
 import type { DefinitionFailure } from '../dynamic/data-access/custom-field.gateway';
 import type { SaveEntityDraftInput } from '../dynamic/data-access/entity-definition.gateway';
 import { AuthService } from '../auth/auth.service';
+import { CustomFieldRegistryService } from '../dynamic/custom-field-registry.service';
 import { EntityRecordsGateway } from '../dynamic/data-access/entity-records.gateway';
 import { defineField } from '../dynamic/engine/define-entity';
 import { DynamicEntityRegistryService } from '../dynamic/entity-registry.service';
@@ -398,5 +399,218 @@ describe('Numeração automática (servidor)', () => {
       atlas.records.create('customer', { data: { nome: 'Novo cliente' } }),
     );
     expect(customer.data['numeroCliente']).toBe('CLI-0004');
+  });
+});
+
+describe('Fórmulas (servidor)', () => {
+  beforeEach(() => setupMockBackend());
+
+  const PEDIDO: SaveEntityDraftInput = {
+    key: 'pedido',
+    names: { singular: 'Pedido', plural: 'Pedidos' },
+    icon: 'cube',
+    expectedVersion: null,
+    fields: [
+      defineField({ type: 'text', key: 'ref', label: 'Referência', required: true }),
+      defineField({ type: 'number', key: 'quantidade', label: 'Quantidade' }),
+      defineField({ type: 'currency', key: 'preco', label: 'Preço', currency: 'EUR', scale: 2 }),
+      defineField({
+        type: 'currency',
+        key: 'desconto',
+        label: 'Desconto',
+        currency: 'EUR',
+        scale: 2,
+      }),
+      defineField({
+        type: 'formula',
+        key: 'subtotal',
+        label: 'Subtotal',
+        formula: { source: 'quantidade * preco - desconto' },
+        scale: 2,
+        sortable: true,
+      }),
+      defineField({
+        type: 'formula',
+        key: 'total',
+        label: 'Total com IVA',
+        formula: { source: 'round(subtotal * 1.23, 2)' },
+        scale: 2,
+      }),
+    ],
+  };
+
+  async function publish() {
+    const ctx = await enter('frota@demo.pt', 'transportes-atlas');
+    await firstValueFrom(ctx.registry.saveDraft(PEDIDO));
+    await firstValueFrom(ctx.registry.publish('pedido'));
+    return ctx;
+  }
+  const create = (r: EntityRecordsGateway, data: Record<string, unknown>) =>
+    firstValueFrom(r.create('pedido', { data: { ref: 'P', ...data } as never }));
+
+  it('computes chained formulas on the server, exactly', async () => {
+    const { records } = await publish();
+    const pedido = await create(records, { quantidade: 3, preco: 19.99, desconto: 0.07 });
+    expect(pedido.data['subtotal']).toBe(59.9);
+    expect(pedido.data['total']).toBe(73.68);
+  });
+
+  it('recalculates on update and leaves the result empty when an input is missing', async () => {
+    const { records } = await publish();
+    const pedido = await create(records, { quantidade: 2, preco: 10, desconto: 0 });
+    expect(pedido.data['subtotal']).toBe(20);
+    const updated = await firstValueFrom(
+      records.update('pedido', pedido.id, { expectedRowVersion: 1, data: { quantidade: 5 } }),
+    );
+    expect(updated.data['subtotal']).toBe(50);
+    const partial = await create(records, { quantidade: 2, preco: 10 });
+    expect(partial.data['subtotal']).toBeNull(); // falta o desconto: nunca se assume zero
+  });
+
+  it('refuses a client-supplied formula result', async () => {
+    const { records } = await publish();
+    const forged = await fails(
+      firstValueFrom(records.create('pedido', { data: { ref: 'X', subtotal: 1 } })),
+    );
+    expect(forged.status).toBe(422);
+  });
+
+  it('keeps the audit trail of computed values', async () => {
+    const { records } = await publish();
+    const pedido = await create(records, { quantidade: 1, preco: 5, desconto: 1 });
+    const audit = await firstValueFrom(records.audit('pedido', pedido.id));
+    expect(audit[0]!.changes.find((c) => c.field === 'subtotal')).toMatchObject({ to: 4 });
+  });
+
+  it('sorts by a formula field', async () => {
+    const { records } = await publish();
+    await create(records, { ref: 'A', quantidade: 1, preco: 30, desconto: 0 });
+    await create(records, { ref: 'B', quantidade: 1, preco: 10, desconto: 0 });
+    const page = await firstValueFrom(
+      records.list('pedido', { ...Q, sort: { key: 'subtotal', direction: 'asc' } }),
+    );
+    expect(page.items.map((r) => r.data['ref'])).toEqual(['B', 'A']);
+  });
+
+  it('refuses to publish a circular formula, even if the draft was saved', async () => {
+    const { registry } = await enter('frota@demo.pt', 'transportes-atlas');
+    const circular = defineField({
+      type: 'formula',
+      key: 'a',
+      label: 'A',
+      formula: { source: 'b' },
+      scale: 0,
+    });
+    const other = defineField({
+      type: 'formula',
+      key: 'b',
+      label: 'B',
+      formula: { source: 'a' },
+      scale: 0,
+    });
+    await firstValueFrom(
+      registry.saveDraft({ ...PEDIDO, key: 'ciclo', fields: [circular, other] }),
+    );
+    const error = await fails(firstValueFrom(registry.publish('ciclo')));
+    expect(error.status).toBe(422);
+    expect(messages(error).join(' ')).toContain('Dependência circular');
+  });
+});
+
+describe('Fórmulas e dados sensíveis', () => {
+  beforeEach(() => setupMockBackend());
+
+  async function adminAddsFields() {
+    const admin = await enter('escola@demo.pt', 'escola-horizonte');
+    const custom = TestBed.inject(CustomFieldRegistryService);
+    const sensitive = {
+      sensitivity: 'sensitive' as const,
+      permissions: {
+        read: 'entities.customer.sensitive.read',
+        write: 'entities.customer.sensitive.write',
+      },
+    };
+    const save = (field: ReturnType<typeof defineField>) =>
+      firstValueFrom(
+        custom.save({
+          id: null,
+          entity: { kind: 'core', key: 'customer' },
+          field,
+          showInList: false,
+          state: 'active',
+          expectedVersion: null,
+        }),
+      );
+    return { admin, save, sensitive };
+  }
+
+  it('blocks a formula that would leak a sensitive field into a visible one', async () => {
+    const { save, sensitive } = await adminAddsFields();
+    await save(
+      defineField({
+        type: 'currency',
+        key: 'valorContrato',
+        label: 'Valor do contrato',
+        currency: 'EUR',
+        ...sensitive,
+      }),
+    );
+    const leak = await fails(
+      save(
+        defineField({
+          type: 'formula',
+          key: 'valorAnual',
+          label: 'Valor anual',
+          formula: { source: 'valorContrato * 12' },
+          scale: 2,
+        }),
+      ),
+    );
+    expect(leak.status).toBe(422);
+    expect(messages(leak).join(' ')).toContain('campo sensível "valorContrato"');
+  });
+
+  it('hides the result of a sensitive formula from users without the permission', async () => {
+    const { admin, save, sensitive } = await adminAddsFields();
+    await save(
+      defineField({
+        type: 'currency',
+        key: 'valorContrato',
+        label: 'Valor do contrato',
+        currency: 'EUR',
+        ...sensitive,
+      }),
+    );
+    await save(
+      defineField({
+        type: 'formula',
+        key: 'valorAnual',
+        label: 'Valor anual',
+        formula: { source: 'valorContrato * 12' },
+        scale: 2,
+        ...sensitive,
+      }),
+    );
+    const created = await firstValueFrom(
+      admin.records.create('customer', { data: { nome: 'Cliente VIP', valorContrato: 100.5 } }),
+    );
+    expect(created.data['valorAnual']).toBe(1206);
+
+    const secretary = await switchTo('multi@demo.pt', 'escola-horizonte');
+    const custom = TestBed.inject(CustomFieldRegistryService);
+    custom.reload();
+    await firstValueFrom(secretary.registry.ensureLoaded());
+    const page = await firstValueFrom(
+      secretary.records.list('customer', { page: 1, pageSize: 50 }),
+    );
+    const vip = page.items.find((r) => r.data['nome'] === 'Cliente VIP')!;
+    expect(vip.data).not.toHaveProperty('valorContrato');
+    expect(vip.data).not.toHaveProperty('valorAnual');
+    const denied = await fails(
+      firstValueFrom(
+        secretary.records.list('customer', { ...Q, sort: { key: 'valorAnual', direction: 'asc' } }),
+      ),
+    );
+    expect(denied.status).toBe(403);
   });
 });

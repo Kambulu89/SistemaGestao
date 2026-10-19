@@ -43,6 +43,9 @@ export interface FieldDraft {
   readonly autoPadding: number | null;
   readonly autoStart: number | null;
   readonly autoReset: AutoNumberDefinition['reset'];
+  /** `formula` */
+  readonly formulaSource: string;
+  readonly formulaScale: number | null;
 }
 
 export const EMPTY_DRAFT: FieldDraft = {
@@ -72,6 +75,8 @@ export const EMPTY_DRAFT: FieldDraft = {
   autoPadding: 4,
   autoStart: 1,
   autoReset: 'never',
+  formulaSource: '',
+  formulaScale: 2,
 };
 
 /** `Gestor comercial` → `gestorComercial`: sem acentos, camelCase, a começar por letra. */
@@ -239,6 +244,16 @@ export function buildField(
         validations: rules(),
       };
       break;
+    case 'formula':
+      input = {
+        ...common,
+        type: 'formula',
+        formula: { source: draft.formulaSource.trim() },
+        scale: draft.formulaScale ?? 0,
+        required: false,
+        validations: rules(),
+      };
+      break;
     case 'auto-number':
       input = {
         ...common,
@@ -306,5 +321,7 @@ export function draftOf(field: FieldDefinition): FieldDraft {
     autoPadding: field.type === 'auto-number' ? field.autoNumber.padding : EMPTY_DRAFT.autoPadding,
     autoStart: field.type === 'auto-number' ? field.autoNumber.start : EMPTY_DRAFT.autoStart,
     autoReset: field.type === 'auto-number' ? field.autoNumber.reset : EMPTY_DRAFT.autoReset,
+    formulaSource: field.type === 'formula' ? field.formula.source : '',
+    formulaScale: field.type === 'formula' ? field.scale : EMPTY_DRAFT.formulaScale,
   };
 }

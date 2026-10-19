@@ -114,7 +114,9 @@ describe('Campos personalizados: página e designer', () => {
     const { fixture, el } = await open('escola@demo.pt', 'escola-horizonte');
     button(el, 'Novo campo')!.click();
     await settle(fixture);
-    expect(el.querySelector('[data-testid=preview-types]')?.textContent).toContain('Fórmula');
+    expect(el.querySelector('[data-testid=preview-types]')?.textContent).toContain(
+      'Valor relacionado',
+    );
 
     type(el, 'Tipo de campo', 'currency');
     await settle(fixture);
