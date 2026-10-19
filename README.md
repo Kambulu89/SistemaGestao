@@ -101,7 +101,7 @@ src/app/
     └── verticals/          módulos por sector (vazio)
 ```
 
-Dependências permitidas: `features → layouts/shared/core`; `layouts → shared/core`; `shared` não importa de `core`; `core` não importa de `features` nem de `layouts`. Só `module-catalog.ts`/`module-routes.ts` (raiz de composição) conhecem todas as features. Features de negócio não se importam entre si.
+Dependências permitidas: `features → layouts/shared/core`; `layouts → shared/core`; `shared/ui` não importa de `core` (`shared/dynamic` importa de `core/dynamic`); `core` não importa de `features` nem de `layouts`. Só `module-catalog.ts`/`module-routes.ts` (raiz de composição) conhecem todas as features. Features de negócio não se importam entre si.
 
 ### Rotas
 
@@ -122,6 +122,40 @@ Cada domínio define um `*Gateway` abstracto e `core/mock/` fornece os adapters 
 Pressupostos **provisórios** a confirmar com o backend (nenhum endpoint está inventado): cabeçalho `X-Tenant-Id`, `Authorization: Bearer`, parâmetros de listagem `page/pageSize/sort=chave:dir`, e a forma de `TenantContext` (permissões, subscrição, tenant modules, flags). O token fica em `sessionStorage` só para a demonstração; com backend, preferir cookie `httpOnly`.
 
 Isolamento de âmbitos: `platform.*` só pode vir da sessão da plataforma; nem `*` num papel de tenant a concede.
+
+## Core Dinâmico (Dynamic Core Engine)
+
+Plataforma orientada por metadados: `EntityDefinition → motores → interfaces e operações`.
+Não existe nenhum componente específico de uma entidade; `npm run check:generic` falha se o código genérico passar a referir Viatura, Condutor, etc.
+
+```
+core/dynamic/      contratos (models/), motores puros (engine/), gateways (data-access/), registo e acesso
+shared/dynamic/    DynamicFormRenderer, DynamicListRenderer (reutilizáveis por qualquer feature)
+features/dynamic-core/  administração (Configuração → Core Dinâmico) e páginas de registos
+core/mock/         definições e repositório mock (simula o BACKEND, não o frontend)
+```
+
+| Peça                                                                                                                             | Responsabilidade                                                                                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EntityDefinition`, `FieldDefinition` (união discriminada, 14 tipos), `FormDefinition`, `StatusDefinition`, `WorkflowDefinition` | metadados versionados (`draft → published → archived`), âmbito `global` ou `tenant`                                                              |
+| `Condition`                                                                                                                      | gramática declarativa única (`eq/in/and/or/not…`) para visibilidade, obrigatoriedade, validações, transições e políticas. Nunca código do tenant |
+| motor de validação                                                                                                               | regras executáveis no cliente; `unique` é decidida só pelo servidor; padrões protegidos contra ReDoS                                             |
+| `evaluateOperation`                                                                                                              | RBAC (permissões `entities.<chave>.<op>` do IAM existente) + ABAC (políticas "negar quando…")                                                    |
+| workflow                                                                                                                         | transições com condição, permissão, aprovação e acções declarativas; sem workflow, mudança livre                                                 |
+| `DynamicEntityRegistryService`                                                                                                   | definições do tenant activo; nunca mistura tenants                                                                                               |
+| compatibilidade                                                                                                                  | `diffDefinitions`/`checkPublishable`: remover/renomear campo, mudar tipo ou retirar opção bloqueia a publicação. Nenhuma migração automática     |
+
+### Contratos de API (propostos, não existentes)
+
+`ENTITY_API` em `core/dynamic/data-access/entity-api-paths.ts`: `GET/POST v1/entities`, `GET v1/entities/{key}/definition`, `GET/POST v1/entities/{key}/records`, `GET/PATCH/DELETE …/records/{id}`, `POST …/transitions`, `GET …/audit`. O tenant viaja em `X-Tenant-Id`.
+
+### Persistência futura (sem stack de backend definida)
+
+Híbrida: tabelas relacionais para o estrutural; definições versionadas em tabela própria; atributos configuráveis em `JSONB` com índices GIN/expressão nos campos pesquisáveis; `tenant_id` em todas as linhas com row-level security; auditoria append-only. A stack do backend tem de ser decidida antes de implementar.
+
+### Demonstração
+
+`frota@demo.pt` (admin) e `operador@demo.pt` (permissões limitadas) nos Transportes Atlas: Viaturas (v1→v2), Condutores (regras condicionais, referência) e Notas (global). A Escola vê só Notas.
 
 ## Acrescentar um módulo (sem tocar no core)
 

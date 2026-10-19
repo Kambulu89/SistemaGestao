@@ -1,6 +1,7 @@
 import { type Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
+import { DynamicEntityRegistryService } from '../../core/dynamic/entity-registry.service';
 import { TenantContextService } from '../../core/tenant-context/tenant-context.service';
 import { loginAs, setupMockBackend } from '../../core/testing/test-backend';
 import { TenantDashboard } from './dashboard/tenant-dashboard';
@@ -10,6 +11,8 @@ import { TenantPermissionsPage } from './permissions/tenant-permissions-page';
 async function render(component: Type<unknown>, email: string, slug: string): Promise<HTMLElement> {
   await loginAs(email);
   await firstValueFrom(TestBed.inject(TenantContextService).activate(slug));
+  // O `tenantGuard` carrega as definições ao entrar no tenant.
+  await firstValueFrom(TestBed.inject(DynamicEntityRegistryService).ensureLoaded());
   const fixture = TestBed.createComponent(component);
   await fixture.whenStable();
   return fixture.nativeElement as HTMLElement;
@@ -59,5 +62,22 @@ describe('tenant pages', () => {
   it('permissions page only lists tenant-scope capabilities', async () => {
     const el = await render(TenantPermissionsPage, 'escola@demo.pt', 'escola-horizonte');
     expect(el.textContent).not.toContain('platform.tenants.read');
+  });
+
+  it('permissions page also lists the dynamic entity permissions (same IAM keys)', async () => {
+    const el = await render(TenantPermissionsPage, 'frota@demo.pt', 'transportes-atlas');
+    expect(el.textContent).toContain('Entidade: Viaturas');
+    const row = [...el.querySelectorAll('tr')].find((r) =>
+      r.textContent?.includes('entities.vehicle.delete'),
+    );
+    expect(row?.textContent).toContain('Concedida');
+  });
+
+  it('shows the operator only the entity permissions the role grants', async () => {
+    const el = await render(TenantPermissionsPage, 'operador@demo.pt', 'transportes-atlas');
+    const state = (key: string) =>
+      [...el.querySelectorAll('tr')].find((r) => r.textContent?.includes(key))?.textContent;
+    expect(state('entities.vehicle.update')).toContain('Concedida');
+    expect(state('entities.vehicle.delete')).toContain('Não concedida');
   });
 });

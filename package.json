@@ -10,7 +10,8 @@
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,css}\"",
-    "start:prod": "ng serve --configuration production"
+    "start:prod": "ng serve --configuration production",
+    "check:generic": "! grep -rnEi 'vehicle|viatura|matricula|condutor|driver' src/app/core/dynamic src/app/shared src/app/features/dynamic-core --include=*.ts --exclude=*.spec.ts | grep -vE ':[0-9]+:[[:space:]]*(//|\\*|/\\*)'"
   },
   "private": true,
   "packageManager": "npm@10.9.4",

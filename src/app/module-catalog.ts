@@ -11,6 +11,7 @@ import { PROCUREMENT_MODULES } from './features/business/procurement/procurement
 import { PROJECTS_MODULES } from './features/business/projects/projects.manifest';
 import { SALES_MODULES } from './features/business/sales/sales.manifest';
 import { SUPPORT_MODULES } from './features/business/support/support.manifest';
+import { DYNAMIC_CORE_MODULES } from './features/dynamic-core/dynamic-core.manifest';
 import { CONFIGURATION_MODULES } from './features/dynamic/configuration/configuration.manifest';
 import { INTEGRATIONS_MODULES } from './features/dynamic/integrations/integrations.manifest';
 import { REPORTING_MODULES } from './features/dynamic/reporting/reporting.manifest';
@@ -41,5 +42,6 @@ export const ALL_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   ...REPORTING_MODULES,
   ...INTEGRATIONS_MODULES,
   ...GOVERNANCE_MODULES,
+  ...DYNAMIC_CORE_MODULES,
   ...CONFIGURATION_MODULES,
 ];

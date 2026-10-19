@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { entityPermissionDefinitions } from '../../../core/dynamic/engine/entity-permissions';
+import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { PermissionService } from '../../../core/permissions/permission.service';
 import { TenantContextService } from '../../../core/tenant-context/tenant-context.service';
@@ -23,7 +25,7 @@ import { Table, type TableColumn } from '../../../shared/ui/table/table';
       "
     />
 
-    @for (group of groups(); track group.id) {
+    @for (group of allGroups(); track group.id) {
       <section class="mb-6" [attr.aria-label]="group.name">
         <h2 class="mb-2 text-base font-semibold">{{ group.name }}</h2>
         <app-card [flush]="true">
@@ -55,6 +57,7 @@ import { Table, type TableColumn } from '../../../shared/ui/table/table';
 })
 export class TenantPermissionsPage {
   private readonly registry = inject(ModuleRegistryService);
+  private readonly entities = inject(DynamicEntityRegistryService);
   private readonly permissions = inject(PermissionService);
   private readonly tenantContext = inject(TenantContextService);
 
@@ -83,5 +86,21 @@ export class TenantPermissionsPage {
         ),
       }))
       .filter((g) => g.rows.length > 0),
+  );
+
+  /** Permissões das entidades dinâmicas: as mesmas chaves do IAM, declaradas pelas definições. */
+  protected readonly allGroups = computed(() => [...this.groups(), ...this.entityGroups()]);
+
+  protected readonly entityGroups = computed(() =>
+    this.entities.published().map((entity) => ({
+      id: `entity-${entity.key}`,
+      name: `Entidade: ${entity.names.plural}`,
+      rows: entityPermissionDefinitions(entity).map((p) => ({
+        key: p.key,
+        name: p.name,
+        module: 'Core Dinâmico',
+        granted: this.permissions.can(p.key),
+      })),
+    })),
   );
 }
