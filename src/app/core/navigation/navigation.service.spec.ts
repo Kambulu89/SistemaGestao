@@ -1,11 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
+import { DynamicEntityRegistryService } from '../dynamic/entity-registry.service';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
 import { loginAs, setupMockBackend } from '../testing/test-backend';
 import { NavigationService } from './navigation.service';
 
 async function nav(slug: string) {
   await firstValueFrom(TestBed.inject(TenantContextService).activate(slug));
+  // O `tenantGuard` carrega as definições ao entrar no tenant.
+  await firstValueFrom(TestBed.inject(DynamicEntityRegistryService).ensureLoaded());
   return TestBed.inject(NavigationService).tenantNav();
 }
 const labels = (groups: readonly { items: readonly { label: string }[] }[]) =>
@@ -68,6 +71,23 @@ describe('NavigationService', () => {
     const all = labels(await nav('escola-horizonte'));
     expect(all).not.toContain('Autenticação');
     expect(all).not.toContain('Auditoria e logs');
+  });
+
+  it('lists the dynamic entities of the tenant in a "Dados" group, per permission', async () => {
+    await loginAs('operador@demo.pt');
+    const groups = await nav('transportes-atlas');
+    const data = groups.find((g) => g.id === 'data');
+    expect(data?.label).toBe('Dados');
+    expect(data?.items.map((i) => [i.label, i.path])).toEqual([
+      ['Condutores', '/t/transportes-atlas/data/driver'],
+      ['Notas', '/t/transportes-atlas/data/note'],
+      ['Viaturas', '/t/transportes-atlas/data/vehicle'],
+    ]);
+  });
+
+  it('shows no "Dados" group when the role grants no entity access', async () => {
+    await loginAs('multi@demo.pt');
+    expect((await nav('escola-horizonte')).some((g) => g.id === 'data')).toBe(false);
   });
 
   it('shows the platform menu to platform admins', async () => {

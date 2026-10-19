@@ -1,4 +1,5 @@
 import { computed, inject, Injectable } from '@angular/core';
+import { EntityAccessService } from '../dynamic/entity-access.service';
 import { ModuleRegistryService } from '../modules/module-registry.service';
 import { TenantModulesService } from '../modules/tenant-modules.service';
 import { PLATFORM_PERMISSIONS, TENANT_PERMISSIONS } from '../permissions/permission.model';
@@ -19,6 +20,7 @@ export class NavigationService {
   private readonly tenantContext = inject(TenantContextService);
   private readonly registry = inject(ModuleRegistryService);
   private readonly tenantModules = inject(TenantModulesService);
+  private readonly entities = inject(EntityAccessService);
 
   readonly platformNav = computed<readonly NavGroup[]>(() => [
     {
@@ -97,6 +99,13 @@ export class NavigationService {
         ]),
       },
     ];
+
+    const entityItems = this.entities.readable().map<NavItem>((entity) => ({
+      label: entity.names.plural,
+      path: `${base}/data/${entity.key}`,
+      icon: entity.icon,
+    }));
+    if (entityItems.length > 0) groups.push({ id: 'data', label: 'Dados', items: entityItems });
 
     const accessible = this.tenantModules.accessible().filter((r) => r.manifest.showInNavigation);
     for (const group of this.registry.groups) {

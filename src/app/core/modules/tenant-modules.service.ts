@@ -65,6 +65,15 @@ export class TenantModulesService {
   /** Módulos que o utilizador pode usar: base do menu lateral. */
   readonly accessible = computed(() => this.resolved().filter((m) => m.access === 'accessible'));
 
+  /**
+   * O módulo está contratado, activo e liberto de dependências/flags neste tenant, independentemente
+   * de o utilizador ter a permissão de entrada. Serve a quem tem permissões mais finas (ex.: entidades).
+   */
+  isAvailable(moduleId: string): boolean {
+    const access = this.accessOf(moduleId);
+    return access === 'accessible' || access === 'forbidden';
+  }
+
   accessOf(moduleId: string): ModuleAccessStatus | null {
     return this.resolved().find((m) => m.manifest.id === moduleId)?.access ?? null;
   }

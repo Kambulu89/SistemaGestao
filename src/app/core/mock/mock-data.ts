@@ -21,6 +21,14 @@ export const DEMO_ACCOUNTS = [
     description: 'Dois tenants: Secretário na Escola, Administrador na Clínica',
   },
   { email: 'escola@demo.pt', description: 'Administrador da Escola Horizonte' },
+  {
+    email: 'frota@demo.pt',
+    description: 'Administrador dos Transportes Atlas (entidades dinâmicas)',
+  },
+  {
+    email: 'operador@demo.pt',
+    description: 'Operador de frota nos Transportes Atlas (permissões limitadas)',
+  },
 ] as const;
 
 export const MOCK_USERS: readonly User[] = [
@@ -32,6 +40,8 @@ export const MOCK_USERS: readonly User[] = [
   },
   { id: 'u-multi', name: 'Rui Multi-tenant', email: 'multi@demo.pt', platformPermissions: [] },
   { id: 'u-escola', name: 'Marta Escola', email: 'escola@demo.pt', platformPermissions: [] },
+  { id: 'u-frota', name: 'Paulo Frota', email: 'frota@demo.pt', platformPermissions: [] },
+  { id: 'u-operador', name: 'Sofia Operadora', email: 'operador@demo.pt', platformPermissions: [] },
 ];
 
 const regional = { locale: 'pt-PT', currency: 'EUR', timeZone: 'Europe/Lisbon' };
@@ -49,7 +59,7 @@ export const MOCK_TENANTS: readonly Tenant[] = [
     id: 't-atlas',
     slug: 'transportes-atlas',
     name: 'Transportes Atlas',
-    status: 'suspended',
+    status: 'active',
     ...regional,
     locale: 'pt-AO',
     currency: 'AOA',
@@ -180,9 +190,9 @@ export const MOCK_SUBSCRIPTIONS: readonly Subscription[] = [
     id: 'sub-atlas',
     tenantId: 't-atlas',
     planCode: 'business',
-    status: 'suspended',
-    startedAt: '2024-03-01',
-    renewsAt: null,
+    status: 'active',
+    startedAt: '2025-03-01',
+    renewsAt: '2027-03-01',
     moduleIds: planModuleIds('business'),
     limits: planLimits('business', { users: 48, storage: 31 }),
   },
@@ -247,7 +257,10 @@ export const MOCK_TENANT_SETUP: Readonly<Record<string, TenantSetup>> = {
     ],
     featureFlags: { 'crm.import': false },
   },
-  't-atlas': { modules: [on('crm.customers')], featureFlags: {} },
+  't-atlas': {
+    modules: [on('crm.customers'), on('configuration.forms')],
+    featureFlags: { 'configuration.form-builder': true },
+  },
 };
 
 // ------------------------------------------------ papéis e permissões
@@ -282,6 +295,23 @@ export const MOCK_MEMBERSHIPS: readonly MockMembership[] = [
     ],
   },
   { userId: 'u-multi', tenantId: 't-clinica', roleName: 'Administrador', permissions: ['*'] },
+  { userId: 'u-frota', tenantId: 't-atlas', roleName: 'Administrador', permissions: ['*'] },
+  {
+    userId: 'u-operador',
+    tenantId: 't-atlas',
+    roleName: 'Operador de frota',
+    // Pode consultar, criar e editar viaturas e fazer transições simples; não elimina nem aprova.
+    permissions: [
+      'entities.vehicle.read',
+      'entities.vehicle.create',
+      'entities.vehicle.update',
+      'entities.vehicle.transition',
+      'entities.driver.read',
+      'entities.note.read',
+      'entities.note.create',
+      'crm.customers.read',
+    ],
+  },
 ];
 
 export function buildTenantContext(
