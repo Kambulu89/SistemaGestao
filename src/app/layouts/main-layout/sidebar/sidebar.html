@@ -1,0 +1,33 @@
+<aside
+  id="sidebar"
+  class="fixed inset-y-0 start-0 z-50 flex w-64 flex-col border-e border-line bg-surface transition-transform duration-200 lg:visible lg:sticky lg:top-0 lg:z-auto lg:h-dvh lg:translate-x-0"
+  [class.-translate-x-full]="!open()"
+  [class.invisible]="!open()"
+>
+  <div class="flex h-16 items-center justify-between px-4 lg:hidden">
+    <span class="text-base font-semibold">Menu</span>
+    <app-button variant="ghost" label="Fechar menu de navegação" (click)="closed.emit()">
+      <app-icon name="close" class="size-5" />
+    </app-button>
+  </div>
+
+  <nav aria-label="Principal" class="flex-1 overflow-y-auto p-3">
+    <ul class="space-y-1">
+      @for (item of items(); track item.path) {
+        <li>
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
+            ariaCurrentWhenActive="page"
+            [routerLinkActiveOptions]="{ exact: item.path === '/' }"
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-muted hover:text-fg"
+            (click)="closed.emit()"
+          >
+            <app-icon [name]="item.icon" class="size-5" />
+            {{ item.label }}
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+</aside>
