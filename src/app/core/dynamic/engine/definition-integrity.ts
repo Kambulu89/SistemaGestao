@@ -3,9 +3,9 @@ import { STATUS_KEY } from '../models/condition.model';
 import { SYSTEM_COLUMNS, type EntityDefinition } from '../models/entity-definition.model';
 import { activeOptions, hasOptions, type FieldDefinition } from '../models/field-definition.model';
 import { validateAutoNumber } from './auto-number';
+import { validateFormDefinition } from './form-integrity';
 import { orderFormulas, parseFormula } from './formula';
 import { fieldCapabilities, isKnownFieldType } from './field-types';
-import type { FormItem } from '../models/form-definition.model';
 import type { ValidationRule } from '../models/validation-rule.model';
 import { conditionDepth, conditionFields, MAX_CONDITION_DEPTH } from './condition';
 import { ENTITY_OPERATIONS } from './entity-permissions';
@@ -284,22 +284,8 @@ export function validateEntityDefinition(
     else checkRule(path, rule, target);
   });
 
-  // --- formulários
-  for (const form of entity.forms) {
-    const used = new Set<string>();
-    const visit = (items: readonly FormItem[], path: string) =>
-      items.forEach((item, i) => {
-        if (item.kind === 'group') return visit(item.items, `${path}[${i}]`);
-        if (!fieldKeys.has(item.field))
-          error(`${path}[${i}]`, `O formulário refere o campo desconhecido "${item.field}".`);
-        if (used.has(item.field))
-          error(`${path}[${i}]`, `O campo "${item.field}" aparece mais de uma vez.`);
-        used.add(item.field);
-      });
-    form.sections.forEach((s, i) => visit(s.items, `forms.${form.key}.sections[${i}]`));
-    if (form.modes.length === 0)
-      error(`forms.${form.key}`, 'O formulário não é usado em nenhum modo.');
-  }
+  // --- formulários (a mesma validação do Form Builder; sem as regras estritas dos geridos)
+  for (const form of entity.forms) issues.push(...validateFormDefinition(form, entity));
 
   // --- listagem
   const listable = (key: string) =>
