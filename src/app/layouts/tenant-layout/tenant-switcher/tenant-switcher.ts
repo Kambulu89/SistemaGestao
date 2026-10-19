@@ -21,7 +21,7 @@ import { Dropdown } from '../../../shared/ui/dropdown/dropdown';
         >
           {{ tenant()?.name?.slice(0, 2)?.toUpperCase() }}
         </span>
-        <span class="max-w-40 truncate text-start">
+        <span class="max-w-16 truncate text-start min-[420px]:max-w-28 sm:max-w-40">
           <span class="block truncate text-sm font-medium leading-tight">{{ tenant()?.name }}</span>
           <span class="block truncate text-xs text-fg-muted">{{ context()?.roleName }}</span>
         </span>
