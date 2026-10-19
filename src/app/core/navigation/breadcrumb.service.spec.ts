@@ -1,8 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { InjectionToken } from '@angular/core';
+import { type ActivatedRouteSnapshot, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { BreadcrumbService } from './breadcrumb.service';
+
+const LABELS = new InjectionToken<{ prefix: string }>('LABELS');
 
 @Component({ template: '' })
 class Page {}
@@ -11,6 +14,7 @@ describe('BreadcrumbService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        { provide: LABELS, useValue: { prefix: 'Entidade' } },
         provideRouter([
           {
             path: 'crm/customers',
@@ -20,6 +24,16 @@ describe('BreadcrumbService', () => {
           },
           { path: 'users', component: Page, data: { breadcrumb: 'Utilizadores' } },
           { path: 'plain', component: Page },
+          {
+            path: 'dyn/:name',
+            // Rótulo calculado em contexto de injecção, a partir dos parâmetros da rota.
+            data: {
+              breadcrumb: (route: ActivatedRouteSnapshot) =>
+                `${inject(LABELS).prefix} ${route.paramMap.get('name')}`,
+            },
+            component: Page,
+          },
+          { path: 'hidden', component: Page, data: { breadcrumb: () => null } },
         ]),
       ],
     });
@@ -44,6 +58,20 @@ describe('BreadcrumbService', () => {
   it('is empty for routes without a label', async () => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/plain');
+    expect(TestBed.inject(BreadcrumbService).breadcrumbs()).toEqual([]);
+  });
+
+  it('accepts a function label resolved with injection and route params', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/dyn/vehicle');
+    expect(TestBed.inject(BreadcrumbService).breadcrumbs()).toEqual([
+      { label: 'Entidade vehicle', path: '/dyn/vehicle' },
+    ]);
+  });
+
+  it('omits the crumb when the function returns null', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/hidden');
     expect(TestBed.inject(BreadcrumbService).breadcrumbs()).toEqual([]);
   });
 });

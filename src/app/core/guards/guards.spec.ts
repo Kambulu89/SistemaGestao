@@ -10,7 +10,9 @@ import { firstValueFrom, isObservable, type Observable } from 'rxjs';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
 import { moduleId } from '../modules/define-module';
 import { loginAs, setupMockBackend } from '../testing/test-backend';
+import { DynamicEntityRegistryService } from '../dynamic/entity-registry.service';
 import { authGuard, guestGuard } from './auth.guard';
+import { requireEntityOperation } from './entity.guard';
 import { homeRedirectGuard } from './home-redirect.guard';
 import { moduleGuard } from './module.guard';
 import { platformGuard } from './platform.guard';
@@ -84,5 +86,27 @@ describe('guards', () => {
   it('homeRedirectGuard sends platform admins to /platform', async () => {
     await loginAs('plataforma@demo.pt');
     expect(await run(homeRedirectGuard)).toBe('/platform');
+  });
+
+  it('requireEntityOperation admits only entities the user may operate on (RBAC + module + tenant)', async () => {
+    await loginAs('operador@demo.pt');
+    expect(await run(tenantGuard, { tenantSlug: 'transportes-atlas' })).toBe(true); // carrega as definições
+    const guard = (op: Parameters<typeof requireEntityOperation>[0]) => requireEntityOperation(op);
+    const params = (entityKey: string) => ({ entityKey });
+
+    expect(await run(guard('read'), params('vehicle'))).toBe(true);
+    expect(await run(guard('update'), params('vehicle'))).toBe(true);
+    expect(await run(guard('create'), params('driver'))).toBe('/auth/no-access'); // só lê condutores
+    expect(await run(guard('read'), params('ghost'))).toBe('/auth/no-access'); // desconhecida = proibida
+    expect(TestBed.inject(DynamicEntityRegistryService).find('vehicle')).toBeDefined();
+  });
+
+  it('requireEntityOperation hides entities of other tenants', async () => {
+    await loginAs('escola@demo.pt');
+    await run(tenantGuard, { tenantSlug: 'escola-horizonte' });
+    expect(await run(requireEntityOperation('read'), { entityKey: 'note' })).toBe(true);
+    expect(await run(requireEntityOperation('read'), { entityKey: 'vehicle' })).toBe(
+      '/auth/no-access',
+    );
   });
 });

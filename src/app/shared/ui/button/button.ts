@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { Spinner } from '../spinner/spinner';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md';
 
 const BASE =
@@ -12,12 +12,18 @@ const VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-brand-600 text-white hover:bg-brand-700',
   secondary: 'border border-line bg-surface text-fg hover:bg-surface-muted',
   ghost: 'text-fg-muted hover:bg-surface-muted hover:text-fg',
+  danger: 'bg-red-600 text-white hover:bg-red-700',
 };
 
 const SIZES: Record<ButtonSize, string> = {
   sm: 'h-8 px-3 text-sm',
   md: 'h-10 px-4 text-sm',
 };
+
+/** Classes de um botão, para elementos que não são `<button>` (ex.: `<a routerLink>`). */
+export function buttonClasses(variant: ButtonVariant = 'primary', size: ButtonSize = 'md'): string {
+  return `${BASE} ${VARIANTS[variant]} ${SIZES[size]}`;
+}
 
 /**
  * Botão reutilizável. O evento `click` do elemento hospedeiro funciona

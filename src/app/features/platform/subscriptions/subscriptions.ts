@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import type { ApiError } from '../../../core/api/api-error.model';
+import { errorMessage } from '../../../core/api/error-message';
 import type { PageRequest } from '../../../core/api/pagination.model';
 import { SUBSCRIPTION_LABELS } from '../../../core/modules/module-labels';
 import type { SubscriptionStatus } from '../../../core/subscription/subscription.model';
@@ -32,7 +32,7 @@ const PAGE_SIZE = 8;
       } @else if (subscriptions.error()) {
         <div class="p-5">
           <app-alert tone="danger" title="Não foi possível carregar as subscrições">{{
-            errorMessage()
+            loadError()
           }}</app-alert>
         </div>
       } @else if (subscriptions.value(); as page) {
@@ -89,11 +89,7 @@ export class Subscriptions {
     stream: ({ params }) => this.gateway.listSubscriptions(params),
   });
 
-  protected readonly errorMessage = computed(
-    () =>
-      (this.subscriptions.error() as unknown as ApiError | undefined)?.message ??
-      'Tente novamente.',
-  );
+  protected readonly loadError = computed(() => errorMessage(this.subscriptions.error()));
 
   protected status(status: SubscriptionStatus) {
     return SUBSCRIPTION_LABELS[status];

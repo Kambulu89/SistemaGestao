@@ -1,4 +1,7 @@
-import type { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import type { ActivatedRouteSnapshot, Routes } from '@angular/router';
+import { DynamicEntityRegistryService } from '../../core/dynamic/entity-registry.service';
+import { requireEntityOperation } from '../../core/guards/entity.guard';
 import { requirePermission } from '../../core/guards/permission.guard';
 import { TENANT_PERMISSIONS } from '../../core/permissions/permission.model';
 
@@ -53,4 +56,55 @@ export const TENANT_ROUTES: Routes = [
     canActivate: [requirePermission(TENANT_PERMISSIONS.settingsRead)],
     loadComponent: () => import('./settings/settings').then((m) => m.TenantSettings),
   },
+  // Registos de entidades dinâmicas: as mesmas páginas servem qualquer entidade.
+  {
+    path: 'data/:entityKey',
+    canActivate: [requireEntityOperation('read')],
+    data: { breadcrumb: entityPluralName },
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        title: 'Registos',
+        loadComponent: () =>
+          import('../dynamic-core/dynamic-records/records-list-page').then(
+            (m) => m.RecordsListPage,
+          ),
+      },
+      {
+        path: 'new',
+        title: 'Criar registo',
+        data: { breadcrumb: 'Criar' },
+        canActivate: [requireEntityOperation('create')],
+        loadComponent: () =>
+          import('../dynamic-core/dynamic-records/record-form-page').then((m) => m.RecordFormPage),
+      },
+      {
+        path: ':id',
+        pathMatch: 'full',
+        title: 'Registo',
+        data: { breadcrumb: 'Detalhe' },
+        loadComponent: () =>
+          import('../dynamic-core/dynamic-records/record-detail-page').then(
+            (m) => m.RecordDetailPage,
+          ),
+      },
+      {
+        path: ':id/edit',
+        title: 'Editar registo',
+        data: { breadcrumb: 'Editar' },
+        canActivate: [requireEntityOperation('update')],
+        loadComponent: () =>
+          import('../dynamic-core/dynamic-records/record-form-page').then((m) => m.RecordFormPage),
+      },
+    ],
+  },
 ];
+
+/** Migalha com o nome (plural) da entidade da rota. */
+function entityPluralName(route: ActivatedRouteSnapshot): string {
+  return (
+    inject(DynamicEntityRegistryService).find(route.paramMap.get('entityKey') ?? '')?.names
+      .plural ?? 'Dados'
+  );
+}

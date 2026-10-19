@@ -49,6 +49,8 @@ export interface AuditEntry {
   readonly tenantId: string;
   readonly action: AuditAction;
   readonly actorId: string;
+  /** Nome de apresentação do autor, resolvido pelo servidor. */
+  readonly actorName: string;
   readonly at: string;
   readonly changes: readonly AuditChange[];
 }

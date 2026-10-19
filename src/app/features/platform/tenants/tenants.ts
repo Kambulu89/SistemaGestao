@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import type { ApiError } from '../../../core/api/api-error.model';
+import { errorMessage } from '../../../core/api/error-message';
 import type { PageRequest } from '../../../core/api/pagination.model';
 import { TENANT_STATUS_LABELS } from '../../../core/modules/module-labels';
 import type { TenantStatus } from '../../../core/tenant-context/tenant.model';
@@ -33,7 +33,7 @@ const PAGE_SIZE = 8;
       } @else if (tenants.error()) {
         <div class="p-5">
           <app-alert tone="danger" title="Não foi possível carregar os tenants">
-            {{ errorMessage() }}
+            {{ loadError() }}
           </app-alert>
         </div>
       } @else if (tenants.value(); as page) {
@@ -93,9 +93,7 @@ export class Tenants {
     stream: ({ params }) => this.gateway.list(params),
   });
 
-  protected readonly errorMessage = computed(
-    () => (this.tenants.error() as unknown as ApiError | undefined)?.message ?? 'Tente novamente.',
-  );
+  protected readonly loadError = computed(() => errorMessage(this.tenants.error()));
 
   protected onSort(sort: TableSort): void {
     this.sort.set(sort);
