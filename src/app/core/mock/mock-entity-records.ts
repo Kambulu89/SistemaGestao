@@ -77,9 +77,23 @@ export const MOCK_ENTITY_RECORDS: readonly EntityRecord[] = [
     faxAntigo: '213 000 112',
   }),
   customer(ESCOLA, { nome: 'Academia Delta', sectorActividade: 'educacao', categoriaCliente: 'C' }),
-  customer(ATLAS, { nome: 'Logística Norte', regiaoComercial: 'norte', codigoInterno: 'LN-01' }),
-  customer(ATLAS, { nome: 'Armazéns do Sul', regiaoComercial: 'sul', codigoInterno: 'AS-02' }),
-  customer(ATLAS, { nome: 'Cimentos Centro', regiaoComercial: 'centro' }),
+  customer(ATLAS, {
+    nome: 'Logística Norte',
+    regiaoComercial: 'norte',
+    codigoInterno: 'LN-01',
+    numeroCliente: 'CLI-0001',
+  }),
+  customer(ATLAS, {
+    nome: 'Armazéns do Sul',
+    regiaoComercial: 'sul',
+    codigoInterno: 'AS-02',
+    numeroCliente: 'CLI-0002',
+  }),
+  customer(ATLAS, {
+    nome: 'Cimentos Centro',
+    regiaoComercial: 'centro',
+    numeroCliente: 'CLI-0003',
+  }),
   customer('t-clinica', { nome: 'Paciente Exemplo', email: 'paciente@example.pt' }),
   customer('t-clinica', { nome: 'Seguradora Vida' }),
 

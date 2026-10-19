@@ -12,6 +12,17 @@ export const DYNAMIC_CORE_MODULES = [
     group: 'configuration',
     icon: 'settings',
     featureFlag: 'configuration.form-builder',
+    permissions: [
+      { key: 'configuration.forms.read', name: 'Ver o Core Dinâmico' },
+      {
+        key: 'configuration.forms.manage',
+        name: 'Gerir entidades e campos personalizados (rascunhos)',
+      },
+      {
+        key: 'configuration.forms.publish',
+        name: 'Publicar e arquivar entidades e campos personalizados',
+      },
+    ],
     routes: [
       {
         path: '',

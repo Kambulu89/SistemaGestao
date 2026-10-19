@@ -53,6 +53,7 @@ describe('Custom fields: registo e isolamento (caso A)', () => {
       'telefone',
       'regiaoComercial',
       'codigoInterno',
+      'numeroCliente',
     ]);
   });
 

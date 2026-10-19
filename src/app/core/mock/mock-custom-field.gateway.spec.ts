@@ -9,6 +9,7 @@ import {
 } from '../dynamic/data-access/custom-field.gateway';
 import { defineField } from '../dynamic/engine/define-entity';
 import { DynamicEntityRegistryService } from '../dynamic/entity-registry.service';
+import { PermissionService } from '../permissions/permission.service';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
 import { loginAs, setupMockBackend } from '../testing/test-backend';
 
@@ -108,10 +109,11 @@ describe('Mock backend: gestão de campos personalizados', () => {
       firstValueFrom(
         api.save(
           input({
-            type: 'auto-number',
+            type: 'formula',
             key: 'numero',
             label: 'Nº',
-            autoNumber: { prefix: '', padding: 4, start: 1, reset: 'never' },
+            formula: { source: '1 + 1' },
+            scale: 0,
           }),
         ),
       ),
@@ -221,5 +223,39 @@ describe('Mock backend: gestão de campos personalizados', () => {
       ),
     );
     expect(messages(error).join(' ')).toContain('não aceita campos personalizados');
+  });
+});
+
+describe('Mock backend: publicar exige permissão própria', () => {
+  beforeEach(() => {
+    setupMockBackend();
+    // Um papel que gere rascunhos mas não publica.
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: PermissionService,
+          useValue: { can: (p: string) => p !== 'configuration.forms.publish' },
+        },
+      ],
+    });
+  });
+
+  it('lets the role save drafts but refuses to publish or archive (403)', async () => {
+    const { api } = await enter('escola@demo.pt', 'escola-horizonte');
+    const draft = await firstValueFrom(
+      api.save(
+        input({ type: 'text', key: 'soRascunho', label: 'Só rascunho' }, { state: 'draft' }),
+      ),
+    );
+    expect(draft.state).toBe('draft');
+
+    const publish = await fails(
+      firstValueFrom(api.save(input({ type: 'text', key: 'publicado', label: 'Publicado' }))),
+    );
+    expect(publish.status).toBe(403);
+    const archive = await fails(
+      firstValueFrom(api.setState('cf-t-escola-dataRenovacao', 'archived')),
+    );
+    expect(archive.status).toBe(403);
   });
 });

@@ -7,6 +7,7 @@ import { AuthService } from '../auth/auth.service';
 import { EntityRecordsGateway } from '../dynamic/data-access/entity-records.gateway';
 import { defineField } from '../dynamic/engine/define-entity';
 import { DynamicEntityRegistryService } from '../dynamic/entity-registry.service';
+import { PermissionService } from '../permissions/permission.service';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
 import { loginAs, setupMockBackend } from '../testing/test-backend';
 
@@ -293,5 +294,109 @@ describe('Entidades do tenant: ciclo de vida (caso D)', () => {
     expect((await firstValueFrom(records.get('equipamento', created.id))).data).not.toHaveProperty(
       'responsavel',
     );
+  });
+});
+
+describe('Entidades do tenant: publicar exige permissão própria', () => {
+  beforeEach(() => {
+    setupMockBackend();
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: PermissionService,
+          useValue: { can: (p: string) => p !== 'configuration.forms.publish' },
+        },
+      ],
+    });
+  });
+
+  it('saves drafts but refuses to publish (403)', async () => {
+    const { registry } = await enter('frota@demo.pt', 'transportes-atlas');
+    await firstValueFrom(registry.saveDraft(EQUIPAMENTO));
+    const error = await fails(firstValueFrom(registry.publish('equipamento')));
+    expect(error.status).toBe(403);
+    expect(registry.find('equipamento')).toBeUndefined();
+  });
+});
+
+describe('Numeração automática (servidor)', () => {
+  beforeEach(() => setupMockBackend());
+
+  const auto = (reset: 'never' | 'yearly' | 'monthly' = 'never') =>
+    defineField({
+      type: 'auto-number',
+      key: 'numero',
+      label: 'Número',
+      searchable: true,
+      autoNumber: { prefix: 'EQ-', padding: 4, start: 1, reset },
+    });
+  const entity = (reset?: 'never' | 'yearly' | 'monthly'): SaveEntityDraftInput => ({
+    ...EQUIPAMENTO,
+    fields: [auto(reset), ...EQUIPAMENTO.fields],
+  });
+  const create = (records: EntityRecordsGateway, codigo: string) =>
+    firstValueFrom(records.create('equipamento', { data: { codigo, designacao: codigo } }));
+
+  async function publish(reset?: 'never' | 'yearly' | 'monthly') {
+    const ctx = await enter('frota@demo.pt', 'transportes-atlas');
+    await firstValueFrom(ctx.registry.saveDraft(entity(reset)));
+    await firstValueFrom(ctx.registry.publish('equipamento'));
+    return ctx;
+  }
+
+  it('assigns consecutive numbers on the server, starting at the configured value', async () => {
+    const { records } = await publish();
+    const a = await create(records, 'A');
+    const b = await create(records, 'B');
+    expect([a.data['numero'], b.data['numero']]).toEqual(['EQ-0001', 'EQ-0002']);
+  });
+
+  it('never reuses a number, even after the record is deleted', async () => {
+    const { records } = await publish();
+    const a = await create(records, 'A');
+    await firstValueFrom(records.delete('equipamento', a.id));
+    const b = await create(records, 'B');
+    expect(b.data['numero']).toBe('EQ-0002');
+  });
+
+  it('refuses a client-supplied number and refuses to change it', async () => {
+    const { records } = await publish();
+    const forged = await fails(
+      firstValueFrom(
+        records.create('equipamento', {
+          data: { codigo: 'X', designacao: 'X', numero: 'EQ-9999' },
+        }),
+      ),
+    );
+    expect(forged.status).toBe(422);
+    const a = await create(records, 'A');
+    const edit = await fails(
+      firstValueFrom(
+        records.update('equipamento', a.id, { expectedRowVersion: 1, data: { numero: 'EQ-0000' } }),
+      ),
+    );
+    expect(edit.status).toBe(422);
+    const ok = await firstValueFrom(
+      records.update('equipamento', a.id, { expectedRowVersion: 1, data: { designacao: 'novo' } }),
+    );
+    expect(ok.data['numero']).toBe('EQ-0001'); // o número mantém-se
+  });
+
+  it('puts the period into the number and keeps one sequence per period', async () => {
+    const { records } = await publish('yearly');
+    const year = String(new Date().getUTCFullYear());
+    const a = await create(records, 'A');
+    expect(a.data['numero']).toBe(`EQ-${year}-0001`);
+  });
+
+  it('keeps sequences independent per tenant', async () => {
+    const atlas = await publish();
+    await create(atlas.records, 'A');
+    await create(atlas.records, 'B');
+    // O tenant Atlas já tem o campo `numeroCliente` (CLI-) semeado: continua depois dos dados existentes.
+    const customer = await firstValueFrom(
+      atlas.records.create('customer', { data: { nome: 'Novo cliente' } }),
+    );
+    expect(customer.data['numeroCliente']).toBe('CLI-0004');
   });
 });

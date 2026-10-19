@@ -226,9 +226,11 @@ type Editing = number | null;
 
             @if (canManage()) {
               <div class="flex flex-wrap gap-2">
-                <app-button [loading]="saving()" [disabled]="!canPublish()" (click)="run(true)"
-                  >Publicar</app-button
-                >
+                @if (mayPublish()) {
+                  <app-button [loading]="saving()" [disabled]="!canPublish()" (click)="run(true)"
+                    >Publicar</app-button
+                  >
+                }
                 <app-button
                   variant="secondary"
                   [disabled]="saving() || !canSaveDraft()"
@@ -365,6 +367,9 @@ export class EntityDesignerPage {
     const v = (this.value(), this.form.getRawValue());
     return !!v.singular.trim() && !!v.plural.trim() && ENTITY_KEY_PATTERN.test(v.key);
   });
+  protected readonly mayPublish = computed(() =>
+    this.permissions.can('configuration.forms.publish'),
+  );
   protected readonly canPublish = computed(
     () => this.canManage() && !this.saving() && this.issues().length === 0,
   );
@@ -451,7 +456,7 @@ export class EntityDesignerPage {
 
   protected run(publish: boolean): void {
     if (!this.canManage() || this.saving()) return;
-    if (publish && this.issues().length > 0) return;
+    if (publish && (!this.mayPublish() || this.issues().length > 0)) return;
     const v = this.form.getRawValue();
     const current = this.draft() ?? this.published();
 

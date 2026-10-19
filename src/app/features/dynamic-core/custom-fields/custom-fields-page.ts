@@ -118,17 +118,19 @@ interface Row {
                   @case ('actions') {
                     @if (row.definition && canManage()) {
                       <div class="flex justify-end gap-1">
-                        <app-button variant="ghost" size="sm" (click)="edit(row.definition)"
-                          >Editar</app-button
-                        >
-                        @if (row.state === 'active') {
+                        @if (row.state !== 'archived') {
+                          <app-button variant="ghost" size="sm" (click)="edit(row.definition)"
+                            >Editar</app-button
+                          >
+                        }
+                        @if (row.state === 'active' && canPublish()) {
                           <app-button
                             variant="ghost"
                             size="sm"
                             (click)="setState(row.definition, 'archived')"
                             >Arquivar</app-button
                           >
-                        } @else if (row.state === 'archived') {
+                        } @else if (row.state === 'archived' && canPublish()) {
                           <app-button
                             variant="ghost"
                             size="sm"
@@ -179,6 +181,9 @@ export class CustomFieldsPage {
   );
   protected readonly extensible = computed(() => this.entity()?.extensible === true);
   protected readonly canManage = computed(() => this.permissions.can('configuration.forms.manage'));
+  protected readonly canPublish = computed(() =>
+    this.permissions.can('configuration.forms.publish'),
+  );
 
   protected readonly rows = computed<readonly Row[]>(() => {
     const entity = this.entity();

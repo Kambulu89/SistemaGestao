@@ -1,5 +1,6 @@
 import type { ValidationRule } from '../models/validation-rule.model';
 import {
+  type AutoNumberDefinition,
   type FieldDefinition,
   type FieldOption,
   type FieldType,
@@ -37,6 +38,11 @@ export interface FieldDraft {
   readonly multiple: boolean;
   /** Chave da entidade alvo (`entity-reference`). */
   readonly referenceEntity: string;
+  /** `auto-number` */
+  readonly autoPrefix: string;
+  readonly autoPadding: number | null;
+  readonly autoStart: number | null;
+  readonly autoReset: AutoNumberDefinition['reset'];
 }
 
 export const EMPTY_DRAFT: FieldDraft = {
@@ -62,6 +68,10 @@ export const EMPTY_DRAFT: FieldDraft = {
   maxSizeMb: null,
   multiple: false,
   referenceEntity: '',
+  autoPrefix: '',
+  autoPadding: 4,
+  autoStart: 1,
+  autoReset: 'never',
 };
 
 /** `Gestor comercial` → `gestorComercial`: sem acentos, camelCase, a começar por letra. */
@@ -229,6 +239,20 @@ export function buildField(
         validations: rules(),
       };
       break;
+    case 'auto-number':
+      input = {
+        ...common,
+        type: 'auto-number',
+        autoNumber: {
+          prefix: draft.autoPrefix.trim(),
+          padding: draft.autoPadding ?? 0,
+          start: draft.autoStart ?? 0,
+          reset: draft.autoReset,
+        },
+        required: false,
+        validations: rules(),
+      };
+      break;
     case 'entity-reference':
       input = {
         ...common,
@@ -278,5 +302,9 @@ export function draftOf(field: FieldDefinition): FieldDraft {
         : null,
     multiple: field.type === 'file' || field.type === 'image' ? (field.multiple ?? false) : false,
     referenceEntity: field.type === 'entity-reference' ? field.entityKey : '',
+    autoPrefix: field.type === 'auto-number' ? field.autoNumber.prefix : '',
+    autoPadding: field.type === 'auto-number' ? field.autoNumber.padding : EMPTY_DRAFT.autoPadding,
+    autoStart: field.type === 'auto-number' ? field.autoNumber.start : EMPTY_DRAFT.autoStart,
+    autoReset: field.type === 'auto-number' ? field.autoNumber.reset : EMPTY_DRAFT.autoReset,
   };
 }

@@ -7,6 +7,7 @@ import { EntityRecordsGateway } from '../dynamic/data-access/entity-records.gate
 import { compareScalars, isEmptyValue } from '../dynamic/engine/condition';
 import { evaluateOperation } from '../dynamic/engine/entity-permissions';
 import { fieldAccessFromPermissions } from '../dynamic/engine/field-state';
+import { autoNumberPeriod, formatAutoNumber } from '../dynamic/engine/auto-number';
 import { fieldCapabilities } from '../dynamic/engine/field-types';
 import { formatFieldValue } from '../dynamic/engine/format-value';
 import { recordLabel } from '../dynamic/engine/record-label';
@@ -25,6 +26,7 @@ import {
   type UpdateRecordInput,
 } from '../dynamic/models/entity-record.model';
 import {
+  type AutoNumberDefinition,
   hasOptions,
   type FieldDefinition,
   type FieldValue,
@@ -74,6 +76,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
   private readonly records = new Map<string, EntityRecord[]>(); // `${tenantId}:${entityKey}`
   private readonly audits = new Map<string, AuditEntry[]>(); // `${tenantId}:${entityKey}:${id}`
   private counter = 0;
+  private readonly sequences = new Map<string, number>(); // `${tenant}:${entidade}:${campo}:${período}`
 
   constructor() {
     super();
@@ -141,7 +144,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
         tenantId,
         definitionVersion: entity.version,
         status,
-        data: this.clean(entity, input.data),
+        data: this.withAutoNumbers(entity, tenantId, this.clean(entity, input.data), new Date(now)),
         rowVersion: 1,
         createdAt: now,
         createdBy: this.actorId(),
@@ -353,6 +356,49 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
   private preserved(entity: EntityDefinition, data: RecordData): RecordData {
     const known = new Set(entity.fields.map((f) => f.key));
     return Object.fromEntries(Object.entries(data).filter(([k]) => !known.has(k)));
+  }
+
+  /** Atribui os números automáticos (só o servidor o faz; nunca reutiliza um número). */
+  private withAutoNumbers(
+    entity: EntityDefinition,
+    tenantId: string,
+    data: RecordData,
+    at: Date,
+  ): RecordData {
+    const result: Record<string, FieldValue> = { ...data };
+    for (const field of entity.fields) {
+      if (field.type !== 'auto-number') continue;
+      const definition = field.autoNumber;
+      const period = autoNumberPeriod(definition.reset, at);
+      const key = `${tenantId}:${entity.key}:${field.key}:${period}`;
+      let last = this.sequences.get(key);
+      if (last === undefined)
+        last = this.highestIssued(tenantId, entity.key, field.key, definition, period);
+      const next = last === undefined ? definition.start : last + 1;
+      this.sequences.set(key, next);
+      result[field.key] = formatAutoNumber(definition, next, at);
+    }
+    return result;
+  }
+
+  /** Maior sequência já usada no período (para continuar após dados semeados). */
+  private highestIssued(
+    tenantId: string,
+    entityKey: string,
+    fieldKey: string,
+    definition: AutoNumberDefinition,
+    period: string,
+  ): number | undefined {
+    const head = `${definition.prefix}${period ? `${period}-` : ''}`;
+    let highest: number | undefined;
+    for (const record of this.bucket(tenantId, entityKey)) {
+      const value = record.data[fieldKey];
+      if (typeof value !== 'string' || !value.startsWith(head)) continue;
+      const tail = value.slice(head.length);
+      if (!/^\d+$/.test(tail)) continue;
+      highest = Math.max(highest ?? -1, Number(tail));
+    }
+    return highest;
   }
 
   private matches(record: EntityRecord, key: string, value: string): boolean {

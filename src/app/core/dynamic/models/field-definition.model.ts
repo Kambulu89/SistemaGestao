@@ -161,8 +161,8 @@ export interface AutoNumberDefinition {
   /** Número de dígitos, com zeros à esquerda. */
   readonly padding: number;
   readonly start: number;
-  /** `yearly` reinicia a sequência todos os anos. */
-  readonly reset: 'never' | 'yearly';
+  /** `yearly`/`monthly` reiniciam a sequência todos os anos/meses (o período entra no número). */
+  readonly reset: 'never' | 'yearly' | 'monthly';
 }
 
 export type FormulaField = FieldBase<'formula'> & {

@@ -155,9 +155,10 @@ const SUPPORTED_TYPES: ReadonlySet<FieldDefinition['type']> = new Set([
         <div data-testid="computed-field">
           <p class="mb-1.5 text-sm font-medium">{{ field().label }}</p>
           <p
-            class="rounded-lg border border-dashed border-line bg-surface-muted px-3 py-2 text-sm text-fg-muted"
+            class="rounded-lg border border-dashed border-line bg-surface-muted px-3 py-2 text-sm"
+            [class.text-fg-muted]="computedText() === null"
           >
-            Calculado automaticamente pelo servidor.
+            {{ computedText() ?? 'Calculado automaticamente pelo servidor.' }}
           </p>
         </div>
       }
@@ -218,6 +219,12 @@ export class DynamicField {
     // Opções inactivas só se mostram se forem o valor já gravado (ler dados antigos).
     const current = this.control().value;
     return f.options.filter((o) => o.active !== false || o.value === current);
+  });
+
+  /** Valor já atribuído pelo servidor (ex.: numeração automática), se existir. */
+  protected readonly computedText = computed(() => {
+    const value = this.control().value;
+    return value === null || value === undefined || value === '' ? null : String(value);
   });
 
   protected readonly typeLabel = computed(() => fieldTypeDefinition(this.field().type).label);

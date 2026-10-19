@@ -19,6 +19,7 @@ import { mockError, respond } from './mock-helpers';
 import { MockMetadataStore } from './mock-metadata-store';
 
 const MANAGE = 'configuration.forms.manage';
+const PUBLISH = 'configuration.forms.publish';
 
 const unprocessable = (message: string, issues: readonly DefinitionIssue[]): ApiError => ({
   status: 422,
@@ -126,6 +127,8 @@ export class MockEntityDefinitionGateway extends EntityDefinitionGateway {
     return respond(() => {
       const tenantId = this.tenantId();
       this.requireManage();
+      if (!this.permissions.can(PUBLISH))
+        throw mockError(403, 'Não tem permissão para publicar entidades.');
       const mine = this.store.versionsFor(tenantId, key).filter((d) => d.scope === 'tenant');
       const draft = mine.find((d) => d.state === 'draft');
       if (!draft) throw mockError(404, 'Não há rascunho para publicar.');

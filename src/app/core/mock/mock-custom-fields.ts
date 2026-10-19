@@ -94,4 +94,11 @@ export const MOCK_CUSTOM_FIELDS: readonly CustomFieldDefinition[] = [
     label: 'Código interno',
     validations: [{ type: 'unique', message: 'Este código interno já existe.' }],
   }),
+  custom('t-atlas', 3, {
+    type: 'auto-number',
+    key: 'numeroCliente',
+    label: 'Nº de cliente',
+    autoNumber: { prefix: 'CLI-', padding: 4, start: 1, reset: 'never' },
+    searchable: true,
+  }),
 ];

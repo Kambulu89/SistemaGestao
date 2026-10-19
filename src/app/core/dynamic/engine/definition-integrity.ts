@@ -2,6 +2,7 @@ import type { Condition } from '../models/condition.model';
 import { STATUS_KEY } from '../models/condition.model';
 import { SYSTEM_COLUMNS, type EntityDefinition } from '../models/entity-definition.model';
 import { activeOptions, hasOptions, type FieldDefinition } from '../models/field-definition.model';
+import { validateAutoNumber } from './auto-number';
 import { fieldCapabilities } from './field-types';
 import type { FormItem } from '../models/form-definition.model';
 import type { ValidationRule } from '../models/validation-rule.model';
@@ -135,6 +136,12 @@ export function validateEntityDefinition(
       !(Number.isInteger(field.scale) && field.scale >= 0 && field.scale <= 10)
     ) {
       error(path, 'As casas decimais têm de ser um inteiro entre 0 e 10.');
+    }
+    if (field.type === 'auto-number') {
+      for (const message of validateAutoNumber(field.autoNumber)) error(path, message);
+      if (field.required) error(path, 'Uma numeração automática não pode ser obrigatória.');
+      if (field.defaultValue !== undefined)
+        error(path, 'Uma numeração automática não tem valor por omissão.');
     }
     if (field.type === 'file' || field.type === 'image') {
       if (field.accept?.some((a) => !isMimePattern(a)))

@@ -68,14 +68,7 @@ describe('catálogo de tipos de campo', () => {
 
   it('assinala os tipos ainda em preparação', () => {
     const preview = FIELD_TYPE_CATALOG.filter((t) => t.status === 'preview').map((t) => t.type);
-    expect(preview).toEqual([
-      'file',
-      'image',
-      'user-reference',
-      'formula',
-      'lookup',
-      'auto-number',
-    ]);
+    expect(preview).toEqual(['user-reference', 'formula', 'lookup']);
     expect(fieldTypeDefinition('text').status).toBe('ready');
   });
 

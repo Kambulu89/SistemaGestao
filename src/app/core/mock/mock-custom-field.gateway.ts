@@ -20,6 +20,7 @@ import { mockError, respond } from './mock-helpers';
 import { MockMetadataStore } from './mock-metadata-store';
 
 const MANAGE = 'configuration.forms.manage';
+const PUBLISH = 'configuration.forms.publish';
 
 const unprocessable = (issues: readonly DefinitionIssue[]): ApiError => ({
   status: 422,
@@ -46,6 +47,7 @@ export class MockCustomFieldGateway extends CustomFieldGateway {
     return respond(() => {
       const tenantId = this.tenantId();
       this.requireManage();
+      if (input.state === 'active') this.require(PUBLISH, 'publicar campos personalizados');
 
       const previous = input.id
         ? this.store.customFieldsFor(tenantId).find((c) => c.id === input.id)
@@ -87,6 +89,7 @@ export class MockCustomFieldGateway extends CustomFieldGateway {
     return respond(() => {
       const tenantId = this.tenantId();
       this.requireManage();
+      this.require(PUBLISH, 'arquivar ou reactivar campos personalizados');
       const previous = this.store.customFieldsFor(tenantId).find((c) => c.id === id);
       if (!previous) throw mockError(404, 'Campo não encontrado.');
       if (previous.state === 'draft')
@@ -112,6 +115,11 @@ export class MockCustomFieldGateway extends CustomFieldGateway {
     const id = this.tenantContext.tenant()?.id;
     if (!id) throw mockError(403, 'Sem tenant activo.');
     return id;
+  }
+
+  private require(permission: string, action: string): void {
+    if (!this.permissions.can(permission))
+      throw mockError(403, `Não tem permissão para ${action}.`);
   }
 
   private requireManage(): void {

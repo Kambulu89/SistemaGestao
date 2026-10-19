@@ -34,6 +34,7 @@ import {
 } from '../../../core/dynamic/models/custom-definition.model';
 import type { EntityDefinition } from '../../../core/dynamic/models/entity-definition.model';
 import type {
+  AutoNumberDefinition,
   FieldDefinition,
   FieldType,
   FieldValue,
@@ -185,6 +186,17 @@ const optionGroup = (value = '', label = '', active = true) =>
                   [options]="referenceOptions()"
                 />
               }
+              @if (type() === 'auto-number') {
+                <app-input formControlName="autoPrefix" label="Prefixo" hint="Ex.: EQ- → EQ-0001" />
+                <app-input formControlName="autoPadding" type="number" label="Dígitos" />
+                <app-input formControlName="autoStart" type="number" label="Número inicial" />
+                <app-select
+                  formControlName="autoReset"
+                  label="Reinício da sequência"
+                  hint="A sequência é única por tenant e entidade."
+                  [options]="resetOptions"
+                />
+              }
               @if (isFile()) {
                 <app-input
                   formControlName="accept"
@@ -263,9 +275,15 @@ const optionGroup = (value = '', label = '', active = true) =>
           @if (!owned() && !canManage()) {
             <p class="text-sm text-fg-muted">Não tem permissão para gerir campos personalizados.</p>
           } @else {
-            <app-button type="submit" [loading]="saving()" [disabled]="issues().length > 0">{{
-              owned() ? 'Aplicar campo' : published() ? 'Guardar alterações' : 'Publicar campo'
-            }}</app-button>
+            @if (owned() || canPublish()) {
+              <app-button type="submit" [loading]="saving()" [disabled]="issues().length > 0">{{
+                owned() ? 'Aplicar campo' : published() ? 'Guardar alterações' : 'Publicar campo'
+              }}</app-button>
+            } @else if (published()) {
+              <p class="text-sm text-fg-muted">
+                Não tem permissão para publicar alterações a um campo já publicado.
+              </p>
+            }
             @if (!owned() && !published()) {
               <app-button
                 variant="secondary"
@@ -307,6 +325,11 @@ export class CustomFieldDesigner {
   readonly cancelled = output<void>();
 
   protected readonly previewTypes = PREVIEW_TYPES;
+  protected readonly resetOptions: readonly SelectOption[] = [
+    { value: 'never', label: 'Nunca' },
+    { value: 'yearly', label: 'Todos os anos' },
+    { value: 'monthly', label: 'Todos os meses' },
+  ];
   protected readonly codeTouched = signal(false);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -337,6 +360,10 @@ export class CustomFieldDesigner {
     maxSizeMb: new FormControl<number | null>(null),
     multiple: new FormControl(false, { nonNullable: true }),
     referenceEntity: new FormControl('', { nonNullable: true }),
+    autoPrefix: new FormControl('', { nonNullable: true }),
+    autoPadding: new FormControl<number | null>(4),
+    autoStart: new FormControl<number | null>(1),
+    autoReset: new FormControl<AutoNumberDefinition['reset']>('never', { nonNullable: true }),
   });
   protected readonly options = this.form.controls.options;
 
@@ -361,6 +388,9 @@ export class CustomFieldDesigner {
     this.entities.published().map((e) => ({ value: e.key, label: e.names.plural })),
   );
   protected readonly canManage = computed(() => this.permissions.can('configuration.forms.manage'));
+  protected readonly canPublish = computed(
+    () => this.canManage() && this.permissions.can('configuration.forms.publish'),
+  );
   protected readonly typeOptions = computed(() => {
     const base = this.baseField();
     if (!base) return READY_TYPES;
@@ -376,7 +406,12 @@ export class CustomFieldDesigner {
   protected readonly isText = computed(() => ['text', 'textarea'].includes(this.type()));
   protected readonly isFile = computed(() => ['file', 'image'].includes(this.type()));
   protected readonly hasTypeSettings = computed(
-    () => this.isNumeric() || this.isText() || this.isFile() || this.type() === 'entity-reference',
+    () =>
+      this.isNumeric() ||
+      this.isText() ||
+      this.isFile() ||
+      this.type() === 'entity-reference' ||
+      this.type() === 'auto-number',
   );
 
   private readonly draft = computed<FieldDraft>(() => {
@@ -491,6 +526,7 @@ export class CustomFieldDesigner {
       return;
     }
     if (!this.canManage() || this.saving() || this.issues().length > 0) return;
+    if (state === 'active' && !this.canPublish()) return;
     const previous = this.definition();
     const field = buildField(
       this.draft(),

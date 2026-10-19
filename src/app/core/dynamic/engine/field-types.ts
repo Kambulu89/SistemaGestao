@@ -133,8 +133,14 @@ export const FIELD_TYPE_CATALOG: readonly FieldTypeDefinition[] = [
     sortable: true,
     options: true,
   }),
-  def('file', 'Ficheiro', 'Documento ou anexo.', 'preview', {}),
-  def('image', 'Imagem', 'Imagem com pré-visualização.', 'preview', {}),
+  def(
+    'file',
+    'Ficheiro',
+    'Documento ou anexo (tipo e tamanho validados no servidor).',
+    'ready',
+    {},
+  ),
+  def('image', 'Imagem', 'Imagem (tipo e tamanho validados no servidor).', 'ready', {}),
   def(
     'entity-reference',
     'Referência a entidade',
@@ -163,7 +169,7 @@ export const FIELD_TYPE_CATALOG: readonly FieldTypeDefinition[] = [
     'auto-number',
     'Numeração automática',
     'Identificador sequencial atribuído pelo servidor.',
-    'preview',
+    'ready',
     {
       writable: false,
       required: false,
