@@ -210,4 +210,111 @@ describe('validateEntityDefinition', () => {
     ).toBe(true);
     expect(hasErrors(issues)).toBe(false);
   });
+
+  describe('capacidades e configuração por tipo', () => {
+    const field = (
+      f: Parameters<typeof base>[0] extends never
+        ? never
+        : NonNullable<EntityInput['fields']>[number],
+    ) => messages(base({ fields: [f] }));
+
+    it('recusa pesquisa, filtro, ordenação, valor por omissão e obrigatoriedade onde o tipo não os suporta', () => {
+      expect(field({ type: 'file', key: 'f', label: 'F', searchable: true })).toContain(
+        'não suporta pesquisa',
+      );
+      expect(field({ type: 'textarea', key: 't', label: 'T', filterable: true })).toContain(
+        'não suporta filtro',
+      );
+      expect(field({ type: 'file', key: 'f', label: 'F', sortable: true })).toContain(
+        'não suporta ordenação',
+      );
+      expect(
+        field({ type: 'datetime', key: 'd', label: 'D', defaultValue: '2026-01-01T00:00:00Z' }),
+      ).toContain('não admite valor por omissão');
+      expect(
+        field({
+          type: 'auto-number',
+          key: 'n',
+          label: 'N',
+          required: true,
+          autoNumber: { prefix: 'X-', padding: 4, start: 1, reset: 'never' },
+        }),
+      ).toContain('não pode ser obrigatório');
+    });
+
+    it('dados sensíveis exigem permissões explícitas de leitura e escrita', () => {
+      expect(field({ type: 'text', key: 's', label: 'S', sensitivity: 'sensitive' })).toContain(
+        'permissões explícitas',
+      );
+      expect(
+        field({
+          type: 'text',
+          key: 's',
+          label: 'S',
+          sensitivity: 'sensitive',
+          permissions: { read: 'a' },
+        }),
+      ).toContain('permissões explícitas');
+      expect(
+        field({
+          type: 'text',
+          key: 's',
+          label: 'S',
+          sensitivity: 'sensitive',
+          permissions: { read: 'a', write: 'b' },
+        }),
+      ).toBe('');
+    });
+
+    it('opções: pelo menos uma activa, e o valor por omissão não pode ser inactivo', () => {
+      const opts = [
+        { value: 'a', label: 'A', active: false },
+        { value: 'b', label: 'B', active: false },
+      ];
+      expect(field({ type: 'radio', key: 'r', label: 'R', options: opts })).toContain(
+        'pelo menos uma opção activa',
+      );
+      expect(
+        field({
+          type: 'select',
+          key: 's',
+          label: 'S',
+          defaultValue: 'a',
+          options: [
+            { value: 'a', label: 'A', active: false },
+            { value: 'b', label: 'B' },
+          ],
+        }),
+      ).toContain('opção inactiva');
+    });
+
+    it('moeda e decimal: precisão dentro dos limites', () => {
+      expect(
+        field({ type: 'currency', key: 'm', label: 'M', currency: 'EUR', scale: 9 }),
+      ).toContain('entre 0 e 6');
+      expect(field({ type: 'currency', key: 'm', label: 'M', currency: 'euro' })).toContain(
+        'ISO 4217',
+      );
+      expect(field({ type: 'decimal', key: 'd', label: 'D', scale: 11 })).toContain('entre 0 e 10');
+      expect(field({ type: 'currency', key: 'm', label: 'M', currency: 'EUR', scale: 2 })).toBe('');
+    });
+
+    it('ficheiros e imagens: MIME e tamanho máximo válidos', () => {
+      expect(field({ type: 'file', key: 'f', label: 'F', accept: ['pdf'] })).toContain(
+        'Tipo MIME inválido',
+      );
+      expect(field({ type: 'image', key: 'i', label: 'I', maxSizeBytes: 999_999_999 })).toContain(
+        'tamanho máximo',
+      );
+      expect(
+        field({
+          type: 'image',
+          key: 'i',
+          label: 'I',
+          accept: ['image/png'],
+          maxSizeBytes: 1_000_000,
+        }),
+      ).toBe('');
+    });
+  });
 });

@@ -109,6 +109,11 @@ export function validateEntityDefinition(
             : [];
       if (defaults.some((d) => !values.includes(d)))
         error(path, 'O valor por omissão não é uma das opções.');
+      if (field.options.length > 0 && activeOptions(field).length === 0)
+        error(path, 'Tem de haver pelo menos uma opção activa.');
+      const inactive = new Set(field.options.filter((o) => o.active === false).map((o) => o.value));
+      if (defaults.some((d) => inactive.has(d)))
+        error(path, 'O valor por omissão é uma opção inactiva.');
     }
     if (field.type === 'entity-reference') {
       if (!field.entityKey) error(path, 'Indique a entidade referenciada.');
@@ -116,8 +121,30 @@ export function validateEntityDefinition(
         error(path, `A entidade referenciada "${field.entityKey}" não existe.`);
       }
     }
-    if (field.type === 'currency' && !/^[A-Z]{3}$/.test(field.currency))
-      error(path, 'Indique uma moeda ISO 4217 (ex.: EUR).');
+    if (field.type === 'currency') {
+      if (!/^[A-Z]{3}$/.test(field.currency)) error(path, 'Indique uma moeda ISO 4217 (ex.: EUR).');
+      if (
+        field.scale !== undefined &&
+        !(Number.isInteger(field.scale) && field.scale >= 0 && field.scale <= 6)
+      )
+        error(path, 'A precisão da moeda tem de ser um inteiro entre 0 e 6.');
+    }
+    if (
+      field.type === 'decimal' &&
+      field.scale !== undefined &&
+      !(Number.isInteger(field.scale) && field.scale >= 0 && field.scale <= 10)
+    ) {
+      error(path, 'As casas decimais têm de ser um inteiro entre 0 e 10.');
+    }
+    if (field.type === 'file' || field.type === 'image') {
+      if (field.accept?.some((a) => !isMimePattern(a)))
+        error(path, 'Tipo MIME inválido em "accept" (ex.: image/*, application/pdf).');
+      if (
+        field.maxSizeBytes !== undefined &&
+        (field.maxSizeBytes < 1 || field.maxSizeBytes > MAX_FILE_BYTES)
+      )
+        error(path, `O tamanho máximo tem de estar entre 1 byte e ${MAX_FILE_BYTES / 1048576} MB.`);
+    }
 
     checkCondition(`${path}.visibleWhen`, field.visibleWhen);
     checkCondition(`${path}.editableWhen`, field.editableWhen);
