@@ -24,6 +24,19 @@ export class MockMetadataStore {
     return this.customFields.filter((c) => c.tenantId === tenantId);
   }
 
+  /** Definições publicadas do tenant, sem campos personalizados fundidos. */
+  baseDefinitions(tenantId: string): EntityDefinition[] {
+    return resolvePublished(this.definitions, tenantId);
+  }
+
+  /** Guarda (cria ou substitui) um campo personalizado. */
+  saveCustomField(definition: CustomFieldDefinition): CustomFieldDefinition {
+    const index = this.customFields.findIndex((c) => c.id === definition.id);
+    if (index >= 0) this.customFields[index] = definition;
+    else this.customFields.push(definition);
+    return definition;
+  }
+
   /** Definições em vigor para o tenant, já com os seus campos personalizados activos. */
   effective(tenantId: string): EntityDefinition[] {
     const custom = this.customFieldsFor(tenantId);

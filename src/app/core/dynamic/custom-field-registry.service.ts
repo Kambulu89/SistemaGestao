@@ -2,7 +2,7 @@ import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { type Observable, of, tap } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
-import { CustomFieldGateway } from './data-access/custom-field.gateway';
+import { CustomFieldGateway, type SaveCustomFieldInput } from './data-access/custom-field.gateway';
 import {
   type CustomFieldDefinition,
   type EntityRef,
@@ -50,6 +50,15 @@ export class CustomFieldRegistryService {
     return this.gateway
       .list()
       .pipe(tap((definitions) => this.loaded.set({ tenantId: tenant.id, definitions })));
+  }
+
+  /** Cria ou altera um campo; o resultado entra no registo e funde-se logo nas entidades. */
+  save(input: SaveCustomFieldInput): Observable<CustomFieldDefinition> {
+    return this.gateway.save(input).pipe(tap((saved) => this.upsert(saved)));
+  }
+
+  setState(id: string, state: 'active' | 'archived'): Observable<CustomFieldDefinition> {
+    return this.gateway.setState(id, state).pipe(tap((saved) => this.upsert(saved)));
   }
 
   reload(): void {

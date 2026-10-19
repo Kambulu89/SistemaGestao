@@ -80,6 +80,13 @@ const yesNo = (value: boolean): string => (value ? 'Sim' : 'Não');
           }}</app-badge>
           <app-badge>v{{ entity.version }}</app-badge>
           <app-badge [tone]="state().tone">{{ state().label }}</app-badge>
+          @if (entity.extensible) {
+            <a
+              routerLink="campos"
+              class="text-sm text-brand-700 hover:underline dark:text-brand-300"
+              >Campos personalizados</a
+            >
+          }
           @if (canOpenRecords()) {
             <a
               [routerLink]="['../../data', entity.key]"

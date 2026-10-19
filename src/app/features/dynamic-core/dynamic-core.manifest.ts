@@ -21,6 +21,13 @@ export const DYNAMIC_CORE_MODULES = [
           import('./entity-admin/entity-admin-list-page').then((m) => m.EntityAdminListPage),
       },
       {
+        path: ':entityKey/campos',
+        title: 'Campos personalizados',
+        permission: 'configuration.forms.read',
+        loadComponent: () =>
+          import('./custom-fields/custom-fields-page').then((m) => m.CustomFieldsPage),
+      },
+      {
         path: ':entityKey',
         title: 'Definição da entidade',
         permission: 'configuration.forms.read',
