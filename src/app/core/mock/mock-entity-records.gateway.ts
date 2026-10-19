@@ -270,7 +270,14 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
     if (!entity || (entity.moduleId !== null && !this.modules.isAvailable(entity.moduleId))) {
       throw fail(404, 'Entidade não encontrada.');
     }
-    return { tenantId, entity };
+    // Campos arquivados deixam de existir para o servidor: não se devolvem, validam nem escrevem,
+    // mas os valores já gravados mantêm-se no registo.
+    return {
+      tenantId,
+      entity: entity.fields.some((f) => f.archived)
+        ? { ...entity, fields: entity.fields.filter((f) => !f.archived) }
+        : entity,
+    };
   }
 
   /** Filtros e ordenação só podem usar campos que o utilizador pode ler (não vazam valores). */

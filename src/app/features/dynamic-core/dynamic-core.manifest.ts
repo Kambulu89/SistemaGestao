@@ -21,6 +21,20 @@ export const DYNAMIC_CORE_MODULES = [
           import('./entity-admin/entity-admin-list-page').then((m) => m.EntityAdminListPage),
       },
       {
+        path: 'novo',
+        title: 'Nova entidade',
+        permission: 'configuration.forms.manage',
+        loadComponent: () =>
+          import('./entity-designer/entity-designer-page').then((m) => m.EntityDesignerPage),
+      },
+      {
+        path: ':entityKey/editar',
+        title: 'Editar entidade',
+        permission: 'configuration.forms.manage',
+        loadComponent: () =>
+          import('./entity-designer/entity-designer-page').then((m) => m.EntityDesignerPage),
+      },
+      {
         path: ':entityKey/campos',
         title: 'Campos personalizados',
         permission: 'configuration.forms.read',

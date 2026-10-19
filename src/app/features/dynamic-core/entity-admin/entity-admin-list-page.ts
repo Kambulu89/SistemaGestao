@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { PermissionService } from '../../../core/permissions/permission.service';
 import { EntityAccessService } from '../../../core/dynamic/entity-access.service';
 import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
 import { hasErrors } from '../../../core/dynamic/engine/definition-integrity';
+import { buttonClasses } from '../../../shared/ui/button/button';
 import { Badge } from '../../../shared/ui/badge/badge';
 import { Card } from '../../../shared/ui/card/card';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
@@ -31,7 +33,13 @@ interface Row {
     <app-page-header
       title="Core Dinâmico"
       description="Entidades configuráveis deste tenant. Cada formulário, listagem, validação e fluxo é gerado a partir da definição (metadados), sem código específico."
-    />
+    >
+      @if (canManage()) {
+        <div pageActions>
+          <a routerLink="novo" [class]="newButtonClasses">Nova entidade</a>
+        </div>
+      }
+    </app-page-header>
 
     <app-card [flush]="true">
       @if (rows().length === 0) {
@@ -86,6 +94,9 @@ interface Row {
 export class EntityAdminListPage {
   private readonly registry = inject(DynamicEntityRegistryService);
   private readonly access = inject(EntityAccessService);
+  private readonly permissions = inject(PermissionService);
+  protected readonly canManage = computed(() => this.permissions.can('configuration.forms.manage'));
+  protected readonly newButtonClasses = buttonClasses('primary', 'md');
 
   protected readonly columns: readonly TableColumn[] = [
     { key: 'name', label: 'Entidade' },

@@ -3,7 +3,10 @@ import { forkJoin, map, type Observable, of, tap } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
 import { CustomFieldRegistryService } from './custom-field-registry.service';
-import { EntityDefinitionGateway } from './data-access/entity-definition.gateway';
+import {
+  EntityDefinitionGateway,
+  type SaveEntityDraftInput,
+} from './data-access/entity-definition.gateway';
 import {
   mergeCustomFieldsDetailed,
   validateCustomFieldDefinition,
@@ -116,6 +119,58 @@ export class DynamicEntityRegistryService {
     return forkJoin([definitions$, this.customFields.ensureLoaded()]).pipe(
       map(([definitions]) => definitions),
     );
+  }
+
+  /** Guarda o rascunho de uma entidade do tenant e actualiza o registo. */
+  saveDraft(input: SaveEntityDraftInput): Observable<EntityDefinition> {
+    return this.gateway.saveDraft(input).pipe(tap((saved) => this.replace(saved)));
+  }
+
+  /** Publica o rascunho: a versão anterior fica arquivada. */
+  publish(key: string): Observable<EntityDefinition> {
+    return this.gateway
+      .publish(key)
+      .pipe(
+        tap((published) =>
+          this.replace(published, (d) =>
+            d.key === key && d.state === 'published' && d.id !== published.id
+              ? { ...d, state: 'archived' }
+              : d,
+          ),
+        ),
+      );
+  }
+
+  discardDraft(key: string): Observable<void> {
+    return this.gateway.discardDraft(key).pipe(
+      tap(() => {
+        const tenant = this.tenantContext.tenant();
+        const loaded = this.loaded();
+        if (!tenant || loaded?.tenantId !== tenant.id) return;
+        this.loaded.set({
+          tenantId: tenant.id,
+          definitions: loaded.definitions.filter(
+            (d) => !(d.key === key && d.scope === 'tenant' && d.state === 'draft'),
+          ),
+        });
+      }),
+    );
+  }
+
+  /** A versão em rascunho de uma entidade do tenant, se existir. */
+  draftOf(key: string): EntityDefinition | undefined {
+    return this.all().find((d) => d.key === key && d.scope === 'tenant' && d.state === 'draft');
+  }
+
+  private replace(
+    saved: EntityDefinition,
+    adjust: (d: EntityDefinition) => EntityDefinition = (d) => d,
+  ): void {
+    const tenant = this.tenantContext.tenant();
+    const loaded = this.loaded();
+    if (!tenant || loaded?.tenantId !== tenant.id || saved.tenantId !== tenant.id) return;
+    const rest = loaded.definitions.filter((d) => d.id !== saved.id).map(adjust);
+    this.loaded.set({ tenantId: tenant.id, definitions: [...rest, saved] });
   }
 
   reload(): void {

@@ -106,3 +106,32 @@ describe('buildField / draftOf', () => {
     }
   });
 });
+
+describe('buildField: campo existente e referências', () => {
+  it('keeps what the designer does not edit (default, conditions, other rules)', () => {
+    const base = buildField(draft({ type: 'text', maxLength: 5 }), ctx);
+    const rich = {
+      ...base,
+      defaultValue: 'x',
+      visibleWhen: { op: 'eq', field: 'a', value: 1 },
+      validations: [...base.validations, { type: 'pattern', pattern: '^[a-z]+$' }],
+    } as typeof base;
+    const edited = buildField({ ...draftOf(rich), name: 'Novo nome', maxLength: 9 }, ctx, rich);
+    expect(edited.label).toBe('Novo nome');
+    expect(edited.defaultValue).toBe('x');
+    expect(edited.visibleWhen).toEqual(rich.visibleWhen);
+    expect(edited.validations).toEqual(
+      expect.arrayContaining([
+        { type: 'pattern', pattern: '^[a-z]+$' },
+        { type: 'maxLength', value: 9 },
+      ]),
+    );
+    expect(edited.validations.filter((r) => r.type === 'maxLength')).toHaveLength(1);
+  });
+
+  it('builds an entity reference with its target entity', () => {
+    const field = buildField(draft({ type: 'entity-reference', referenceEntity: 'vehicle' }), ctx);
+    expect(field).toMatchObject({ type: 'entity-reference', entityKey: 'vehicle' });
+    expect(draftOf(field).referenceEntity).toBe('vehicle');
+  });
+});

@@ -16,7 +16,10 @@ import { errorMessage } from '../../../core/api/error-message';
 import { CustomFieldRegistryService } from '../../../core/dynamic/custom-field-registry.service';
 import type { DefinitionFailure } from '../../../core/dynamic/data-access/custom-field.gateway';
 import { validateCustomFieldDefinition } from '../../../core/dynamic/engine/custom-fields';
-import type { DefinitionIssue } from '../../../core/dynamic/engine/definition-integrity';
+import {
+  type DefinitionIssue,
+  validateEntityDefinition,
+} from '../../../core/dynamic/engine/definition-integrity';
 import {
   buildField,
   codeFromName,
@@ -30,7 +33,12 @@ import {
   entityRefOf,
 } from '../../../core/dynamic/models/custom-definition.model';
 import type { EntityDefinition } from '../../../core/dynamic/models/entity-definition.model';
-import type { FieldType, FieldValue } from '../../../core/dynamic/models/field-definition.model';
+import type {
+  FieldDefinition,
+  FieldType,
+  FieldValue,
+} from '../../../core/dynamic/models/field-definition.model';
+import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
 import { PermissionService } from '../../../core/permissions/permission.service';
 import { TenantContextService } from '../../../core/tenant-context/tenant-context.service';
 import { DynamicField } from '../../../shared/dynamic/dynamic-field';
@@ -169,6 +177,14 @@ const optionGroup = (value = '', label = '', active = true) =>
                 <app-input formControlName="minLength" type="number" label="Comprimento mínimo" />
                 <app-input formControlName="maxLength" type="number" label="Comprimento máximo" />
               }
+              @if (type() === 'entity-reference') {
+                <app-select
+                  formControlName="referenceEntity"
+                  label="Entidade referenciada"
+                  [required]="true"
+                  [options]="referenceOptions()"
+                />
+              }
               @if (isFile()) {
                 <app-input
                   formControlName="accept"
@@ -203,7 +219,7 @@ const optionGroup = (value = '', label = '', active = true) =>
             @if (kind().sortable) {
               <app-checkbox formControlName="sortable" label="Ordenável" />
             }
-            @if (kind().listable) {
+            @if (kind().listable && !owned()) {
               <app-checkbox formControlName="showInList" label="Mostrar como coluna da listagem" />
             }
             <app-checkbox
@@ -244,13 +260,13 @@ const optionGroup = (value = '', label = '', active = true) =>
         }
 
         <div class="flex flex-wrap gap-2">
-          @if (!canManage()) {
+          @if (!owned() && !canManage()) {
             <p class="text-sm text-fg-muted">Não tem permissão para gerir campos personalizados.</p>
           } @else {
             <app-button type="submit" [loading]="saving()" [disabled]="issues().length > 0">{{
-              published() ? 'Guardar alterações' : 'Publicar campo'
+              owned() ? 'Aplicar campo' : published() ? 'Guardar alterações' : 'Publicar campo'
             }}</app-button>
-            @if (!published()) {
+            @if (!owned() && !published()) {
               <app-button
                 variant="secondary"
                 [disabled]="saving() || issues().length > 0"
@@ -267,6 +283,7 @@ const optionGroup = (value = '', label = '', active = true) =>
 })
 export class CustomFieldDesigner {
   private readonly registry = inject(CustomFieldRegistryService);
+  private readonly entities = inject(DynamicEntityRegistryService);
   private readonly permissions = inject(PermissionService);
   private readonly tenant = inject(TenantContextService).tenant;
 
@@ -274,6 +291,17 @@ export class CustomFieldDesigner {
   readonly entity = input.required<EntityDefinition>();
   /** O campo a editar; sem valor, cria-se um novo. */
   readonly definition = input<CustomFieldDefinition | null>(null);
+
+  /**
+   * Modo "campo da própria entidade": o campo não é persistido aqui, é devolvido em `built` para
+   * o designer de entidades o juntar à sua lista. `entity` é então a entidade em edição.
+   */
+  readonly owned = input(false);
+  /** No modo `owned`, o campo a alterar (ou nenhum, para um campo novo). */
+  readonly ownedField = input<FieldDefinition | null>(null);
+  /** No modo `owned`, impede mudar o código e o tipo (o campo já foi publicado). */
+  readonly lockIdentity = input(false);
+  readonly built = output<FieldDefinition>();
 
   readonly saved = output<CustomFieldDefinition>();
   readonly cancelled = output<void>();
@@ -308,6 +336,7 @@ export class CustomFieldDesigner {
     accept: new FormControl('', { nonNullable: true }),
     maxSizeMb: new FormControl<number | null>(null),
     multiple: new FormControl(false, { nonNullable: true }),
+    referenceEntity: new FormControl('', { nonNullable: true }),
   });
   protected readonly options = this.form.controls.options;
 
@@ -323,15 +352,22 @@ export class CustomFieldDesigner {
     const d = this.definition();
     return !!d && d.state !== 'draft';
   });
-  protected readonly locked = this.published;
+  /** O campo de partida a editar, seja personalizado ou da própria entidade. */
+  private readonly baseField = computed<FieldDefinition | null>(
+    () => this.ownedField() ?? this.definition()?.field ?? null,
+  );
+  protected readonly locked = computed(() => this.published() || this.lockIdentity());
+  protected readonly referenceOptions = computed<readonly SelectOption[]>(() =>
+    this.entities.published().map((e) => ({ value: e.key, label: e.names.plural })),
+  );
   protected readonly canManage = computed(() => this.permissions.can('configuration.forms.manage'));
   protected readonly typeOptions = computed(() => {
-    const d = this.definition();
-    if (!d) return READY_TYPES;
+    const base = this.baseField();
+    if (!base) return READY_TYPES;
     // Um campo já existente mantém o seu tipo visível mesmo que o tipo ainda esteja em preparação.
-    return READY_TYPES.some((o) => o.value === d.field.type)
+    return READY_TYPES.some((o) => o.value === base.type)
       ? READY_TYPES
-      : [...READY_TYPES, { value: d.field.type, label: d.field.type }];
+      : [...READY_TYPES, { value: base.type, label: base.type }];
   });
 
   protected readonly isNumeric = computed(() =>
@@ -340,7 +376,7 @@ export class CustomFieldDesigner {
   protected readonly isText = computed(() => ['text', 'textarea'].includes(this.type()));
   protected readonly isFile = computed(() => ['file', 'image'].includes(this.type()));
   protected readonly hasTypeSettings = computed(
-    () => this.isNumeric() || this.isText() || this.isFile(),
+    () => this.isNumeric() || this.isText() || this.isFile() || this.type() === 'entity-reference',
   );
 
   private readonly draft = computed<FieldDraft>(() => {
@@ -356,13 +392,14 @@ export class CustomFieldDesigner {
     return buildField(
       { ...draft, code: draft.code || 'preview' },
       { entityKey: this.entity().key },
+      this.baseField() ?? undefined,
     );
   });
 
   private readonly candidate = computed<CustomFieldDefinition | null>(() => {
     const field = this.previewField();
     const tenantId = this.tenant()?.id;
-    if (!field || !tenantId) return null;
+    if (!field || !tenantId || this.owned()) return null;
     const previous = this.definition();
     return {
       id: previous?.id ?? `cf-new-${field.key}`,
@@ -388,6 +425,7 @@ export class CustomFieldDesigner {
         path: 'code',
         message: 'O código começa por minúscula e tem 2 a 40 letras ou dígitos (camelCase).',
       });
+    if (this.owned()) local.push(...this.ownedIssues());
     if (candidate)
       local.push(
         ...validateCustomFieldDefinition(this.entity(), candidate, this.registry.all()).filter(
@@ -400,14 +438,19 @@ export class CustomFieldDesigner {
   constructor() {
     // Carrega o campo a editar (ou limpa para um novo).
     effect(() => {
-      const d = this.definition();
-      this.codeTouched.set(!!d);
-      this.fill(d ? draftOf(d.field) : EMPTY_DRAFT, d?.showInList ?? false);
+      const base = this.baseField();
+      this.codeTouched.set(!!base);
+      this.fill(base ? draftOf(base) : EMPTY_DRAFT, this.definition()?.showInList ?? false);
+    });
+
+    // Uma correcção do utilizador torna obsoletos os problemas devolvidos pelo servidor.
+    this.form.valueChanges.subscribe(() => {
+      if (this.serverIssues().length > 0) this.serverIssues.set([]);
     });
 
     // O código acompanha o nome enquanto o utilizador não o tocar e o campo ainda não existe.
     this.form.controls.name.valueChanges.subscribe((name) => {
-      if (!this.codeTouched() && !this.definition())
+      if (!this.codeTouched() && !this.baseField())
         this.form.controls.code.setValue(codeFromName(name), { emitEvent: true });
     });
 
@@ -436,12 +479,24 @@ export class CustomFieldDesigner {
   }
 
   protected save(state: 'draft' | 'active'): void {
+    if (this.owned()) {
+      if (this.issues().length > 0) return;
+      this.built.emit(
+        buildField(
+          this.draft(),
+          { entityKey: this.entity().key, order: this.ownedField()?.order },
+          this.ownedField() ?? undefined,
+        ),
+      );
+      return;
+    }
     if (!this.canManage() || this.saving() || this.issues().length > 0) return;
     const previous = this.definition();
-    const field = buildField(this.draft(), {
-      entityKey: this.entity().key,
-      order: previous?.field.order,
-    });
+    const field = buildField(
+      this.draft(),
+      { entityKey: this.entity().key, order: previous?.field.order },
+      previous?.field,
+    );
     this.saving.set(true);
     this.error.set(null);
     this.serverIssues.set([]);
@@ -467,6 +522,30 @@ export class CustomFieldDesigner {
           else this.error.set(errorMessage(e));
         },
       });
+  }
+
+  /** Verificações do modo `owned`: duplicados e integridade do campo dentro da entidade em edição. */
+  private ownedIssues(): DefinitionIssue[] {
+    const field = this.previewField();
+    const code = this.draft().code;
+    if (!field) return [];
+    const issues: DefinitionIssue[] = [];
+    const originalKey = this.ownedField()?.key;
+    if (code !== originalKey && this.entity().fields.some((f) => f.key === code))
+      issues.push({
+        severity: 'error',
+        path: `fields.${code}`,
+        message: `O código "${code}" já existe nesta entidade.`,
+      });
+    const trial: EntityDefinition = {
+      ...this.entity(),
+      fields: [...this.entity().fields.filter((f) => f.key !== originalKey), field],
+    };
+    const known = new Set([...this.entities.published().map((e) => e.key), trial.key]);
+    for (const issue of validateEntityDefinition(trial, { knownEntityKeys: known })) {
+      if (issue.severity === 'error' && issue.path.includes(`.${field.key}`)) issues.push(issue);
+    }
+    return issues;
   }
 
   private fill(draft: FieldDraft, showInList: boolean): void {

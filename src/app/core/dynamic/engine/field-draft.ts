@@ -35,6 +35,8 @@ export interface FieldDraft {
   readonly accept: string;
   readonly maxSizeMb: number | null;
   readonly multiple: boolean;
+  /** Chave da entidade alvo (`entity-reference`). */
+  readonly referenceEntity: string;
 }
 
 export const EMPTY_DRAFT: FieldDraft = {
@@ -59,6 +61,7 @@ export const EMPTY_DRAFT: FieldDraft = {
   accept: '',
   maxSizeMb: null,
   multiple: false,
+  referenceEntity: '',
 };
 
 /** `Gestor comercial` → `gestorComercial`: sem acentos, camelCase, a começar por letra. */
@@ -84,6 +87,33 @@ export const sensitivePermissions = (entityKey: string) => ({
   write: `entities.${entityKey}.sensitive.write`,
 });
 
+const MANAGED_RULES: readonly ValidationRule['type'][] = [
+  'unique',
+  'min',
+  'max',
+  'minLength',
+  'maxLength',
+];
+
+/** Propriedades que o designer não mostra mas que um campo existente pode ter. */
+function preservedProps(base: FieldDefinition | undefined) {
+  if (!base) return {};
+  const { defaultValue, visible, editable, visibleWhen, editableWhen, requiredWhen, archived } =
+    base;
+  return Object.fromEntries(
+    Object.entries({
+      defaultValue,
+      visible,
+      editable,
+      visibleWhen,
+      editableWhen,
+      requiredWhen,
+      archived,
+      origin: base.origin,
+    }).filter(([, v]) => v !== undefined),
+  );
+}
+
 const num = (value: number | null): number | undefined => value ?? undefined;
 const list = (text: string): string[] =>
   text
@@ -95,9 +125,13 @@ const list = (text: string): string[] =>
 export function buildField(
   draft: FieldDraft,
   context: { readonly entityKey: string; readonly order?: number },
+  base?: FieldDefinition,
 ): FieldDefinition {
   const caps = fieldCapabilities(draft.type);
-  const validations: ValidationRule[] = [];
+  // O que o designer não edita (padrão, e-mail, comparações…) mantém-se ao alterar um campo existente.
+  const validations: ValidationRule[] = (base?.validations ?? []).filter(
+    (r) => !MANAGED_RULES.includes(r.type),
+  );
   if (caps.unique && draft.unique) validations.push({ type: 'unique' });
   if (draft.min !== null) validations.push({ type: 'min', value: draft.min });
   if (draft.max !== null) validations.push({ type: 'max', value: draft.max });
@@ -105,11 +139,14 @@ export function buildField(
   if (draft.maxLength !== null) validations.push({ type: 'maxLength', value: draft.maxLength });
 
   const common = {
+    ...preservedProps(base),
     key: draft.code,
     label: draft.name.trim(),
     description: draft.description.trim() || undefined,
     placeholder: draft.placeholder.trim() || undefined,
     required: caps.required && draft.required,
+    permissions: undefined,
+    sensitivity: undefined,
     searchable: caps.searchable && draft.searchable,
     filterable: caps.filterable && draft.filterable,
     sortable: caps.sortable && draft.sortable,
@@ -128,8 +165,10 @@ export function buildField(
     label: o.label.trim(),
     ...(o.active === false ? { active: false } : {}),
   }));
-  const rules = (...types: ValidationRule['type'][]) =>
-    validations.filter((r) => types.includes(r.type) || r.type === 'unique');
+  const rules = (...allowed: ValidationRule['type'][]) =>
+    validations.filter(
+      (r) => !MANAGED_RULES.includes(r.type) || allowed.includes(r.type) || r.type === 'unique',
+    );
 
   let input: FieldInput;
   switch (draft.type) {
@@ -174,6 +213,14 @@ export function buildField(
         validations: rules(),
       };
       break;
+    case 'entity-reference':
+      input = {
+        ...common,
+        type: 'entity-reference',
+        entityKey: draft.referenceEntity,
+        validations: rules(),
+      };
+      break;
     default:
       // Restantes tipos simples (boolean, date, email, …) não têm configuração própria.
       input = { ...common, type: draft.type, validations: rules() } as FieldInput;
@@ -214,5 +261,6 @@ export function draftOf(field: FieldDefinition): FieldDraft {
         ? field.maxSizeBytes / (1024 * 1024)
         : null,
     multiple: field.type === 'file' || field.type === 'image' ? (field.multiple ?? false) : false,
+    referenceEntity: field.type === 'entity-reference' ? field.entityKey : '',
   };
 }

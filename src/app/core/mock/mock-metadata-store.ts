@@ -29,6 +29,24 @@ export class MockMetadataStore {
     return resolvePublished(this.definitions, tenantId);
   }
 
+  /** Todas as versões e estados de uma entidade do tenant. */
+  versionsFor(tenantId: string, key: string): EntityDefinition[] {
+    return this.definitionsFor(tenantId).filter((d) => d.key === key);
+  }
+
+  /** Guarda (cria ou substitui, por `id`) uma definição de entidade. */
+  saveDefinition(definition: EntityDefinition): EntityDefinition {
+    const index = this.definitions.findIndex((d) => d.id === definition.id);
+    if (index >= 0) this.definitions[index] = definition;
+    else this.definitions.push(definition);
+    return definition;
+  }
+
+  removeDefinition(id: string): void {
+    const index = this.definitions.findIndex((d) => d.id === id);
+    if (index >= 0) this.definitions.splice(index, 1);
+  }
+
   /** Guarda (cria ou substitui) um campo personalizado. */
   saveCustomField(definition: CustomFieldDefinition): CustomFieldDefinition {
     const index = this.customFields.findIndex((c) => c.id === definition.id);

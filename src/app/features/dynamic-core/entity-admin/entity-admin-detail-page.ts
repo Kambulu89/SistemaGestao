@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { PermissionService } from '../../../core/permissions/permission.service';
 import { EntityAccessService } from '../../../core/dynamic/entity-access.service';
 import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
 import { diffDefinitions } from '../../../core/dynamic/engine/definition-compat';
@@ -80,6 +81,13 @@ const yesNo = (value: boolean): string => (value ? 'Sim' : 'Não');
           }}</app-badge>
           <app-badge>v{{ entity.version }}</app-badge>
           <app-badge [tone]="state().tone">{{ state().label }}</app-badge>
+          @if (entity.scope === 'tenant' && canManage()) {
+            <a
+              routerLink="editar"
+              class="text-sm text-brand-700 hover:underline dark:text-brand-300"
+              >Editar entidade</a
+            >
+          }
           @if (entity.extensible) {
             <a
               routerLink="campos"
@@ -270,6 +278,8 @@ const yesNo = (value: boolean): string => (value ? 'Sim' : 'Não');
 export class EntityAdminDetailPage {
   private readonly registry = inject(DynamicEntityRegistryService);
   private readonly access = inject(EntityAccessService);
+  private readonly permissions = inject(PermissionService);
+  protected readonly canManage = computed(() => this.permissions.can('configuration.forms.manage'));
   protected readonly fieldAccess = this.access.fieldAccess;
 
   /** Parâmetro de rota `:entityKey`. */
