@@ -53,6 +53,12 @@ export interface AuditEntry {
   readonly changes: readonly AuditChange[];
 }
 
+/** Pedido de opções para um campo de referência: por texto e/ou por ids já seleccionados. */
+export interface ReferenceLookupQuery {
+  readonly search?: string;
+  readonly ids?: readonly string[];
+}
+
 export interface ReferenceOption {
   readonly id: string;
   readonly label: string;

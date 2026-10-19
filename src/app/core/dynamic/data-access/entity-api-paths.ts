@@ -20,7 +20,7 @@ export const ENTITY_API = {
   transitions: (key: string, id: string) => `${ENTITY_API.record(key, id)}/transitions`,
   /** GET (histórico de auditoria) */
   audit: (key: string, id: string) => `${ENTITY_API.record(key, id)}/audit`,
-  /** GET `?search=` (opções para campos de referência) */
+  /** GET `?search=&ids=` (opções para campos de referência) */
   lookup: (key: string) => `${ENTITY_API.records(key)}/lookup`,
 } as const;
 

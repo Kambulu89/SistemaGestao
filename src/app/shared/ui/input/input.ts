@@ -1,110 +1,107 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  DestroyRef,
-  inject,
-  input,
-  signal,
-} from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { type ControlValueAccessor, NgControl, type ValidationErrors } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { FieldChrome } from '../form-field/field-chrome';
+import { FormFieldBase } from '../form-field/form-field-base';
 
-let nextId = 0;
+export type InputType =
+  'text' | 'email' | 'password' | 'number' | 'tel' | 'date' | 'datetime-local';
 
-function messageFor(errors: ValidationErrors): string {
-  if (errors['required']) return 'Campo obrigatório.';
-  if (errors['email']) return 'Introduza um email válido.';
-  const minlength = errors['minlength'] as { requiredLength: number } | undefined;
-  if (minlength) return `Mínimo de ${minlength.requiredLength} caracteres.`;
-  return 'Valor inválido.';
+const pad = (n: number): string => String(n).padStart(2, '0');
+
+/** ISO 8601 (UTC) → valor de `<input type="datetime-local">` na hora local. */
+function isoToLocalInput(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function localInputToIso(local: string): string | null {
+  const d = new Date(local);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 /**
  * Campo de texto compatível com Reactive Forms (`formControlName` / `[formControl]`).
- * Mostra o erro do controlo depois de este ser tocado.
+ * O valor do formulário é: `string` (texto, email, telefone, data `AAAA-MM-DD`), `number | null`
+ * (`number`) e ISO 8601 em UTC (`datetime-local`, apresentado na hora local).
  */
 @Component({
   selector: 'app-input',
+  imports: [FieldChrome],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <label [for]="id" class="mb-1.5 block text-sm font-medium">{{ label() }}</label>
-    <input
-      [id]="id"
-      [type]="type()"
-      [value]="value()"
-      [disabled]="disabled()"
-      [attr.autocomplete]="autocomplete()"
-      [attr.placeholder]="placeholder()"
-      [attr.aria-invalid]="error() ? true : null"
-      [attr.aria-describedby]="error() ? id + '-error' : hint() ? id + '-hint' : null"
-      class="block h-10 w-full rounded-lg border bg-surface px-3 text-sm text-fg placeholder:text-fg-muted disabled:cursor-not-allowed disabled:opacity-50"
-      [class.border-line]="!error()"
-      [class.border-red-500]="error()"
-      (input)="onInput($event)"
-      (blur)="onTouched()"
-    />
-    @if (error(); as error) {
-      <p [id]="id + '-error'" class="mt-1.5 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-    } @else if (hint(); as hint) {
-      <p [id]="id + '-hint'" class="mt-1.5 text-sm text-fg-muted">{{ hint }}</p>
-    }
+    <app-field-chrome
+      [fieldId]="id"
+      [label]="label()"
+      [required]="required()"
+      [hint]="hint()"
+      [error]="error()"
+    >
+      <div class="relative">
+        <input
+          [id]="id"
+          [type]="type()"
+          [value]="display()"
+          [disabled]="disabled()"
+          [attr.autocomplete]="autocomplete()"
+          [attr.placeholder]="placeholder()"
+          [attr.step]="step()"
+          [attr.min]="min()"
+          [attr.max]="max()"
+          [attr.aria-required]="required() || null"
+          [attr.aria-invalid]="error() ? true : null"
+          [attr.aria-describedby]="describedBy()"
+          class="block h-10 w-full rounded-lg border bg-surface px-3 text-sm text-fg placeholder:text-fg-muted disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-70"
+          [class.border-line]="!error()"
+          [class.border-red-500]="error()"
+          [class.pe-14]="suffix()"
+          (input)="onInput($event)"
+          (blur)="onTouched()"
+        />
+        @if (suffix(); as suffix) {
+          <span
+            class="pointer-events-none absolute inset-y-0 end-3 flex items-center text-sm text-fg-muted"
+            aria-hidden="true"
+          >
+            {{ suffix }}
+          </span>
+        }
+      </div>
+    </app-field-chrome>
   `,
 })
-export class Input implements ControlValueAccessor {
-  private readonly ngControl = inject(NgControl, { self: true, optional: true });
-  private readonly destroyRef = inject(DestroyRef);
-
-  readonly label = input.required<string>();
-  readonly type = input<'text' | 'email' | 'password'>('text');
+export class Input extends FormFieldBase<string | number> {
+  readonly type = input<InputType>('text');
   readonly autocomplete = input<string>();
   readonly placeholder = input<string>();
-  readonly hint = input<string>();
+  readonly step = input<string | number>();
+  readonly min = input<string | number>();
+  readonly max = input<string | number>();
+  /** Texto fixo à direita (ex.: unidade ou moeda). */
+  readonly suffix = input<string>();
 
-  protected readonly id = `app-input-${nextId++}`;
-  protected readonly value = signal('');
-  protected readonly disabled = signal(false);
-
-  /** Incrementado quando o controlo muda de estado (tocado, validado…) para recalcular o erro. */
-  private readonly controlChanged = signal(0);
-
-  protected readonly error = computed(() => {
-    this.controlChanged();
-    const control = this.ngControl?.control;
-    return control?.touched && control.errors ? messageFor(control.errors) : null;
+  protected readonly display = computed(() => {
+    const value = this.value();
+    if (value === null || value === undefined) return '';
+    return this.type() === 'datetime-local' ? isoToLocalInput(String(value)) : String(value);
   });
 
-  private onChange: (value: string) => void = () => undefined;
-  protected onTouched: () => void = () => undefined;
-
-  constructor() {
-    if (this.ngControl) this.ngControl.valueAccessor = this;
-  }
-
-  writeValue(value: string | null): void {
-    this.value.set(value ?? '');
-  }
-
-  registerOnChange(fn: (value: string) => void): void {
-    this.onChange = fn;
-    // O controlo já existe neste ponto; `events` emite valor, estado, "tocado" e submissão.
-    this.ngControl?.control?.events
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.controlChanged.update((n) => n + 1));
-  }
-
-  registerOnTouched(fn: () => void): void {
-    this.onTouched = fn;
-  }
-
-  setDisabledState(isDisabled: boolean): void {
-    this.disabled.set(isDisabled);
-  }
-
   protected onInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.value.set(value);
-    this.onChange(value);
+    const raw = (event.target as HTMLInputElement).value;
+    switch (this.type()) {
+      case 'number': {
+        const parsed = raw === '' ? null : Number(raw);
+        this.setValue(parsed === null || Number.isNaN(parsed) ? null : parsed);
+        break;
+      }
+      case 'datetime-local':
+        this.setValue(raw === '' ? null : localInputToIso(raw));
+        break;
+      case 'date':
+        this.setValue(raw === '' ? null : raw);
+        break;
+      default:
+        this.setValue(raw);
+    }
   }
 }

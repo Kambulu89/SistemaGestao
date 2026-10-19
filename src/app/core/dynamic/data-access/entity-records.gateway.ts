@@ -5,6 +5,7 @@ import type {
   CreateRecordInput,
   EntityRecord,
   RecordQuery,
+  ReferenceLookupQuery,
   ReferenceOption,
   UpdateRecordInput,
 } from '../models/entity-record.model';
@@ -31,6 +32,9 @@ export abstract class EntityRecordsGateway {
     transitionKey: string,
   ): Observable<EntityRecord>;
   abstract audit(entityKey: string, id: string): Observable<readonly AuditEntry[]>;
-  /** Opções para campos `reference`: registos da entidade alvo que correspondem à pesquisa. */
-  abstract lookup(entityKey: string, search: string): Observable<readonly ReferenceOption[]>;
+  /** Opções para campos `reference`: registos da entidade alvo que correspondem à pesquisa ou aos ids. */
+  abstract lookup(
+    entityKey: string,
+    query: ReferenceLookupQuery,
+  ): Observable<readonly ReferenceOption[]>;
 }
