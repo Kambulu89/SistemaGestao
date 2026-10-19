@@ -18,6 +18,7 @@ import type { DefinitionFailure } from '../../../core/dynamic/data-access/custom
 import { defineEntity } from '../../../core/dynamic/engine/define-entity';
 import {
   type DefinitionIssue,
+  integrityContext,
   validateEntityDefinition,
 } from '../../../core/dynamic/engine/definition-integrity';
 import { ENTITY_KEY_PATTERN, entityKeyFromName } from '../../../core/dynamic/engine/field-draft';
@@ -355,8 +356,12 @@ export class EntityDesignerPage {
         path: 'fields',
         message: 'A entidade precisa de pelo menos um campo.',
       });
-    const known = new Set([...this.registry.published().map((d) => d.key), v.key]);
-    for (const issue of validateEntityDefinition(this.trial(), { knownEntityKeys: known })) {
+    const trial = this.trial();
+    const context = integrityContext([
+      ...this.registry.published().filter((d) => d.key !== trial.key),
+      trial,
+    ]);
+    for (const issue of validateEntityDefinition(trial, context)) {
       if (issue.severity === 'error' && !local.some((l) => l.message === issue.message))
         local.push(issue);
     }

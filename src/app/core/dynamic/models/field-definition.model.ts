@@ -154,6 +154,11 @@ export interface LookupDefinition {
   readonly sourceField: string;
   /** O que fazer quando o registo referenciado já não existe. */
   readonly onMissing: 'empty' | 'error';
+  /**
+   * Só no cliente, nunca gravado: a definição do campo de origem, resolvida pelo registo para que
+   * os renderers formatem o valor (data, moeda, opção…) como o campo original.
+   */
+  readonly resolvedSource?: FieldDefinition;
 }
 
 export interface AutoNumberDefinition {

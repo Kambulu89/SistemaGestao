@@ -12,7 +12,12 @@ import {
   validateCustomFieldDefinition,
   type SkippedCustomField,
 } from './engine/custom-fields';
-import { type DefinitionIssue, validateEntityDefinition } from './engine/definition-integrity';
+import {
+  type DefinitionIssue,
+  integrityContext,
+  validateEntityDefinition,
+} from './engine/definition-integrity';
+import { resolveLookupSources } from './engine/lookup-source';
 import { resolvePublished, versionsOf } from './engine/resolve-definitions';
 import type { EntityDefinition } from './models/entity-definition.model';
 
@@ -62,7 +67,7 @@ export class DynamicEntityRegistryService {
    * Os renderers e motores recebem esta e não precisam de saber o que é personalizado.
    */
   readonly published = computed<readonly EntityDefinition[]>(() =>
-    this.merged().map((m) => m.entity),
+    resolveLookupSources(this.merged().map((m) => m.entity)),
   );
 
   /** Campos personalizados que não foram fundidos (ex.: código em conflito), por entidade. */
@@ -78,12 +83,12 @@ export class DynamicEntityRegistryService {
   /** Problemas das definições dos campos personalizados, por entidade. */
   readonly customFieldIssues = computed<ReadonlyMap<string, readonly DefinitionIssue[]>>(() => {
     const all = this.customFields.all();
-    const known = new Set(this.base().map((d) => d.key));
+    const context = integrityContext(this.published());
     const result = new Map<string, DefinitionIssue[]>();
     for (const def of all) {
       if (def.state === 'archived') continue;
       const entity = this.base().find((d) => d.key === def.entity.key);
-      const issues = validateCustomFieldDefinition(entity, def, all, { knownEntityKeys: known });
+      const issues = validateCustomFieldDefinition(entity, def, all, context);
       if (issues.length > 0)
         result.set(def.entity.key, [...(result.get(def.entity.key) ?? []), ...issues]);
     }
@@ -92,10 +97,8 @@ export class DynamicEntityRegistryService {
 
   /** Problemas de integridade (inclui referências entre entidades) por chave de entidade. */
   readonly issues = computed<ReadonlyMap<string, readonly DefinitionIssue[]>>(() => {
-    const known = new Set(this.published().map((d) => d.key));
-    return new Map(
-      this.published().map((d) => [d.key, validateEntityDefinition(d, { knownEntityKeys: known })]),
-    );
+    const context = integrityContext(this.published());
+    return new Map(this.published().map((d) => [d.key, validateEntityDefinition(d, context)]));
   });
 
   constructor() {

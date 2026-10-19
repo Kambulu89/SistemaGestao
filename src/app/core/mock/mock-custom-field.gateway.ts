@@ -11,7 +11,7 @@ import {
   checkCustomFieldChange,
   validateCustomFieldDefinition,
 } from '../dynamic/engine/custom-fields';
-import type { DefinitionIssue } from '../dynamic/engine/definition-integrity';
+import { type DefinitionIssue, integrityContext } from '../dynamic/engine/definition-integrity';
 import { fieldTypeDefinition } from '../dynamic/engine/field-types';
 import { type CustomFieldDefinition, entityRefId } from '../dynamic/models/custom-definition.model';
 import { PermissionService } from '../permissions/permission.service';
@@ -152,7 +152,7 @@ export class MockCustomFieldGateway extends CustomFieldGateway {
       );
     issues.push(
       ...validateCustomFieldDefinition(entity, candidate, this.store.customFieldsFor(tenantId), {
-        knownEntityKeys: new Set(this.store.baseDefinitions(tenantId).map((d) => d.key)),
+        ...integrityContext(this.store.effective(tenantId)),
       }),
     );
 

@@ -9,6 +9,7 @@ import type { FormDefinition, FormItem } from '../models/form-definition.model';
 import { type DefinitionChange, diffField } from './definition-compat';
 import {
   type DefinitionIssue,
+  type IntegrityOptions,
   RESERVED_FIELD_KEYS,
   validateEntityDefinition,
 } from './definition-integrity';
@@ -157,7 +158,7 @@ export function validateCustomFieldDefinition(
   entity: EntityDefinition | undefined,
   candidate: CustomFieldDefinition,
   siblings: readonly CustomFieldDefinition[],
-  options: { readonly knownEntityKeys?: ReadonlySet<string> } = {},
+  options: IntegrityOptions = {},
 ): DefinitionIssue[] {
   const issues: DefinitionIssue[] = [];
   const error = (path: string, message: string) =>

@@ -161,7 +161,7 @@ export const FIELD_TYPE_CATALOG: readonly FieldTypeDefinition[] = [
     listable: true,
     sortable: true,
   }),
-  def('lookup', 'Valor relacionado', 'Valor lido de um registo referenciado.', 'preview', {
+  def('lookup', 'Valor relacionado', 'Valor lido de um registo referenciado.', 'ready', {
     writable: false,
     required: false,
   }),

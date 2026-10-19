@@ -8,7 +8,7 @@ import {
   type SaveEntityDraftInput,
 } from '../dynamic/data-access/entity-definition.gateway';
 import { checkPublishable } from '../dynamic/engine/definition-compat';
-import type { DefinitionIssue } from '../dynamic/engine/definition-integrity';
+import { type DefinitionIssue, integrityContext } from '../dynamic/engine/definition-integrity';
 import { ENTITY_KEY_PATTERN } from '../dynamic/engine/field-draft';
 import { defineEntity, generateDefaultList } from '../dynamic/engine/define-entity';
 import type { EntityDefinition } from '../dynamic/models/entity-definition.model';
@@ -134,9 +134,8 @@ export class MockEntityDefinitionGateway extends EntityDefinitionGateway {
       if (!draft) throw mockError(404, 'Não há rascunho para publicar.');
       const published = mine.find((d) => d.state === 'published') ?? null;
 
-      const known = new Set(this.store.baseDefinitions(tenantId).map((d) => d.key));
-      known.add(key);
-      const check = checkPublishable(published, draft, { knownEntityKeys: known });
+      const others = this.store.effective(tenantId).filter((d) => d.key !== key);
+      const check = checkPublishable(published, draft, integrityContext([...others, draft]));
       const blocking = [
         ...check.issues.filter((i) => i.severity === 'error'),
         ...check.breaking.map((c) => error(c.path, c.message)),

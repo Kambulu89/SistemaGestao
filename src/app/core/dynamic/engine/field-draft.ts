@@ -46,6 +46,10 @@ export interface FieldDraft {
   /** `formula` */
   readonly formulaSource: string;
   readonly formulaScale: number | null;
+  /** `lookup` */
+  readonly lookupRelation: string;
+  readonly lookupSource: string;
+  readonly lookupOnMissing: 'empty' | 'error';
 }
 
 export const EMPTY_DRAFT: FieldDraft = {
@@ -77,6 +81,9 @@ export const EMPTY_DRAFT: FieldDraft = {
   autoReset: 'never',
   formulaSource: '',
   formulaScale: 2,
+  lookupRelation: '',
+  lookupSource: '',
+  lookupOnMissing: 'empty',
 };
 
 /** `Gestor comercial` → `gestorComercial`: sem acentos, camelCase, a começar por letra. */
@@ -254,6 +261,19 @@ export function buildField(
         validations: rules(),
       };
       break;
+    case 'lookup':
+      input = {
+        ...common,
+        type: 'lookup',
+        lookup: {
+          relationField: draft.lookupRelation,
+          sourceField: draft.lookupSource,
+          onMissing: draft.lookupOnMissing,
+        },
+        required: false,
+        validations: rules(),
+      };
+      break;
     case 'auto-number':
       input = {
         ...common,
@@ -323,5 +343,8 @@ export function draftOf(field: FieldDefinition): FieldDraft {
     autoReset: field.type === 'auto-number' ? field.autoNumber.reset : EMPTY_DRAFT.autoReset,
     formulaSource: field.type === 'formula' ? field.formula.source : '',
     formulaScale: field.type === 'formula' ? field.scale : EMPTY_DRAFT.formulaScale,
+    lookupRelation: field.type === 'lookup' ? field.lookup.relationField : '',
+    lookupSource: field.type === 'lookup' ? field.lookup.sourceField : '',
+    lookupOnMissing: field.type === 'lookup' ? field.lookup.onMissing : 'empty',
   };
 }

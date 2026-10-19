@@ -18,7 +18,40 @@ export interface DefinitionIssue {
   readonly message: string;
 }
 
+/**
+ * Contexto para validar referências entre entidades: as chaves existentes e, para os valores
+ * relacionados (`lookup`), as próprias definições (para verificar o campo de origem).
+ */
+/** Tipos cujo valor pode ser copiado para um campo `lookup` (escalares legíveis). */
+export const LOOKUP_SOURCE_TYPES: ReadonlySet<string> = new Set([
+  'text',
+  'textarea',
+  'number',
+  'decimal',
+  'currency',
+  'boolean',
+  'checkbox',
+  'date',
+  'datetime',
+  'email',
+  'phone',
+  'url',
+  'select',
+  'radio',
+  'formula',
+  'auto-number',
+]);
+
+export function integrityContext(entities: readonly EntityDefinition[]): IntegrityOptions {
+  return {
+    knownEntityKeys: new Set(entities.map((e) => e.key)),
+    entities: new Map(entities.map((e) => [e.key, e])),
+  };
+}
+
 export interface IntegrityOptions {
+  /** Definições das entidades existentes, para validar campos `lookup`. */
+  readonly entities?: ReadonlyMap<string, EntityDefinition>;
   /** Chaves de entidades existentes, para validar campos `reference`. */
   readonly knownEntityKeys?: ReadonlySet<string>;
 }
@@ -95,6 +128,42 @@ export function validateEntityDefinition(
       error(
         path,
         'Dependência circular: a fórmula depende, directa ou indirectamente, de si própria.',
+      );
+  };
+
+  /** Valida um valor relacionado: relação, entidade e campo de origem, e dados sensíveis. */
+  const checkLookup = (field: Extract<FieldDefinition, { type: 'lookup' }>): void => {
+    const path = `fields.${field.key}`;
+    const relation = fieldByKey.get(field.lookup.relationField);
+    if (!relation || relation.archived)
+      return void error(path, `O campo de relação "${field.lookup.relationField}" não existe.`);
+    if (relation.type !== 'entity-reference')
+      return void error(path, `"${relation.key}" não é uma referência a entidade.`);
+    if (!['empty', 'error'].includes(field.lookup.onMissing))
+      error(path, 'Indique o que fazer quando o registo referenciado não existe.');
+    // Sem definições do alvo (ex.: validação isolada) só se verifica a relação.
+    const target = options.entities?.get(relation.entityKey);
+    if (!options.entities) return;
+    if (!target)
+      return void error(path, `A entidade referenciada "${relation.entityKey}" não existe.`);
+    const source = target.fields.find((f) => f.key === field.lookup.sourceField);
+    if (!source || source.archived)
+      return void error(
+        path,
+        `O campo "${field.lookup.sourceField}" não existe em ${target.names.plural}.`,
+      );
+    if (!LOOKUP_SOURCE_TYPES.has(source.type))
+      return void error(
+        path,
+        `Não se pode mostrar um campo do tipo ${source.type} como valor relacionado.`,
+      );
+    if (
+      source.sensitivity === 'sensitive' &&
+      (field.sensitivity !== 'sensitive' || field.permissions?.read !== source.permissions?.read)
+    )
+      error(
+        path,
+        `O campo "${source.key}" é sensível: o valor relacionado tem de ser sensível e exigir a mesma permissão de leitura.`,
       );
   };
 
@@ -185,6 +254,7 @@ export function validateEntityDefinition(
       error(path, 'As casas decimais têm de ser um inteiro entre 0 e 10.');
     }
     if (field.type === 'formula') checkFormula(field);
+    if (field.type === 'lookup') checkLookup(field);
     if (field.type === 'auto-number') {
       for (const message of validateAutoNumber(field.autoNumber)) error(path, message);
       if (field.required) error(path, 'Uma numeração automática não pode ser obrigatória.');

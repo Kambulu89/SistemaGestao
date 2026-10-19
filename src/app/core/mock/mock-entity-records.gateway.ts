@@ -159,7 +159,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       };
       this.bucket(tenantId, entityKey).push(record);
       this.pushAudit(record, 'create', this.diff(entity, {}, record.data));
-      return this.visible(entity, record);
+      return this.visible(entity, this.materialize(entity, record));
     });
   }
 
@@ -187,7 +187,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
         ...this.clean(entity, merged),
       });
       const changes = this.diff(entity, record.data, data);
-      if (changes.length === 0) return this.visible(entity, record);
+      if (changes.length === 0) return this.visible(entity, this.materialize(entity, record));
 
       const updated: EntityRecord = {
         ...record,
@@ -199,7 +199,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       };
       this.replace(updated);
       this.pushAudit(updated, 'update', changes);
-      return this.visible(entity, updated);
+      return this.visible(entity, this.materialize(entity, updated));
     });
   }
 
@@ -242,7 +242,7 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
         { field: 'status', from: record.status, to: result.status },
         ...this.diff(entity, record.data, result.data),
       ]);
-      return this.visible(entity, updated);
+      return this.visible(entity, this.materialize(entity, updated));
     });
   }
 
@@ -436,10 +436,58 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       : data;
   }
 
-  /** Um registo com as fórmulas recalculadas: reflecte sempre a definição em vigor. */
+  /**
+   * Um registo com os valores derivados: fórmulas recalculadas e valores relacionados lidos do
+   * registo referenciado. Reflecte sempre a definição em vigor e os direitos de quem pede.
+   */
   private materialize(entity: EntityDefinition, record: EntityRecord): EntityRecord {
-    const data = this.withDerived(entity, record.data);
+    const data = this.withLookups(entity, record.tenantId, this.withDerived(entity, record.data));
     return data === record.data ? record : { ...record, data };
+  }
+
+  private withLookups(entity: EntityDefinition, tenantId: string, data: RecordData): RecordData {
+    const lookups = entity.fields.filter((f) => f.type === 'lookup' && !f.archived);
+    if (lookups.length === 0) return data;
+    const out: Record<string, FieldValue> = { ...data };
+    for (const field of lookups) {
+      if (field.type === 'lookup')
+        out[field.key] = this.resolveLookup(field, entity, tenantId, data);
+    }
+    return out;
+  }
+
+  /**
+   * Valor de um campo do registo referenciado. Só se devolve o que o utilizador já poderia ver
+   * abrindo esse registo: permissão de leitura da entidade alvo (RBAC + ABAC) e do campo.
+   * Em qualquer dúvida (sem permissão, registo apagado, módulo indisponível) o valor fica vazio.
+   */
+  private resolveLookup(
+    field: Extract<FieldDefinition, { type: 'lookup' }>,
+    entity: EntityDefinition,
+    tenantId: string,
+    data: RecordData,
+  ): FieldValue {
+    const relation = entity.fields.find((f) => f.key === field.lookup.relationField);
+    const id = relation ? data[relation.key] : null;
+    if (relation?.type !== 'entity-reference' || typeof id !== 'string' || !id) return null;
+
+    const target = this.store.effective(tenantId).find((d) => d.key === relation.entityKey);
+    if (!target || (target.moduleId !== null && !this.modules.isAvailable(target.moduleId)))
+      return null;
+    const targetRecord = this.bucket(tenantId, target.key).find((r) => r.id === id);
+    if (!targetRecord) return null;
+    if (!evaluateOperation(target, 'read', (p) => this.permissions.can(p), targetRecord).allowed)
+      return null;
+
+    const source = target.fields.find((f) => f.key === field.lookup.sourceField && !f.archived);
+    const access = fieldAccessFromPermissions((p) => this.permissions.can(p));
+    if (!source || !access.canRead(source)) return null;
+
+    // Só as fórmulas do alvo (nunca os seus valores relacionados: evita cadeias e ciclos).
+    const value = this.withDerived(target, targetRecord.data)[source.key];
+    return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+      ? value
+      : null;
   }
 
   private matches(record: EntityRecord, key: string, value: string): boolean {
@@ -519,6 +567,19 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
         add(key, 'server', 'A referência não existe.');
       } else if (field.type === 'user-reference' && !this.members().some((u) => u.id === value)) {
         add(key, 'server', 'O utilizador não pertence a este tenant.');
+      }
+    }
+
+    // Um valor relacionado configurado para falhar não aceita relações que apontam para o vazio.
+    for (const field of entity.fields) {
+      if (field.type !== 'lookup' || field.archived || field.lookup.onMissing !== 'error') continue;
+      const relationKey = field.lookup.relationField;
+      const target = fields.get(relationKey);
+      const id = data[relationKey];
+      if (target?.type === 'entity-reference' && typeof id === 'string' && id) {
+        const exists = this.bucket(tenantId, target.entityKey).some((r) => r.id === id);
+        if (!exists && !issues.some((i) => i.fieldKey === relationKey))
+          add(relationKey, 'server', 'A referência não existe.');
       }
     }
 

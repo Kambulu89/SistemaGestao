@@ -114,8 +114,18 @@ describe('Campos personalizados: página e designer', () => {
     const { fixture, el } = await open('escola@demo.pt', 'escola-horizonte');
     button(el, 'Novo campo')!.click();
     await settle(fixture);
-    expect(el.querySelector('[data-testid=preview-types]')?.textContent).toContain(
-      'Valor relacionado',
+    // Todos os tipos do catálogo estão disponíveis: não há aviso de «em preparação».
+    expect(el.querySelector('[data-testid=preview-types]')).toBeNull();
+    const types = [...el.querySelectorAll('select')[0]!.querySelectorAll('option')].map((o) =>
+      o.textContent?.trim(),
+    );
+    expect(types).toEqual(
+      expect.arrayContaining([
+        'Fórmula',
+        'Valor relacionado',
+        'Numeração automática',
+        'Referência a utilizador',
+      ]),
     );
 
     type(el, 'Tipo de campo', 'currency');
@@ -127,6 +137,74 @@ describe('Campos personalizados: página e designer', () => {
     await settle(fixture);
     expect(el.textContent).not.toContain('Moeda (ISO 4217)');
     expect(el.textContent).not.toContain('Entra na pesquisa'); // booleano não é pesquisável
+  });
+
+  it('configures advanced types: formula, lookup, auto-number and user reference', async () => {
+    const { fixture, el } = await open('frota@demo.pt', 'transportes-atlas');
+    button(el, 'Novo campo')!.click();
+    await settle(fixture);
+
+    type(el, 'Tipo de campo', 'formula');
+    await settle(fixture);
+    expect(el.textContent).toContain('Expressão');
+    expect(el.querySelector('[data-testid=formula-fields]')?.textContent).toContain(
+      'nenhum campo numérico',
+    );
+
+    type(el, 'Tipo de campo', 'auto-number');
+    await settle(fixture);
+    expect(el.textContent).toContain('Prefixo');
+    expect(el.textContent).toContain('Reinício da sequência');
+    expect(el.textContent).not.toContain('Obrigatório'); // atribuído pelo servidor
+
+    type(el, 'Tipo de campo', 'lookup');
+    await settle(fixture);
+    expect(el.textContent).toContain('Referência a seguir');
+    expect(el.textContent).toContain('Campo a mostrar');
+    expect(el.textContent).not.toContain('Entra na pesquisa');
+  });
+
+  it('creates a formula field through the designer and the server computes it', async () => {
+    const { fixture, el, registry } = await open('frota@demo.pt', 'transportes-atlas');
+    // Dois campos numéricos de base.
+    for (const [name, kind] of [
+      ['Quantidade', 'number'],
+      ['Preço unitário', 'decimal'],
+    ] as const) {
+      button(el, 'Novo campo')!.click();
+      await settle(fixture);
+      type(el, 'Nome', name);
+      type(el, 'Tipo de campo', kind);
+      await settle(fixture);
+      el.querySelector<HTMLButtonElement>('button[type=submit]')!.click();
+      await settle(fixture);
+    }
+    button(el, 'Novo campo')!.click();
+    await settle(fixture);
+    type(el, 'Nome', 'Total estimado');
+    type(el, 'Tipo de campo', 'formula');
+    await settle(fixture);
+    expect(el.querySelector('[data-testid=formula-fields]')?.textContent).toContain('quantidade');
+    expect(el.querySelector('[data-testid=formula-fields]')?.textContent).toContain(
+      'precoUnitario',
+    );
+
+    const expression = el.querySelector<HTMLTextAreaElement>('textarea[aria-required=true]')!;
+    expression.value = 'quantidade * fantasma';
+    expression.dispatchEvent(new Event('input'));
+    await settle(fixture);
+    expect(el.querySelector('[data-testid=designer-issues]')?.textContent).toContain(
+      'campo desconhecido',
+    );
+    expect(el.querySelector<HTMLButtonElement>('button[type=submit]')!.disabled).toBe(true);
+
+    expression.value = 'quantidade * precoUnitario';
+    expression.dispatchEvent(new Event('input'));
+    await settle(fixture);
+    el.querySelector<HTMLButtonElement>('button[type=submit]')!.click();
+    await settle(fixture);
+    await settle(fixture);
+    expect(registry.find('customer')!.fields.map((f) => f.key)).toContain('totalEstimado');
   });
 
   it('blocks saving a duplicate code and explains why', async () => {

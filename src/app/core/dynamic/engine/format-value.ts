@@ -25,6 +25,18 @@ export function formatFieldValue(
     return EMPTY;
   }
 
+  if (field.type === 'lookup') {
+    // O valor é do campo de origem: formata-se como ele (data, moeda, opção…).
+    const source = field.lookup.resolvedSource;
+    return source
+      ? formatFieldValue(source, value, locale)
+      : value === true
+        ? 'Sim'
+        : value === false
+          ? 'Não'
+          : String(value);
+  }
+
   if (hasOptions(field)) {
     const label = (v: string) => field.options.find((o) => o.value === v)?.label ?? v;
     return Array.isArray(value)
@@ -50,9 +62,12 @@ export function formatFieldValue(
         : String(value);
     case 'currency':
       return typeof value === 'number'
-        ? new Intl.NumberFormat(locale, { style: 'currency', currency: field.currency }).format(
-            value,
-          )
+        ? new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: field.currency,
+            minimumFractionDigits: field.scale ?? 2,
+            maximumFractionDigits: field.scale ?? 2,
+          }).format(value)
         : String(value);
     case 'date':
       return typeof value === 'string'

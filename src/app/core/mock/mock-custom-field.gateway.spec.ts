@@ -108,12 +108,8 @@ describe('Mock backend: gestão de campos personalizados', () => {
     const preview = await fails(
       firstValueFrom(
         api.save(
-          input({
-            type: 'lookup',
-            key: 'numero',
-            label: 'Nº',
-            lookup: { relationField: 'nome', sourceField: 'nome', onMissing: 'empty' },
-          }),
+          // Um tipo que o servidor não conhece (ex.: de um cliente mais recente) nunca se aceita.
+          input({ type: 'hologram', key: 'numero', label: 'Nº' } as never),
         ),
       ),
     );

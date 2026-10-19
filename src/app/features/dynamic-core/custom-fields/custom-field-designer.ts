@@ -18,6 +18,8 @@ import type { DefinitionFailure } from '../../../core/dynamic/data-access/custom
 import { validateCustomFieldDefinition } from '../../../core/dynamic/engine/custom-fields';
 import {
   type DefinitionIssue,
+  integrityContext,
+  LOOKUP_SOURCE_TYPES,
   validateEntityDefinition,
 } from '../../../core/dynamic/engine/definition-integrity';
 import {
@@ -115,14 +117,16 @@ const optionGroup = (value = '', label = '', active = true) =>
               Campo publicado: o código e o tipo já não se alteram.
             </p>
           }
-          <div class="mt-3 text-sm text-fg-muted" data-testid="preview-types">
-            <p class="mb-1">Tipos avançados ainda em preparação (não podem ser criados):</p>
-            <div class="flex flex-wrap gap-1.5">
-              @for (t of previewTypes; track t.type) {
-                <app-badge [title]="t.description">{{ t.label }}</app-badge>
-              }
+          @if (previewTypes.length > 0) {
+            <div class="mt-3 text-sm text-fg-muted" data-testid="preview-types">
+              <p class="mb-1">Tipos avançados ainda em preparação (não podem ser criados):</p>
+              <div class="flex flex-wrap gap-1.5">
+                @for (t of previewTypes; track t.type) {
+                  <app-badge [title]="t.description">{{ t.label }}</app-badge>
+                }
+              </div>
             </div>
-          </div>
+          }
         </app-card>
 
         @if (kind().options) {
@@ -184,6 +188,27 @@ const optionGroup = (value = '', label = '', active = true) =>
                   label="Entidade referenciada"
                   [required]="true"
                   [options]="referenceOptions()"
+                />
+              }
+              @if (type() === 'lookup') {
+                <app-select
+                  formControlName="lookupRelation"
+                  label="Referência a seguir"
+                  hint="Um campo «Referência a entidade» desta entidade."
+                  [required]="true"
+                  [options]="relationOptions()"
+                />
+                <app-select
+                  formControlName="lookupSource"
+                  label="Campo a mostrar"
+                  hint="Campo do registo referenciado. Só se mostra a quem já o pode ver."
+                  [required]="true"
+                  [options]="sourceOptions()"
+                />
+                <app-select
+                  formControlName="lookupOnMissing"
+                  label="Se o registo referenciado já não existir"
+                  [options]="missingOptions"
                 />
               }
               @if (type() === 'formula') {
@@ -365,6 +390,36 @@ export class CustomFieldDesigner {
       .map((f) => f.key);
   });
 
+  protected readonly missingOptions: readonly SelectOption[] = [
+    { value: 'empty', label: 'Mostrar vazio' },
+    { value: 'error', label: 'Recusar guardar o registo' },
+  ];
+
+  /** Referências a entidade disponíveis (nativas e personalizadas, sem o próprio campo). */
+  private readonly referenceFields = computed(() => {
+    const custom = this.owned()
+      ? []
+      : this.registry
+          .forEntity(entityRefOf(this.entity()))
+          .filter((c) => c.state !== 'archived')
+          .map((c) => c.field);
+    return [...this.entity().fields, ...custom].filter(
+      (f) => !f.archived && f.type === 'entity-reference',
+    );
+  });
+  protected readonly relationOptions = computed<readonly SelectOption[]>(() =>
+    this.referenceFields().map((f) => ({ value: f.key, label: f.label })),
+  );
+  protected readonly sourceOptions = computed<readonly SelectOption[]>(() => {
+    const relation = (this.value(), this.form.controls.lookupRelation.value);
+    const field = this.referenceFields().find((f) => f.key === relation);
+    if (field?.type !== 'entity-reference') return [];
+    const target = this.entities.published().find((e) => e.key === field.entityKey);
+    return (target?.fields ?? [])
+      .filter((f) => !f.archived && LOOKUP_SOURCE_TYPES.has(f.type))
+      .map((f) => ({ value: f.key, label: f.label }));
+  });
+
   protected readonly resetOptions: readonly SelectOption[] = [
     { value: 'never', label: 'Nunca' },
     { value: 'yearly', label: 'Todos os anos' },
@@ -406,6 +461,9 @@ export class CustomFieldDesigner {
     autoReset: new FormControl<AutoNumberDefinition['reset']>('never', { nonNullable: true }),
     formulaSource: new FormControl('', { nonNullable: true }),
     formulaScale: new FormControl<number | null>(2),
+    lookupRelation: new FormControl('', { nonNullable: true }),
+    lookupSource: new FormControl('', { nonNullable: true }),
+    lookupOnMissing: new FormControl<'empty' | 'error'>('empty', { nonNullable: true }),
   });
   protected readonly options = this.form.controls.options;
 
@@ -454,7 +512,8 @@ export class CustomFieldDesigner {
       this.isFile() ||
       this.type() === 'entity-reference' ||
       this.type() === 'auto-number' ||
-      this.type() === 'formula',
+      this.type() === 'formula' ||
+      this.type() === 'lookup',
   );
 
   private readonly draft = computed<FieldDraft>(() => {
@@ -620,8 +679,11 @@ export class CustomFieldDesigner {
       ...this.entity(),
       fields: [...this.entity().fields.filter((f) => f.key !== originalKey), field],
     };
-    const known = new Set([...this.entities.published().map((e) => e.key), trial.key]);
-    for (const issue of validateEntityDefinition(trial, { knownEntityKeys: known })) {
+    const context = integrityContext([
+      ...this.entities.published().filter((e) => e.key !== trial.key),
+      trial,
+    ]);
+    for (const issue of validateEntityDefinition(trial, context)) {
       if (issue.severity === 'error' && issue.path.includes(`.${field.key}`)) issues.push(issue);
     }
     return issues;

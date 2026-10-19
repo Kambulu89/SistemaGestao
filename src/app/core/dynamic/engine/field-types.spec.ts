@@ -71,9 +71,9 @@ describe('catálogo de tipos de campo', () => {
     }
   });
 
-  it('assinala os tipos ainda em preparação', () => {
+  it('todos os tipos do catálogo estão prontos (o estado «preview» fica para tipos futuros)', () => {
     const preview = FIELD_TYPE_CATALOG.filter((t) => t.status === 'preview').map((t) => t.type);
-    expect(preview).toEqual(['lookup']);
+    expect(preview).toEqual([]);
     expect(fieldTypeDefinition('text').status).toBe('ready');
   });
 
