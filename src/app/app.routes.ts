@@ -1,22 +1,64 @@
 import type { Routes } from '@angular/router';
-import { MainLayout } from './layouts/main-layout/main-layout';
+import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { homeRedirectGuard } from './core/guards/home-redirect.guard';
+import { platformGuard } from './core/guards/platform.guard';
+import { tenantGuard } from './core/guards/tenant.guard';
+
+const authLayout = () => import('./layouts/auth-layout/auth-layout').then((m) => m.AuthLayout);
+const notFound = () => import('./features/system/not-found/not-found').then((m) => m.NotFound);
 
 export const routes: Routes = [
+  // "/" decide para onde enviar o utilizador (login, plataforma ou último tenant).
+  { path: '', pathMatch: 'full', canActivate: [homeRedirectGuard], children: [] },
+
   {
-    path: '',
-    component: MainLayout,
+    path: 'auth',
+    loadComponent: authLayout,
     children: [
+      { path: '', pathMatch: 'full', redirectTo: 'login' },
       {
-        path: '',
-        pathMatch: 'full',
-        title: 'Início',
-        loadComponent: () => import('./features/home/home').then((m) => m.Home),
+        path: 'login',
+        title: 'Entrar',
+        canActivate: [guestGuard],
+        loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
       },
       {
-        path: '**',
-        title: 'Página não encontrada',
-        loadComponent: () => import('./features/not-found/not-found').then((m) => m.NotFound),
+        path: 'forgot-password',
+        title: 'Recuperar palavra-passe',
+        canActivate: [guestGuard],
+        loadComponent: () =>
+          import('./features/auth/forgot-password/forgot-password').then((m) => m.ForgotPassword),
+      },
+      {
+        path: 'no-access',
+        title: 'Sem acesso',
+        loadComponent: () =>
+          import('./features/system/no-access/no-access').then((m) => m.NoAccess),
       },
     ],
+  },
+
+  {
+    path: 'platform',
+    canActivate: [authGuard, platformGuard],
+    loadComponent: () =>
+      import('./layouts/platform-layout/platform-layout').then((m) => m.PlatformLayout),
+    loadChildren: () =>
+      import('./features/platform/platform.routes').then((m) => m.PLATFORM_ROUTES),
+  },
+
+  {
+    path: 't/:tenantSlug',
+    canActivate: [authGuard, tenantGuard],
+    runGuardsAndResolvers: 'paramsChange',
+    loadComponent: () =>
+      import('./layouts/tenant-layout/tenant-layout').then((m) => m.TenantLayout),
+    loadChildren: () => import('./features/tenant/tenant.routes').then((m) => m.TENANT_ROUTES),
+  },
+
+  {
+    path: '**',
+    loadComponent: authLayout,
+    children: [{ path: '', title: 'Página não encontrada', loadComponent: notFound }],
   },
 ];

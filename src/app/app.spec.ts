@@ -5,7 +5,6 @@ import { App } from './app';
 describe('App', () => {
   it('should create the app', () => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
-    const fixture = TestBed.createComponent(App);
-    expect(fixture.componentInstance).toBeTruthy();
+    expect(TestBed.createComponent(App).componentInstance).toBeTruthy();
   });
 });
