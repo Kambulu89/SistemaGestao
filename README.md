@@ -1,10 +1,54 @@
-# Plataforma de Gestão Empresarial (frontend)
+# Plataforma de Gestão Empresarial
 
-Fundação frontend de uma plataforma SaaS **multi-tenant, modular e configurável**.
-Angular 22 · Tailwind CSS 4 · TypeScript estrito · Signals · RxJS · Reactive Forms · Vitest.
+Plataforma SaaS **multi-tenant, modular e configurável**. Este repositório tem duas partes:
 
-> **Segurança:** isolamento de dados e verificação efectiva de permissões são responsabilidade do backend.
+| Parte | Pasta | Estado |
+| --- | --- | --- |
+| Frontend (Angular 22 · Tailwind 4) | raiz (`src/`) | funcional sobre **dados mock**; é o que as secções abaixo descrevem |
+| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0**: arranque, ambiente, saúde, erros, RLS-base. Sem módulos de negócio nem autenticação real |
+
+Contrato funcional: [`docs/especificacao-v2.docx`](docs/especificacao-v2.docx). Regras permanentes: [`CLAUDE.md`](CLAUDE.md).
+Arquitectura: [`docs/architecture.md`](docs/architecture.md) · decisões: [`docs/decisions.md`](docs/decisions.md) ·
+plano e estado das fases: [`docs/implementation-plan.md`](docs/implementation-plan.md).
+
+> **Segurança:** isolamento de dados e verificação efectiva de permissões são responsabilidade do **backend**.
 > Guards, menus filtrados e elementos ocultos no frontend servem apenas para navegação e experiência de utilização.
+
+## Executar o backend (desenvolvimento)
+
+Requisitos: Node ≥ 22.22, PostgreSQL 16, Redis 7 (ou Docker).
+
+**Opção A — Docker Compose** (PostgreSQL, Redis, MinIO, API e frontend):
+
+```bash
+cp .env.compose.example .env        # preencher os valores (openssl rand -hex 16; APP_KEY: openssl rand -hex 32)
+docker compose up --build
+docker compose exec api npm run migrate
+curl localhost:3333/api/v1/ready
+```
+
+**Opção B — serviços locais:**
+
+```bash
+# 1) Contas e bases (uma vez). Define as palavras-passe que vai pôr no .env do backend.
+SG_OWNER_PASSWORD=... SG_RUNTIME_PASSWORD=... POSTGRES_USER=postgres bash docker/postgres/init/01-roles.sh
+# 2) API
+cd backend
+cp .env.example .env                 # preencher APP_KEY (node ace generate:key) e as palavras-passe
+npm ci
+npm run migrate                      # conta sg_owner
+npm run dev                          # http://localhost:3333/api/v1/health
+```
+
+Validar (backend): `npm run lint && npm run format:check && npm run typecheck && npm test && npm run build`.
+Os testes usam a base `sistema_gestao_test` (`cp .env.test.example .env.test` e preencher).
+Endpoints actuais: `GET /api/v1/health` (liveness) e `GET /api/v1/ready` (base de dados + Redis).
+
+---
+
+# Frontend
+
+Angular 22 · Tailwind CSS 4 · TypeScript estrito · Signals · RxJS · Reactive Forms · Vitest.
 
 ## Requisitos
 
