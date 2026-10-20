@@ -53,7 +53,7 @@ isolamento por tenant e testes negativos com dois tenants.
 
 | # | Fatia | Depende de | Entrega |
 | --- | --- | --- | --- |
-| 1.1 | **Núcleo de multi-tenancy e esquema** | F0 | colunas base B/G; padrão de migration de tabela de tenant (RLS `ENABLE`+`FORCE`, política, FK composta `(tenant_id,id)`); `TenantContext` imutável; `TenantScopedConnection` (transacção + `set_config` local; sem contexto → erro); repositório base que exige contexto; **teste de conformidade do esquema** (toda a tabela com `tenant_id` tem RLS forçada e política); verificação automática das fronteiras de módulo |
+| 1.1 | ✅ **Núcleo de multi-tenancy e esquema** (feita — ver secção 2.1) | F0 | colunas base B/G; padrão de migration de tabela de tenant (RLS `ENABLE`+`FORCE`, política, FK composta `(tenant_id,id)`); `TenantContext` imutável; `TenantScopedConnection` (transacção + `set_config` local; sem contexto → erro); repositório base que exige contexto; **teste de conformidade do esquema** (toda a tabela com `tenant_id` tem RLS forçada e política); verificação automática das fronteiras de módulo |
 | 1.2 | **Tenant e utilizadores** (C01 mínimo, C04) | 1.1 | `Tenant`, `TenantDomain`, `User`, `AuthSession`; login/logout com sessão opaca em cookie HttpOnly+Secure+SameSite, CSRF, hash de palavra-passe, rate limit em Redis, sessões activas/revogação; recuperação com token de uso único. MFA e SSO ficam **fora** (documentar) |
 | 1.3 | **Membership e contexto** (C05 parte 1) | 1.2 | `TenantMembership`; pipeline de resolução do tenant (spec §10.1) como middleware; `GET /context` com `authorizationVersion`; troca de tenant; suspensão de tenant bloqueia operações |
 | 1.4 | **Autorização** (C06) | 1.3 | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); *default deny*, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar |
@@ -62,6 +62,26 @@ isolamento por tenant e testes negativos com dois tenants.
 | 1.7 | **Party** (C08) | 1.5 | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). *Item da spec F1 que não constava do pedido: confirmar se entra nesta fase.* |
 | 1.8 | **Frontend real** | 1.2–1.6 | adaptadores HTTP para auth/tenant/contexto/membros/papéis/organização; remover os mocks correspondentes; mapeamento de permissões (D-014); selector de tenant que cancela pedidos e limpa caches; sessão em cookie |
 | 1.9 | **Matriz de isolamento** | todas | dois tenants de demonstração + utilizadores com papéis distintos; testes negativos (abaixo) em CI |
+
+### 2.1 Fatia 1.1 — concluída
+**Entregue:** `TenantContext` imutável e `TenantContextStore`; `LucidTenantDatabase` (transacção + `set_config` local);
+`TenantRepository` (colunas base, versões, 404/409); helpers `createTenantTable`/`createGlobalTable`/`tenantForeignKey`;
+enumeração explícita de tabelas globais; verificador de conformidade do esquema; verificador de fronteiras de módulo
+(R1–R6). Detalhe em `docs/architecture.md` §2 e §5 e ADRs D-016/D-017.
+
+**Evidência (executada):** 73 testes backend a passar (35 novos), incluindo: sem contexto → falha antes de abrir ligação;
+RLS isola sem o filtro do repositório e **também a conta dona** (FORCE RLS); `WITH CHECK` recusa escrita noutro tenant;
+FK composta recusa ligação A→B; 30 alternâncias A/B sobre o pool sem herdar contexto; 40 pedidos concorrentes só vêem os
+seus dados; `expectedVersion` (sucesso, 409, 404 para outro tenant, corrida entre 3 escritores → 1 vence); rollback total;
+colunas reservadas rejeitadas; conformidade do esquema com 6 controlos negativos (tabela sem `tenant_id`, `tenant_id`
+nulo, RLS não forçada, política sem `WITH CHECK`, sem chave `(tenant_id,id)`, FK simples) e esquema real sem violações;
+fronteiras de módulo com um controlo negativo por regra. Lint, `format:check`, `typecheck`, `build` e migrations numa
+base limpa a passar.
+
+**Limitações assumidas:** as tabelas dos testes vivem num esquema `probe` (fixtures criadas com os helpers reais): ainda
+não há tabelas de domínio. A FK `tenant_id → tenants` só passa a existir na fatia 1.2 (os helpers já a geram por
+omissão). Cache, jobs, ficheiros, pesquisa, exportações e WebSocket não existem ainda: a respectiva matriz de isolamento
+fica para quando forem criados. O `TenantContext` ainda não é **construído** por nenhum middleware (fatia 1.3).
 
 ### Critérios de aceitação da Fase 1
 Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios de aceitação de cada componente:

@@ -10,8 +10,9 @@ Documentação: [`docs/architecture.md`](docs/architecture.md) · [`docs/decisio
 ## Estado do repositório (actualizar quando mudar)
 
 - `src/` (raiz): frontend **Angular 22 + Tailwind 4**. Funciona sobre adaptadores **mock** (`src/app/core/mock`).
-- `backend/`: API **AdonisJS 6 + PostgreSQL 16 + Redis**. Fase 0 feita (arranque, ambiente, saúde, erros, correlation id,
-  RLS-base). **Ainda não existe nenhum módulo de negócio nem autenticação real.**
+- `backend/`: API **AdonisJS 6 + PostgreSQL 16 + Redis**. Fase 0 e fatia 1.1 feitas (arranque, ambiente, saúde, erros,
+  correlation id, `TenantContext`, acesso a dados por tenant com RLS, helpers de migration, verificadores de esquema e de
+  arquitectura). **Ainda não existe nenhum módulo de negócio nem autenticação real.**
 - Fase actual e próximos passos: ver `docs/implementation-plan.md`. Uma fase de cada vez; não avançar sem pedido.
 
 ## Comandos
@@ -91,6 +92,9 @@ respostas, logs ou documentação.
 - Cada pedido tem `correlationId` (gerado/validado pelo servidor, cabeçalho `X-Correlation-Id`); entra em logs e erros.
 - Logs estruturados, sem payloads sensíveis (campos redigidos em `config/logger.ts`).
 - Configuração por variáveis de ambiente validadas no arranque (`backend/start/env_schema.ts`). Sem segredos no código.
+- Tabelas de tenant criam-se **só** com `createTenantTable`/`tenantForeignKey` (`backend/database/support`); acesso a dados
+  de tenant **só** por `LucidTenantDatabase.run()` + `TenantRepository`; módulos importam outros só por `index.ts`.
+  `npm test` falha se uma tabela não cumprir o isolamento ou se uma fronteira de módulo for violada.
 - Migrations: versionadas, **sem** `IF NOT EXISTS` indiscriminado, estratégia expand/contract; seeds idempotentes;
   dados de demonstração só em ambientes não produtivos e em **dois tenants** separados.
 - Não actualizar versões principais de dependências sem ADR (ver `docs/decisions.md`). Respeitar os lockfiles.

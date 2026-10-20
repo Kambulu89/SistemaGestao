@@ -84,6 +84,20 @@ O frontend usa `<módulo>.read|manage` e `entities.<chave>.<op>`; a spec usa `<r
 `invoice.approve`, `dynamic.<code>.read`). **Proposta:** adoptar a nomenclatura da spec no backend e mapear no
 frontend por um único ponto (adaptador do contexto), mantendo as chaves do mock só até serem substituídas.
 
+## D-016 Transporte do contexto de tenant e acesso a dados (aceite — fatia 1.1)
+**Decisão.** `TenantContext` imutável (campos da spec §10.1; validação de UUIDs e coerência actor/identidades) transportado
+por `AsyncLocalStorage` (`TenantContextStore`) e entregue aos casos de uso como `TenantScope` por
+`TenantUnitOfWork.run()`. A implementação Lucid abre uma transacção na conta de runtime e faz
+`set_config('app.tenant_id', …, true)`; os repositórios derivam de `TenantRepository`. O `tenant_id` nunca é um valor
+fornecido pelo chamador. **Alternativas rejeitadas.** Filtrar só na aplicação (sem RLS); `SET` de sessão (contamina o
+pool); passar o `tenantId` solto por parâmetro. **Consequências.** Todo o acesso a dados de tenant é transaccional;
+jobs e consumidores têm de construir o seu contexto (actor `SERVICE`) e usar o mesmo mecanismo.
+
+## D-017 Fronteiras de módulo verificadas por teste (aceite — fatia 1.1)
+**Decisão.** `tests/support/architecture.ts` analisa os imports de `app/**` (R1–R6, ver `architecture.md` §2) dentro de
+`npm test`. Cada módulo expõe uma API pública (`index.ts`); o kernel HTTP (`core/http`) é partilhado.
+**Limite.** Só analisa imports; escritas SQL cruzadas entre módulos não são detectáveis estaticamente.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

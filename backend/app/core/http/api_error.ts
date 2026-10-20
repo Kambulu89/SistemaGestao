@@ -29,6 +29,13 @@ export class ApiError extends Error {
     return new ApiError(409, code, message, details)
   }
 
+  /** Conflito de versão: devolve a versão actual para o cliente poder rever as diferenças. */
+  static versionConflict(currentVersion: number) {
+    return new ApiError(409, 'VERSION_CONFLICT', 'O registo foi alterado entretanto.', [
+      { path: 'version', code: 'STALE_VERSION', message: `Versão actual: ${currentVersion}.` },
+    ])
+  }
+
   static notReady(details: ApiErrorDetail[]) {
     return new ApiError(503, 'NOT_READY', 'O serviço ainda não está pronto.', details)
   }

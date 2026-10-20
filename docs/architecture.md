@@ -33,8 +33,14 @@ backend/
     core/
       http/       ApiError, envelope de sucesso/erro, correlation id
       health/     application (CheckReadiness) · infrastructure (sondas DB/Redis) · presentation (controller)
-  database/migrations/   baseline da plataforma (função de contexto de tenant + privilégios)
-  tests/          unit + functional (Japa)
+      tenancy/    (fatia 1.1) domain: TenantContext imutável, tabelas globais enumeradas · application: portas
+                  TenantScope/TenantUnitOfWork · infrastructure: TenantContextStore (AsyncLocalStorage),
+                  LucidTenantDatabase (transacção + set_config), TenantRepository, verificação do esquema
+                  · index.ts = API pública do módulo
+  database/
+    migrations/   baseline da plataforma (função de contexto de tenant + privilégios)
+    support/      helpers de migration: createTenantTable, createGlobalTable, tenantForeignKey
+  tests/          unit + functional (Japa); support/ = fixtures, verificador de arquitectura
 ```
 
 ### Estrutura modular prevista (spec §1.2) — ainda **não** criada
@@ -60,8 +66,10 @@ desenho em miniatura.
    ficheiros internos. Um módulo **não escreve** nas tabelas de outro.
 4. `core` não depende de módulos de negócio, nem de verticais. Verticais dependem de módulos, nunca o inverso.
 
-> Estado: regras documentadas; **ainda sem verificação automática** (não há módulos para verificar). Entrar em
-> `docs/implementation-plan.md`, Fase 1, item 1.1.
+> Estado: **verificadas automaticamente** por `tests/support/architecture.ts` (executado em `npm test`/CI sobre todo o
+> `app/`), com regras R1–R4 (camadas e direcção), R3 (só pelo `index` do módulo), R5 (sem `eval`/`new Function`/
+> `child_process`/`vm`) e R6 (só `infrastructure/` acede à base de dados). Não é verificável estaticamente que um módulo
+> não escreve nas tabelas de outro por SQL: fica à revisão e aos testes de isolamento.
 
 ## 3. Pedido HTTP (implementado na Fase 0)
 
@@ -72,9 +80,10 @@ desenho em miniatura.
 4. Bodyparser (JSON ≤ 1 MB; multipart não processado automaticamente: uploads usam prepare/complete, Fase 4).
 5. Controller → caso de uso. Erros → `HttpExceptionHandler`.
 
+Implementado (fatia 1.1): `TenantContext` imutável, transporte por `TenantContextStore`, transacção de acesso com
+`set_config('app.tenant_id', …, true)` (`LucidTenantDatabase`) e repositórios que exigem o âmbito.
 Previsto (spec §10.1) e **ainda não implementado**: autenticar identidade → resolver tenant candidato → validar
-membership/estado → `TenantContext` imutável → transacção de acesso com `set_config('app.tenant_id', …, true)` →
-RBAC/ABAC → caso de uso → outbox.
+membership/estado → **construir** o `TenantContext` (middleware, fatia 1.3) → RBAC/ABAC → outbox.
 
 ## 4. Convenções transversais
 
@@ -103,7 +112,8 @@ Convenções de UUID/decimais/datas/erros/transacções ficam aqui, não repetid
     só DML nas tabelas criadas pela `owner` (default privileges). É por ela que a RLS tem de passar.
 - Migration `create_platform_baseline`: função `app_current_tenant_id()` que lê `app.tenant_id` do contexto SQL da
   transacção; sem contexto devolve `NULL` (e, nas políticas, nega).
-- Padrão a aplicar a cada tabela de tenant (Fase 1; ver spec §10.1):
+- **Toda** a tabela de tenant é criada com `createTenantTable` (`database/support/tenant_tables.ts`), que acrescenta as
+  colunas base, a chave única `(tenant_id, id)`, o índice por `tenant_id` e a RLS, equivalente a:
 
   ```sql
   ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
@@ -112,7 +122,16 @@ Convenções de UUID/decimais/datas/erros/transacções ficam aqui, não repetid
     USING (tenant_id = app_current_tenant_id())
     WITH CHECK (tenant_id = app_current_tenant_id());
   ```
-  Chaves únicas `(tenant_id, id)` nos alvos e FKs compostas `(tenant_id, target_id)`; índices a começar em `tenant_id`.
+  As ligações entre tabelas de tenant usam `tenantForeignKey` (FK composta `(tenant_id, coluna) → alvo(tenant_id, id)`).
+  Tabelas globais usam `createGlobalTable` e têm de constar de `PLATFORM_TABLES` (`core/tenancy/domain/platform_tables.ts`);
+  uma tabela que não é de tenant nem está enumerada **falha** a verificação.
+- **Acesso a dados de tenant:** `LucidTenantDatabase.run(fn)` abre a transacção da conta de runtime, define o tenant e
+  entrega um `TenantScope`; `TenantRepository` (colunas base, `findById`/`getById`/`list`/`insert`/`update`) usa sempre
+  o `tenant_id` do contexto **e** a RLS, rejeita colunas reservadas (`tenant_id`, `version`, autor…), devolve 404 para
+  ids de outro tenant e 409 `VERSION_CONFLICT` com `expectedVersion`. Sem contexto, falha antes de abrir ligação.
+- **Teste de conformidade do esquema** (`findTenancyViolations`, em `npm test`): confirma no catálogo que toda a tabela
+  não global tem `tenant_id NOT NULL`, RLS activa **e forçada**, política `USING`+`WITH CHECK` com
+  `app_current_tenant_id()`, chave `(tenant_id, id)` e FKs compostas entre tabelas de tenant.
 - Testado (ver `backend/tests/functional/database.spec.ts`): a conta de runtime não é superuser nem `BYPASSRLS`, não
   altera a estrutura, não lê o registo de migrations; `set_config(..., true)` só vale dentro da transacção e **uma
   ligação reutilizada entre tenants não herda o contexto anterior**.
@@ -148,7 +167,7 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 | Formato comum de respostas/erros | FEITO | `core/http/*`, `app/exceptions/handler.ts`, `tests/functional/errors.spec.ts` |
 | `correlation_id` e logging sem dados sensíveis | FEITO | middleware + `config/logger.ts` + testes |
 | Migrations e seeds (convenção) | PARCIAL | migration baseline; **sem seeds** (ainda não há dados de referência) |
-| RLS | PARCIAL | só a fundação (`app_current_tenant_id()`, contas); **nenhuma política aplicada** (sem tabelas) |
+| RLS | PARCIAL | fundação + helpers de migration + `TenantContext`/repositório + verificador de conformidade (fatia 1.1), testados com tabelas de fixture; **nenhuma tabela de domínio ainda** |
 | Docker de desenvolvimento | PARCIAL | `docker-compose.yml` validado com `docker compose config`; **não executado** (sem daemon no ambiente de análise); sem worker |
 | CI | PARCIAL | `.github/workflows/ci.yml` com YAML válido; **não executado** no GitHub |
 
