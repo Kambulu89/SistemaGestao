@@ -10,11 +10,13 @@ Documentação: [`docs/architecture.md`](docs/architecture.md) · [`docs/decisio
 ## Estado do repositório (actualizar quando mudar)
 
 - `src/` (raiz): frontend **Angular 22 + Tailwind 4**. Funciona sobre adaptadores **mock** (`src/app/core/mock`).
-- `backend/`: API **AdonisJS 6 + PostgreSQL 16 + Redis**. Fase 0 e fatias 1.1–1.7 feitas (arranque, ambiente, saúde, erros,
+- `backend/`: API **AdonisJS 6 + PostgreSQL 16 + Redis**. Fase 0 e fatias 1.1–1.7 e 1.9 feitas (falta a 1.8, o frontend real) (arranque, ambiente, saúde, erros,
   correlation id, `TenantContext`, acesso a dados por tenant com RLS, helpers de migration, verificadores de esquema e de
   arquitectura), tenants/domínios, autenticação (sessão opaca, CSRF, recuperação; sem MFA/SSO nem auditoria) e `TenantMembership` com
   resolução do contexto de tenant no servidor (`GET /context`) e autorização RBAC+ABAC (papéis, atribuições, políticas por
   AST, simulação) e organização (unidades em árvore, centros de custo, equipas, âmbitos de acesso por unidade), convites e gestão de membros (último administrador protegido) e Party (pessoas e organizações externas, contactos, moradas).
+  A matriz de isolamento (`tests/functional/isolation_matrix.spec.ts`) cobre todas as rotas e tabelas de tenant: ao criar
+  uma rota ou tabela de tenant, estenda `tests/support/matrix_fixture.ts` e declare o selector no OpenAPI.
   **Ainda não existe nenhum módulo de negócio nem ligação do frontend.**
 - Fase actual e próximos passos: ver `docs/implementation-plan.md`. Uma fase de cada vez; não avançar sem pedido.
 

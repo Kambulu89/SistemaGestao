@@ -61,7 +61,7 @@ isolamento por tenant e testes negativos com dois tenants.
 | 1.6 | ✅ **Convites e membros** (C05 parte 2; feita — ver secção 2.6) | 1.4, 1.5 | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências |
 | 1.7 | ✅ **Party** (C08; feita — ver secção 2.7) | 1.5 | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). *Item da spec F1 que não constava do pedido: confirmar se entra nesta fase.* |
 | 1.8 | **Frontend real** | 1.2–1.6 | adaptadores HTTP para auth/tenant/contexto/membros/papéis/organização; remover os mocks correspondentes; mapeamento de permissões (D-014); selector de tenant que cancela pedidos e limpa caches; sessão em cookie |
-| 1.9 | **Matriz de isolamento** | todas | dois tenants de demonstração + utilizadores com papéis distintos; testes negativos (abaixo) em CI |
+| 1.9 | ✅ **Matriz de isolamento** (feita — ver secção 2.8) | todas | dois tenants de demonstração + utilizadores com papéis distintos; testes negativos (abaixo) em CI |
 
 ### 2.1 Fatia 1.1 — concluída
 **Entregue:** `TenantContext` imutável e `TenantContextStore`; `LucidTenantDatabase` (transacção + `set_config` local);
@@ -263,27 +263,61 @@ compilado lista os dois cadastros demo.
 - Sem restrição de base de dados que force a existência do subtipo (só a aplicação); sem regras de campo em contactos/moradas.
 - Sem auditoria das alterações a dados pessoais (Fase 2) — relevante para dados sensíveis/RGPD.
 
-### Critérios de aceitação da Fase 1
-Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios de aceitação de cada componente:
+### 2.8 Fatia 1.9 — concluída
+**Entregue:** `tests/functional/isolation_matrix.spec.ts` + `tests/support/matrix_fixture.ts`: dois tenants com **os mesmos**
+códigos, nomes, emails, NIF e documento, cada um com todas as entidades de tenant (papéis, atribuições, políticas, organização,
+unidades, centro de custo, equipa, âmbito, pessoa, organização externa, contacto, morada, relação, convite, preferência) e
+utilizadores com papéis distintos (administrador, membro com papel limitado, operador sem papéis). Corre em `npm test` e, por isso,
+na CI (`.github/workflows/ci.yml`). Nenhuma alteração ao código de produção foi necessária: a matriz não encontrou fugas.
 
-- **Isolamento (dois tenants com códigos semelhantes):** ler/escrever IDs do outro tenant por API → 404 sem vazar
-  existência; FK composta rejeita ligação entre tenants; RLS com a conta de runtime nega sem contexto e com contexto
-  alheio; ligação reutilizada entre A e B não herda contexto; `tenant_id` no corpo do pedido é ignorado/rejeitado.
-  (Cache, jobs, ficheiros, pesquisa, relatórios, exportações e WebSocket: **não existem na Fase 1** — o teste passa a
-  existir quando a funcionalidade for criada e fica registado como pendente em cada fase.)
-- **C01:** utilizador suspenso (tenant) não lê dados por URL directa; domínio duplicado → 409.
-- **C04:** token expirado ou reutilizado falha; logout impede novo pedido autenticado; troca de tenant não reutiliza
-  permissões anteriores; cookies/segredos não aparecem em logs; mensagens de recuperação não revelam se o email existe.
-- **C05:** utilizador de A convidado em B mantém conta única; convite revogado falha; último administrador não sai sem
-  sucessor; reduzir acesso invalida caches/`authorizationVersion` imediatamente.
-- **C06:** operador sem `invoice.approve`-equivalente recebe 403; ID alheio → 404; campo restrito oculto em API/pesquisa/
-  exportação/auditoria (a parte de exportação/pesquisa fica pendente até existirem); DENY prevalece; simulação não concede.
-- **C07:** unidade não é pai de si própria nem de antepassado; centro de custo de outra organização rejeitado.
-- **C08** (se incluída): fornecedor empresarial sem `Person`; pessoa cliente e colaborador sem duplicar contactos.
-- **Concorrência/idempotência:** convites e criação de membership com limite de utilizadores sob concorrência.
-- **Definição de concluído (spec §11.2):** constraints, API documentada (OpenAPI), regras no servidor, permissões e
-  isolamento testados, UI com sucesso/vazio/erro/409, auditoria das mutações críticas, migrations/seeds numa base limpa,
-  sem mocks no caminho real.
+**O que a matriz impõe (13 testes, 232 no total):**
+- Ids de **outro tenant → 404 em 30 operações** (GET/PATCH/DELETE/POST sobre cada recurso), nos dois sentidos, e o estado dos dois
+  tenants fica **idêntico** antes e depois (snapshot completo de listagens e detalhes).
+- Listagens só com dados do próprio tenant e com a mesma dimensão; preferências, pesquisa (`q`) e duplicados não atravessam tenants.
+- **19 referências cruzadas** em corpos de pedido (papel/membro/unidade/organização/pai/gestor/responsável/pessoa/convite/simulação de
+  B usados por A) → 404 ou 422; `tenantId`/`tenant_id` no corpo é ignorado; selectores contraditórios → 400.
+- **Varrimento de todas as rotas de tenant do OpenAPI** (57 operações): sem sessão 401; sem selector 400; tenant alheio ou
+  inexistente 403 `TENANT_ACCESS_DENIED` (iguais); CSRF falso 403; operador sem papel 403 `PERMISSION_DENIED`. Uma rota nova sem
+  selector no OpenAPI falha o teste (lista explícita das rotas que não são de tenant).
+- Membro com papel limitado só faz o que o papel permite; trocar de tenant (A→B→A…) não reutiliza permissões; 24 pedidos
+  intercalados A/B não se misturam; tenant suspenso bloqueia todas as rotas testadas.
+- **Base de dados, automático para toda a tabela com `tenant_id`** (descoberta no esquema; as globais excluídas): o cenário tem de
+  ter dados nos dois tenants (senão falha e pede para estender a fixture); sem contexto 0 linhas; A vê exactamente as suas e nenhuma
+  de B; `DELETE` cruzado afecta 0; mudar linhas para B é recusado pela RLS (`WITH CHECK`). 7 FKs compostas cruzadas recusadas.
+- **Redis:** nenhuma chave fora de `ratelimit:*`, `dev:mailbox` e `tenant:{id}:*`; nenhum email de cadastro em chaves.
+
+**Prova de eficácia:** com a RLS desligada na tabela `addresses` (migration alterada temporariamente e reposta) a matriz falhou
+(`addresses sem contexto: expected 2 to equal 0`). Uma verificação inicial da matriz também apanhou um erro do próprio teste
+(a RLS escondia a linha alvo e a FK nunca era exercida); corrigido lendo o id com o contexto do outro tenant.
+
+**Por verificar / limitações:**
+- Cache, jobs, ficheiros, pesquisa dedicada, relatórios, exportações e WebSocket **não existem**: o isolamento deles fica por testar
+  (só há a guarda de prefixos do Redis) e passa a ser obrigatório quando forem criados — a guarda do Redis e a descoberta
+  automática de tabelas obrigam a estender a matriz.
+- O administrador da plataforma (SaaS) ainda não existe como actor: "sem acesso automático aos dados dos tenants" está garantido
+  por não haver nenhuma rota de plataforma nem papel que atravesse tenants, mas não há teste de concessão de suporte.
+- A matriz exercita a API HTTP e a base; não inclui o frontend (fatia 1.8).
+- Não houve execução da CI no GitHub (continua por executar); os mesmos comandos correm localmente.
+
+### Critérios de aceitação da Fase 1 — estado
+Gate da spec: *"Testes negativos em dois tenants aprovados"* — **cumprido ao nível do backend** (fatia 1.9). A Fase 1 **não está
+fechada**: falta a fatia 1.8 (frontend real, sem mocks no caminho real), a auditoria das mutações críticas (Fase 2) e a UI.
+
+| Critério | Estado | Evidência |
+| --- | --- | --- |
+| Isolamento com dois tenants de códigos semelhantes (404, FK composta, RLS, ligação reutilizada, `tenant_id` no corpo) | FEITO (backend) | `isolation_matrix.spec.ts`, `tenancy.spec.ts`, `schema_conformance.spec.ts` |
+| Isolamento de cache, jobs, ficheiros, pesquisa, relatórios, exportações, WebSocket | PENDENTE (não existem) | só a guarda de prefixos do Redis |
+| C01 tenant suspenso bloqueia por URL directa; domínio duplicado 409 | FEITO | `context.spec.ts`, `tenants.spec.ts`, matriz |
+| C04 token expirado/reutilizado, logout, troca de tenant, cookies fora dos logs, recuperação sem revelar email | FEITO (logs: só redacção + verificação manual) | `auth.spec.ts`, `logger_redaction.spec.ts`, matriz |
+| C05 conta única em vários tenants, convite revogado falha, último administrador, `authorizationVersion` | FEITO | `members.spec.ts` |
+| C06 sem permissão 403, ID alheio 404, DENY prevalece, simulação não concede | FEITO | `iam.spec.ts`, `authorization_domain.spec.ts`, matriz |
+| C06 campo restrito oculto em exportação/pesquisa/auditoria/realtime | PARCIAL (API e pesquisa de Party; resto não existe) | `party.spec.ts` |
+| C07 unidade não é pai de si nem de antepassado; centro de custo de outra organização rejeitado | FEITO | `organization.spec.ts` (+ FK na base) |
+| C08 fornecedor sem Person; pessoa cliente e colaborador sem duplicar contactos | PARCIAL (Customer/Employee não existem) | `party.spec.ts` |
+| Concorrência: convites/membership com limite de utilizadores | FEITO | `members.spec.ts` |
+| OpenAPI, regras no servidor, permissões e isolamento testados, migrations/seeds numa base limpa | FEITO | paridade OpenAPI↔rotas; migrations (8) e seeder em base limpa |
+| Auditoria das mutações críticas | PENDENTE (Fase 2) | — |
+| UI com sucesso/vazio/erro/409, sem mocks no caminho real | PENDENTE (fatia 1.8) | — |
 
 ### Decisões a tomar antes de começar a Fase 1
 1. ~~Nomenclatura de permissões (D-014)~~ — decidida na fatia 1.4.
