@@ -69,6 +69,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_OWNER_USER: sg_owner
       DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
+      WEB_BASE_URL: http://localhost:4200
+      MAIL_DRIVER: none
       REDIS_HOST: redis
       REDIS_PORT: 6379
     volumes:

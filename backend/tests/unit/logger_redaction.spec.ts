@@ -25,6 +25,12 @@ test.group('logs sem dados sensíveis', () => {
         headers: { authorization: 'Bearer abc.def', cookie: 'session=xyz' },
         req: { headers: { authorization: 'Bearer req-secret', cookie: 'c=req-cookie' } },
         integration: { apiKey: 'key-777', secret: 'shh' },
+        body: {
+          currentPassword: 'old-pass-xyz',
+          newPassword: 'new-pass-xyz',
+          csrfToken: 'csrf-xyz',
+        },
+        sessionToken: 'sess-xyz',
       },
       'pedido'
     )
@@ -38,6 +44,10 @@ test.group('logs sem dados sensíveis', () => {
       'req-secret',
       'req-cookie',
       'key-777',
+      'old-pass-xyz',
+      'new-pass-xyz',
+      'csrf-xyz',
+      'sess-xyz',
       'shh',
     ]) {
       assert.notInclude(text, secret)

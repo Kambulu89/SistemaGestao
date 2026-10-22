@@ -74,10 +74,11 @@ sugerida pelo npm é saltar para versões principais diferentes (v7) ou recuar. 
 não processam pedidos HTTP. **Acção.** Reavaliar em cada fase e quando se decidir a migração para a v7; registar
 aqui o resultado. **Risco aceite por:** equipa de desenvolvimento, até à primeira produção.
 
-## D-013 Sessão e selector de tenant (proposta — implementar na Fase 1)
+## D-013 Sessão e selector de tenant (sessão: aceite na fatia 1.2; selector: fatia 1.3)
 Sessão opaca em cookie `HttpOnly`/`Secure`/`SameSite` com protecção CSRF; sem credenciais em `localStorage`/
 `sessionStorage`. O tenant viaja como **selector explícito** (domínio verificado ou cabeçalho) e é sempre validado
 contra a sessão e a membership activa; o frontend pode manter `/t/:slug` na URL. Substitui o `sessionStorage` do mock.
+A parte da sessão está implementada e detalhada em D-018; o selector fica para a fatia 1.3.
 
 ## D-014 Nomenclatura de permissões (aberta — decidir antes da Fase 1.5)
 O frontend usa `<módulo>.read|manage` e `entities.<chave>.<op>`; a spec usa `<recurso>.<acção>` (ex.:
@@ -97,6 +98,47 @@ jobs e consumidores têm de construir o seu contexto (actor `SERVICE`) e usar o 
 **Decisão.** `tests/support/architecture.ts` analisa os imports de `app/**` (R1–R6, ver `architecture.md` §2) dentro de
 `npm test`. Cada módulo expõe uma API pública (`index.ts`); o kernel HTTP (`core/http`) é partilhado.
 **Limite.** Só analisa imports; escritas SQL cruzadas entre módulos não são detectáveis estaticamente.
+
+## D-018 Sessão opaca, cookie e CSRF (aceite — fatia 1.2)
+**Decisão.** O token de sessão tem 256 bits aleatórios; a base guarda só o SHA-256 (`auth_sessions.token_hash`). Cookie
+`sg_session` (`__Host-sg_session` em produção), `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` em produção. Validade
+absoluta de 12 h; `last_seen_at` actualiza-se no máximo de 60 em 60 s. Revogação por sessão ou em lote (alteração e
+recuperação de palavra-passe). CSRF: nas escritas autenticadas exige-se `X-Csrf-Token` = HMAC(`APP_KEY`, id da sessão)
+(obtido no login e em `GET /me`) e o `Origin` de browser, quando presente, tem de estar em `CORS_ORIGINS` (também nas
+rotas públicas, contra *login CSRF*). **Nota.** O Adonis serializa o valor de `plainCookie` num envelope base64; não é
+cifra, o segredo continua a ser o token. **Alternativas rejeitadas.** JWT (revogação difícil); token em `localStorage`.
+**Parâmetros de demonstração** (validar com o produto): 12 h de validade absoluta, sem *remember me*, sem limite de
+sessões em simultâneo.
+
+## D-019 Palavras-passe e tokens de uso único (aceite — fatia 1.2)
+**Decisão.** Hash `scrypt` do Adonis (custo 16384, r=8, p=1), com `needsReHash` no login. Política: 12–128 caracteres,
+diferente do email e fora de uma lista mínima de valores triviais (sem regras de composição). Falha de login
+indistinguível entre utilizador inexistente, palavra-passe errada e conta pendente/bloqueada (verifica-se contra um hash
+fictício para igualar o tempo). Tokens de recuperação (1 h) e de verificação de email (24 h): 256 bits, só o hash na
+base, uso único garantido por `UPDATE … WHERE consumed_at IS NULL AND expires_at > now()` dentro da mesma transacção que
+altera a palavra-passe e revoga as sessões. Um pedido novo invalida os anteriores. A recuperação responde sempre `202`
+com o mesmo corpo. **MFA e SSO ficam fora da Fase 1** (`auth_sessions.mfa_verified_at` já existe, não é usado).
+
+## D-020 Limitação de taxa em Redis (aceite — fatia 1.2)
+**Decisão.** Contador de janela fixa em Redis (`INCR` + `EXPIRE`, auto-reparável; sem Lua para respeitar R5). Login: 20
+por IP e 5 por conta+IP em 15 min (as chaves usam HMAC do email, nunca o email). Recuperação: 10/h por IP (429) e 3/h
+por conta (ignorado em silêncio). Alteração de palavra-passe: 5/15 min por utilizador. Resposta `429 RATE_LIMITED` com
+`Retry-After`. **Limitação.** `request.ip()` é o IP do socket; atrás de um proxy é preciso configurar `trustProxy`
+(por fazer, depende da infraestrutura de produção).
+
+## D-021 Entrega de email (porta + driver de desenvolvimento; fornecedor em aberto)
+**Decisão.** `TokenMailer` é uma porta. `MAIL_DRIVER=dev-redis` guarda a mensagem (incluindo o token) numa lista Redis
+para desenvolvimento e testes e é **proibido em produção** (`assertEnvConsistency`); `none` regista um aviso sem token.
+Escolher o fornecedor real (SMTP/API) é decisão de produto pendente; sem ela, recuperação e verificação de email não
+chegam a utilizadores reais.
+
+## D-022 Identidade e plano de controlo são tabelas globais (aceite — fatia 1.2)
+**Decisão.** `tenants`, `tenant_domains`, `users`, `auth_sessions` e `one_time_tokens` são globais e constam de
+`PLATFORM_TABLES` (nada se infere por ausência de filtro). Não têm RLS: a conta de runtime lê-as sem contexto de tenant,
+por isso o acesso é feito só pelos repositórios do módulo e o dono de cada acesso é a camada de aplicação.
+`tenant_domains.hostname` é único globalmente (409 em duplicado). Estados do tenant: PROVISIONING→ACTIVE→
+SUSPENDED↔ACTIVE→CLOSING→CLOSED (domínio, com versão optimista). `ProvisioningStep` e a API HTTP de plataforma
+(administrador SaaS) ficam para depois; por agora a gestão faz-se por comandos `node ace` (`tenant:*`, `user:create`).
 
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver

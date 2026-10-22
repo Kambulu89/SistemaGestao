@@ -37,8 +37,18 @@ backend/
                   TenantScope/TenantUnitOfWork · infrastructure: TenantContextStore (AsyncLocalStorage),
                   LucidTenantDatabase (transacção + set_config), TenantRepository, verificação do esquema
                   · index.ts = API pública do módulo
+      auth/       (fatia 1.2) domain: email, política de palavras-passe, tokens, sessão · application: casos de
+                  uso (login, logout, sessões, recuperação, verificação, criação de conta) e portas ·
+                  infrastructure: repositórios Lucid, scrypt, rate limit Redis, CSRF HMAC, mailers · presentation:
+                  controllers, validadores, middleware `auth`/`origin`, composição · index.ts
+    platform/
+      tenants/    (fatia 1.2) domain: estados e domínios do tenant · application: criar, mudar estado, registar e
+                  verificar domínio · infrastructure: store Lucid · index.ts
+  commands/       `node ace tenant:*`, `user:create` (gestão da plataforma sem API HTTP)
+  openapi/        contrato `openapi.yaml` (teste de paridade com as rotas)
   database/
-    migrations/   baseline da plataforma (função de contexto de tenant + privilégios)
+    migrations/   baseline da plataforma · tenants/domínios · identidade (users, sessões, tokens)
+    seeders/      demo (dois tenants; só fora de produção)
     support/      helpers de migration: createTenantTable, createGlobalTable, tenantForeignKey
   tests/          unit + functional (Japa); support/ = fixtures, verificador de arquitectura
 ```
@@ -151,7 +161,7 @@ Angular 22 standalone + signals + Tailwind 4. Estrutura: `core` (sessão, tenant
   `shared/dynamic` com contratos próprios; relação com C10–C15 na secção 7.
 - **Segurança no cliente:** guards e menus são só conveniência. Divergência conhecida: o mock guarda o token em
   `sessionStorage`; a especificação (C04) exige **sessão opaca em cookie HttpOnly + Secure + SameSite + CSRF**, a
-  implementar na Fase 1 com o backend.
+  implementar na Fase 1 com o backend (o backend já a fornece desde a fatia 1.2; a ligação do frontend é a fatia 1.8).
 
 ## 7. Comparação com a especificação (estado real)
 
@@ -161,12 +171,12 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 
 | Item | Estado | Evidência |
 | --- | --- | --- |
-| Monólito modular — estrutura base | PARCIAL | `core/http`, `core/health`; restantes módulos por criar |
+| Monólito modular — estrutura base | PARCIAL | `core/{http,health,tenancy,auth}`, `platform/tenants`; restantes módulos por criar |
 | Validação de ambiente e `.env.example` | FEITO | `start/env_schema.ts`, `tests/unit/env.spec.ts` |
 | Ligação à base e Redis; `health` / `ready` | FEITO | `GET /api/v1/health`, `/ready`; testes funcionais |
 | Formato comum de respostas/erros | FEITO | `core/http/*`, `app/exceptions/handler.ts`, `tests/functional/errors.spec.ts` |
 | `correlation_id` e logging sem dados sensíveis | FEITO | middleware + `config/logger.ts` + testes |
-| Migrations e seeds (convenção) | PARCIAL | migration baseline; **sem seeds** (ainda não há dados de referência) |
+| Migrations e seeds (convenção) | PARCIAL | 3 migrations; seeder de demonstração (2 tenants, só não-produção); **sem seeds de referência** (permissões: fatia 1.4) |
 | RLS | PARCIAL | fundação + helpers de migration + `TenantContext`/repositório + verificador de conformidade (fatia 1.1), testados com tabelas de fixture; **nenhuma tabela de domínio ainda** |
 | Docker de desenvolvimento | PARCIAL | `docker-compose.yml` validado com `docker compose config`; **não executado** (sem daemon no ambiente de análise); sem worker |
 | CI | PARCIAL | `.github/workflows/ci.yml` com YAML válido; **não executado** no GitHub |
@@ -175,10 +185,10 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 
 | Componente | Backend | Frontend |
 | --- | --- | --- |
-| C01 Tenants e provisionamento | AUSENTE | MOCK (admin de plataforma, listagem) |
+| C01 Tenants e provisionamento | PARCIAL (fatia 1.2: tenant, estados, domínios únicos e verificação; comandos `node ace`; **sem** API de plataforma, `ProvisioningStep` nem bloqueio por suspensão — 1.3) | MOCK (admin de plataforma, listagem) |
 | C02 Planos, assinaturas, limites | AUSENTE | MOCK (planos/subscrições estáticos) |
 | C03 Registo de módulos e funcionalidades | AUSENTE | PARCIAL (catálogo e manifestos reais no frontend; activação por tenant é mock) |
-| C04 Identidade, autenticação, sessões | AUSENTE | MOCK (login simulado; token em `sessionStorage`) |
+| C04 Identidade, autenticação, sessões | PARCIAL (fatia 1.2: login/logout, sessão opaca + CSRF, rate limit, sessões activas, recuperação, verificação de email; **sem** MFA/SSO, auditoria nem fornecedor de email) | MOCK (login simulado; token em `sessionStorage`) |
 | C05 Membros, convites, preferências | AUSENTE | AUSENTE |
 | C06 Papéis, permissões, políticas | AUSENTE | PARCIAL (permissões por chave e avaliador RBAC+ABAC no cliente; só conveniência) |
 | C07 Organizações, unidades, centros de custo | AUSENTE | AUSENTE |

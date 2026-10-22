@@ -5,9 +5,17 @@
  *
  * Cada entrada é `esquema.tabela`. Acrescentar aqui exige uma decisão registada em `docs/decisions.md`:
  * uma tabela global não tem RLS, por isso só o plano de controlo (contas e rotas próprias) lhe acede.
- * Actualmente: nenhuma (as tabelas globais Tenant, User, … chegam com as fatias 1.2 e seguintes).
+ * Actualmente: tenants, tenant_domains, users, auth_sessions e one_time_tokens (fatia 1.2).
  */
-export const PLATFORM_TABLES: ReadonlySet<string> = new Set<string>([])
+export const PLATFORM_TABLES: ReadonlySet<string> = new Set<string>([
+  // Plano de controlo (C01)
+  'public.tenants',
+  'public.tenant_domains',
+  // Identidade global (C04)
+  'public.users',
+  'public.auth_sessions',
+  'public.one_time_tokens',
+])
 
 /** Tabelas do próprio framework (registo de migrations). Não contêm dados de tenants. */
 export const FRAMEWORK_TABLES: ReadonlySet<string> = new Set([

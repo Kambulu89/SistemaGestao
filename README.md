@@ -42,7 +42,13 @@ npm run dev                          # http://localhost:3333/api/v1/health
 
 Validar (backend): `npm run lint && npm run format:check && npm run typecheck && npm test && npm run build`.
 Os testes usam a base `sistema_gestao_test` (`cp .env.test.example .env.test` e preencher).
-Endpoints actuais: `GET /api/v1/health` (liveness) e `GET /api/v1/ready` (base de dados + Redis).
+Endpoints actuais: `health`, `ready`, `auth/*` (login, logout, recuperação, verificação de email) e `me/*` (utilizador,
+sessões, palavra-passe) — contrato em `backend/openapi/openapi.yaml`.
+
+Gestão da plataforma (sem API HTTP ainda): `node ace tenant:create|tenant:status|tenant:domain:add|tenant:domain:verify`
+e `USER_PASSWORD=… node ace user:create <email> <nome> --verified`. Dados de demonstração (dois tenants, só fora de
+produção): `DEMO_USER_PASSWORD=… npm run seed`. Em desenvolvimento use `MAIL_DRIVER=dev-redis` (as mensagens com tokens
+ficam na lista Redis `dev:mailbox`); não há fornecedor de email real.
 
 ---
 

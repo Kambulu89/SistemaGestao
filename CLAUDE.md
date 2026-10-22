@@ -10,9 +10,10 @@ Documentação: [`docs/architecture.md`](docs/architecture.md) · [`docs/decisio
 ## Estado do repositório (actualizar quando mudar)
 
 - `src/` (raiz): frontend **Angular 22 + Tailwind 4**. Funciona sobre adaptadores **mock** (`src/app/core/mock`).
-- `backend/`: API **AdonisJS 6 + PostgreSQL 16 + Redis**. Fase 0 e fatia 1.1 feitas (arranque, ambiente, saúde, erros,
+- `backend/`: API **AdonisJS 6 + PostgreSQL 16 + Redis**. Fase 0 e fatias 1.1–1.2 feitas (arranque, ambiente, saúde, erros,
   correlation id, `TenantContext`, acesso a dados por tenant com RLS, helpers de migration, verificadores de esquema e de
-  arquitectura). **Ainda não existe nenhum módulo de negócio nem autenticação real.**
+  arquitectura), tenants/domínios e autenticação (sessão opaca, CSRF, recuperação; sem MFA/SSO nem auditoria).
+  **Ainda não existe nenhum módulo de negócio, `TenantMembership`, autorização (RBAC/ABAC) nem ligação do frontend.**
 - Fase actual e próximos passos: ver `docs/implementation-plan.md`. Uma fase de cada vez; não avançar sem pedido.
 
 ## Comandos

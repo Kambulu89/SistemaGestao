@@ -1,0 +1,194 @@
+openapi: 3.0.3
+info:
+  title: Sistema de Gestão — API
+  version: 0.2.0
+  description: |
+    Contrato da API `/api/v1` mantido à mão e verificado contra as rotas registadas
+    (`tests/functional/openapi_parity.spec.ts`). Autenticação por cookie de sessão opaco
+    (HttpOnly, SameSite=Lax) + cabeçalho `X-Csrf-Token` nas escritas autenticadas.
+servers:
+  - url: /api/v1
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: sg_session
+  headers:
+    CorrelationId:
+      description: Identificador do pedido (também no corpo).
+      schema: { type: string }
+  parameters:
+    CsrfToken:
+      name: X-Csrf-Token
+      in: header
+      required: true
+      description: Token anti-CSRF obtido no login ou em `GET /me`.
+      schema: { type: string }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details, correlationId]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            correlationId: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                required: [path, code, message]
+                properties:
+                  path: { type: string }
+                  code: { type: string }
+                  message: { type: string }
+    User:
+      type: object
+      required: [id, email, displayName, locale]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        displayName: { type: string }
+        locale: { type: string, nullable: true }
+  responses:
+    Error:
+      description: Erro no formato comum.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+paths:
+  /health:
+    get:
+      summary: Liveness
+      responses:
+        '200': { description: O processo responde. }
+  /ready:
+    get:
+      summary: Readiness (base de dados e Redis)
+      responses:
+        '200': { description: Pronto. }
+        '503': { $ref: '#/components/responses/Error' }
+  /auth/login:
+    post:
+      summary: Inicia sessão (define o cookie de sessão)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: Sessão criada; devolve o utilizador e o token CSRF. }
+        '401': { description: INVALID_CREDENTIALS (indistinguível entre causas). }
+        '403': { description: ORIGIN_NOT_ALLOWED. }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { description: RATE_LIMITED, com `Retry-After`. }
+  /auth/forgot-password:
+    post:
+      summary: Pede a recuperação de palavra-passe (resposta sempre igual)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        '202': { description: Aceite, exista ou não a conta. }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { description: RATE_LIMITED. }
+  /auth/reset-password:
+    post:
+      summary: Conclui a recuperação com o token de uso único
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string }
+      responses:
+        '204': { description: Palavra-passe alterada; todas as sessões revogadas. }
+        '400': { description: INVALID_OR_EXPIRED_TOKEN. }
+        '422': { $ref: '#/components/responses/Error' }
+  /auth/verify-email:
+    post:
+      summary: Verifica o email com o token de uso único
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '204': { description: Email verificado. }
+        '400': { description: INVALID_OR_EXPIRED_TOKEN. }
+  /auth/logout:
+    post:
+      summary: Termina a sessão actual
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfToken' }]
+      responses:
+        '204': { description: Sessão revogada. }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { description: CSRF_TOKEN_INVALID. }
+  /me:
+    get:
+      summary: Utilizador autenticado
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Utilizador, token CSRF e sessão. }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/sessions:
+    get:
+      summary: Sessões activas do utilizador
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Lista de sessões (a actual marcada). }
+        '401': { $ref: '#/components/responses/Error' }
+  /me/sessions/{id}:
+    delete:
+      summary: Revoga uma sessão própria
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Revogada. }
+        '404': { description: Inexistente ou de outro utilizador. }
+  /me/password:
+    post:
+      summary: Altera a palavra-passe (exige a actual; revoga as outras sessões)
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/CsrfToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string }
+      responses:
+        '204': { description: Alterada. }
+        '403': { description: REAUTHENTICATION_FAILED. }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { description: RATE_LIMITED. }

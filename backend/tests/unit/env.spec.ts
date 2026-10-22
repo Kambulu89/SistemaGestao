@@ -1,6 +1,6 @@
 import { test } from '@japa/runner'
 import { Env } from '@adonisjs/core/env'
-import { envSchema } from '#start/env_schema'
+import { assertEnvConsistency, envSchema } from '#start/env_schema'
 
 const VALID = {
   NODE_ENV: 'test',
@@ -16,6 +16,8 @@ const VALID = {
   DB_PASSWORD: 'pw-runtime',
   DB_OWNER_USER: 'owner',
   DB_OWNER_PASSWORD: 'pw-owner',
+  WEB_BASE_URL: 'http://localhost:4200',
+  MAIL_DRIVER: 'none',
   REDIS_HOST: 'localhost',
   REDIS_PORT: '6379',
 }
@@ -75,6 +77,16 @@ test.group('validação do ambiente', () => {
     const value = appKey.release()
     assert.notInclude(String(appKey), value)
     assert.notInclude(JSON.stringify({ appKey }), value)
+  })
+
+  test('proíbe o driver de email de desenvolvimento em produção e chaves curtas', ({ assert }) => {
+    const base = { NODE_ENV: 'production', MAIL_DRIVER: 'none', APP_KEY: 'k'.repeat(32) }
+    assert.doesNotThrow(() => assertEnvConsistency(base))
+    assert.throws(() => assertEnvConsistency({ ...base, MAIL_DRIVER: 'dev-redis' }))
+    assert.throws(() => assertEnvConsistency({ ...base, APP_KEY: 'curta' }))
+    assert.doesNotThrow(() =>
+      assertEnvConsistency({ ...base, NODE_ENV: 'development', MAIL_DRIVER: 'dev-redis' })
+    )
   })
 
   test('a conta de runtime e a de migrations são variáveis distintas', ({ assert }) => {

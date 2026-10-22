@@ -54,7 +54,7 @@ isolamento por tenant e testes negativos com dois tenants.
 | # | Fatia | Depende de | Entrega |
 | --- | --- | --- | --- |
 | 1.1 | ✅ **Núcleo de multi-tenancy e esquema** (feita — ver secção 2.1) | F0 | colunas base B/G; padrão de migration de tabela de tenant (RLS `ENABLE`+`FORCE`, política, FK composta `(tenant_id,id)`); `TenantContext` imutável; `TenantScopedConnection` (transacção + `set_config` local; sem contexto → erro); repositório base que exige contexto; **teste de conformidade do esquema** (toda a tabela com `tenant_id` tem RLS forçada e política); verificação automática das fronteiras de módulo |
-| 1.2 | **Tenant e utilizadores** (C01 mínimo, C04) | 1.1 | `Tenant`, `TenantDomain`, `User`, `AuthSession`; login/logout com sessão opaca em cookie HttpOnly+Secure+SameSite, CSRF, hash de palavra-passe, rate limit em Redis, sessões activas/revogação; recuperação com token de uso único. MFA e SSO ficam **fora** (documentar) |
+| 1.2 | ✅ **Tenant e utilizadores** (feita — ver secção 2.2) (C01 mínimo, C04) | 1.1 | `Tenant`, `TenantDomain`, `User`, `AuthSession`; login/logout com sessão opaca em cookie HttpOnly+Secure+SameSite, CSRF, hash de palavra-passe, rate limit em Redis, sessões activas/revogação; recuperação com token de uso único. MFA e SSO ficam **fora** (documentar) |
 | 1.3 | **Membership e contexto** (C05 parte 1) | 1.2 | `TenantMembership`; pipeline de resolução do tenant (spec §10.1) como middleware; `GET /context` com `authorizationVersion`; troca de tenant; suspensão de tenant bloqueia operações |
 | 1.4 | **Autorização** (C06) | 1.3 | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); *default deny*, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar |
 | 1.5 | **Organização** (C07) | 1.4 | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas |
@@ -83,6 +83,36 @@ não há tabelas de domínio. A FK `tenant_id → tenants` só passa a existir n
 omissão). Cache, jobs, ficheiros, pesquisa, exportações e WebSocket não existem ainda: a respectiva matriz de isolamento
 fica para quando forem criados. O `TenantContext` ainda não é **construído** por nenhum middleware (fatia 1.3).
 
+### 2.2 Fatia 1.2 — concluída
+**Entregue:** migrations `tenants`, `tenant_domains`, `users`, `auth_sessions`, `one_time_tokens`; módulos `core/auth`
+(login, logout, `GET /me`, sessões activas e revogação, alteração de palavra-passe, recuperação, verificação de email)
+e `platform/tenants` (ciclo de vida, domínios únicos e verificação); middleware `auth`/`origin`; comandos `tenant:create`,
+`tenant:status`, `tenant:domain:add|verify`, `user:create`; seeder de demonstração (dois tenants, só fora de produção,
+palavra-passe via `DEMO_USER_PASSWORD`); `openapi/openapi.yaml` com teste de paridade com as rotas. ADRs D-013/D-018–D-022.
+
+**Evidência (executada):** 117 testes backend a passar (44 novos): login com cookie `HttpOnly`/`SameSite`, token só como
+hash na base; credenciais inválidas indistinguíveis (3 causas); 429 + `Retry-After`; CSRF em falta/de outra sessão → 403;
+`Origin` alheio → 403; logout impede o pedido seguinte; sessão expirada e conta bloqueada → 401; sessão alheia → 404;
+alteração de palavra-passe revoga as outras sessões; recuperação: resposta igual com/sem conta, token de uso único
+(reuso → 400, **4 pedidos concorrentes → 1 vence**), expirado/inventado → 400, palavra-passe fraca não gasta o token,
+pedido novo invalida o anterior; verificação de email de uso único; email duplicado → 409; domínio duplicado → 409
+(entre tenants e com maiúsculas); máquina de estados do tenant. Conformidade do esquema e fronteiras de módulo (R1–R6)
+a passar com o código novo. Lint, `format:check`, `typecheck`, `build` e migrations numa base limpa (`drop schema` +
+`migrate` + `migrate:status`) a passar; seeder corrido duas vezes (idempotente); servidor compilado: login real `200`
+com cookie e `401` indistinguível, sem a palavra-passe no log.
+
+**Por verificar / limitações assumidas:**
+- Sem fornecedor de email (D-021): recuperação e verificação só são testáveis via `dev-redis`.
+- `trustProxy` por configurar (D-020): o IP de rate limit é o do socket.
+- Não existe auditoria (`AuditLog`/`SecurityEvent`, Fase 2): login, logout e alterações de palavra-passe **não** são
+  registados num log de auditoria; só há logs estruturados sem segredos.
+- "Tenant suspenso bloqueia operações" e a troca de tenant dependem de `TenantMembership`/contexto (fatia 1.3); aqui só
+  está testada a máquina de estados. Não há API HTTP de plataforma para tenants (apenas comandos).
+- Tabelas globais de identidade sem RLS (D-022). `ProvisioningStep` adiado. MFA/SSO fora.
+- Frontend não ligado (fatia 1.8); o `sessionStorage` do mock mantém-se até lá.
+- Teste de "cookies/segredos fora dos logs" cobre a configuração de redacção (unit) e uma verificação manual do log do
+  servidor compilado; não há teste automático que capture os logs de um pedido real.
+
 ### Critérios de aceitação da Fase 1
 Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios de aceitação de cada componente:
 
@@ -108,8 +138,8 @@ Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios
 ### Decisões a tomar antes de começar a Fase 1
 1. Nomenclatura de permissões (D-014).
 2. Se Party (1.7) entra na Fase 1 ou na seguinte.
-3. Mecanismo de hash e de rate limit (proposta: hash do Adonis + limitador Redis); MFA fora da Fase 1.
-4. Biblioteca/ferramenta para OpenAPI (a documentação de cada endpoint é obrigatória).
+3. ~~Mecanismo de hash e de rate limit~~ — decidido na fatia 1.2 (D-019/D-020); MFA fora da Fase 1.
+4. ~~Ferramenta OpenAPI~~ — ficheiro `backend/openapi/openapi.yaml` mantido à mão + teste de paridade com as rotas (fatia 1.2); rever se for preferível gerar.
 5. Primeiros dois tenants de demonstração (nomes, países/moeda) — parâmetros identificados como demonstração.
 
 ## 3. Regras para todas as fases

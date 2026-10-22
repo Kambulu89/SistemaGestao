@@ -26,6 +26,7 @@ const SHARED_KERNEL = new Set(['core/http'])
 
 const ALIASES: Record<string, string> = {
   '#core/': 'app/core/',
+  '#platform/': 'app/platform/',
   '#exceptions/': 'app/exceptions/',
   '#middleware/': 'app/middleware/',
   '#start/': 'start/',

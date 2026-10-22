@@ -35,7 +35,33 @@ export const envSchema = {
   DB_OWNER_USER: Env.schema.string(),
   DB_OWNER_PASSWORD: Env.schema.string(),
 
+  /** URL base do frontend, usada nas ligações enviadas por email (ex.: recuperação de palavra-passe). */
+  WEB_BASE_URL: Env.schema.string({ format: 'url', tld: false }),
+  /**
+   * Entrega de tokens por email. `none`: sem entrega (o pedido continua a responder de forma genérica).
+   * `dev-redis`: guarda a mensagem numa lista Redis para desenvolvimento/testes — **proibido em produção**.
+   * Um fornecedor real só entra quando for escolhido (decisão de produto pendente).
+   */
+  MAIL_DRIVER: Env.schema.enum(['none', 'dev-redis'] as const),
+
+  /** Só para o seeder de demonstração (nunca em produção). Sem valor por omissão. */
+  DEMO_USER_PASSWORD: Env.schema.string.optional(),
+
   REDIS_HOST: Env.schema.string({ format: 'host' }),
   REDIS_PORT: Env.schema.number(),
   REDIS_PASSWORD: Env.schema.string.optional(),
 } as const
+
+/** Regras entre variáveis que o esquema por campo não exprime. Lança se a combinação for insegura. */
+export function assertEnvConsistency(values: {
+  NODE_ENV: string
+  MAIL_DRIVER: string
+  APP_KEY: string
+}) {
+  if (values.NODE_ENV === 'production' && values.MAIL_DRIVER === 'dev-redis') {
+    throw new Error('MAIL_DRIVER=dev-redis não é permitido em produção.')
+  }
+  if (values.APP_KEY.length < 32) {
+    throw new Error('APP_KEY tem de ter pelo menos 32 caracteres.')
+  }
+}

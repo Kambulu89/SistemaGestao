@@ -26,6 +26,18 @@ export const REDACTED_PATHS = [
   'req.headers.authorization',
   'req.headers.cookie',
   'res.headers["set-cookie"]',
+  'currentPassword',
+  '*.currentPassword',
+  'newPassword',
+  '*.newPassword',
+  'passwordHash',
+  '*.passwordHash',
+  'csrfToken',
+  '*.csrfToken',
+  'sessionToken',
+  '*.sessionToken',
+  'verificationToken',
+  '*.verificationToken',
 ]
 
 const loggerConfig = defineConfig({

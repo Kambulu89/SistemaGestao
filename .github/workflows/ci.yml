@@ -64,6 +64,8 @@ jobs:
       DB_PASSWORD: ci-runtime-password
       DB_OWNER_USER: sg_owner
       DB_OWNER_PASSWORD: ci-owner-password
+      WEB_BASE_URL: http://localhost:4200
+      MAIL_DRIVER: dev-redis
       REDIS_HOST: localhost
       REDIS_PORT: 6379
     steps:

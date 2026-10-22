@@ -20,7 +20,15 @@ server.use([
   () => import('@adonisjs/cors/cors_middleware'),
 ])
 
-/** Middleware de rota (só nas rotas registadas). Vazio até haver autenticação e contexto de tenant. */
+/** Middleware de rota (só nas rotas registadas). */
 router.use([() => import('@adonisjs/core/bodyparser_middleware')])
 
-export const middleware = router.named({})
+export const middleware = router.named({
+  /** Sessão opaca em cookie + CSRF nas escritas. */
+  auth: () => import('#core/auth/presentation/auth_middleware'),
+  /** Rejeita `Origin` de browser fora da lista permitida nas escritas. */
+  origin: async () => {
+    const { OriginMiddleware } = await import('#core/auth/presentation/auth_middleware')
+    return { default: OriginMiddleware }
+  },
+})
