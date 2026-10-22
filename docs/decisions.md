@@ -206,8 +206,8 @@ quota. Qualquer falha de token/email/estado/prazo responde igual (`400 INVALID_O
 409; suspenso não se auto-reactiva; quem saiu (`LEFT`) volta com um convite novo e **a mesma membership** (única saída de
 `LEFT`). Papéis e unidades do convite são revalidados ao aceitar (o que entretanto desapareceu é ignorado). A mesma conta
 mantém a identidade única entre tenants.
-**Quota (provisória).** `tenants.max_members` (NULL = sem limite; `node ace tenant:limit`) conta tudo o que não é `LEFT`; é
-verificada na aceitação sob o lock de membros. Será substituída pelos limites do plano quando existir C02.
+**Quota.** Conta tudo o que não é `LEFT` e é verificada na aceitação sob o lock de membros. O limite vem do plano contratado
+(D-030; substituiu a coluna provisória `tenants.max_members`, entretanto removida).
 **Último administrador.** `AdminGuard` serializa (lock por tenant) as alterações que podem retirar administradores e recusa
 (409 `LAST_ADMIN`, transacção anulada) a que deixe o tenant sem nenhum membro ACTIVE com atribuição sem limite de unidade de
 um papel que concede `iam.manage`. Aplica-se a suspender/terminar um membro, revogar uma atribuição e alterar as permissões
@@ -280,6 +280,27 @@ valores). O utilizador vê os seus (`GET /me/security-events`); o tenant vê os 
 **Limites conhecidos.** Sem cadeia de hash/assinatura das entradas, sem exportação nem política de retenção automática (o
 expurgo é manual pela conta dona), sem auditoria de leituras nem de MFA/SSO (não existem), `user_preferences` isenta, e o IP vem
 de `request.ip()` sem proxy de confiança configurado.
+
+## D-030 Planos, assinaturas e limites no plano de controlo (aceite — fatia 2.2)
+**Modelo.** `plan_versions` (revisões de um `plan_code`; `limits` e `entitlements` em `jsonb` validados pela aplicação; preço
+`numeric(19,4)`, string na API), `subscriptions` (no máximo uma não cancelada por tenant: índice parcial único) e
+`subscription_changes` (histórico append-only: atribuição, upgrade, downgrade, estado). São tabelas **globais** (`PLATFORM_TABLES`):
+não têm RLS, por isso toda a leitura filtra pelo `tenant_id` do contexto validado; `subscriptions` entra na auditoria do tenant
+(`audit_logs`, lida com `subscription.read`). **Imutabilidade.** Um trigger só deixa editar/apagar uma versão em `DRAFT`; uma
+`PUBLISHED` só pode passar a `RETIRED` sem tocar em mais nada, logo preços e limites nunca mudam retroactivamente e uma
+assinatura mantém os termos que contratou mesmo depois de novas revisões. **Direitos.** `ACTIVE` concede; `TRIAL` até `trial_end`;
+`PAST_DUE` até `grace_end`; `SUSPENDED`/`CANCELLED` não. O limite efectivo de uma métrica é o do plano, e **0** sem assinatura ou
+sem direitos (nega por omissão; nunca "ilimitado" por falta de dados); `null` (ilimitado) só em métricas que o suportam (hoje
+`members`, que conta memberships ocupadas, não pessoas). **Quota de membros.** A aceitação de convites lê o limite do plano e
+continua a verificá-lo sob o lock de membros (duas aceitações concorrentes com uma vaga: só uma entra). **Mudança de plano.**
+Serializada por lock consultivo do tenant. Upgrade aplica-se logo; se o consumo exceder os limites do novo plano, a mudança falha
+com `409 PLAN_LIMITS_EXCEEDED` (métricas em `details`), excepto com um período de adequação (1–180 dias): o plano muda, nada é
+eliminado e o excesso só bloqueia novos consumos (`usage[].blocked`). **Gestão.** Não existe ainda identidade de plataforma
+(D-028: nenhuma conta tem `platform.*`), por isso os planos e assinaturas gerem-se por comandos `node ace` (`plan:*`,
+`subscription:*`) até à API `/platform/*` (fatia 2.5, `platform.billing.manage`); o tenant só lê (`GET /tenant/subscription`).
+**Fora desta fatia.** `UsageCounter` com reserva/libertação (não há consumidor: upload/armazenamento), `SaasBillingRecord` e webhooks
+de pagamento (sem fornecedor, decisão de produto pendente), pedido de mudança de plano pelo administrador do tenant, validação dos
+códigos de módulos/funcionalidades contra o registo (C03), renovação automática do período, e a ligação do frontend.
 
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver

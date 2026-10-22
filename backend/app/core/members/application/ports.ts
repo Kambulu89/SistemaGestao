@@ -29,7 +29,7 @@ export interface TenantGate {
   isOperational(tenantId: string): Promise<boolean>
 }
 
-/** Quota provisória de membros por tenant (`null` = sem limite) até existirem planos (C02). */
+/** Limite de membros do tenant, vindo do plano contratado (`null` = ilimitado; 0 = sem direitos activos). */
 export interface MemberQuota {
   limit(tenantId: string): Promise<number | null>
 }

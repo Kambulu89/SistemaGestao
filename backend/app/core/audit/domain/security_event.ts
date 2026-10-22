@@ -60,11 +60,15 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   contacts: 'party.read',
   addresses: 'party.read',
   party_relationships: 'party.read',
+  tenant_domains: 'iam.read',
+  subscriptions: 'subscription.read',
 }
 
 /** Tabelas de tenant que não são auditadas, com o motivo (o teste de conformidade exige o resto). */
 export const AUDIT_EXEMPT_TABLES: Readonly<Record<string, string>> = {
   audit_logs: 'É a própria auditoria (imutável).',
+  subscription_changes:
+    'Histórico próprio e imutável da assinatura (C02), consultável em GET /tenant/subscription.',
   user_preferences:
     'Preferências pessoais de apresentação; sem efeito em acessos nem dados de negócio.',
 }

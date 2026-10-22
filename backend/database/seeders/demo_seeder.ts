@@ -7,6 +7,7 @@ import { organizationServices } from '#core/organization/index'
 import { partyServices } from '#core/party/index'
 import { LucidMembershipDirectory } from '#core/membership/index'
 import { serviceTenantContext } from '#core/tenancy/index'
+import { billingServices } from '#platform/billing/index'
 import {
   ChangeTenantStatus,
   CreateTenant,
@@ -21,6 +22,13 @@ const DEMO = [
   { code: 'demo_a', name: 'Demo A', host: 'demo-a.exemplo.test', admin: 'admin@demo-a.invalid' },
   { code: 'demo_b', name: 'Demo B', host: 'demo-b.exemplo.test', admin: 'admin@demo-b.invalid' },
 ] as const
+
+/** Planos de demonstração (revisão 1, publicados) e o que cada tenant demo contrata. */
+const DEMO_PLANS = [
+  { code: 'demo_basic', name: 'Demo Básico', price: '49.9000', members: 10 as number | null },
+  { code: 'demo_pro', name: 'Demo Profissional', price: '149.9000', members: null },
+] as const
+const DEMO_PLAN_OF: Record<string, string> = { demo_a: 'demo_basic', demo_b: 'demo_pro' }
 
 /** Conta presente nos dois tenants: serve para exercitar a troca de tenant. */
 const MULTI_TENANT_USER = 'multi@demo.invalid'
@@ -48,6 +56,7 @@ export default class DemoSeeder extends BaseSeeder {
     }
 
     const store = new LucidTenantStore()
+    await this.seedPlans()
     for (const demo of DEMO) {
       await ignoreConflict(async () => {
         await new CreateTenant(store).execute({ code: demo.code, name: demo.name })
@@ -68,6 +77,10 @@ export default class DemoSeeder extends BaseSeeder {
         })
       })
       await ignoreConflict(() => addMemberByEmail(demo.code, demo.admin))
+      await billingServices().assignSubscription.execute({
+        tenantId: (await store.findByCode(demo.code))!.id,
+        planCode: DEMO_PLAN_OF[demo.code],
+      })
       await bootstrapTenantAdmin(demo.code, demo.admin)
     }
 
@@ -83,6 +96,24 @@ export default class DemoSeeder extends BaseSeeder {
       await ignoreConflict(() => addMemberByEmail(demo.code, MULTI_TENANT_USER))
       await this.seedOrganization(store, demo)
       await this.seedParties(store, demo)
+    }
+  }
+
+  /** Cria a revisão 1 de cada plano demo e publica-a, se ainda não existir (idempotente). */
+  private async seedPlans() {
+    const { createPlan, publishPlan, listPlans } = billingServices()
+    const existing = await listPlans.execute()
+    for (const plan of DEMO_PLANS) {
+      if (existing.some((p) => p.planCode === plan.code)) continue
+      const draft = await createPlan.execute({
+        planCode: plan.code,
+        name: plan.name,
+        currency: 'AOA',
+        price: plan.price,
+        billingInterval: 'MONTH',
+        limits: { members: plan.members },
+      })
+      await publishPlan.execute(draft.planCode, draft.revision)
     }
   }
 

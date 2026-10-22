@@ -89,6 +89,8 @@ export async function deleteTenantRows(codePattern: string) {
                 set_config('app.audit_disabled', 'on', true)`,
         [id]
       )
+      await trx.from('subscription_changes').where('tenant_id', id).delete()
+      await trx.from('subscriptions').where('tenant_id', id).delete()
       await trx.from('tenant_domains').where('tenant_id', id).delete()
       await trx.from('audit_logs').where('tenant_id', id).delete()
       await trx.from('security_events').where('tenant_id', id).delete()

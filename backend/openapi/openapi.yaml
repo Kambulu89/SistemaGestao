@@ -195,6 +195,24 @@ paths:
         '200':
           { description: Eventos do utilizador autenticado (sem metadados internos de outros). }
         '401': { $ref: '#/components/responses/Error' }
+  /tenant/subscription:
+    get:
+      summary: Plano contratado, consumo, limites e bloqueios do tenant (subscription.read)
+      description: |
+        Mostra os preços e limites da **versão contratada** (uma versão publicada nunca muda); `price` é um decimal em
+        string. Se o consumo exceder o limite de uma métrica (ex.: após um downgrade com período de adequação),
+        `usage[].blocked` é verdadeiro e `subscription.adequacyUntil` indica o prazo; nada é eliminado.
+        `404` se o tenant não tem assinatura.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          {
+            description: 'plan (code, revision, name, price, currency, billingInterval, limits, entitlements), subscription (status, entitled, datas), usage por métrica e history.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /audit-logs:
     get:
       summary: Histórico de alterações do tenant (audit.read)

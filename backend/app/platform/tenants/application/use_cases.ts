@@ -99,18 +99,3 @@ export class VerifyTenantDomain {
     await this.store.markDomainVerified(domain.id, this.now())
   }
 }
-
-/** Define a quota de membros do tenant (`null` retira o limite). Provisório até C02 (planos). */
-export class SetMemberLimit {
-  constructor(private readonly store: TenantStore) {}
-
-  async execute(code: string, max: number | null): Promise<Tenant> {
-    if (max !== null && !(Number.isInteger(max) && max >= 1)) {
-      throw invalid('max', 'INVALID_LIMIT', 'O limite tem de ser um inteiro ≥ 1.')
-    }
-    const tenant = await this.store.findByCode(code.trim().toLowerCase())
-    if (!tenant) throw ApiError.notFound('Tenant não encontrado.')
-    await this.store.setMaxMembers(tenant.id, max)
-    return tenant
-  }
-}

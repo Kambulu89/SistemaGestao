@@ -20,6 +20,8 @@ const MembersController = () => import('#core/members/presentation/members_contr
 const InvitationsController = () => import('#platform/tenants/presentation/invitations_controller')
 const PartyController = () => import('#core/party/presentation/party_controller')
 const AuditController = () => import('#core/audit/presentation/audit_controller')
+const SubscriptionController = () =>
+  import('#platform/billing/presentation/subscription_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
 
 router
@@ -213,4 +215,17 @@ router
     middleware.auth(),
     middleware.tenant(),
     middleware.can({ permission: 'audit.read' }),
+  ])
+
+/** Plano contratado pelo tenant (C02): leitura com `subscription.read`. A gestão de planos é do plano de controlo (comandos). */
+router
+  .group(() => {
+    router.get('/tenant/subscription', [SubscriptionController, 'show'])
+  })
+  .prefix('/api/v1')
+  .use([
+    middleware.origin(),
+    middleware.auth(),
+    middleware.tenant(),
+    middleware.can({ permission: 'subscription.read' }),
   ])

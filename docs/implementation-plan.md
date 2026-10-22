@@ -2,13 +2,13 @@
 
 Fases da especificação (§11) com estado real. Cada fase entrega **fatias verticais** (migration, domínio, API, UI,
 autorização, auditoria, testes). Uma fase só passa quando as verificações aplicáveis correram e a documentação foi
-actualizada. Estado actualizado em: Fase 2, fatia 2.1.
+actualizada. Estado actualizado em: Fase 2, fatia 2.2.
 
 | Fase | Âmbito (spec) | Estado |
 | --- | --- | --- |
 | **F0** Preparação | repositório, versões, Docker, CI, estrutura modular, ADRs | **Concluída** (com 2 verificações por executar — ver abaixo) |
 | **F1** Fundação | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party | **Próxima** (detalhada na secção 2) |
-| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatia 2.1 (auditoria) concluída; 2.2–2.5 por fazer (ver secção 2b) |
+| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria) e 2.2 (planos/assinaturas, backend) concluídas; 2.3–2.5 por fazer (ver secção 2b) |
 | F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | Não iniciada (existem contratos/motores no frontend — ver `architecture.md` §7) |
 | F4 Operação comercial | M01–M08, S01 | Não iniciada |
 | F5 Gestão empresarial | M09–M14, S02–S03 | Não iniciada |
@@ -225,7 +225,7 @@ servidor compilado: o admin demo cria um convite e lista os membros.
 
 **Por verificar / limitações:**
 - Sem fornecedor de email o convite só chega via `dev-redis` (D-021). Nada reenvia um convite (revoga-se e cria-se outro).
-- Quota provisória por tenant (`max_members`), não por plano (C02). O limite não impede que um convite seja **criado** acima do
+- (Superado na 2.2) Quota provisória por tenant (`max_members`), não por plano (C02). O limite não impede que um convite seja **criado** acima do
   limite, só aceite.
 - "Registo verificado" no aceite: a aceitação usa uma conta existente com sessão; o fluxo de registo público de novas contas
   (auto-registo) não existe (só `user:create` e `CreateUser`); um convidado sem conta tem de a ter criado antes.
@@ -369,7 +369,7 @@ Sem decomposição prévia no plano; proposta (uma fatia de cada vez, ordem suje
 | Fatia | Âmbito | Estado |
 | --- | --- | --- |
 | 2.1 | Auditoria mínima (S06): `audit_logs` imutável por triggers, `security_events`, consulta com RBAC e regras de campo | **Concluída** |
-| 2.2 | C02 planos, assinaturas e limites (substitui a quota provisória de convites e os entitlements provisórios do frontend) | Por fazer |
+| 2.2 | C02 planos, assinaturas e limites no backend (substitui a quota provisória de convites). Os entitlements provisórios do frontend ficam para depois de 2.3 | **Concluída** (backend) |
 | 2.3 | C03 registo de módulos e funcionalidades por tenant | Por fazer |
 | 2.4 | C09 configurações, impostos e sequências (numeração sem lacunas e concorrente) | Por fazer |
 | 2.5 | API de administração da plataforma (C01/C02) e fecho dos mocks restantes do frontend | Por fazer |
@@ -386,6 +386,23 @@ segurança, conformidade do esquema; `audit_redaction.spec.ts`; matriz de isolam
 **Limites / por verificar:** sem UI de auditoria (frontend não alterado); sem hash encadeado, exportação nem retenção automática;
 auditoria de leitura inexistente; MFA/SSO não existem; desempenho dos triggers em escrita intensiva não medido; o
 `security_events` do utilizador mostra IP apenas nos metadados dos eventos de login.
+
+### 2b.2 Fatia 2.2 — concluída (backend)
+**Entregue** (ver D-030): migration `create_billing` (`plan_versions` imutáveis depois de publicadas, `subscriptions` com uma aberta por
+tenant, `subscription_changes` append-only; remove `tenants.max_members`), módulo `platform/billing` (domínio de limites,
+direitos e transições; casos de uso de planos, atribuição idempotente, mudança de plano com adequação, estados e limite efectivo),
+permissão `subscription.read`, `GET /tenant/subscription` (versão contratada, consumo, limites, bloqueios, histórico), quota de
+membros ligada ao plano (sem assinatura ou sem direitos → 0), comandos `plan:*` e `subscription:*` (substituem `tenant:limit`),
+planos e assinaturas no seeder demo (`demo_a` básico/10 membros, `demo_b` profissional/ilimitado), OpenAPI e matriz de isolamento.
+**Evidência:** 259 testes no backend (novos: `billing.spec.ts` — revisões concorrentes, publicação e imutabilidade na base,
+validação, atribuição idempotente e concorrente, estados e direitos, histórico imutável, leitura com permissão, isolamento entre
+tenants, upgrade/downgrade com e sem adequação; `billing_domain.spec.ts`; `members.spec.ts` reescrito para quotas por plano, incluindo
+tenant sem assinatura/suspenso e a concorrência com um lugar livre).
+**Limites / por verificar:** sem API `/platform/*` (não existe identidade de plataforma: fatia 2.5); sem `UsageCounter`,
+`SaasBillingRecord`/webhooks, pedido de mudança de plano pelo tenant, renovação automática de períodos nem validação de
+módulos contra o registo (C03); o frontend continua com entitlements provisórios e sem página de plano; um downgrade e uma
+aceitação de convite simultâneos podem, em teoria, deixar o tenant acima do novo limite (o excesso apenas bloqueia novos
+membros, nada se elimina). Tenants criados antes desta fatia ficam **sem assinatura** (limite 0) até `subscription:assign`.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

@@ -12,9 +12,6 @@ export interface TenantStore {
   findById(id: string): Promise<Tenant | null>
   findByIds(ids: string[]): Promise<Tenant[]>
   list(): Promise<Tenant[]>
-  /** Quota provisória de membros (`null` = sem limite) até existirem planos (C02). */
-  maxMembers(tenantId: string): Promise<number | null>
-  setMaxMembers(tenantId: string, max: number | null): Promise<void>
   /** Muda o estado só se a versão coincidir. Devolve `null` em conflito. */
   updateStatus(
     id: string,

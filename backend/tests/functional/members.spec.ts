@@ -9,6 +9,8 @@ import {
   resetAuthState,
   uniqueEmail,
 } from '#tests/support/auth_fixture'
+import { publishPlan, subscribe } from '#tests/support/billing_fixture'
+import { billingServices } from '#platform/billing/index'
 import { addMember, createActiveTenant, deleteTestTenants } from '#tests/support/membership_fixture'
 import { api, login, newActor } from '#tests/support/api_fixture'
 import type { Tenant } from '#platform/tenants/index'
@@ -19,6 +21,7 @@ const code = (prefix: string) => `${prefix}${process.pid}${counter++}`
 
 async function setup(client: any) {
   const tenant = await createActiveTenant()
+  await subscribe(tenant)
   const admin = await newActor(client, tenant, true)
   const operator = await newActor(client, tenant)
   return { tenant, admin, operator, http: api(client, tenant, admin) }
@@ -306,7 +309,7 @@ test.group('membros | convites', (group) => {
     ;(await api(client, tenant, { ...admin, ...session }).get('/api/v1/context')).assertStatus(200)
   })
 
-  test('quota de membros: recusa acima do limite e aceita ao subir o limite', async ({
+  test('quota de membros: recusa acima do limite do plano e aceita ao subir de plano', async ({
     client,
     assert,
   }) => {
@@ -314,12 +317,41 @@ test.group('membros | convites', (group) => {
     const guest = await invitee(client)
     const { token } = await invite(http, guest.email)
 
-    await store.setMaxMembers(tenant.id, 2) // administrador + operador já ocupam 2
+    const services = billingServices()
+    const small = await publishPlan(2) // administrador + operador já ocupam 2
+    await services.changePlan.execute({ tenantId: tenant.id, planCode: small.planCode })
     const refused = await accept(client, guest, token)
     refused.assertStatus(409)
     assert.strictEqual(refused.body().error.code, 'MEMBER_QUOTA_EXCEEDED')
 
-    await store.setMaxMembers(tenant.id, 3)
+    const bigger = await publishPlan(3)
+    await services.changePlan.execute({ tenantId: tenant.id, planCode: bigger.planCode })
+    ;(await accept(client, guest, token)).assertStatus(200)
+  })
+
+  test('sem assinatura ou com direitos suspensos o tenant não admite novos membros', async ({
+    client,
+    assert,
+  }) => {
+    const tenant = await createActiveTenant()
+    const admin = await newActor(client, tenant, true)
+    const http = api(client, tenant, admin)
+    const guest = await invitee(client)
+    const { token } = await invite(http, guest.email)
+    const none = await accept(client, guest, token)
+    none.assertStatus(409)
+    assert.strictEqual(none.body().error.code, 'MEMBER_QUOTA_EXCEEDED')
+
+    await subscribe(tenant)
+    await billingServices().setSubscriptionStatus.execute({
+      tenantId: tenant.id,
+      status: 'SUSPENDED',
+    })
+    ;(await accept(client, guest, token)).assertStatus(409)
+    await billingServices().setSubscriptionStatus.execute({
+      tenantId: tenant.id,
+      status: 'ACTIVE',
+    })
     ;(await accept(client, guest, token)).assertStatus(200)
   })
 
@@ -331,7 +363,8 @@ test.group('membros | convites', (group) => {
     const b = await invitee(client)
     const ta = (await invite(http, a.email)).token
     const tb = (await invite(http, b.email)).token
-    await store.setMaxMembers(tenant.id, 3)
+    const plan = await publishPlan(3)
+    await billingServices().changePlan.execute({ tenantId: tenant.id, planCode: plan.planCode })
 
     const results = await Promise.all([accept(client, a, ta), accept(client, b, tb)])
     const statuses = results.map((r) => r.status()).sort()

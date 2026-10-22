@@ -17,6 +17,10 @@ export const PLATFORM_TABLES: ReadonlySet<string> = new Set<string>([
   'public.one_time_tokens',
   // Catálogo de permissões (C06): igual para todos os tenants, semeado a partir do código
   'public.permissions',
+  // Planos e assinaturas SaaS (C02): plano de controlo; a leitura por tenant filtra pelo tenant do contexto
+  'public.plan_versions',
+  'public.subscriptions',
+  'public.subscription_changes',
   // Eventos de segurança (S06): tenant_id opcional, só INSERT/SELECT; a leitura por tenant filtra no repositório
   'public.security_events',
 ])

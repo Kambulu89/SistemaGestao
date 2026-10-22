@@ -1,6 +1,7 @@
 import { LucidMembershipDirectory } from '#core/membership/index'
 import { organizationServices } from '#core/organization/index'
 import { memberServices } from '#core/members/index'
+import { billingServices } from '#platform/billing/index'
 import { isOperational } from '#platform/tenants/domain/tenant'
 import { LucidTenantStore } from '#platform/tenants/infrastructure/lucid_tenant_store'
 import {
@@ -24,7 +25,7 @@ function build() {
           return tenant !== null && isOperational(tenant.status)
         },
       },
-      { limit: (tenantId) => tenants.maxMembers(tenantId) }
+      { limit: (tenantId) => billingServices().resolveLimit.execute(tenantId, 'members') }
     ),
     listMyTenants: new ListMyTenants(tenants, memberships),
   }
