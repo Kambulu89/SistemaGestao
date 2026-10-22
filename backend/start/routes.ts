@@ -22,6 +22,7 @@ const PartyController = () => import('#core/party/presentation/party_controller'
 const AuditController = () => import('#core/audit/presentation/audit_controller')
 const SubscriptionController = () =>
   import('#platform/billing/presentation/subscription_controller')
+const ModulesController = () => import('#platform/modules/presentation/modules_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
 
 router
@@ -59,6 +60,7 @@ router
 router
   .group(() => {
     router.get('/context', [ContextController, 'show'])
+    router.get('/context/features', [ModulesController, 'features'])
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])
@@ -229,3 +231,20 @@ router
     middleware.tenant(),
     middleware.can({ permission: 'subscription.read' }),
   ])
+
+/** Registo de módulos (C03): catálogo com `module.read`; activar, desactivar e overrides com `module.manage`. */
+router
+  .group(() => {
+    router
+      .get('/modules', [ModulesController, 'list'])
+      .use(middleware.can({ permission: 'module.read' }))
+    router
+      .group(() => {
+        router.post('/tenant/modules/:code/enable', [ModulesController, 'enable'])
+        router.post('/tenant/modules/:code/disable', [ModulesController, 'disable'])
+        router.put('/tenant/features/:code', [ModulesController, 'setOverride'])
+      })
+      .use(middleware.can({ permission: 'module.manage' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])

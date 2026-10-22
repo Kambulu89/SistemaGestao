@@ -512,7 +512,8 @@ test.group('matriz de isolamento', (group) => {
     assert.isAbove(operations.length, 50)
 
     const url = (path: string) => path.replace('{id}', UUID0).replace('{key}', 'ui.theme')
-    const noPermissionNeeded = (path: string) => path === '/context' || path.startsWith('/me/')
+    const noPermissionNeeded = (path: string) =>
+      path === '/context' || path === '/context/features' || path.startsWith('/me/')
 
     for (const { method, path } of operations) {
       const label = `${method.toUpperCase()} ${path}`

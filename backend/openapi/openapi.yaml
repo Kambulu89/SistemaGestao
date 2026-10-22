@@ -195,6 +195,94 @@ paths:
         '200':
           { description: Eventos do utilizador autenticado (sem metadados internos de outros). }
         '401': { $ref: '#/components/responses/Error' }
+  /modules:
+    get:
+      summary: Catálogo de módulos do tenant (module.read)
+      description: |
+        Para cada módulo: dependências (`requires`), se o plano o licencia, o estado no tenant, os módulos
+        obrigatórios ainda por activar (`missingDependencies`), os módulos activos que dependem dele
+        (`activeDependents`) e as funcionalidades com o motivo quando não estão disponíveis.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Módulos do registo com o estado do tenant. }
+        '403': { $ref: '#/components/responses/Error' }
+  /tenant/modules/{code}/enable:
+    post:
+      summary: Activa um módulo (module.manage)
+      description: |
+        Acesso efectivo = licença válida AND módulo activo AND funcionalidade ligada. `409 MODULE_NOT_LICENSED`,
+        `409 DEPENDENCIES_MISSING` (módulos a activar antes, em `details`) ou, com `withDependencies`, activa-os
+        pela ordem certa. Repetir é seguro; uma falha deixa o módulo em `ERROR` e pode ser retomada.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: code, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                withDependencies: { type: boolean }
+      responses:
+        '200': { description: Módulo com o estado actual. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /tenant/modules/{code}/disable:
+    post:
+      summary: Desactiva um módulo (module.manage)
+      description: |
+        Bloqueia novos comandos; não apaga tabelas, dados nem histórico. `409 DEPENDENTS_ENABLED` se houver
+        módulos activos que dependam dele. A resposta traz `affectedFeatures`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: code, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'module e affectedFeatures.' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /tenant/features/{code}:
+    put:
+      summary: Override de uma funcionalidade do tenant (module.manage)
+      description: |
+        `override` true/false com `reason` obrigatório e `expiresAt` opcional (futuro); `null` repõe o valor por
+        omissão. Um override a favor nunca ultrapassa a licença do plano (`409 FEATURE_NOT_LICENSED`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: code, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [override]
+              properties:
+                override: { type: boolean, nullable: true }
+                reason: { type: string, maxLength: 500, nullable: true }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        '200': { description: Funcionalidade com o estado efectivo. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /context/features:
+    get:
+      summary: Funcionalidades efectivas do tenant
+      description: Só conveniência para a interface; cada comando volta a ser verificado no servidor (`403 FEATURE_NOT_AVAILABLE`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Lista de code, moduleCode, enabled e reason.' }
   /tenant/subscription:
     get:
       summary: Plano contratado, consumo, limites e bloqueios do tenant (subscription.read)

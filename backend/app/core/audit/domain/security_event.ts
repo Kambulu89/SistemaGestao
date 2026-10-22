@@ -62,6 +62,8 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   party_relationships: 'party.read',
   tenant_domains: 'iam.read',
   subscriptions: 'subscription.read',
+  tenant_modules: 'module.read',
+  tenant_features: 'module.read',
 }
 
 /** Tabelas de tenant que não são auditadas, com o motivo (o teste de conformidade exige o resto). */

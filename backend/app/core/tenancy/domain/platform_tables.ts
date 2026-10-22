@@ -21,6 +21,10 @@ export const PLATFORM_TABLES: ReadonlySet<string> = new Set<string>([
   'public.plan_versions',
   'public.subscriptions',
   'public.subscription_changes',
+  // Registo de módulos e funcionalidades (C03): catálogo entregue por código, igual para todos os tenants
+  'public.modules',
+  'public.module_dependencies',
+  'public.features',
   // Eventos de segurança (S06): tenant_id opcional, só INSERT/SELECT; a leitura por tenant filtra no repositório
   'public.security_events',
 ])

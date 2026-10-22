@@ -8,5 +8,8 @@ export {
   type Subscription,
   type SubscriptionStatus,
 } from '#platform/billing/domain/plan'
-export type { SubscriptionView } from '#platform/billing/application/use_cases'
+export type {
+  LicensedEntitlements,
+  SubscriptionView,
+} from '#platform/billing/application/use_cases'
 export { billingServices } from '#platform/billing/presentation/composition'

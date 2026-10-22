@@ -302,6 +302,28 @@ eliminado e o excesso só bloqueia novos consumos (`usage[].blocked`). **Gestão
 de pagamento (sem fornecedor, decisão de produto pendente), pedido de mudança de plano pelo administrador do tenant, validação dos
 códigos de módulos/funcionalidades contra o registo (C03), renovação automática do período, e a ligação do frontend.
 
+## D-031 Registo de módulos: catálogo entregue por código, activação por tenant e acesso efectivo (aceite — fatia 2.3)
+**Catálogo.** `modules`, `module_dependencies` e `features` são tabelas globais alimentadas por **manifestos em código**
+(`platform/modules/manifests.ts`, `node ace modules:sync`); o tenant nunca fornece manifestos, SQL ou código. A sincronização valida o
+conjunto inteiro antes de gravar (códigos, versões, funcionalidades prefixadas pelo módulo, dependências existentes e satisfeitas
+por `^ ~ >= > <= < *`, **sem ciclos** — incluindo ciclos por dependência opcional —, `minCoreVersion` ≤ núcleo e o núcleo
+`FOUNDATION` sem depender de módulos) e é idempotente; o que sai do código passa a `DEPRECATED` e nunca se apaga. Hoje o código só
+declara o módulo `core`: **não se regista um módulo que ainda não existe**; os testes usam um catálogo próprio com as dependências da
+especificação (SALES→CORE+CRM+CATALOG, INVENTORY→CATALOG, FINANCE opcional). **Activação.** `tenant_modules` (estado, configuração, `enabled_at`,
+último erro) e `tenant_features` (override com motivo e prazo) são tabelas de tenant, auditadas. O núcleo está sempre activo e não tem
+linha. `POST /tenant/modules/{code}/enable` exige licença do plano e dependências obrigatórias activas (`409 DEPENDENCIES_MISSING`
+com a lista; `withDependencies` activa-as pela ordem certa); passa por `ENABLING` e corre o activador do módulo (código, idempotente);
+uma falha deixa `ERROR` (mensagem genérica ao tenant) e repetir retoma sem duplicar; tudo serializado por lock consultivo do tenant.
+Desactivar recusa enquanto houver dependentes activos (`409 DEPENDENTS_ENABLED`), devolve as funcionalidades afectadas e **nunca
+apaga** tabelas, dados nem histórico. **Acesso efectivo** = tenant operacional (middleware `tenant`) AND licença válida (assinatura que
+concede direitos e inclui o módulo; uma funcionalidade vem com o módulo se for `default_enabled`, senão tem de constar do plano) AND
+módulo activo AND funcionalidade ligada (`override` dentro do prazo, senão o valor por omissão) AND autorização. Um override a favor
+**nunca** ultrapassa a licença (`409 FEATURE_NOT_LICENSED`; e deixa de valer se o plano mudar). A API bloqueia (`middleware.feature`,
+`403 FEATURE_NOT_AVAILABLE`, funcionalidade desconhecida nega) — o menu é só conveniência (`GET /context/features`, `modules`/`features`
+em `GET /context`). **Fora desta fatia:** validar as listas do plano contra o registo ao publicar (hoje o plano guarda códigos por
+validar), configuração por módulo (`configuration` existe mas não tem API), tratamento de processos em curso na desactivação (não
+existem processos), estado `DISABLING` (a desactivação é imediata), API de plataforma para o catálogo, e a ligação do frontend.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

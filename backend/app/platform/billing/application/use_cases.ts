@@ -396,3 +396,31 @@ export class ResolveLimit {
     return plan ? plan.limits[metric] : 0
   }
 }
+
+export interface LicensedEntitlements {
+  /** A assinatura concede direitos agora (estado e prazos). */
+  entitled: boolean
+  modules: string[]
+  features: string[]
+}
+
+/**
+ * Direitos licenciados pelo plano contratado (módulos e funcionalidades). Sem assinatura, ou sem
+ * direitos activos, nada está licenciado (nega por omissão). Não valida o registo de módulos (C03).
+ */
+export class ResolveEntitlements {
+  constructor(
+    private readonly plans: PlanStore,
+    private readonly subscriptions: SubscriptionStore,
+    private readonly clock: Clock = systemClock
+  ) {}
+
+  async execute(tenantId: string): Promise<LicensedEntitlements> {
+    const none = { entitled: false, modules: [], features: [] }
+    const subscription = await this.subscriptions.findCurrent(tenantId)
+    if (!subscription || !grantsEntitlements(subscription, this.clock.now())) return none
+    const plan = await this.plans.findById(subscription.planVersionId)
+    if (!plan) return none
+    return { entitled: true, ...plan.entitlements }
+  }
+}

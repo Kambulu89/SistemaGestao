@@ -49,6 +49,8 @@ export async function deleteTestTenants() {
       await trx.from('audit_logs').where('tenant_id', id).delete()
       await trx.from('tenant_memberships').where('tenant_id', id).update({ person_id: null })
       for (const table of [
+        'tenant_features',
+        'tenant_modules',
         'party_relationships',
         'addresses',
         'contacts',

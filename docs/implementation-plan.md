@@ -2,13 +2,13 @@
 
 Fases da especificação (§11) com estado real. Cada fase entrega **fatias verticais** (migration, domínio, API, UI,
 autorização, auditoria, testes). Uma fase só passa quando as verificações aplicáveis correram e a documentação foi
-actualizada. Estado actualizado em: Fase 2, fatia 2.2.
+actualizada. Estado actualizado em: Fase 2, fatia 2.3.
 
 | Fase | Âmbito (spec) | Estado |
 | --- | --- | --- |
 | **F0** Preparação | repositório, versões, Docker, CI, estrutura modular, ADRs | **Concluída** (com 2 verificações por executar — ver abaixo) |
 | **F1** Fundação | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party | **Próxima** (detalhada na secção 2) |
-| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria) e 2.2 (planos/assinaturas, backend) concluídas; 2.3–2.5 por fazer (ver secção 2b) |
+| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos), backend, concluídas; 2.4–2.5 por fazer (ver secção 2b) |
 | F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | Não iniciada (existem contratos/motores no frontend — ver `architecture.md` §7) |
 | F4 Operação comercial | M01–M08, S01 | Não iniciada |
 | F5 Gestão empresarial | M09–M14, S02–S03 | Não iniciada |
@@ -370,7 +370,7 @@ Sem decomposição prévia no plano; proposta (uma fatia de cada vez, ordem suje
 | --- | --- | --- |
 | 2.1 | Auditoria mínima (S06): `audit_logs` imutável por triggers, `security_events`, consulta com RBAC e regras de campo | **Concluída** |
 | 2.2 | C02 planos, assinaturas e limites no backend (substitui a quota provisória de convites). Os entitlements provisórios do frontend ficam para depois de 2.3 | **Concluída** (backend) |
-| 2.3 | C03 registo de módulos e funcionalidades por tenant | Por fazer |
+| 2.3 | C03 registo de módulos e funcionalidades por tenant | **Concluída** (backend) |
 | 2.4 | C09 configurações, impostos e sequências (numeração sem lacunas e concorrente) | Por fazer |
 | 2.5 | API de administração da plataforma (C01/C02) e fecho dos mocks restantes do frontend | Por fazer |
 
@@ -403,6 +403,20 @@ tenant sem assinatura/suspenso e a concorrência com um lugar livre).
 módulos contra o registo (C03); o frontend continua com entitlements provisórios e sem página de plano; um downgrade e uma
 aceitação de convite simultâneos podem, em teoria, deixar o tenant acima do novo limite (o excesso apenas bloqueia novos
 membros, nada se elimina). Tenants criados antes desta fatia ficam **sem assinatura** (limite 0) até `subscription:assign`.
+
+### 2b.3 Fatia 2.3 — concluída (backend)
+**Entregue** (ver D-031): migration `create_modules` (`modules`, `module_dependencies`, `features` globais; `tenant_modules` e
+`tenant_features` de tenant, auditadas), módulo `platform/modules` (validação do grafo e das versões, activação com dependências,
+desactivação sem apagar, overrides, acesso efectivo), `ResolveEntitlements` no billing, permissões `module.read`/`module.manage`,
+rotas `GET /modules`, `POST /tenant/modules/{code}/enable|disable`, `PUT /tenant/features/{code}`, `GET /context/features`
+(+ `modules`/`features` em `GET /context`), `middleware.feature`, comando `modules:sync`, OpenAPI e matriz de isolamento.
+**Evidência:** 281 testes (novos: `modules_domain.spec.ts` — versões, ciclos, dependências, decisão de funcionalidade;
+`modules.spec.ts` — sincronização idempotente e que recusa ciclos, SALES sem dependências, activação ordenada e concorrente sem
+duplicados, licença, descontinuado, núcleo, desactivação com dependentes sem apagar, falha→ERROR→retoma, funcionalidades e overrides
+(nunca ultrapassam a licença), bloqueio pela API, assinatura suspensa, isolamento).
+**Limites / por verificar:** o código só declara o módulo `core` (nenhum módulo de negócio existe); o plano não valida os códigos
+de módulos/funcionalidades contra o registo; sem API de configuração por módulo nem de plataforma; frontend ainda com
+`provisional-entitlements.ts` (não ligado a `GET /context`/`/modules`); sem estado `DISABLING` nem tratamento de processos em curso.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

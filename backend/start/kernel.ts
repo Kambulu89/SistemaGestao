@@ -30,6 +30,8 @@ export const middleware = router.named({
   tenant: () => import('#platform/tenants/presentation/tenant_middleware'),
   /** Exige uma permissão (depois de `tenant`): `middleware.can({ permission: 'iam.manage' })`. */
   can: () => import('#core/permissions/presentation/permission_middleware'),
+  /** Exige uma funcionalidade efectiva (depois de `tenant`): `middleware.feature({ code: 'sales.quotes' })`. */
+  feature: () => import('#platform/modules/presentation/feature_middleware'),
   /** Rejeita `Origin` de browser fora da lista permitida nas escritas. */
   origin: async () => {
     const { OriginMiddleware } = await import('#core/auth/presentation/auth_middleware')

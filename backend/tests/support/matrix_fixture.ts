@@ -2,6 +2,7 @@ import { iamServices } from '#core/permissions/index'
 import { serviceTenantContext } from '#core/tenancy/index'
 import type { Tenant } from '#platform/tenants/index'
 import { api, newActor, type Actor } from '#tests/support/api_fixture'
+import { license, syncTestRegistry } from '#tests/support/modules_fixture'
 import { addMember, createActiveTenant } from '#tests/support/membership_fixture'
 import { createActiveUser } from '#tests/support/auth_fixture'
 
@@ -68,6 +69,18 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   const operator = await newActor(client, t)
   const member = await newActor(client, t)
   const http = api(client, t, admin)
+
+  // Módulos (C03): o mesmo módulo e override nos dois tenants, com plano que os licencia.
+  await syncTestRegistry()
+  await license(t, ['crm'], ['crm.scoring'])
+  await must(await http.post('/api/v1/tenant/modules/crm/enable', {}), 200)
+  await must(
+    await http.put('/api/v1/tenant/features/crm.scoring', {
+      override: true,
+      reason: 'Piloto comum',
+    }),
+    200
+  )
 
   const role = await must<{ id: string }>(
     await http.post('/api/v1/roles', {

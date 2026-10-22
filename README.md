@@ -5,7 +5,7 @@ Plataforma SaaS **multi-tenant, modular e configurável**. Este repositório tem
 | Parte | Pasta | Estado |
 | --- | --- | --- |
 | Frontend (Angular 22 · Tailwind 4) | raiz (`src/`) | ligado à API para identidade, tenants, membros, convites, organização e perfis; o resto (core dinâmico, plataforma) ainda sobre **dados mock** |
-| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0, Fase 1 (fatias 1.1–1.9) e Fase 2 fatias 2.1–2.2**: tenants, autenticação, membros e convites, autorização RBAC+ABAC, organização, Party, matriz de isolamento, auditoria mínima, planos e assinaturas. Sem módulos de negócio |
+| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0, Fase 1 (fatias 1.1–1.9) e Fase 2 fatias 2.1–2.3**: tenants, autenticação, membros e convites, autorização RBAC+ABAC, organização, Party, matriz de isolamento, auditoria mínima, planos e assinaturas e registo de módulos. Sem módulos de negócio |
 
 Contrato funcional: [`docs/especificacao-v2.docx`](docs/especificacao-v2.docx). Regras permanentes: [`CLAUDE.md`](CLAUDE.md).
 Arquitectura: [`docs/architecture.md`](docs/architecture.md) · decisões: [`docs/decisions.md`](docs/decisions.md) ·
@@ -46,7 +46,7 @@ Endpoints actuais: `health`, `ready`, `auth/*` (login, logout, recuperação, ve
 sessões, palavra-passe, tenants), `context`, `roles`, `role-assignments`, `access-policies`, `permissions`, `authorization/simulate`, `organizations`, `organization-units`, `cost-centers`, `membership-scopes`, `memberships`, `invitations`, `me/preferences`, `parties`, `people` e `organization-parties` — contrato em `backend/openapi/openapi.yaml`.
 
 Gestão da plataforma (sem API HTTP ainda): `node ace tenant:create|tenant:status|tenant:domain:add|tenant:domain:verify`
-`USER_PASSWORD=… node ace user:create <email> <nome> --verified` e `node ace membership:add|membership:status <tenant> <email> [estado]` e, para planos (D-030), `node ace plan:create|plan:publish|plan:retire|plan:list` e `subscription:assign|subscription:change|subscription:status <tenant> …` e `node ace iam:sync` / `iam:bootstrap <tenant> <email>`
+`USER_PASSWORD=… node ace user:create <email> <nome> --verified` e `node ace membership:add|membership:status <tenant> <email> [estado]` e, para planos (D-030), `node ace plan:create|plan:publish|plan:retire|plan:list` e `subscription:assign|subscription:change|subscription:status <tenant> …` e `modules:sync` (registo de módulos, D-031) e `node ace iam:sync` / `iam:bootstrap <tenant> <email>`
 (catálogo de permissões e papel `tenant_admin`; correr `iam:sync` em cada ambiente depois de migrar).
 Os pedidos de tenant (`GET /context`) indicam o tenant em `X-Tenant-Id` ou `X-Tenant-Code`. Dados de demonstração (dois tenants, só fora de
 produção): `DEMO_USER_PASSWORD=… npm run seed`. Em desenvolvimento use `MAIL_DRIVER=dev-redis` (as mensagens com tokens
