@@ -12,6 +12,7 @@ import { middleware } from '#start/kernel'
 
 const AuthController = () => import('#core/auth/presentation/auth_controller')
 const MeController = () => import('#core/auth/presentation/me_controller')
+const ContextController = () => import('#platform/tenants/presentation/context_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
 
 router
@@ -36,8 +37,17 @@ router
         router.get('/me/sessions', [MeController, 'sessions'])
         router.delete('/me/sessions/:id', [MeController, 'revokeSession'])
         router.post('/me/password', [MeController, 'changePassword'])
+        router.get('/me/tenants', [ContextController, 'myTenants'])
       })
       .use(middleware.auth())
   })
   .prefix('/api/v1')
   .use(middleware.origin())
+
+/** Rotas de tenant: sessão + selector validado contra a membership activa. */
+router
+  .group(() => {
+    router.get('/context', [ContextController, 'show'])
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])

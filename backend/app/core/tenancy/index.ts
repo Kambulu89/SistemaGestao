@@ -8,6 +8,7 @@ export {
   MissingTenantContextError,
   TenantContext,
   isUuid,
+  serviceTenantContext,
   type ActorType,
   type TenantContextProps,
   type UnitScope,

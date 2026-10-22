@@ -8,6 +8,7 @@ import {
   CreateTenant,
   LucidTenantStore,
   RegisterTenantDomain,
+  addMemberByEmail,
 } from '#platform/tenants/index'
 
 /** Dois tenants de demonstração, separados. Os domínios/emails usam TLDs reservados (`.test`, `.invalid`). */
@@ -15,6 +16,9 @@ const DEMO = [
   { code: 'demo_a', name: 'Demo A', host: 'demo-a.exemplo.test', admin: 'admin@demo-a.invalid' },
   { code: 'demo_b', name: 'Demo B', host: 'demo-b.exemplo.test', admin: 'admin@demo-b.invalid' },
 ] as const
+
+/** Conta presente nos dois tenants: serve para exercitar a troca de tenant. */
+const MULTI_TENANT_USER = 'multi@demo.invalid'
 
 const ignoreConflict = async (action: () => Promise<unknown>) => {
   try {
@@ -26,7 +30,7 @@ const ignoreConflict = async (action: () => Promise<unknown>) => {
 
 /**
  * Idempotente. Nunca corre em produção. A palavra-passe vem de `DEMO_USER_PASSWORD`
- * (nada de credenciais no código). A ligação utilizador↔tenant chega com `TenantMembership` (fatia 1.3).
+ * (nada de credenciais no código). Papéis e permissões chegam com a fatia 1.4.
  */
 export default class DemoSeeder extends BaseSeeder {
   static environment = ['development', 'test']
@@ -58,6 +62,19 @@ export default class DemoSeeder extends BaseSeeder {
           verified: true,
         })
       })
+      await ignoreConflict(() => addMemberByEmail(demo.code, demo.admin))
+    }
+
+    await ignoreConflict(async () => {
+      await authServices().createUser.execute({
+        email: MULTI_TENANT_USER,
+        displayName: 'Utilizador nos dois tenants',
+        password,
+        verified: true,
+      })
+    })
+    for (const demo of DEMO) {
+      await ignoreConflict(() => addMemberByEmail(demo.code, MULTI_TENANT_USER))
     }
   }
 }

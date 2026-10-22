@@ -74,11 +74,11 @@ sugerida pelo npm é saltar para versões principais diferentes (v7) ou recuar. 
 não processam pedidos HTTP. **Acção.** Reavaliar em cada fase e quando se decidir a migração para a v7; registar
 aqui o resultado. **Risco aceite por:** equipa de desenvolvimento, até à primeira produção.
 
-## D-013 Sessão e selector de tenant (sessão: aceite na fatia 1.2; selector: fatia 1.3)
+## D-013 Sessão e selector de tenant (aceite — fatias 1.2 e 1.3)
 Sessão opaca em cookie `HttpOnly`/`Secure`/`SameSite` com protecção CSRF; sem credenciais em `localStorage`/
 `sessionStorage`. O tenant viaja como **selector explícito** (domínio verificado ou cabeçalho) e é sempre validado
 contra a sessão e a membership activa; o frontend pode manter `/t/:slug` na URL. Substitui o `sessionStorage` do mock.
-A parte da sessão está implementada e detalhada em D-018; o selector fica para a fatia 1.3.
+A parte da sessão está em D-018 e o selector de tenant em D-023.
 
 ## D-014 Nomenclatura de permissões (aberta — decidir antes da Fase 1.5)
 O frontend usa `<módulo>.read|manage` e `entities.<chave>.<op>`; a spec usa `<recurso>.<acção>` (ex.:
@@ -139,6 +139,24 @@ por isso o acesso é feito só pelos repositórios do módulo e o dono de cada a
 `tenant_domains.hostname` é único globalmente (409 em duplicado). Estados do tenant: PROVISIONING→ACTIVE→
 SUSPENDED↔ACTIVE→CLOSING→CLOSED (domínio, com versão optimista). `ProvisioningStep` e a API HTTP de plataforma
 (administrador SaaS) ficam para depois; por agora a gestão faz-se por comandos `node ace` (`tenant:*`, `user:create`).
+
+## D-023 Resolução do tenant, membership e leitura por utilizador (aceite — fatia 1.3)
+**Decisão.** Não há "tenant actual" guardado na sessão: cada pedido de tenant traz um **selector** (`X-Tenant-Id`,
+`X-Tenant-Code` ou domínio verificado no `Host`; vários têm de coincidir, senão 400). O middleware `tenant` (depois de
+`auth`) segue a spec §10.1: tenant candidato → membership **ACTIVE** do utilizador → tenant **ACTIVE** → constrói o
+`TenantContext` (com `permissionsVersion` = `authorization_version` da membership) → corre o pedido dentro do
+`TenantContextStore`. Tenant inexistente e tenant sem membership dão o mesmo `403 TENANT_ACCESS_DENIED`; só depois de
+confirmada a membership se distingue `403 TENANT_NOT_ACTIVE`. Trocar de tenant é mudar o selector e recarregar
+`GET /context`; como o contexto é reconstruído por pedido, nada do tenant anterior é reutilizado.
+`tenant_memberships` é tabela de tenant (RLS forçada). Para ler *as próprias* memberships antes de haver contexto
+existe a política `tenant_memberships_self_read` (`FOR SELECT USING (user_id = app_current_user_id())`), com
+`app.user_id` definido pelo servidor numa transacção a partir da sessão autenticada; escritas continuam a exigir o
+contexto de tenant. **Alternativas rejeitadas.** Função `SECURITY DEFINER` (a RLS é forçada também para o dono, exigiria
+`BYPASSRLS`); tabela global de memberships (quebra o princípio de tenant); guardar o tenant na sessão (estado partilhado
+entre separadores). **Limitações.** Sem `MembershipScope`/unidades (1.5): `unitScope` fica `UNITS []` (nega por omissão).
+`GET /context` devolve só o que existe (tenant, membership, utilizador, locale, `authorizationVersion`, âmbito);
+módulos, funcionalidades, permissões e configurações entram com C03/C06/C09. Não há API HTTP de membros: a gestão faz-se
+por `node ace membership:add|status` até aos convites (1.6).
 
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver

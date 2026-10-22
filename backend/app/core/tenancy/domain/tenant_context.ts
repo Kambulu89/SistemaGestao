@@ -109,3 +109,22 @@ export class TenantContext {
     return context
   }
 }
+
+/**
+ * Contexto de um actor de serviço (comandos de plataforma, jobs, seeds): sem utilizador, sem acesso a
+ * unidades. O chamador indica o tenant explicitamente; nunca há "tenant por omissão".
+ */
+export function serviceTenantContext(
+  tenantId: string,
+  correlationId: string,
+  locale = 'pt-AO'
+): TenantContext {
+  return TenantContext.create({
+    tenantId,
+    actorType: 'SERVICE',
+    unitScope: { kind: 'UNITS', unitIds: [] },
+    permissionsVersion: 0,
+    correlationId,
+    locale,
+  })
+}

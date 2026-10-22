@@ -14,3 +14,14 @@ export {
   VerifyTenantDomain,
 } from '#platform/tenants/application/use_cases'
 export { LucidTenantStore } from '#platform/tenants/infrastructure/lucid_tenant_store'
+export {
+  ListMyTenants,
+  ResolveTenantContext,
+  type MyTenant,
+  type ResolvedTenantContext,
+  type TenantSelector,
+} from '#platform/tenants/application/context_use_cases'
+export {
+  addMemberByEmail,
+  changeMemberStatusByEmail,
+} from '#platform/tenants/presentation/member_commands'

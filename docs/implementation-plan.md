@@ -55,7 +55,7 @@ isolamento por tenant e testes negativos com dois tenants.
 | --- | --- | --- | --- |
 | 1.1 | ✅ **Núcleo de multi-tenancy e esquema** (feita — ver secção 2.1) | F0 | colunas base B/G; padrão de migration de tabela de tenant (RLS `ENABLE`+`FORCE`, política, FK composta `(tenant_id,id)`); `TenantContext` imutável; `TenantScopedConnection` (transacção + `set_config` local; sem contexto → erro); repositório base que exige contexto; **teste de conformidade do esquema** (toda a tabela com `tenant_id` tem RLS forçada e política); verificação automática das fronteiras de módulo |
 | 1.2 | ✅ **Tenant e utilizadores** (feita — ver secção 2.2) (C01 mínimo, C04) | 1.1 | `Tenant`, `TenantDomain`, `User`, `AuthSession`; login/logout com sessão opaca em cookie HttpOnly+Secure+SameSite, CSRF, hash de palavra-passe, rate limit em Redis, sessões activas/revogação; recuperação com token de uso único. MFA e SSO ficam **fora** (documentar) |
-| 1.3 | **Membership e contexto** (C05 parte 1) | 1.2 | `TenantMembership`; pipeline de resolução do tenant (spec §10.1) como middleware; `GET /context` com `authorizationVersion`; troca de tenant; suspensão de tenant bloqueia operações |
+| 1.3 | ✅ **Membership e contexto** (feita — ver secção 2.3) (C05 parte 1) | 1.2 | `TenantMembership`; pipeline de resolução do tenant (spec §10.1) como middleware; `GET /context` com `authorizationVersion`; troca de tenant; suspensão de tenant bloqueia operações |
 | 1.4 | **Autorização** (C06) | 1.3 | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); *default deny*, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar |
 | 1.5 | **Organização** (C07) | 1.4 | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas |
 | 1.6 | **Convites e membros** (C05 parte 2) | 1.4, 1.5 | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências |
@@ -81,7 +81,7 @@ base limpa a passar.
 **Limitações assumidas:** as tabelas dos testes vivem num esquema `probe` (fixtures criadas com os helpers reais): ainda
 não há tabelas de domínio. A FK `tenant_id → tenants` só passa a existir na fatia 1.2 (os helpers já a geram por
 omissão). Cache, jobs, ficheiros, pesquisa, exportações e WebSocket não existem ainda: a respectiva matriz de isolamento
-fica para quando forem criados. O `TenantContext` ainda não é **construído** por nenhum middleware (fatia 1.3).
+fica para quando forem criados. O `TenantContext` passou a ser construído pelo middleware `tenant` na fatia 1.3.
 
 ### 2.2 Fatia 1.2 — concluída
 **Entregue:** migrations `tenants`, `tenant_domains`, `users`, `auth_sessions`, `one_time_tokens`; módulos `core/auth`
@@ -106,12 +106,37 @@ com cookie e `401` indistinguível, sem a palavra-passe no log.
 - `trustProxy` por configurar (D-020): o IP de rate limit é o do socket.
 - Não existe auditoria (`AuditLog`/`SecurityEvent`, Fase 2): login, logout e alterações de palavra-passe **não** são
   registados num log de auditoria; só há logs estruturados sem segredos.
-- "Tenant suspenso bloqueia operações" e a troca de tenant dependem de `TenantMembership`/contexto (fatia 1.3); aqui só
-  está testada a máquina de estados. Não há API HTTP de plataforma para tenants (apenas comandos).
+- "Tenant suspenso bloqueia operações" e a troca de tenant ficaram cobertos na fatia 1.3 (2.3); aqui só estava testada
+  a máquina de estados. Não há API HTTP de plataforma para tenants (apenas comandos).
 - Tabelas globais de identidade sem RLS (D-022). `ProvisioningStep` adiado. MFA/SSO fora.
 - Frontend não ligado (fatia 1.8); o `sessionStorage` do mock mantém-se até lá.
 - Teste de "cookies/segredos fora dos logs" cobre a configuração de redacção (unit) e uma verificação manual do log do
   servidor compilado; não há teste automático que capture os logs de um pedido real.
+
+### 2.3 Fatia 1.3 — concluída
+**Entregue:** migration `tenant_memberships` (RLS forçada, `unique(tenant_id,user_id)`, `authorization_version`, política de
+leitura própria); módulo `core/membership` (estados INVITED/ACTIVE/SUSPENDED/LEFT, `AddMember`, `ChangeMembershipStatus`,
+directório de leitura por utilizador); em `platform/tenants`: `ResolveTenantContext`, `ListMyTenants`, middleware `tenant`,
+`GET /context`, `GET /me/tenants`; comandos `membership:add|status`; seeder com memberships (inclui um utilizador nos dois
+tenants); OpenAPI actualizado. ADR D-023.
+
+**Evidência (executada):** 132 testes backend a passar (15 novos): selector em falta/inválido/ambíguo → 400; contexto por id
+e por código; sem membership ≡ tenant inexistente (mesma resposta 403); membership convidada não dá acesso; troca A↔B devolve
+a membership de cada tenant e quem só pertence a A recebe 403 em B; suspender a membership corta o acesso da sessão já
+aberta de imediato e `authorizationVersion` sobe (1→2→3); `LEFT` terminal (409), membership inexistente (404), duplicada
+(409); tenant suspenso → 403 `TENANT_NOT_ACTIVE` por URL directa (e 403 genérico para quem não é membro) e volta ao
+reactivar; `/me/tenants` só com membership activa; domínio verificado como selector, não verificado ignorado, conflito →
+400; RLS: sem contexto 0 linhas, leitura por utilizador só devolve as suas, `app.user_id` não permite inserir nem alterar.
+Lint, `format:check`, `typecheck`, `build` e migrations numa base limpa (4 migrations) a passar; seeder corrido duas vezes;
+comandos `membership:status` executados; o dono vê 0 linhas sem contexto (FORCE RLS).
+
+**Por verificar / limitações:**
+- `GET /context` não traz módulos, funcionalidades, permissões nem configurações (C03/C06/C09 não existem).
+- `unitScope` fica vazio (nega por omissão) até haver `MembershipScope`/organizações (1.4/1.5).
+- Sem API HTTP de membros/convites (1.6); `AddMember` com `userId` inexistente depende da FK e não tem tradução de erro
+  própria (só é chamado por comandos que verificam o utilizador antes).
+- Sem auditoria das mudanças de membership/tenant (Fase 2). Sem cache de contexto: cada pedido consulta tenant e membership.
+- O pedido paga duas consultas extra por pedido de tenant (tenant + membership); optimizar só se a medição o justificar.
 
 ### Critérios de aceitação da Fase 1
 Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios de aceitação de cada componente:

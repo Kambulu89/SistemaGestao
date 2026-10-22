@@ -172,6 +172,38 @@ paths:
       responses:
         '204': { description: Revogada. }
         '404': { description: Inexistente ou de outro utilizador. }
+  /me/tenants:
+    get:
+      summary: Tenants a que o utilizador pertence (membership activa)
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Lista com id, código, nome e estado do tenant. }
+        '401': { $ref: '#/components/responses/Error' }
+  /context:
+    get:
+      summary: Contexto do tenant seleccionado
+      description: |
+        O tenant é indicado por `X-Tenant-Id` ou `X-Tenant-Code` (ou por um domínio verificado no `Host`).
+        É apenas um selector: o servidor valida a membership activa e o estado do tenant.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: X-Tenant-Id, in: header, required: false, schema: { type: string, format: uuid } }
+        - { name: X-Tenant-Code, in: header, required: false, schema: { type: string } }
+      responses:
+        '200':
+          {
+            description: Tenant,
+            membership,
+            utilizador,
+            locale,
+            authorizationVersion e âmbito de unidades.,
+          }
+        '400': { description: TENANT_SELECTOR_REQUIRED / INVALID / AMBIGUOUS / MISMATCH. }
+        '401': { $ref: '#/components/responses/Error' }
+        '403':
+          {
+            description: TENANT_ACCESS_DENIED (sem membership ou tenant inexistente) ou TENANT_NOT_ACTIVE.,
+          }
   /me/password:
     post:
       summary: Altera a palavra-passe (exige a actual; revoga as outras sessões)

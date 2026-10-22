@@ -26,6 +26,8 @@ router.use([() => import('@adonisjs/core/bodyparser_middleware')])
 export const middleware = router.named({
   /** Sessão opaca em cookie + CSRF nas escritas. */
   auth: () => import('#core/auth/presentation/auth_middleware'),
+  /** Resolve o tenant do pedido (depois de `auth`): selector + membership activa + tenant activo. */
+  tenant: () => import('#platform/tenants/presentation/tenant_middleware'),
   /** Rejeita `Origin` de browser fora da lista permitida nas escritas. */
   origin: async () => {
     const { OriginMiddleware } = await import('#core/auth/presentation/auth_middleware')
