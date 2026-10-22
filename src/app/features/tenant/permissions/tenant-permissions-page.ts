@@ -1,10 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { errorMessage } from '../../../core/api/error-message';
 import { entityPermissionDefinitions } from '../../../core/dynamic/engine/entity-permissions';
 import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { PermissionService } from '../../../core/permissions/permission.service';
 import { TenantContextService } from '../../../core/tenant-context/tenant-context.service';
+import { Alert } from '../../../shared/ui/alert/alert';
 import { Badge } from '../../../shared/ui/badge/badge';
+import { LoadingState } from '../../../shared/ui/loading-state/loading-state';
+import { IamApi } from '../data-access/iam.api';
 import { Card } from '../../../shared/ui/card/card';
 import { PageHeader } from '../../../shared/ui/page-header/page-header';
 import { Table, type TableColumn } from '../../../shared/ui/table/table';
@@ -12,18 +17,50 @@ import { Table, type TableColumn } from '../../../shared/ui/table/table';
 /** Catálogo de permissões declaradas pelos módulos e quais o seu perfil concede. */
 @Component({
   selector: 'app-tenant-permissions-page',
-  imports: [PageHeader, Card, Table, Badge],
+  imports: [PageHeader, Card, Table, Badge, Alert, LoadingState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
     <app-page-header
       title="Permissões"
-      [description]="
-        'Perfil actual: ' +
-        (role() ?? '—') +
-        '. Cada módulo declara as suas permissões; a atribuição por perfil (RBAC/ABAC) será construída com o backend.'
-      "
+      [description]="'Perfis do servidor e permissões declaradas pelos módulos. O servidor decide sempre; esta lista é só informativa.'"
     />
+
+    @if (canReadRoles()) {
+      <section class="mb-6" aria-label="Perfis">
+        <h2 class="mb-2 text-base font-semibold">Perfis</h2>
+        <app-card [flush]="true">
+          @if (roles.isLoading() && !roles.hasValue()) {
+            <app-loading-state label="A carregar perfis…" />
+          } @else if (roles.error()) {
+            <div class="p-5">
+              <app-alert tone="danger" title="Não foi possível carregar os perfis">
+                {{ rolesError() }}
+              </app-alert>
+            </div>
+          } @else {
+            <app-table caption="Perfis da organização" [columns]="roleColumns" [rows]="roleRows()">
+              <ng-template let-row let-column="column">
+                @switch (column.key) {
+                  @case ('name') {
+                    <span class="font-medium">{{ row.name }}</span>
+                    <code class="ms-2 rounded bg-surface-muted px-1.5 py-0.5 text-xs">{{
+                      row.code
+                    }}</code>
+                    @if (row.isSystem) {
+                      <app-badge class="ms-2">Sistema</app-badge>
+                    }
+                  }
+                  @case ('permissions') {
+                    {{ row.permissions }}
+                  }
+                }
+              </ng-template>
+            </app-table>
+          }
+        </app-card>
+      </section>
+    }
 
     @for (group of allGroups(); track group.id) {
       <section class="mb-6" [attr.aria-label]="group.name">
@@ -61,7 +98,26 @@ export class TenantPermissionsPage {
   private readonly permissions = inject(PermissionService);
   private readonly tenantContext = inject(TenantContextService);
 
-  protected readonly role = computed(() => this.tenantContext.active()?.roleName);
+  private readonly api = inject(IamApi);
+
+  protected readonly canReadRoles = computed(() => this.permissions.can('iam.read'));
+  protected readonly roleColumns: readonly TableColumn[] = [
+    { key: 'name', label: 'Perfil' },
+    { key: 'permissions', label: 'Permissões' },
+  ];
+  protected readonly roles = rxResource({
+    params: () => (this.canReadRoles() ? this.tenantContext.tenant()?.id : undefined),
+    stream: () => this.api.listRoles(),
+  });
+  protected readonly roleRows = computed(() =>
+    (this.roles.hasValue() ? this.roles.value() : []).map((r) => ({
+      ...r,
+      permissions: r.permissionCodes.join(', ') || '—',
+    })),
+  );
+  protected rolesError(): string {
+    return errorMessage(this.roles.error());
+  }
 
   protected readonly columns: readonly TableColumn[] = [
     { key: 'key', label: 'Permissão' },

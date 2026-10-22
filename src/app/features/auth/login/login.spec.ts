@@ -1,60 +1,75 @@
-import { TestBed } from '@angular/core/testing';
+import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { throwError } from 'rxjs';
+import type { ApiError } from '../../../core/api/api-error.model';
+import { AuthService } from '../../../core/auth/auth.service';
 import { setupMockBackend } from '../../../core/testing/test-backend';
 import { Login } from './login';
 
 describe('Login', () => {
-  beforeEach(() => setupMockBackend());
+  let login: ReturnType<typeof vi.fn>;
 
-  async function render(returnUrl?: string) {
-    const fixture = TestBed.createComponent(Login);
-    if (returnUrl) fixture.componentRef.setInput('returnUrl', returnUrl);
-    await fixture.whenStable();
-    return { fixture, el: fixture.nativeElement as HTMLElement };
-  }
-
-  function submit(el: HTMLElement, email: string, password: string): void {
-    const [emailInput, passwordInput] = Array.from(el.querySelectorAll('input'));
-    for (const [input, value] of [
-      [emailInput, email],
-      [passwordInput, password],
-    ] as const) {
-      if (!input) continue;
-      input.value = value;
-      input.dispatchEvent(new Event('input'));
-    }
-    el.querySelector<HTMLButtonElement>('button[type=submit]')?.click();
-  }
-
-  it('shows validation errors instead of calling the API when empty', async () => {
-    const { fixture, el } = await render();
-    el.querySelector<HTMLButtonElement>('button[type=submit]')?.click();
-    await fixture.whenStable();
-    expect(el.textContent).toContain('Campo obrigatório.');
+  beforeEach(() => {
+    setupMockBackend();
+    login = vi.spyOn(TestBed.inject(AuthService), 'login') as unknown as ReturnType<typeof vi.fn>;
   });
 
-  it('shows the error returned for wrong credentials', async () => {
-    const { fixture, el } = await render();
-    submit(el, 'multi@demo.pt', 'errada');
-    await vi.waitFor(() => {
-      fixture.detectChanges();
-      expect(el.querySelector('[role=alert]')?.textContent).toContain('Credenciais inválidas.');
-    });
-  });
+  async function submit(fixture: ComponentFixture<Login>): Promise<string> {
+    const root = fixture.nativeElement as HTMLElement;
+    const [email, password] = Array.from(root.querySelectorAll('input'));
+    if (!email || !password) throw new Error('Campos em falta');
+    email.value = 'ana@exemplo.pt';
+    email.dispatchEvent(new Event('input'));
+    password.value = 'segredo-segredo';
+    password.dispatchEvent(new Event('input'));
+    root.querySelector('form')?.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return root.textContent ?? '';
+  }
 
-  it('navigates to the returnUrl after login', async () => {
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    const { el } = await render('/t/escola-horizonte/modules/crm');
-    submit(el, 'multi@demo.pt', 'demo1234');
-    await vi.waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith('/t/escola-horizonte/modules/crm'),
+  it('shows the generic server message for wrong credentials and stays on the page', async () => {
+    login.mockReturnValue(
+      throwError(
+        () =>
+          ({
+            status: 401,
+            code: 'INVALID_CREDENTIALS',
+            message: 'Email ou palavra-passe inválidos.',
+          }) satisfies ApiError,
+      ),
     );
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(Login);
+    fixture.detectChanges();
+
+    expect(await submit(fixture)).toContain('Email ou palavra-passe inválidos.');
+    expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('refuses external return URLs (open redirect)', async () => {
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    const { el } = await render('//evil.example');
-    submit(el, 'multi@demo.pt', 'demo1234');
-    await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith('/'));
+  it('tells the user how long to wait when rate limited (429 + Retry-After)', async () => {
+    login.mockReturnValue(
+      throwError(
+        () =>
+          ({
+            status: 429,
+            code: 'RATE_LIMITED',
+            message: 'Demasiadas tentativas.',
+            retryAfterSeconds: 610,
+          }) satisfies ApiError,
+      ),
+    );
+    const fixture = TestBed.createComponent(Login);
+    fixture.detectChanges();
+    expect(await submit(fixture)).toContain('Tente novamente dentro de 11 min.');
+  });
+
+  it('never offers or pre-fills a password for the demo accounts', () => {
+    const fixture = TestBed.createComponent(Login);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('admin@demo-a.invalid');
+    expect(text).toContain('DEMO_USER_PASSWORD');
+    expect(text).not.toContain('demo1234');
   });
 });

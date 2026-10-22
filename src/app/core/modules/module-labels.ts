@@ -94,7 +94,10 @@ export const SUBSCRIPTION_LABELS: Record<SubscriptionStatus, { label: string; to
 };
 
 export const TENANT_STATUS_LABELS: Record<TenantStatus, { label: string; tone: LabelTone }> = {
+  provisioning: { label: 'Em preparação', tone: 'neutral' },
   active: { label: 'Activo', tone: 'success' },
   trial: { label: 'Teste', tone: 'brand' },
   suspended: { label: 'Suspenso', tone: 'danger' },
+  closing: { label: 'Em encerramento', tone: 'danger' },
+  closed: { label: 'Encerrado', tone: 'danger' },
 };

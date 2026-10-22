@@ -4,8 +4,8 @@ export const environment: AppEnvironment = {
   production: false,
   name: 'development',
   appName: 'Plataforma de Gestão',
-  apiUrl: 'http://localhost:3000/api',
-  defaultLocale: 'pt-PT',
-  defaultCurrency: 'EUR',
-  defaultTimeZone: 'Europe/Lisbon',
+  apiUrl: 'http://localhost:3333/api/v1',
+  defaultLocale: 'pt-AO',
+  defaultCurrency: 'AOA',
+  defaultTimeZone: 'Africa/Luanda',
 };

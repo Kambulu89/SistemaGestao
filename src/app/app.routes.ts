@@ -32,6 +32,22 @@ export const routes: Routes = [
           import('./features/auth/forgot-password/forgot-password').then((m) => m.ForgotPassword),
       },
       {
+        path: 'reset-password',
+        title: 'Nova palavra-passe',
+        canActivate: [guestGuard],
+        loadComponent: () =>
+          import('./features/auth/reset-password/reset-password').then((m) => m.ResetPassword),
+      },
+      {
+        path: 'accept-invitation',
+        title: 'Convite',
+        canActivate: [authGuard],
+        loadComponent: () =>
+          import('./features/auth/accept-invitation/accept-invitation').then(
+            (m) => m.AcceptInvitation,
+          ),
+      },
+      {
         path: 'no-access',
         title: 'Sem acesso',
         loadComponent: () =>

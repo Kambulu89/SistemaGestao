@@ -169,14 +169,16 @@ Angular 22 standalone + signals + Tailwind 4. Estrutura: `core` (sessão, tenant
 `shared` (ui + dynamic renderers) · `layouts` · `features`. Regras: `core` não importa `features`/`layouts`;
 `shared/ui` é independente de `core`.
 
-- **Dados:** gateways abstractos (`*Gateway`) com adaptadores **mock** (`core/mock`) que simulam o backend. Servem para
-  desenvolver a interface; **não são prova de que a funcionalidade existe**. Cada fatia da Fase 1+ substitui o mock
-  correspondente por um adaptador HTTP e remove o caminho mock (ver plano).
+- **Dados:** gateways abstractos (`*Gateway`). **Identidade e tenants são HTTP** (`HttpAuthGateway`, `HttpTenantGateway`, sobre
+  `ApiService`, que desembrulha o envelope da API); os duplos de teste equivalentes vivem em `core/testing`. Continuam **mock**
+  (`core/mock`) — e **não são prova de que a funcionalidade existe** — as entidades dinâmicas, campos personalizados e registos, a
+  administração da plataforma e, provisoriamente, módulos/subscrição do contexto (`provisional-entitlements.ts`).
 - **Core Dinâmico** (entidades, campos, formulários, validação, condições, workflow local) já existe em `core/dynamic` e
   `shared/dynamic` com contratos próprios; relação com C10–C15 na secção 7.
-- **Segurança no cliente:** guards e menus são só conveniência. Divergência conhecida: o mock guarda o token em
-  `sessionStorage`; a especificação (C04) exige **sessão opaca em cookie HttpOnly + Secure + SameSite + CSRF**, a
-  implementar na Fase 1 com o backend (o backend já a fornece desde a fatia 1.2; a ligação do frontend é a fatia 1.8).
+- **Segurança no cliente:** guards e menus são só conveniência. A sessão é o cookie `HttpOnly` do servidor (com CSRF por
+  cabeçalho); o frontend guarda em memória o utilizador e o token CSRF, nunca em storage (D-028). O selector de tenant
+  (`X-Tenant-Id`) é anexado pelo `authInterceptor`; trocar de tenant cancela os pedidos do anterior e limpa os dados em memória.
+  As permissões do servidor são traduzidas num único ponto (`backend-permissions.ts`, D-014).
 
 ## 7. Comparação com a especificação (estado real)
 
@@ -200,13 +202,13 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 
 | Componente | Backend | Frontend |
 | --- | --- | --- |
-| C01 Tenants e provisionamento | PARCIAL (fatias 1.2–1.3: tenant, estados, domínios únicos e verificação; comandos `node ace`; tenant suspenso bloqueia o acesso; **sem** API de plataforma nem `ProvisioningStep`) | MOCK (admin de plataforma, listagem) |
+| C01 Tenants e provisionamento | PARCIAL (fatias 1.2–1.3: tenant, estados, domínios únicos e verificação; comandos `node ace`; tenant suspenso bloqueia o acesso; **sem** API de plataforma nem `ProvisioningStep`) | PARCIAL (selector e contexto reais; admin de plataforma ainda mock) |
 | C02 Planos, assinaturas, limites | AUSENTE | MOCK (planos/subscrições estáticos) |
 | C03 Registo de módulos e funcionalidades | AUSENTE | PARCIAL (catálogo e manifestos reais no frontend; activação por tenant é mock) |
-| C04 Identidade, autenticação, sessões | PARCIAL (fatia 1.2: login/logout, sessão opaca + CSRF, rate limit, sessões activas, recuperação, verificação de email; **sem** MFA/SSO, auditoria nem fornecedor de email) | MOCK (login simulado; token em `sessionStorage`) |
-| C05 Membros, convites, preferências | PARCIAL (fatias 1.3 e 1.6: membership, convites por token, aceitação com controlo do email, quota provisória, último administrador protegido, preferências; **sem** planos (C02), reenvio, auto-registo nem auditoria) | AUSENTE |
-| C06 Papéis, permissões, políticas | PARCIAL (fatia 1.4: catálogo, papéis, atribuições com validade, políticas ABAC por AST, regras de campo, simulação; âmbito por unidade nas decisões (1.5); **sem** filtro de linhas, cache nem auditoria) | PARCIAL (permissões por chave e avaliador RBAC+ABAC no cliente; só conveniência) |
-| C07 Organizações, unidades, centros de custo | PARCIAL (fatia 1.5: organizações, árvore de unidades sem ciclos e do mesmo pai-organização, centros de custo, equipas, `MembershipScope`; **sem** preview de impacto, regra de documentos nem moeda-base bloqueada por lançamentos) | AUSENTE |
+| C04 Identidade, autenticação, sessões | PARCIAL (fatia 1.2: login/logout, sessão opaca + CSRF, rate limit, sessões activas, recuperação, verificação de email; **sem** MFA/SSO, auditoria nem fornecedor de email) | FEITO para login, restauro, logout e recuperação (sessão em cookie, sem storage); sem MFA/sessões activas na UI |
+| C05 Membros, convites, preferências | PARCIAL (fatias 1.3 e 1.6: membership, convites por token, aceitação com controlo do email, quota provisória, último administrador protegido, preferências; **sem** planos (C02), reenvio, auto-registo nem auditoria) | PARCIAL (lista, estados, convidar/revogar, aceitar convite; sem preferências) |
+| C06 Papéis, permissões, políticas | PARCIAL (fatia 1.4: catálogo, papéis, atribuições com validade, políticas ABAC por AST, regras de campo, simulação; âmbito por unidade nas decisões (1.5); **sem** filtro de linhas, cache nem auditoria) | PARCIAL (perfis do servidor listados; permissões do servidor traduzidas; sem editor de papéis/políticas) |
+| C07 Organizações, unidades, centros de custo | PARCIAL (fatia 1.5: organizações, árvore de unidades sem ciclos e do mesmo pai-organização, centros de custo, equipas, `MembershipScope`; **sem** preview de impacto, regra de documentos nem moeda-base bloqueada por lançamentos) | PARCIAL (organização e árvore de unidades: listar, criar, inactivar; sem centros de custo, equipas nem âmbitos) |
 | C08 Pessoas, organizações externas, contactos | PARCIAL (fatia 1.7: Party/Person/OrganizationParty, contactos, moradas, relações, aviso de duplicados, campos sensíveis por regras de campo, ligação a membership; **sem** fusão assistida nem auditoria) | AUSENTE |
 | C09 Configurações, impostos, sequências | AUSENTE | AUSENTE |
 | C10 Metadados, entidades dinâmicas, campos | AUSENTE | PARCIAL/MOCK (contratos e motores no cliente; persistência mock) |

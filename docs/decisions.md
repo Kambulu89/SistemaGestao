@@ -78,7 +78,7 @@ aqui o resultado. **Risco aceite por:** equipa de desenvolvimento, até à prime
 Sessão opaca em cookie `HttpOnly`/`Secure`/`SameSite` com protecção CSRF; sem credenciais em `localStorage`/
 `sessionStorage`. O tenant viaja como **selector explícito** (domínio verificado ou cabeçalho) e é sempre validado
 contra a sessão e a membership activa; o frontend pode manter `/t/:slug` na URL. Substitui o `sessionStorage` do mock.
-A parte da sessão está em D-018 e o selector de tenant em D-023.
+A parte da sessão está em D-018 o selector de tenant em D-023 e a ligação do frontend em D-028.
 
 ## D-014 Nomenclatura de permissões (aceite — fatia 1.4)
 Backend: `<recurso>.<acção>` em minúsculas (`iam.manage`, `member.invite`, `invoice.approve`), com `code = resource || '.' ||
@@ -236,6 +236,27 @@ trilho de auditoria (Fase 2) e remapeamento de ligações de módulos que ainda 
 para identificação. Alterar o NIF/nome não reescreve documentos emitidos: os módulos de documentos guardarão o seu snapshot.
 **Limites.** Contactos e moradas não têm regras de campo próprias; não há arquivamento em cascata; `organizations.address_id` (a
 organização interna) continua sem FK para `addresses`.
+
+## D-028 Frontend ligado ao backend: sessão em cookie, selector de tenant e permissões (aceite — fatia 1.8)
+**Sessão.** O token é o cookie `HttpOnly` do servidor; o JavaScript nunca o vê. O frontend guarda **só em memória** o utilizador, o
+token anti-CSRF e a expiração; nada em `sessionStorage`/`localStorage` (excepto o último tenant, conveniência sem segredo). Ao
+arrancar, `provideAppInitializer` chama `GET /me` para restaurar a sessão do cookie antes da primeira navegação. O
+`authInterceptor` envia `withCredentials`, `X-Csrf-Token` nas escritas e `X-Tenant-Id` (nunca em `/auth/*`, `/me/tenants` e
+`/invitations/accept`; um selector explícito do chamador prevalece, como no pedido de contexto de um tenant ainda não activo).
+Um 401 num pedido autenticado limpa o estado local (`expireLocally`, sem novo pedido) e leva ao login; um 401 do próprio login ou
+do `GET /me` não conta como sessão expirada. **Erros.** O `errorInterceptor` converte o envelope de erro da API em `ApiError`
+(`code`, `message`, `fieldErrors`, `correlationId`, `retryAfterSeconds`); `details` mantém o corpo para os adaptadores locais.
+**Troca de tenant.** `TenantContextService.switched$` emite quando o tenant activo muda ou a sessão termina: o
+`tenantScopeInterceptor` cancela (`takeUntil`) os pedidos em curso do tenant anterior e os serviços registados em
+`TENANT_SCOPE_RESETTERS` limpam os seus dados; as listas das páginas dependem do id do tenant (`rxResource.params`), pelo que
+pedem de novo. Um pedido cancelado completa sem valor. **Permissões (D-014).** `mapBackendPermissions` é o único ponto de
+tradução: cada código do servidor (`member.invite`) mantém-se e ganha os aliases que as páginas esperam (`iam.users.manage`);
+`manage` dá `read`, `read` nunca dá `manage`; nunca se produz `platform.*`. Só conveniência: o servidor decide. **Mocks.** Os
+gateways mock de identidade e tenants passaram a duplos de teste (`core/testing`) e já não são fornecidos pela aplicação. Continuam
+mock no caminho real: entidades dinâmicas, campos personalizados e registos (sem backend para C10–C15), a administração da
+plataforma e, **provisoriamente, módulos/subscrição/feature flags do contexto** (`provisional-entitlements.ts`: todos os módulos do
+catálogo contratados e activos; só as permissões do servidor limitam o acesso) até existirem C02/C03. O administrador global
+(plataforma) não existe no backend: nenhuma conta tem `platform.*`.
 
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver

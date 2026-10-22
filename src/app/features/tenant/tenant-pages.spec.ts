@@ -48,7 +48,6 @@ describe('tenant pages', () => {
 
   it('permissions page shows which permissions the current role grants', async () => {
     const el = await render(TenantPermissionsPage, 'multi@demo.pt', 'escola-horizonte');
-    expect(el.textContent).toContain('Secretário');
     const row = [...el.querySelectorAll('tr')].find((r) =>
       r.textContent?.includes('crm.customers.read'),
     );

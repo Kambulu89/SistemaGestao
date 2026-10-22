@@ -60,7 +60,7 @@ isolamento por tenant e testes negativos com dois tenants.
 | 1.5 | ✅ **Organização** (C07; feita — ver secção 2.5) | 1.4 | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas |
 | 1.6 | ✅ **Convites e membros** (C05 parte 2; feita — ver secção 2.6) | 1.4, 1.5 | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências |
 | 1.7 | ✅ **Party** (C08; feita — ver secção 2.7) | 1.5 | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). *Item da spec F1 que não constava do pedido: confirmar se entra nesta fase.* |
-| 1.8 | **Frontend real** | 1.2–1.6 | adaptadores HTTP para auth/tenant/contexto/membros/papéis/organização; remover os mocks correspondentes; mapeamento de permissões (D-014); selector de tenant que cancela pedidos e limpa caches; sessão em cookie |
+| 1.8 | ✅ **Frontend real** (feita parcialmente — ver secção 2.9) | 1.2–1.6 | adaptadores HTTP para auth/tenant/contexto/membros/papéis/organização; remover os mocks correspondentes; mapeamento de permissões (D-014); selector de tenant que cancela pedidos e limpa caches; sessão em cookie |
 | 1.9 | ✅ **Matriz de isolamento** (feita — ver secção 2.8) | todas | dois tenants de demonstração + utilizadores com papéis distintos; testes negativos (abaixo) em CI |
 
 ### 2.1 Fatia 1.1 — concluída
@@ -109,7 +109,7 @@ com cookie e `401` indistinguível, sem a palavra-passe no log.
 - "Tenant suspenso bloqueia operações" e a troca de tenant ficaram cobertos na fatia 1.3 (2.3); aqui só estava testada
   a máquina de estados. Não há API HTTP de plataforma para tenants (apenas comandos).
 - Tabelas globais de identidade sem RLS (D-022). `ProvisioningStep` adiado. MFA/SSO fora.
-- Frontend não ligado (fatia 1.8); o `sessionStorage` do mock mantém-se até lá.
+- Frontend ligado na fatia 1.8 (2.9): a sessão já é só cookie `HttpOnly`.
 - Teste de "cookies/segredos fora dos logs" cobre a configuração de redacção (unit) e uma verificação manual do log do
   servidor compilado; não há teste automático que capture os logs de um pedido real.
 
@@ -299,9 +299,46 @@ na CI (`.github/workflows/ci.yml`). Nenhuma alteração ao código de produção
 - A matriz exercita a API HTTP e a base; não inclui o frontend (fatia 1.8).
 - Não houve execução da CI no GitHub (continua por executar); os mesmos comandos correm localmente.
 
+### 2.9 Fatia 1.8 — concluída (parcialmente: ver limites)
+**Entregue (frontend `src/`):** `HttpAuthGateway` e `HttpTenantGateway` (login, logout, restauro de sessão por `GET /me`,
+recuperação e nova palavra-passe, organizações do utilizador, contexto do tenant); sessão **só em cookie `HttpOnly`** + CSRF em
+memória; `ApiService` que desembrulha o envelope; interceptores de credenciais/CSRF/selector de tenant, de cancelamento na troca de
+tenant e de erros (envelope, `Retry-After`, 401); `mapBackendPermissions` (D-014); `TENANT_SCOPE_RESETTERS`; páginas reais de
+**Utilizadores** (membros, estados, convidar/revogar, último administrador), **Organização** (árvore de unidades, criar, inactivar,
+409/422 nos campos), **Permissões** (perfis do servidor), **Reset de palavra-passe** e **Aceitar convite**; login com 429 e sem
+palavra-passe pré-preenchida; os mocks de identidade/tenants passaram a duplos de teste. ADR D-028.
+
+**Evidência (executada):** `ng test` **647 testes a passar** (eram 582; +65): gateways HTTP, interceptores (cookie, CSRF só em
+escritas, selector só em rotas de tenant e nunca em `/auth/*`, cancelamento na troca de tenant e no logout, envelope de erros,
+`Retry-After`, 401 sem laço), `AuthService` (nada em storage, restauro, logout emite o pedido antes de limpar o CSRF), tradução de
+permissões, `TenantContextService` (resetters, `switched$`, `refreshMemberships`), `tenantGuard` com tenant recusado, e as páginas
+(sucesso, vazio, erro, 409 `LAST_ADMIN`/`VERSION_CONFLICT`/código repetido, erros por campo, permissões que escondem acções, recarga
+ao trocar de tenant). `ng lint`, `format:check`, `check:generic` e `ng build` (produção) a passar. **Verificação num browser real
+(Chromium, Playwright) contra a API real e a base de dados**, front em `localhost:4200` e API em `localhost:3333` (cross-origin com
+cookies): **26/26** verificações — login errado/certo, cookie `HttpOnly`+`SameSite=Lax` invisível a `document.cookie`, storage sem
+sessão, membros reais, convite (201), segundo convite (409), revogação, suspender o último administrador (LAST_ADMIN explicado),
+árvore de unidades, código de unidade repetido (409 no campo), criar unidade, perfis, recarregar mantém a sessão, logout (`/me` →
+401) e área do tenant a pedir login de novo, membro de dois tenants com o seu selector, membro sem perfis recusado, tenant alheio →
+sem acesso, sem erros de JavaScript. O script do E2E **não** está no repositório (usou o Playwright global do ambiente).
+
+**Por verificar / limites (a fatia NÃO elimina todos os mocks):**
+- **Ainda mock no caminho real:** entidades dinâmicas, campos personalizados e registos (C10–C15 sem backend); administração da
+  plataforma; e, provisoriamente, **módulos/subscrição/feature flags** do contexto (`provisional-entitlements.ts`). Páginas de
+  módulos de negócio (CRM, vendas…) continuam scaffolds e o servidor não concede permissões para elas.
+- Sem UI para: papéis (criar/editar/atribuir), políticas ABAC, simulação, âmbitos de acesso, Party, preferências, perfil/sessões
+  activas e alteração de palavra-passe — a API existe; as páginas ficam para a(s) próxima(s) fatia(s).
+- `roleName` e a moeda do tenant não vêm do servidor (`null`): o painel mostra-os vazios. O logout falha em silêncio no servidor se
+  a rede cair (o estado local é limpo na mesma; a sessão expira por tempo).
+- Um pedido cancelado por troca de tenant **completa sem valor** (quem usa `firstValueFrom` recebe `EmptyError`); as páginas
+  actuais usam `rxResource`, que lida com isso. Os testes E2E não cobrem a corrida de cancelamento num browser (só unitária).
+- Produção: `apiUrl: '/api/v1'` pressupõe a API atrás do mesmo domínio (proxy); sem proxy é preciso configurar `apiUrl` e
+  `CORS_ORIGINS` (com credenciais). O `Dockerfile.web.dev` e o `docker-compose` não foram ajustados nem executados.
+- A verificação visual foi feita com capturas de ecrã das páginas de utilizadores, organização, permissões e sem-acesso em 1300 px;
+  não houve verificação em ecrãs pequenos, nem de acessibilidade para além do que os componentes partilhados já cobrem.
+
 ### Critérios de aceitação da Fase 1 — estado
 Gate da spec: *"Testes negativos em dois tenants aprovados"* — **cumprido ao nível do backend** (fatia 1.9). A Fase 1 **não está
-fechada**: falta a fatia 1.8 (frontend real, sem mocks no caminho real), a auditoria das mutações críticas (Fase 2) e a UI.
+fechada**: a fatia 1.8 ligou o frontend mas ficou parcial (ver 2.9), e falta a auditoria das mutações críticas (Fase 2).
 
 | Critério | Estado | Evidência |
 | --- | --- | --- |
@@ -317,7 +354,7 @@ fechada**: falta a fatia 1.8 (frontend real, sem mocks no caminho real), a audit
 | Concorrência: convites/membership com limite de utilizadores | FEITO | `members.spec.ts` |
 | OpenAPI, regras no servidor, permissões e isolamento testados, migrations/seeds numa base limpa | FEITO | paridade OpenAPI↔rotas; migrations (8) e seeder em base limpa |
 | Auditoria das mutações críticas | PENDENTE (Fase 2) | — |
-| UI com sucesso/vazio/erro/409, sem mocks no caminho real | PENDENTE (fatia 1.8) | — |
+| UI com sucesso/vazio/erro/409, sem mocks no caminho real | PARCIAL (fatia 1.8): membros, organização, perfis e auth reais; faltam papéis/políticas/Party/âmbitos e persistem mocks do core dinâmico e da plataforma | `ng test` (647), E2E no browser (26/26) |
 
 ### Decisões a tomar antes de começar a Fase 1
 1. ~~Nomenclatura de permissões (D-014)~~ — decidida na fatia 1.4.

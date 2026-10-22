@@ -3,10 +3,13 @@ import type { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { TenantGateway } from '../tenant-context/tenant.gateway';
 import type { TenantContext, TenantMembership } from '../tenant-context/tenant.model';
-import { buildTenantContext, MOCK_MEMBERSHIPS, MOCK_TENANTS } from './mock-data';
-import { mockError, respond } from './mock-helpers';
+import { buildTenantContext, MOCK_MEMBERSHIPS, MOCK_TENANTS } from '../mock/mock-data';
+import { mockError, respond } from '../mock/mock-helpers';
 
-/** Um backend real identifica o utilizador pelo token; o mock usa a sessão local. */
+/**
+ * DUPLO DE TESTE do gateway de tenants (não faz parte da aplicação). A aplicação usa `HttpTenantGateway`.
+ * Um backend real identifica o utilizador pela sessão em cookie; o duplo usa a sessão local.
+ */
 @Injectable()
 export class MockTenantGateway extends TenantGateway {
   private readonly auth = inject(AuthService);

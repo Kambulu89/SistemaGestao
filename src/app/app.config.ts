@@ -17,7 +17,14 @@ import {
 import { routes } from './app.routes';
 import { PageTitleStrategy } from './core/config/page-title.strategy';
 import { ThemeService } from './core/config/theme.service';
+import { firstValueFrom } from 'rxjs';
+import { AuthGateway } from './core/auth/auth.gateway';
+import { AuthService } from './core/auth/auth.service';
+import { HttpAuthGateway } from './core/auth/http-auth.gateway';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { tenantScopeInterceptor } from './core/interceptors/tenant-scope.interceptor';
+import { TenantGateway } from './core/tenant-context/tenant.gateway';
+import { HttpTenantGateway } from './core/tenant-context/http-tenant.gateway';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { MODULE_MANIFESTS } from './core/modules/module-manifests.token';
 import { provideMockBackend } from './core/mock/provide-mock-backend';
@@ -33,12 +40,20 @@ export const appConfig: ApplicationConfig = {
       withComponentInputBinding(),
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
     ),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorInterceptor])),
+    provideHttpClient(
+      withFetch(),
+      withInterceptors([authInterceptor, tenantScopeInterceptor, errorInterceptor]),
+    ),
     { provide: TitleStrategy, useClass: PageTitleStrategy },
     { provide: LOCALE_ID, useValue: 'pt-PT' },
-    // Enquanto não houver backend, os contratos do core são servidos por adapters mock.
     { provide: MODULE_MANIFESTS, useValue: ALL_MODULE_MANIFESTS },
+    // Identidade e tenants são HTTP (backend real, sessão em cookie).
+    { provide: AuthGateway, useClass: HttpAuthGateway },
+    { provide: TenantGateway, useClass: HttpTenantGateway },
+    // Ainda mock: entidades dinâmicas, campos personalizados e registos (sem backend para C10–C15).
     provideMockBackend(),
+    // Recupera a sessão do cookie antes da primeira navegação (os guards já a encontram).
+    provideAppInitializer(() => firstValueFrom(inject(AuthService).restore()).catch(() => null)),
     // Instancia o tema no arranque para aplicar a classe `dark` de imediato.
     provideAppInitializer(() => {
       inject(ThemeService);

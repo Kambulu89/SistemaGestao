@@ -4,8 +4,8 @@ Plataforma SaaS **multi-tenant, modular e configurável**. Este repositório tem
 
 | Parte | Pasta | Estado |
 | --- | --- | --- |
-| Frontend (Angular 22 · Tailwind 4) | raiz (`src/`) | funcional sobre **dados mock**; é o que as secções abaixo descrevem |
-| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0**: arranque, ambiente, saúde, erros, RLS-base. Sem módulos de negócio nem autenticação real |
+| Frontend (Angular 22 · Tailwind 4) | raiz (`src/`) | ligado à API para identidade, tenants, membros, convites, organização e perfis; o resto (core dinâmico, plataforma) ainda sobre **dados mock** |
+| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0 e Fase 1 (fatias 1.1–1.9)**: tenants, autenticação, membros e convites, autorização RBAC+ABAC, organização, Party e matriz de isolamento. Sem módulos de negócio |
 
 Contrato funcional: [`docs/especificacao-v2.docx`](docs/especificacao-v2.docx). Regras permanentes: [`CLAUDE.md`](CLAUDE.md).
 Arquitectura: [`docs/architecture.md`](docs/architecture.md) · decisões: [`docs/decisions.md`](docs/decisions.md) ·
@@ -55,6 +55,10 @@ ficam na lista Redis `dev:mailbox`); não há fornecedor de email real.
 ---
 
 # Frontend
+
+> Em desenvolvimento o frontend (`ng serve`, `:4200`) fala com a API em `http://localhost:3333/api/v1` (ver
+> `src/environments/environment.development.ts`); a API tem de ter `CORS_ORIGINS=http://localhost:4200` (a sessão é um cookie
+> `HttpOnly`, enviado com `withCredentials`). Contas de demonstração: ver o seeder do backend (`DEMO_USER_PASSWORD`).
 
 Angular 22 · Tailwind CSS 4 · TypeScript estrito · Signals · RxJS · Reactive Forms · Vitest.
 
