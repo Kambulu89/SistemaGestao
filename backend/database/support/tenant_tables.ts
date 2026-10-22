@@ -111,3 +111,23 @@ export function tenantForeignKey(
 export function dropTable(migration: BaseSchema, name: string, schemaName?: string) {
   migration.schema.raw(`DROP TABLE IF EXISTS ${qualified(name, schemaName)} CASCADE`)
 }
+
+/**
+ * Liga uma tabela de tenant à auditoria: cada INSERT/UPDATE/DELETE grava uma linha imutável em
+ * `audit_logs` **na mesma transacção** (trigger `audit_row_change`). `redact` lista as colunas cujo
+ * valor nunca entra na auditoria (aparece como `[REDACTED]`): segredos, hashes e dados sensíveis.
+ * Toda a tabela de tenant tem de usar isto ou constar de `AUDIT_EXEMPT_TABLES` (verificado por teste).
+ */
+export function auditTable(migration: BaseSchema, name: string, redact: readonly string[] = []) {
+  const args = redact.map((column) => `'${column.replaceAll("'", "''")}'`).join(', ')
+  migration.schema.raw(`
+    CREATE TRIGGER ${quote(`${name}_audit`)}
+      AFTER INSERT OR UPDATE OR DELETE ON ${quote(name)}
+      FOR EACH ROW EXECUTE FUNCTION audit_row_change(${args})
+  `)
+}
+
+/** Remove a auditoria de uma tabela (usado no `down` das migrations). */
+export function unauditTable(migration: BaseSchema, name: string) {
+  migration.schema.raw(`DROP TRIGGER IF EXISTS ${quote(`${name}_audit`)} ON ${quote(name)}`)
+}

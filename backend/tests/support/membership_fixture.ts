@@ -39,7 +39,14 @@ export async function deleteTestTenants() {
   const tenants = await owner.from('tenants').where('code', 'like', 'mt\\_%').select('id')
   for (const { id } of tenants) {
     await owner.transaction(async (trx) => {
-      await trx.rawQuery("select set_config('app.tenant_id', ?, true)", [id])
+      await trx.rawQuery(
+        `select set_config('app.tenant_id', ?, true),
+                set_config('app.audit_purge', 'on', true),
+                set_config('app.audit_disabled', 'on', true)`,
+        [id]
+      )
+      // A auditoria é imutável: só a conta dona, com o interruptor de retenção, a pode apagar.
+      await trx.from('audit_logs').where('tenant_id', id).delete()
       await trx.from('tenant_memberships').where('tenant_id', id).update({ person_id: null })
       for (const table of [
         'party_relationships',
@@ -65,8 +72,27 @@ export async function deleteTestTenants() {
       await trx.from('tenant_memberships').where('tenant_id', id).delete()
     })
   }
-  await owner.rawQuery(
-    `delete from tenant_domains where tenant_id in (select id from tenants where code like 'mt\\_%')`
-  )
-  await owner.rawQuery(`delete from tenants where code like 'mt\\_%'`)
+  await deleteTenantRows('mt\\_%')
+}
+
+/**
+ * Apaga tenants de teste e o que lhes é próprio (domínios, auditoria). A auditoria é imutável: só a
+ * conta dona, com os interruptores de retenção/desactivação, a apaga.
+ */
+export async function deleteTenantRows(codePattern: string) {
+  const owner = db.connection('owner')
+  const tenants = await owner.from('tenants').where('code', 'like', codePattern).select('id')
+  for (const { id } of tenants) {
+    await owner.transaction(async (trx) => {
+      await trx.rawQuery(
+        `select set_config('app.tenant_id', ?, true), set_config('app.audit_purge', 'on', true),
+                set_config('app.audit_disabled', 'on', true)`,
+        [id]
+      )
+      await trx.from('tenant_domains').where('tenant_id', id).delete()
+      await trx.from('audit_logs').where('tenant_id', id).delete()
+      await trx.from('security_events').where('tenant_id', id).delete()
+      await trx.from('tenants').where('id', id).delete()
+    })
+  }
 }

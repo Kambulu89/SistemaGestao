@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
 import corsConfig from '#config/cors'
+import { securityEvents } from '#core/audit/index'
 import { ApiError } from '#core/http/api_error'
 import type { Principal } from '#core/auth/domain/identity'
 import { CSRF_HEADER, SESSION_COOKIE, authServices } from '#core/auth/presentation/composition'
@@ -28,6 +29,11 @@ export class OriginMiddleware {
     if (!SAFE_METHODS.has(request.method())) {
       const origin = request.header('origin')
       if (origin && !this.allowed.has(origin)) {
+        await securityEvents.record({
+          type: 'ORIGIN_REJECTED',
+          severity: 'WARN',
+          metadata: { origin, method: request.method() },
+        })
         throw new ApiError(403, 'ORIGIN_NOT_ALLOWED', 'Origem do pedido não permitida.')
       }
     }
@@ -46,6 +52,12 @@ export default class AuthMiddleware {
 
     if (!SAFE_METHODS.has(ctx.request.method())) {
       if (!services.csrf.verify(principal.session.id, ctx.request.header(CSRF_HEADER))) {
+        await securityEvents.record({
+          type: 'CSRF_REJECTED',
+          severity: 'HIGH',
+          userId: principal.user.id,
+          metadata: { method: ctx.request.method(), path: ctx.request.url() },
+        })
         throw new ApiError(403, 'CSRF_TOKEN_INVALID', 'Token CSRF em falta ou inválido.')
       }
     }

@@ -17,6 +17,8 @@ export const PLATFORM_TABLES: ReadonlySet<string> = new Set<string>([
   'public.one_time_tokens',
   // Catálogo de permissões (C06): igual para todos os tenants, semeado a partir do código
   'public.permissions',
+  // Eventos de segurança (S06): tenant_id opcional, só INSERT/SELECT; a leitura por tenant filtra no repositório
+  'public.security_events',
 ])
 
 /** Tabelas do próprio framework (registo de migrations). Não contêm dados de tenants. */

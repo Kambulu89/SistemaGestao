@@ -185,6 +185,53 @@ paths:
       responses:
         '200': { description: Lista com id, código, nome e estado do tenant. }
         '401': { $ref: '#/components/responses/Error' }
+  /me/security-events:
+    get:
+      summary: Actividade de segurança da própria conta (login, palavra-passe…)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: limit, in: query, required: false, schema: { type: integer, maximum: 100 } }
+      responses:
+        '200':
+          { description: Eventos do utilizador autenticado (sem metadados internos de outros). }
+        '401': { $ref: '#/components/responses/Error' }
+  /audit-logs:
+    get:
+      summary: Histórico de alterações do tenant (audit.read)
+      description: |
+        Só inclui recursos que o actor pode ler (RBAC) e omite, de antes/depois, os campos escondidos
+        pelas regras de campo. Segredos e campos sensíveis são redigidos na origem (`[REDACTED]`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: from, in: query, required: false, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date-time } }
+        - { name: resourceType, in: query, required: false, schema: { type: string } }
+        - { name: resourceId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: action, in: query, required: false, schema: { type: string } }
+        - {
+            name: actorMembershipId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - { name: limit, in: query, required: false, schema: { type: integer, maximum: 100 } }
+        - { name: offset, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200': { description: Entradas por ordem decrescente de data. }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /security-events:
+    get:
+      summary: Eventos de segurança do tenant (audit.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: limit, in: query, required: false, schema: { type: integer, maximum: 100 } }
+        - { name: offset, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200': { description: Eventos com tenant_id igual ao do contexto. }
+        '403': { $ref: '#/components/responses/Error' }
   /context:
     get:
       summary: Contexto do tenant seleccionado

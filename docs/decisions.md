@@ -258,6 +258,29 @@ plataforma e, **provisoriamente, módulos/subscrição/feature flags do contexto
 catálogo contratados e activos; só as permissões do servidor limitam o acesso) até existirem C02/C03. O administrador global
 (plataforma) não existe no backend: nenhuma conta tem `platform.*`.
 
+## D-029 Auditoria mínima: triggers na base, `audit_logs` imutável e `security_events` (aceite — fatia 2.1)
+**Onde se audita.** A alteração é registada por *triggers* `AFTER INSERT/UPDATE/DELETE` (`audit_row_change`, `SECURITY DEFINER`)
+na **mesma transacção** da mudança: não há caminho de escrita que a esqueça, e uma falha ao auditar desfaz a operação. O actor
+vem de GUCs definidos por `LucidTenantDatabase.run()` junto com o tenant (`app.actor_type/user_id/membership_id`,
+`app.correlation_id`, `app.client_ip`; `app.audit_reason` opcional). A entrada guarda `before_data`/`after_data` (linha completa)
+e a acção `<tabela>.<INSERT|UPDATE|DELETE>`. **Imutabilidade.** `audit_logs` tem um trigger que recusa `UPDATE/DELETE` e a
+conta de runtime só tem `SELECT` (nem `INSERT`: só o trigger escreve); a retenção/expurgo é uma operação da conta `owner` com
+`app.audit_purge`, e `app.audit_disabled` (migrations/fixtures) — ambos só valem numa sessão dona (`audit_is_owner_session()`),
+por isso a aplicação não os consegue activar. **Redacção.** Colunas sensíveis por tabela são substituídas por `[REDACTED]` no
+trigger (`invitations.token_hash`; em `people`: data de nascimento, nacionalidade, identificação); metadados montados pela
+aplicação passam por `redactSecrets`. **Cobertura.** Um teste de conformidade exige trigger de auditoria em toda a tabela de
+tenant ou isenção justificada em `AUDIT_EXEMPT_TABLES` (`audit_logs`, `user_preferences`). Tabelas escritas fora de contexto de
+tenant (`tenant_domains`) também são auditadas: o trigger fixa o tenant da linha só durante o `INSERT`. **Leitura.** `GET
+/audit-logs` exige `audit.read` e **além disso** só devolve recursos que o actor pode ler (`AUDIT_READ_PERMISSION`; recurso sem
+mapeamento nega por omissão) e retira de antes/depois os campos escondidos pelas regras de campo. **Eventos de segurança.**
+`security_events` é global (`tenant_id` nulo quando não há tenant fiável): a aplicação regista login (sucesso, falha, limite),
+logout, recuperação, CSRF/origem rejeitados, tenant recusado e permissão negada — sem emails nem palavras-passe tentadas;
+os triggers `audit_global_change` registam criação/alteração de estado de contas e tenants e mudança de palavra-passe (sem
+valores). O utilizador vê os seus (`GET /me/security-events`); o tenant vê os do seu `tenant_id` com `audit.read`.
+**Limites conhecidos.** Sem cadeia de hash/assinatura das entradas, sem exportação nem política de retenção automática (o
+expurgo é manual pela conta dona), sem auditoria de leituras nem de MFA/SSO (não existem), `user_preferences` isenta, e o IP vem
+de `request.ip()` sem proxy de confiança configurado.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

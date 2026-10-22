@@ -48,6 +48,11 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     moduleCode: 'party',
     description: 'Alterar pessoas, contactos, moradas e relações.',
   },
+  {
+    code: 'audit.read',
+    moduleCode: 'audit',
+    description: 'Ver o histórico de auditoria e os eventos de segurança.',
+  },
 ]
 
 const CODE = /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/

@@ -1,5 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
+import { securityEvents } from '#core/audit/index'
+import { ApiError } from '#core/http/api_error'
 import { tenantContextStore, type TenantContext } from '#core/tenancy/index'
 import type { Membership } from '#core/membership/index'
 import type { Tenant } from '#platform/tenants/domain/tenant'
@@ -22,15 +24,29 @@ declare module '@adonisjs/core/http' {
 export default class TenantMiddleware {
   async handle(ctx: HttpContext, next: NextFn) {
     const { request, principal } = ctx
-    const resolved = await tenantServices().resolveTenantContext.execute({
-      user: principal.user,
-      correlationId: ctx.correlationId,
-      selector: {
-        tenantId: request.header('x-tenant-id'),
-        tenantCode: request.header('x-tenant-code'),
-        host: request.header('host'),
-      },
-    })
+    let resolved
+    try {
+      resolved = await tenantServices().resolveTenantContext.execute({
+        user: principal.user,
+        correlationId: ctx.correlationId,
+        selector: {
+          tenantId: request.header('x-tenant-id'),
+          tenantCode: request.header('x-tenant-code'),
+          host: request.header('host'),
+        },
+      })
+    } catch (error) {
+      // Sem tenant_id: o evento é global (o selector pode ser alheio e não prova nada).
+      if (error instanceof ApiError && error.status === 403) {
+        await securityEvents.record({
+          type: 'TENANT_ACCESS_DENIED',
+          severity: 'WARN',
+          userId: principal.user.id,
+          metadata: { path: request.url() },
+        })
+      }
+      throw error
+    }
 
     ctx.tenantContext = resolved.context
     ctx.tenant = resolved.tenant

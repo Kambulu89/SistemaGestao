@@ -2,13 +2,13 @@
 
 Fases da especificação (§11) com estado real. Cada fase entrega **fatias verticais** (migration, domínio, API, UI,
 autorização, auditoria, testes). Uma fase só passa quando as verificações aplicáveis correram e a documentação foi
-actualizada. Estado actualizado em: Fase 0.
+actualizada. Estado actualizado em: Fase 2, fatia 2.1.
 
 | Fase | Âmbito (spec) | Estado |
 | --- | --- | --- |
 | **F0** Preparação | repositório, versões, Docker, CI, estrutura modular, ADRs | **Concluída** (com 2 verificações por executar — ver abaixo) |
 | **F1** Fundação | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party | **Próxima** (detalhada na secção 2) |
-| F2 SaaS | C02, C03, C09, auditoria mínima S06 | Não iniciada |
+| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatia 2.1 (auditoria) concluída; 2.2–2.5 por fazer (ver secção 2b) |
 | F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | Não iniciada (existem contratos/motores no frontend — ver `architecture.md` §7) |
 | F4 Operação comercial | M01–M08, S01 | Não iniciada |
 | F5 Gestão empresarial | M09–M14, S02–S03 | Não iniciada |
@@ -338,7 +338,7 @@ sem acesso, sem erros de JavaScript. O script do E2E **não** está no repositó
 
 ### Critérios de aceitação da Fase 1 — estado
 Gate da spec: *"Testes negativos em dois tenants aprovados"* — **cumprido ao nível do backend** (fatia 1.9). A Fase 1 **não está
-fechada**: a fatia 1.8 ligou o frontend mas ficou parcial (ver 2.9), e falta a auditoria das mutações críticas (Fase 2).
+fechada**: a fatia 1.8 ligou o frontend mas ficou parcial (ver 2.9), a auditoria das mutações críticas foi entregue na fatia 2.1.
 
 | Critério | Estado | Evidência |
 | --- | --- | --- |
@@ -353,7 +353,7 @@ fechada**: a fatia 1.8 ligou o frontend mas ficou parcial (ver 2.9), e falta a a
 | C08 fornecedor sem Person; pessoa cliente e colaborador sem duplicar contactos | PARCIAL (Customer/Employee não existem) | `party.spec.ts` |
 | Concorrência: convites/membership com limite de utilizadores | FEITO | `members.spec.ts` |
 | OpenAPI, regras no servidor, permissões e isolamento testados, migrations/seeds numa base limpa | FEITO | paridade OpenAPI↔rotas; migrations (8) e seeder em base limpa |
-| Auditoria das mutações críticas | PENDENTE (Fase 2) | — |
+| Auditoria das mutações críticas | FEITO (fatia 2.1) | `audit.spec.ts`, matriz de isolamento, D-029 |
 | UI com sucesso/vazio/erro/409, sem mocks no caminho real | PARCIAL (fatia 1.8): membros, organização, perfis e auth reais; faltam papéis/políticas/Party/âmbitos e persistem mocks do core dinâmico e da plataforma | `ng test` (647), E2E no browser (26/26) |
 
 ### Decisões a tomar antes de começar a Fase 1
@@ -362,6 +362,30 @@ fechada**: a fatia 1.8 ligou o frontend mas ficou parcial (ver 2.9), e falta a a
 3. ~~Mecanismo de hash e de rate limit~~ — decidido na fatia 1.2 (D-019/D-020); MFA fora da Fase 1.
 4. ~~Ferramenta OpenAPI~~ — ficheiro `backend/openapi/openapi.yaml` mantido à mão + teste de paridade com as rotas (fatia 1.2); rever se for preferível gerar.
 5. Primeiros dois tenants de demonstração (nomes, países/moeda) — parâmetros identificados como demonstração.
+
+## 2b. Fase 2 — SaaS (em curso)
+Sem decomposição prévia no plano; proposta (uma fatia de cada vez, ordem sujeita a confirmação):
+
+| Fatia | Âmbito | Estado |
+| --- | --- | --- |
+| 2.1 | Auditoria mínima (S06): `audit_logs` imutável por triggers, `security_events`, consulta com RBAC e regras de campo | **Concluída** |
+| 2.2 | C02 planos, assinaturas e limites (substitui a quota provisória de convites e os entitlements provisórios do frontend) | Por fazer |
+| 2.3 | C03 registo de módulos e funcionalidades por tenant | Por fazer |
+| 2.4 | C09 configurações, impostos e sequências (numeração sem lacunas e concorrente) | Por fazer |
+| 2.5 | API de administração da plataforma (C01/C02) e fecho dos mocks restantes do frontend | Por fazer |
+
+### 2b.1 Fatia 2.1 — concluída
+**Entregue** (ver D-029): migration `create_audit` (`audit_logs` tenant + imutável; `security_events` global; funções e triggers de
+auditoria sobre 18 tabelas de tenant e de mudança em `users`/`tenants`), `auditTable` nos helpers de migration, GUCs de actor em
+`LucidTenantDatabase.run()`, módulo `core/audit` (redacção, registo de eventos, consulta), permissão `audit.read`, rotas
+`GET /audit-logs`, `GET /security-events`, `GET /me/security-events`, eventos de segurança no login/logout/recuperação e nos
+middlewares (origem, CSRF, tenant, permissão), OpenAPI actualizado.
+**Evidência:** 242 testes no backend (novos: `audit.spec.ts` — actor/correlação/antes-depois, redacção de sensíveis, filtros e
+validação, permissão por recurso, regras de campo, isolamento entre tenants, imutabilidade (dona e runtime), eventos de
+segurança, conformidade do esquema; `audit_redaction.spec.ts`; matriz de isolamento com `audit_logs` só-leitura para o runtime).
+**Limites / por verificar:** sem UI de auditoria (frontend não alterado); sem hash encadeado, exportação nem retenção automática;
+auditoria de leitura inexistente; MFA/SSO não existem; desempenho dos triggers em escrita intensiva não medido; o
+`security_events` do utilizador mostra IP apenas nos metadados dos eventos de login.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

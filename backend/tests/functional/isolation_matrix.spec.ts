@@ -498,6 +498,7 @@ test.group('matriz de isolamento', (group) => {
       'get /me/sessions',
       'delete /me/sessions/{id}',
       'post /me/password',
+      'get /me/security-events',
       'get /me/tenants',
       'post /invitations/accept',
     ])
@@ -729,6 +730,21 @@ test.group('matriz de isolamento', (group) => {
         0,
         `${table}: A não vê linhas de B`
       )
+
+      if (table === 'audit_logs') {
+        // Imutável: a conta de runtime nem sequer tem privilégios de escrita (mais forte do que a RLS).
+        for (const sql of [
+          `delete from ${table} where tenant_id = '${a.tenant.id}'`,
+          `update ${table} set reason = 'x' where tenant_id = '${a.tenant.id}'`,
+          `insert into ${table} (tenant_id, action, resource_type, actor_type) values ('${a.tenant.id}', 'X', 'x', 'USER')`,
+        ]) {
+          const denied = await capture(() =>
+            asTenant('runtime', a.tenant.id, (t) => t.rawQuery(sql))
+          )
+          assert.match(denied.message, /permission denied/, `${table}: ${sql.split(' ')[0]}`)
+        }
+        continue
+      }
 
       // Não consegue apagar nem mudar linhas de B, nem passar as suas para B (WITH CHECK).
       const deleted = await asTenant('runtime', a.tenant.id, (trx) =>

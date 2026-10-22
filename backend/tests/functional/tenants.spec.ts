@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
+import { deleteTenantRows } from '#tests/support/membership_fixture'
 import { capture } from '#tests/support/capture'
 import { ApiError } from '#core/http/api_error'
 import {
@@ -14,13 +15,7 @@ const store = new LucidTenantStore()
 let counter = 0
 const code = () => `t_${process.pid}_${Date.now()}_${counter++}`
 
-async function cleanup() {
-  const owner = db.connection('owner')
-  await owner.rawQuery(
-    `delete from tenant_domains where tenant_id in (select id from tenants where code like 't\\_%')`
-  )
-  await owner.rawQuery(`delete from tenants where code like 't\\_%'`)
-}
+const cleanup = () => deleteTenantRows('t\\_%')
 
 test.group('tenants | plano de controlo', (group) => {
   group.each.setup(() => cleanup)

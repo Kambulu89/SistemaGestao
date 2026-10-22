@@ -19,6 +19,7 @@ const OrganizationController = () =>
 const MembersController = () => import('#core/members/presentation/members_controller')
 const InvitationsController = () => import('#platform/tenants/presentation/invitations_controller')
 const PartyController = () => import('#core/party/presentation/party_controller')
+const AuditController = () => import('#core/audit/presentation/audit_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
 
 router
@@ -44,6 +45,7 @@ router
         router.delete('/me/sessions/:id', [MeController, 'revokeSession'])
         router.post('/me/password', [MeController, 'changePassword'])
         router.get('/me/tenants', [ContextController, 'myTenants'])
+        router.get('/me/security-events', [AuditController, 'myEvents'])
         router.post('/invitations/accept', [InvitationsController, 'accept'])
       })
       .use(middleware.auth())
@@ -198,3 +200,17 @@ router
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/** Auditoria (S06): histórico de alterações e eventos de segurança do tenant, com `audit.read`. */
+router
+  .group(() => {
+    router.get('/audit-logs', [AuditController, 'list'])
+    router.get('/security-events', [AuditController, 'securityEvents'])
+  })
+  .prefix('/api/v1')
+  .use([
+    middleware.origin(),
+    middleware.auth(),
+    middleware.tenant(),
+    middleware.can({ permission: 'audit.read' }),
+  ])

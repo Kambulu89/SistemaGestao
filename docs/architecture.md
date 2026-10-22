@@ -160,6 +160,9 @@ Convenções de UUID/decimais/datas/erros/transacções ficam aqui, não repetid
 - Testado (ver `backend/tests/functional/database.spec.ts`): a conta de runtime não é superuser nem `BYPASSRLS`, não
   altera a estrutura, não lê o registo de migrations; `set_config(..., true)` só vale dentro da transacção e **uma
   ligação reutilizada entre tenants não herda o contexto anterior**.
+- **Auditoria (D-029):** triggers `AFTER` escrevem `audit_logs` na mesma transacção (actor, correlação e IP vêm de GUCs
+  definidos por `LucidTenantDatabase.run()`); a tabela é imutável (trigger + a conta de runtime só faz `SELECT`); só a conta
+  `owner` expurga. `security_events` é global. Todo o tenant-table tem trigger ou isenção justificada (teste de conformidade).
 - Política de eliminação (spec §9.1): `RESTRICT` em documentos, movimentos, pessoas com histórico e configurações
   publicadas; `CASCADE` só em filhos de rascunhos e tabelas de ligação sem história.
 
@@ -210,6 +213,7 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 | C06 Papéis, permissões, políticas | PARCIAL (fatia 1.4: catálogo, papéis, atribuições com validade, políticas ABAC por AST, regras de campo, simulação; âmbito por unidade nas decisões (1.5); **sem** filtro de linhas, cache nem auditoria) | PARCIAL (perfis do servidor listados; permissões do servidor traduzidas; sem editor de papéis/políticas) |
 | C07 Organizações, unidades, centros de custo | PARCIAL (fatia 1.5: organizações, árvore de unidades sem ciclos e do mesmo pai-organização, centros de custo, equipas, `MembershipScope`; **sem** preview de impacto, regra de documentos nem moeda-base bloqueada por lançamentos) | PARCIAL (organização e árvore de unidades: listar, criar, inactivar; sem centros de custo, equipas nem âmbitos) |
 | C08 Pessoas, organizações externas, contactos | PARCIAL (fatia 1.7: Party/Person/OrganizationParty, contactos, moradas, relações, aviso de duplicados, campos sensíveis por regras de campo, ligação a membership; **sem** fusão assistida nem auditoria) | AUSENTE |
+| S06 Auditoria mínima | PARCIAL (fatia 2.1: `audit_logs` imutável por triggers com actor/correlação, `security_events`, consulta com RBAC e regras de campo; **sem** hash encadeado, exportação, retenção automática nem UI) | AUSENTE |
 | C09 Configurações, impostos, sequências | AUSENTE | AUSENTE |
 | C10 Metadados, entidades dinâmicas, campos | AUSENTE | PARCIAL/MOCK (contratos e motores no cliente; persistência mock) |
 | C11 Formulários | AUSENTE | PARCIAL (contratos, motores e integridade; sem Form Builder visual) |

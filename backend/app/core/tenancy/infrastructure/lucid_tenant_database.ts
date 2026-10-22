@@ -1,4 +1,5 @@
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+import { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
 import type { TenantScope, TenantUnitOfWork } from '#core/tenancy/application/tenant_unit_of_work'
 import { MissingTenantContextError, type TenantContext } from '#core/tenancy/domain/tenant_context'
@@ -33,7 +34,23 @@ export class LucidTenantDatabase implements TenantUnitOfWork {
     if (!resolved) throw new MissingTenantContextError()
 
     return db.connection(this.connection).transaction(async (trx) => {
-      await trx.rawQuery("select set_config('app.tenant_id', ?, true)", [resolved.tenantId])
+      // Tenant (RLS) e actor/correlação/IP (auditoria): variáveis locais à transacção, nunca do pool.
+      await trx.rawQuery(
+        `select set_config('app.tenant_id', ?, true),
+                set_config('app.actor_type', ?, true),
+                set_config('app.actor_user_id', ?, true),
+                set_config('app.actor_membership_id', ?, true),
+                set_config('app.correlation_id', ?, true),
+                set_config('app.client_ip', ?, true)`,
+        [
+          resolved.tenantId,
+          resolved.actorType,
+          resolved.userId ?? '',
+          resolved.membershipId ?? '',
+          resolved.correlationId,
+          HttpContext.get()?.request.ip() ?? '',
+        ]
+      )
       return fn(new LucidTenantScope(resolved, trx))
     })
   }
