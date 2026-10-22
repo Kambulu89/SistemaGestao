@@ -38,7 +38,7 @@ export default class ContextController {
       unitScope: tenantContext.unitScope,
       permissions,
       // Só conveniência para a interface; cada comando volta a ser verificado no servidor.
-      modules: modules.filter((m) => m.status === 'ENABLED').map((m) => m.code),
+      modules: modules.filter((m) => m.status === 'ENABLED' && m.licensed).map((m) => m.code),
       features: modules
         .flatMap((m) => m.features)
         .filter((f) => f.enabled)

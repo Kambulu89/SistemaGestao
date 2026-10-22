@@ -21,7 +21,16 @@ export const TENANT_ROUTES: Routes = [
     pathMatch: 'full',
     title: 'Módulos',
     data: { breadcrumb: 'Módulos' },
+    canActivate: [requirePermission(TENANT_PERMISSIONS.modulesRead)],
     loadComponent: () => import('./modules/tenant-modules-page').then((m) => m.TenantModulesPage),
+  },
+  {
+    path: 'plan',
+    pathMatch: 'full',
+    title: 'Plano',
+    data: { breadcrumb: 'Plano' },
+    canActivate: [requirePermission(TENANT_PERMISSIONS.planRead)],
+    loadComponent: () => import('./plan/tenant-plan-page').then((m) => m.TenantPlanPage),
   },
   {
     path: 'organization',

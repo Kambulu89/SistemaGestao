@@ -34,6 +34,13 @@ export class AuthorizePlatform {
     const grants = await this.grants.forUser(userId)
     return grants.some((g) => g.permission === permission && grantActive(g, now))
   }
+
+  /** Permissões de plataforma em vigor (para a interface; o servidor volta a verificar cada rota). */
+  async permissionsOf(userId: string): Promise<PlatformPermission[]> {
+    const now = this.clock.now()
+    const grants = await this.grants.forUser(userId)
+    return [...new Set(grants.filter((g) => grantActive(g, now)).map((g) => g.permission))].sort()
+  }
 }
 
 export class GrantPlatformPermission {

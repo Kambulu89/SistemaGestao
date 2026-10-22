@@ -300,6 +300,8 @@ router
  */
 router
   .group(() => {
+    router.get('/me', [PlatformController, 'me'])
+
     router
       .group(() => {
         router.get('/tenants', [PlatformController, 'listTenants'])

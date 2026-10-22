@@ -505,6 +505,7 @@ test.group('matriz de isolamento', (group) => {
       'get /me/tenants',
       'post /invitations/accept',
       // Administração da plataforma: sem selector de tenant (política própria `platform.*`; testada em platform.spec.ts)
+      'get /platform/me',
       'get /platform/tenants',
       'post /platform/tenants',
       'get /platform/tenants/{id}',

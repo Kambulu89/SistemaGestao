@@ -39,6 +39,7 @@ describe('HttpAuthGateway', () => {
         expiresAt: '2026-10-23T00:00:00.000Z',
       }),
     );
+    http.expectOne(`${API}/platform/me`).flush(envelope({ permissions: [] }));
     expect(await promise).toEqual({
       user: { id: 'u1', name: 'Ana Silva', email: 'ana@exemplo.pt', platformPermissions: [] },
       csrfToken: 'csrf',
@@ -55,7 +56,49 @@ describe('HttpAuthGateway', () => {
         session: { id: 's', expiresAt: '2026-10-23T00:00:00.000Z' },
       }),
     );
-    expect((await promise)?.csrfToken).toBe('csrf');
+    http.expectOne(`${API}/platform/me`).flush(envelope({ permissions: [] }));
+    const session = await promise;
+    expect(session?.csrfToken).toBe('csrf');
+    expect(session?.user.platformPermissions).toEqual([]);
+  });
+
+  it('translates the platform grants of the account (and nothing else) into UI permissions', async () => {
+    const promise = firstValueFrom(gateway.restore());
+    http.expectOne(`${API}/me`).flush(
+      envelope({
+        user: { id: 'u1', email: 'root@b.pt', displayName: 'Root' },
+        csrfToken: 'csrf',
+        session: { id: 's', expiresAt: '2026-10-23T00:00:00.000Z' },
+      }),
+    );
+    http
+      .expectOne(`${API}/platform/me`)
+      .flush(envelope({ permissions: ['platform.billing.manage'] }));
+    const permissions = (await promise)?.user.platformPermissions ?? [];
+    expect(permissions).toEqual(
+      expect.arrayContaining([
+        'platform.access',
+        'platform.billing.manage',
+        'platform.plans.read',
+        'platform.subscriptions.read',
+      ]),
+    );
+    // Só a concessão pedida: nada de gerir tenants nem de configurações de plataforma.
+    expect(permissions).not.toContain('platform.tenant.manage');
+    expect(permissions).not.toContain('platform.tenants.read');
+  });
+
+  it('treats a failing platform/me as "not a platform admin" without breaking the session', async () => {
+    const promise = firstValueFrom(gateway.restore());
+    http.expectOne(`${API}/me`).flush(
+      envelope({
+        user: { id: 'u1', email: 'a@b.pt', displayName: 'A' },
+        csrfToken: 'csrf',
+        session: { id: 's', expiresAt: '2026-10-23T00:00:00.000Z' },
+      }),
+    );
+    http.expectOne(`${API}/platform/me`).flush({}, { status: 500, statusText: 'x' });
+    expect((await promise)?.user.platformPermissions).toEqual([]);
   });
 
   it('treats a 401 on restore as "no session"', async () => {

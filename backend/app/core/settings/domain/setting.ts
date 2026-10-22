@@ -163,11 +163,14 @@ export interface ResolutionContext {
 }
 
 export type ValueSource =
-  { level: 'DEFAULT' } | { level: SettingScope; scopeId: string | null; moduleCode: string | null }
+  | { level: 'DEFAULT' }
+  | { level: SettingScope; scopeId: string | null; moduleCode: string | null; version: number }
 
 export interface EffectiveSetting {
   key: string
   category: SettingDefinition['category']
+  description: string
+  spec: ValueSpec
   value: unknown
   source: ValueSource
   allowedScopes: readonly SettingScope[]
@@ -210,6 +213,8 @@ export function resolveEffective(
   let result: EffectiveSetting = {
     key: definition.key,
     category: definition.category,
+    description: definition.description,
+    spec: definition.spec,
     value: definition.defaultValue,
     source: { level: 'DEFAULT' },
     allowedScopes: definition.allowedScopes,
@@ -227,7 +232,12 @@ export function resolveEffective(
       result = {
         ...result,
         value: hit.value,
-        source: { level: ref.scopeType, scopeId: ref.scopeId, moduleCode: ref.moduleCode },
+        source: {
+          level: ref.scopeType,
+          scopeId: ref.scopeId,
+          moduleCode: ref.moduleCode,
+          version: hit.version,
+        },
       }
     }
   }

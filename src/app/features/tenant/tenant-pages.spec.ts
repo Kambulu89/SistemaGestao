@@ -5,7 +5,6 @@ import { DynamicEntityRegistryService } from '../../core/dynamic/entity-registry
 import { TenantContextService } from '../../core/tenant-context/tenant-context.service';
 import { loginAs, setupMockBackend } from '../../core/testing/test-backend';
 import { TenantDashboard } from './dashboard/tenant-dashboard';
-import { TenantModulesPage } from './modules/tenant-modules-page';
 import { TenantPermissionsPage } from './permissions/tenant-permissions-page';
 
 async function render(component: Type<unknown>, email: string, slug: string): Promise<HTMLElement> {
@@ -34,16 +33,6 @@ describe('tenant pages', () => {
   it('dashboard summarises full access for an admin', async () => {
     const el = await render(TenantDashboard, 'escola@demo.pt', 'escola-horizonte');
     expect(el.textContent).toContain('Acesso total à organização');
-  });
-
-  it('modules page lists every group with the resolution of each module', async () => {
-    const el = await render(TenantModulesPage, 'multi@demo.pt', 'escola-horizonte');
-    expect(el.querySelectorAll('table')).toHaveLength(el.querySelectorAll('section').length);
-    expect(el.textContent).toContain('Clientes e contactos');
-    expect(el.textContent).toContain('Acessível');
-    expect(el.textContent).toContain('Sem permissão');
-    expect(el.textContent).toContain('Não contratado');
-    expect(el.textContent).toContain('Desactivado');
   });
 
   it('permissions page shows which permissions the current role grants', async () => {

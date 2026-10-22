@@ -372,6 +372,26 @@ existe: D-019), suporte excepcional com acesso limitado no tempo a dados de um t
 implementado, por isso o suporte **não** tem acesso), fecho de tenant com exportação/retenção, `ProvisioningStep` persistido (o estado deriva das
 próprias entidades), domínio personalizado no provisionamento, e a UI de plataforma.
 
+## D-034 Frontend da Fase 2 ligado à API: sem direitos provisórios, plataforma real e convenção de nomes (aceite)
+**Fim dos direitos provisórios.** `provisional-entitlements.ts` foi removido. O contexto do tenant vem do servidor: `GET /context` devolve os
+módulos do registo **activos e licenciados** e as funcionalidades efectivas (licença AND módulo activo AND funcionalidade ligada); quem tem
+`subscription.read` vê também o plano e o consumo (`GET /tenant/subscription`). Sem módulos de negócio no registo, nenhum módulo de negócio
+fica acessível no frontend: é o estado real (D-031), não um defeito. **Convenção de nomes (código ↔ registo).** O módulo do registo é o
+primeiro segmento do código do manifesto do frontend (`crm.customers` pertence ao módulo `crm`) e a funcionalidade `import` desse manifesto
+chama-se `crm.customers.import` no registo (que exige o prefixo do módulo). Um módulo novo do backend só precisa de seguir este nome. **Plataforma.**
+`GET /platform/me` devolve as concessões `platform.*` da conta (a ligação do frontend não faz parte do `core` de autenticação, que não pode
+depender da plataforma); o frontend traduz-as para as suas chaves (`mapPlatformPermissions`) só para navegação — o servidor volta a verificar
+cada rota. Um falhanço de `platform/me` trata a conta como não sendo da plataforma. Os pedidos `/platform/*` nunca levam `X-Tenant-Id`. A área de
+plataforma tem: painel (contagens reais e indicadores do catálogo do código), tenants (provisionar, ver passos, suspender/reactivar com
+motivo), planos (criar revisão, publicar, retirar) e subscrições (ver plano/consumo/histórico, atribuir, mudar de plano com adequação, mudar estado).
+A página «Configurações da plataforma» (sem backend) foi removida. **Tenant.** Novas páginas: Plano (versão contratada, consumo, bloqueios,
+adequação, histórico) e Módulos (registo real: licença, dependências em falta, activar com dependências, desactivar sem apagar dados,
+overrides de funcionalidades); «Configurações» passou a ter Preferências (valor efectivo e origem, preferência pessoal, repor herança),
+Impostos, Unidades (com conversão) e Sequências (com pré-visualização sem consumir número). Preços, taxas e números atravessam o
+frontend como **strings**. Um diálogo cujo estado de carga fecha o `<dialog>` nativo emite `closed`: o estado de carga não pode controlar `open`.
+**Fora desta fatia:** configurações por filial/módulo na interface (a API suporta), ligação a `Party`/papéis/políticas (Fase 1, por fazer), UI de
+auditoria, e activação de módulos de negócio reais (não existem).
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

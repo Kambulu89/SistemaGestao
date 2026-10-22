@@ -62,6 +62,9 @@ test.group('configurações | API', (group) => {
 
     assert.strictEqual((await level()).source.level, 'DEFAULT')
     assert.strictEqual((await level()).value, 'dd/MM/yyyy')
+    // A definição vem com o texto e as opções permitidas (a interface não as replica).
+    assert.isString((await level()).description)
+    assert.deepEqual((await level()).spec.options, ['dd/MM/yyyy', 'yyyy-MM-dd', 'MM/dd/yyyy'])
 
     const put = (body: Record<string, unknown>) => http.put(`/api/v1/settings/${key}`, body)
     ;(await put({ scopeType: 'TENANT', value: 'yyyy-MM-dd' })).assertStatus(200)
@@ -73,6 +76,7 @@ test.group('configurações | API', (group) => {
       level: 'ORGANIZATION',
       scopeId: org.id,
       moduleCode: null,
+      version: 1,
     })
     ;(await put({ scopeType: 'BRANCH', scopeId: branch.id, value: 'dd/MM/yyyy' })).assertStatus(200)
     assert.strictEqual((await level()).source.level, 'BRANCH')
@@ -89,7 +93,12 @@ test.group('configurações | API', (group) => {
       })
     ).assertStatus(200)
     const combo = await level()
-    assert.deepEqual(combo.source, { level: 'BRANCH', scopeId: branch.id, moduleCode: 'sales' })
+    assert.deepEqual(combo.source, {
+      level: 'BRANCH',
+      scopeId: branch.id,
+      moduleCode: 'sales',
+      version: 1,
+    })
     assert.strictEqual(combo.value, 'MM/dd/yyyy')
 
     // Preferência pessoal: a mais específica.

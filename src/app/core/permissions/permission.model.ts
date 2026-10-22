@@ -15,7 +15,9 @@ export const PLATFORM_PERMISSIONS = {
   modulesRead: 'platform.modules.read',
   plansRead: 'platform.plans.read',
   subscriptionsRead: 'platform.subscriptions.read',
-  settingsRead: 'platform.settings.read',
+  /** Concessões do servidor (D-033): gerir tenants / planos e assinaturas. */
+  tenantsManage: 'platform.tenant.manage',
+  billingManage: 'platform.billing.manage',
 } as const;
 
 /** Permissões das páginas de administração do tenant (as dos módulos vêm dos manifestos). */
@@ -24,6 +26,11 @@ export const TENANT_PERMISSIONS = {
   usersRead: 'iam.users.read',
   accessRead: 'iam.access-control.read',
   settingsRead: 'tenant.settings.read',
+  settingsManage: 'tenant.settings.manage',
+  sequencesManage: 'tenant.sequences.manage',
+  planRead: 'tenant.plan.read',
+  modulesRead: 'tenant.modules.read',
+  modulesManage: 'tenant.modules.manage',
 } as const;
 
 export const PLATFORM_NAMESPACE = 'platform.';

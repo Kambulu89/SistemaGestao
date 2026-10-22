@@ -9,7 +9,12 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /** Pedidos que não pertencem a nenhum tenant: o selector não se envia. */
 function isTenantFree(path: string): boolean {
-  return path.startsWith('/auth/') || path === '/me/tenants' || path === '/invitations/accept';
+  return (
+    path.startsWith('/auth/') ||
+    path.startsWith('/platform/') ||
+    path === '/me/tenants' ||
+    path === '/invitations/accept'
+  );
 }
 
 /**

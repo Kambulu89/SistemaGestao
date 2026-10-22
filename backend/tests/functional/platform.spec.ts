@@ -131,6 +131,23 @@ test.group('plataforma | permissões', (group) => {
     assert.match(wipe.message, /não se apagam/)
   })
 
+  test('GET /platform/me devolve só as concessões em vigor, sem exigir nenhuma', async ({
+    client,
+    assert,
+  }) => {
+    const none = await newActor(client, await createActiveTenant())
+    const empty = await platformApi(client, none).get('/api/v1/platform/me')
+    empty.assertStatus(200)
+    assert.deepEqual(empty.body().data.permissions, [])
+
+    const root = await platformUser(client, ['platform.billing.manage'])
+    const mine = await root.http.get('/api/v1/platform/me')
+    assert.deepEqual(mine.body().data.permissions, ['platform.billing.manage'])
+    await administrationServices().revoke.execute(root.user.id, 'platform.billing.manage')
+    assert.deepEqual((await root.http.get('/api/v1/platform/me')).body().data.permissions, [])
+    ;(await client.get('/api/v1/platform/me')).assertStatus(401)
+  })
+
   test('concessões: validação, duplicados e permissões desconhecidas', async ({
     client,
     assert,

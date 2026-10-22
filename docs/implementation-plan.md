@@ -2,13 +2,13 @@
 
 Fases da especificação (§11) com estado real. Cada fase entrega **fatias verticais** (migration, domínio, API, UI,
 autorização, auditoria, testes). Uma fase só passa quando as verificações aplicáveis correram e a documentação foi
-actualizada. Estado actualizado em: Fase 2, fatia 2.5.
+actualizada. Estado actualizado em: Fase 2, fatia 2.6 (frontend).
 
 | Fase | Âmbito (spec) | Estado |
 | --- | --- | --- |
 | **F0** Preparação | repositório, versões, Docker, CI, estrutura modular, ADRs | **Concluída** (com 2 verificações por executar — ver abaixo) |
 | **F1** Fundação | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party | **Próxima** (detalhada na secção 2) |
-| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos) e 2.4 (configurações/sequências) e 2.5 (administração da plataforma), backend, concluídas; falta o frontend da Fase 2 (ver secção 2b) |
+| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos) e 2.4 (configurações/sequências) e 2.5 (administração da plataforma) concluídas no backend; o frontend da Fase 2 está ligado (2b.6) (ver secção 2b) |
 | F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | Não iniciada (existem contratos/motores no frontend — ver `architecture.md` §7) |
 | F4 Operação comercial | M01–M08, S01 | Não iniciada |
 | F5 Gestão empresarial | M09–M14, S02–S03 | Não iniciada |
@@ -372,7 +372,8 @@ Sem decomposição prévia no plano; proposta (uma fatia de cada vez, ordem suje
 | 2.2 | C02 planos, assinaturas e limites no backend (substitui a quota provisória de convites). Os entitlements provisórios do frontend ficam para depois de 2.3 | **Concluída** (backend) |
 | 2.3 | C03 registo de módulos e funcionalidades por tenant | **Concluída** (backend) |
 | 2.4 | C09 configurações, impostos, unidades e sequências (numeração sem lacunas e concorrente) | **Concluída** (backend) |
-| 2.5 | API de administração da plataforma (C01/C02) | **Concluída** (backend); o fecho dos mocks do frontend **não** foi feito |
+| 2.5 | API de administração da plataforma (C01/C02) | **Concluída** (backend) |
+| 2.6 | Frontend da Fase 2: plataforma (tenants, planos, subscrições), plano, módulos e configurações do tenant; fim dos direitos provisórios | **Concluída** (ver 2b.6) |
 
 ### 2b.1 Fatia 2.1 — concluída
 **Entregue** (ver D-029): migration `create_audit` (`audit_logs` tenant + imutável; `security_events` global; funções e triggers de
@@ -447,6 +448,25 @@ suspensão com efeito imediato por URL directa e reactivação, planos e assinat
 concessão excepcional, limitada no tempo e auditada, não foi implementada); sem fecho de tenant; o frontend de administração da
 plataforma continua mock (nenhuma UI foi ligada a estas rotas) e `provisional-entitlements.ts` mantém-se: **o fecho dos mocks do
 frontend fica por fazer** e é a lacuna principal da Fase 2.
+
+### 2b.6 Fatia 2.6 — frontend da Fase 2 (concluída; ver D-034)
+**Entregue:** `provisional-entitlements.ts` removido (o contexto traz módulos/funcionalidades do registo e, com `subscription.read`, o plano e
+o consumo); `GET /platform/me` (backend) e `mapPlatformPermissions`; área de plataforma real — painel com contagens reais, tenants
+(provisionar com passos, suspender/reactivar com motivo), planos (criar revisão, publicar, retirar) e subscrições (plano contratado,
+consumo, histórico, atribuir, mudar de plano com adequação, mudar estado); páginas do tenant: Plano, Módulos (registo real) e
+Configurações com separadores (preferências com origem e herança, impostos, unidades com conversão, sequências com pré-visualização).
+Removidos: gateways mock de tenants e de billing, página «Configurações da plataforma» (sem backend). Backend: `/context` só lista módulos
+licenciados; `GET /settings/effective` passou a incluir descrição, tipo/opções e versão da origem.
+**Evidência:** backend 319 testes; frontend 692 testes (novos: gateways de autenticação e de tenant com os dados do servidor, páginas de
+plataforma e do tenant com APIs duplicadas), lint, `format:check`, `check:generic` e build limpos; **verificação no browser contra a API
+real** (Chromium + backend + PostgreSQL + Redis, base limpa com seeds): login de conta só de plataforma → `/platform`, painel com contagens
+reais, criação e publicação de um plano, provisionamento de um tenant e repetição sem duplicar (1 organização, 1 convite), suspensão com
+motivo, mudança de plano de um tenant, página do plano e dos módulos do tenant, administrador de tenant sem acesso à plataforma, nenhum
+token em storage. Defeitos reais encontrados e corrigidos nessa verificação: o diálogo de subscrições fechava-se a si próprio ao recarregar; e um validador `required` obsoleto (campo oculto) tornava silenciosamente inválida a segunda criação de uma unidade ou de um plano (teste de regressão em `registry-pages.spec.ts`). Unidades, sequências, impostos, preferências e módulos também foram exercitados.
+**Limites / por verificar:** o registo de módulos só declara o núcleo, por isso nenhum módulo de negócio fica acessível no frontend (a
+activação de módulos foi exercitada na API com módulos de teste inseridos só na base de desenvolvimento); configurações por filial/módulo e
+as páginas de papéis, políticas, Party e âmbitos (Fase 1) continuam sem UI real; sem UI de auditoria; E2E não automatizado no repositório
+(correu-se por script local); o core dinâmico (C10–C15) continua mock.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

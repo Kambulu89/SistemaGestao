@@ -31,7 +31,7 @@ export class NavigationService {
           label: 'Tenants',
           path: '/platform/tenants',
           icon: 'building',
-          permission: PLATFORM_PERMISSIONS.tenantsRead,
+          permission: PLATFORM_PERMISSIONS.tenantsManage,
         },
         {
           label: 'Catálogo de módulos',
@@ -43,19 +43,13 @@ export class NavigationService {
           label: 'Planos',
           path: '/platform/plans',
           icon: 'card',
-          permission: PLATFORM_PERMISSIONS.plansRead,
+          permission: PLATFORM_PERMISSIONS.billingManage,
         },
         {
           label: 'Subscrições',
           path: '/platform/subscriptions',
           icon: 'shield',
-          permission: PLATFORM_PERMISSIONS.subscriptionsRead,
-        },
-        {
-          label: 'Configurações',
-          path: '/platform/settings',
-          icon: 'settings',
-          permission: PLATFORM_PERMISSIONS.settingsRead,
+          permission: PLATFORM_PERMISSIONS.billingManage,
         },
       ]),
     },
@@ -71,7 +65,18 @@ export class NavigationService {
         id: 'workspace',
         items: this.visible([
           { label: 'Painel', path: base, icon: 'dashboard', exact: true },
-          { label: 'Módulos', path: `${base}/modules`, icon: 'cube' },
+          {
+            label: 'Módulos',
+            path: `${base}/modules`,
+            icon: 'cube',
+            permission: TENANT_PERMISSIONS.modulesRead,
+          },
+          {
+            label: 'Plano',
+            path: `${base}/plan`,
+            icon: 'card',
+            permission: TENANT_PERMISSIONS.planRead,
+          },
           {
             label: 'Organização',
             path: `${base}/organization`,

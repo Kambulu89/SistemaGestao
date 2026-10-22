@@ -302,7 +302,10 @@ paths:
         - { name: branchId, in: query, required: false, schema: { type: string, format: uuid } }
         - { name: moduleCode, in: query, required: false, schema: { type: string } }
       responses:
-        '200': { description: 'Uma entrada por chave: value, source, category e allowedScopes.' }
+        '200':
+          {
+            description: 'Uma entrada por chave: value, source (level, scopeId, moduleCode, version), category, description, spec (tipo e opções) e allowedScopes.',
+          }
         '422': { $ref: '#/components/responses/Error' }
   /settings:
     get:
@@ -630,6 +633,14 @@ paths:
       responses:
         '200': { description: 'example: o número que seria emitido.' }
         '422': { $ref: '#/components/responses/Error' }
+  /platform/me:
+    get:
+      summary: Permissões de plataforma da própria conta
+      description: Só para a interface; vazio se a conta não tem nenhuma concessão `platform.*` em vigor. Não exige concessão.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: 'permissions: lista de códigos platform.* em vigor.' }
+        '401': { $ref: '#/components/responses/Error' }
   /platform/tenants:
     get:
       summary: Tenants da plataforma, com estado e plano (platform.tenant.manage)

@@ -61,6 +61,13 @@ function audited(
 
 /** Transporte apenas. As rotas exigem `platform.*` (middleware `platform`) e não têm selector de tenant. */
 export default class PlatformController {
+  /** As permissões de plataforma da própria conta (vazio = não é administrador de plataforma). */
+  async me(ctx: HttpContext) {
+    return envelope(ctx, {
+      permissions: await administrationServices().authorize.permissionsOf(ctx.principal.user.id),
+    })
+  }
+
   // --- tenants ---------------------------------------------------------------------------------
 
   async listTenants(ctx: HttpContext) {
