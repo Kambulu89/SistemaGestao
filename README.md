@@ -43,10 +43,11 @@ npm run dev                          # http://localhost:3333/api/v1/health
 Validar (backend): `npm run lint && npm run format:check && npm run typecheck && npm test && npm run build`.
 Os testes usam a base `sistema_gestao_test` (`cp .env.test.example .env.test` e preencher).
 Endpoints actuais: `health`, `ready`, `auth/*` (login, logout, recuperação, verificação de email) e `me/*` (utilizador,
-sessões, palavra-passe, tenants), `context` — contrato em `backend/openapi/openapi.yaml`.
+sessões, palavra-passe, tenants), `context`, `roles`, `role-assignments`, `access-policies`, `permissions` e `authorization/simulate` — contrato em `backend/openapi/openapi.yaml`.
 
 Gestão da plataforma (sem API HTTP ainda): `node ace tenant:create|tenant:status|tenant:domain:add|tenant:domain:verify`
-`USER_PASSWORD=… node ace user:create <email> <nome> --verified` e `node ace membership:add|membership:status <tenant> <email> [estado]`.
+`USER_PASSWORD=… node ace user:create <email> <nome> --verified` e `node ace membership:add|membership:status <tenant> <email> [estado]` e `node ace iam:sync` / `iam:bootstrap <tenant> <email>`
+(catálogo de permissões e papel `tenant_admin`; correr `iam:sync` em cada ambiente depois de migrar).
 Os pedidos de tenant (`GET /context`) indicam o tenant em `X-Tenant-Id` ou `X-Tenant-Code`. Dados de demonstração (dois tenants, só fora de
 produção): `DEMO_USER_PASSWORD=… npm run seed`. Em desenvolvimento use `MAIL_DRIVER=dev-redis` (as mensagens com tokens
 ficam na lista Redis `dev:mailbox`); não há fornecedor de email real.

@@ -19,6 +19,12 @@ components:
       description: Identificador do pedido (também no corpo).
       schema: { type: string }
   parameters:
+    TenantId:
+      name: X-Tenant-Id
+      in: header
+      required: true
+      description: Selector do tenant (ou X-Tenant-Code); validado contra a membership activa.
+      schema: { type: string, format: uuid }
     CsrfToken:
       name: X-Csrf-Token
       in: header
@@ -224,3 +230,215 @@ paths:
         '403': { description: REAUTHENTICATION_FAILED. }
         '422': { $ref: '#/components/responses/Error' }
         '429': { description: RATE_LIMITED. }
+  /permissions:
+    get:
+      summary: Catálogo de permissões (iam.read)
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      responses:
+        '200': { description: Permissões `<recurso>.<acção>`. }
+        '403': { description: PERMISSION_DENIED. }
+  /roles:
+    get:
+      summary: Papéis do tenant (iam.read)
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      responses:
+        '200': { description: Papéis com os códigos das suas permissões. }
+        '403': { description: PERMISSION_DENIED. }
+    post:
+      summary: Cria um papel (iam.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name, permissionCodes]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                permissionCodes: { type: array, items: { type: string } }
+      responses:
+        '201': { description: Criado (cabeçalho Location). }
+        '409': { description: ROLE_CODE_TAKEN. }
+        '422': { $ref: '#/components/responses/Error' }
+  /roles/{id}:
+    get:
+      summary: Detalhe de um papel (iam.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Papel. }
+        '404': { description: Inexistente ou de outro tenant. }
+    patch:
+      summary: Altera um papel com expectedVersion (iam.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                permissionCodes: { type: array, items: { type: string } }
+      responses:
+        '200': { description: Actualizado; invalida a authorizationVersion de quem tem o papel. }
+        '409': { description: VERSION_CONFLICT ou SYSTEM_ROLE_IMMUTABLE. }
+        '404': { description: Inexistente ou de outro tenant. }
+    delete:
+      summary: Remove um papel (iam.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removido. }
+        '409': { description: ROLE_IN_USE ou SYSTEM_ROLE_IMMUTABLE. }
+  /role-assignments:
+    get:
+      summary: Atribuições de papéis (iam.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: membershipId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Atribuições. }
+    post:
+      summary: Atribui um papel a uma membership (iam.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [membershipId, roleId]
+              properties:
+                membershipId: { type: string, format: uuid }
+                roleId: { type: string, format: uuid }
+                organizationUnitId: { type: string, format: uuid, nullable: true }
+                validFrom: { type: string, format: date-time, nullable: true }
+                validUntil: { type: string, format: date-time, nullable: true }
+      responses:
+        '201': { description: Criada. }
+        '404': { description: Membership ou papel inexistentes neste tenant. }
+        '409': { description: ASSIGNMENT_EXISTS. }
+        '422': { $ref: '#/components/responses/Error' }
+  /role-assignments/{id}:
+    delete:
+      summary: Revoga uma atribuição (iam.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Revogada. }
+        '404': { description: Inexistente ou de outro tenant. }
+  /access-policies:
+    get:
+      summary: Políticas ABAC (iam.read)
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      responses:
+        '200': { description: Políticas. }
+    post:
+      summary: Cria uma política (iam.manage)
+      description: |
+        `condition` é uma AST declarativa (and/or/not/eq/neq/gt/gte/lt/lte/in/exists) com variáveis
+        `subject.*`, `resource.*` e `env.*`. Nunca se executa código do tenant. Qualquer DENY activo
+        aplicável prevalece; havendo políticas ALLOW aplicáveis, pelo menos uma tem de se verificar.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, resource, action, effect]
+              properties:
+                name: { type: string }
+                resource: { type: string, description: 'Ou * para qualquer.' }
+                action: { type: string, description: 'Ou * para qualquer.' }
+                effect: { type: string, enum: [ALLOW, DENY] }
+                condition: { type: object, nullable: true }
+                priority: { type: integer }
+                status: { type: string, enum: [DRAFT, ACTIVE, DISABLED] }
+                fieldRules:
+                  type: array
+                  items:
+                    type: object
+                    required: [field, mode]
+                    properties:
+                      field: { type: string }
+                      mode: { type: string, enum: [HIDDEN, READ_ONLY] }
+                      when: { type: object }
+      responses:
+        '201': { description: Criada (estado DRAFT por omissão). }
+        '422': { description: AST ou regras inválidas, com o caminho do problema. }
+  /access-policies/{id}:
+    patch:
+      summary: Altera uma política com expectedVersion (iam.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200':
+          { description: Actualizada; invalida a authorizationVersion de todas as memberships. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: VERSION_CONFLICT. }
+  /authorization/simulate:
+    post:
+      summary: Simula uma decisão (iam.manage); não concede nem altera nada
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [membershipId, permission]
+              properties:
+                membershipId: { type: string, format: uuid }
+                permission: { type: string }
+                resource: { type: object }
+      responses:
+        '200': { description: Decisão, origem (papéis e políticas) e campos ocultos/só de leitura. }
+        '404': { description: Membership inexistente neste tenant. }

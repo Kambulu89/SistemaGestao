@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { envelope } from '#core/http/api_response'
+import { iamServices } from '#core/permissions/index'
 import { tenantServices } from '#platform/tenants/presentation/composition'
 
 export default class ContextController {
@@ -9,11 +10,12 @@ export default class ContextController {
   }
 
   /**
-   * Contexto do pedido actual. Os módulos, funcionalidades, permissões e configurações de apresentação
-   * da spec (C05/C06) só passam a constar quando esses componentes existirem; não se devolvem vazios.
+   * Contexto do pedido actual. Módulos, funcionalidades e configurações (C03/C09) só constam quando esses
+   * componentes existirem; não se devolvem vazios. As permissões são só para apresentação.
    */
   async show(ctx: HttpContext) {
     const { tenant, membership, tenantContext, principal } = ctx
+    const permissions = await iamServices().effectivePermissions.execute(tenantContext)
     return envelope(ctx, {
       tenant: {
         id: tenant.id,
@@ -32,6 +34,7 @@ export default class ContextController {
       locale: tenantContext.locale,
       authorizationVersion: tenantContext.permissionsVersion,
       unitScope: tenantContext.unitScope,
+      permissions,
     })
   }
 }

@@ -18,6 +18,13 @@ export interface MembershipStore {
     input: { userId: string; status: MembershipStatus }
   ): Promise<Membership | null>
   findByUser(scope: TenantScope, userId: string): Promise<Membership | null>
+  findById(scope: TenantScope, membershipId: string): Promise<Membership | null>
+  /**
+   * Incrementa a `authorizationVersion` (invalida decisões e caches). Chamado por quem altera acessos
+   * (papéis, atribuições, políticas): é a API pública do módulo, que é dono da tabela.
+   */
+  bumpAuthorization(scope: TenantScope, membershipIds: readonly string[]): Promise<void>
+  bumpAllAuthorization(scope: TenantScope): Promise<void>
   changeStatus(
     scope: TenantScope,
     membership: Membership,

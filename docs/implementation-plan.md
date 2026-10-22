@@ -56,7 +56,7 @@ isolamento por tenant e testes negativos com dois tenants.
 | 1.1 | ✅ **Núcleo de multi-tenancy e esquema** (feita — ver secção 2.1) | F0 | colunas base B/G; padrão de migration de tabela de tenant (RLS `ENABLE`+`FORCE`, política, FK composta `(tenant_id,id)`); `TenantContext` imutável; `TenantScopedConnection` (transacção + `set_config` local; sem contexto → erro); repositório base que exige contexto; **teste de conformidade do esquema** (toda a tabela com `tenant_id` tem RLS forçada e política); verificação automática das fronteiras de módulo |
 | 1.2 | ✅ **Tenant e utilizadores** (feita — ver secção 2.2) (C01 mínimo, C04) | 1.1 | `Tenant`, `TenantDomain`, `User`, `AuthSession`; login/logout com sessão opaca em cookie HttpOnly+Secure+SameSite, CSRF, hash de palavra-passe, rate limit em Redis, sessões activas/revogação; recuperação com token de uso único. MFA e SSO ficam **fora** (documentar) |
 | 1.3 | ✅ **Membership e contexto** (feita — ver secção 2.3) (C05 parte 1) | 1.2 | `TenantMembership`; pipeline de resolução do tenant (spec §10.1) como middleware; `GET /context` com `authorizationVersion`; troca de tenant; suspensão de tenant bloqueia operações |
-| 1.4 | **Autorização** (C06) | 1.3 | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); *default deny*, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar |
+| 1.4 | ✅ **Autorização** (C06; feita — ver secção 2.4) | 1.3 | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); *default deny*, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar |
 | 1.5 | **Organização** (C07) | 1.4 | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas |
 | 1.6 | **Convites e membros** (C05 parte 2) | 1.4, 1.5 | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências |
 | 1.7 | **Party** (C08) | 1.5 | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). *Item da spec F1 que não constava do pedido: confirmar se entra nesta fase.* |
@@ -138,6 +138,39 @@ comandos `membership:status` executados; o dono vê 0 linhas sem contexto (FORCE
 - Sem auditoria das mudanças de membership/tenant (Fase 2). Sem cache de contexto: cada pedido consulta tenant e membership.
 - O pedido paga duas consultas extra por pedido de tenant (tenant + membership); optimizar só se a medição o justificar.
 
+### 2.4 Fatia 1.4 — concluída
+**Entregue:** migration `permissions` (global) + `roles`, `role_permissions`, `role_assignments`, `access_policies` (tenant,
+RLS forçada); módulo `core/permissions` (catálogo, condições ABAC declarativas, decisão RBAC+ABAC, regras de campo, casos
+de uso de papéis/atribuições/políticas/simulação, `EnsureTenantAdmin`); middleware `can`; endpoints `/permissions`,
+`/roles`, `/role-assignments`, `/access-policies`, `POST /authorization/simulate`; `permissions` em `GET /context`;
+comandos `iam:sync` e `iam:bootstrap`; seeder dá `tenant_admin` aos administradores demo; OpenAPI actualizado.
+ADRs D-014 (aceite) e D-024.
+
+**Evidência (executada):** 160 testes backend a passar (28 novos). Unit: validação da AST (operadores/variáveis/profundidade/
+tamanho/`in`), avaliação (decimais `"100"` > `"99.99"`, segregação de funções, sem acesso a `constructor`/`__proto__`),
+decisão (default deny, DENY prevalece mesmo com ALLOW de prioridade maior, DENY inválido falha fechado, ALLOW sem match
+nega, rascunho/desactivada/outro recurso ignorados, `*`, atribuição por unidade, `HIDDEN` > `READ_ONLY`, `redactFields`,
+`forbiddenChanges`). Funcionais: operador sem papel → 403 e admin → 200; criar/alterar/apagar papéis (422, 409 de código e
+de versão); papel de sistema imutável; atribuir dá acesso de imediato e revogar corta, `authorizationVersion` sobe;
+alterar permissões do papel invalida quem o tem; papel em uso não se apaga; janelas de validade (expirada, futura,
+corrente, invertida → 422); isolamento (papéis/membership/atribuições de outro tenant → 404; admin de A em B → 403);
+política DENY activa bloqueia mesmo com o papel, rascunho/desactivada não, versão sobe; AST inválida → 422 com caminho;
+regras de campo guardadas e devolvidas; simulação mostra origem, não altera nada, exige `iam.manage`, membership alheia
+→ 404; RLS em `roles`/`role_assignments`. Lint, `format:check`, `typecheck`, `build`, migrations numa base limpa (5) e
+seeder duas vezes a passar; servidor compilado: `GET /context` do admin demo devolve as permissões e o selector do outro
+tenant dá 403.
+
+**Por verificar / limitações:**
+- `MembershipScope` e hierarquia de unidades: 1.5 (atribuições por unidade só casam com `resource.unitId` igual).
+- Filtro de linhas antes de paginar/agregar e ocultação de campos em pesquisa, exportação, auditoria e realtime: o motor
+  (`decide`, `redactFields`) existe e está testado, mas **ainda não há** listagens de domínio, pesquisa, exportações nem
+  realtime onde aplicá-lo; a verificação ponta-a-ponta (ex.: "salário restrito não surge numa exportação") fica para
+  quando existirem.
+- Aprovação própria/segregação: expressável por política DENY (testado ao nível da condição), sem fluxo de aprovação real.
+- Sem protecção do último administrador (um admin pode retirar-se `tenant_admin`; 1.6) nem auditoria (Fase 2).
+- Sem cache de decisões; sem rate limit específico nos endpoints de IAM.
+- O catálogo só tem permissões do núcleo (`iam`, `member`, `organization`); cada módulo acrescenta as suas.
+
 ### Critérios de aceitação da Fase 1
 Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios de aceitação de cada componente:
 
@@ -161,7 +194,7 @@ Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios
   sem mocks no caminho real.
 
 ### Decisões a tomar antes de começar a Fase 1
-1. Nomenclatura de permissões (D-014).
+1. ~~Nomenclatura de permissões (D-014)~~ — decidida na fatia 1.4.
 2. Se Party (1.7) entra na Fase 1 ou na seguinte.
 3. ~~Mecanismo de hash e de rate limit~~ — decidido na fatia 1.2 (D-019/D-020); MFA fora da Fase 1.
 4. ~~Ferramenta OpenAPI~~ — ficheiro `backend/openapi/openapi.yaml` mantido à mão + teste de paridade com as rotas (fatia 1.2); rever se for preferível gerar.

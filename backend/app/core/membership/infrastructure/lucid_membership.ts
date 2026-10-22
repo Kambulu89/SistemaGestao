@@ -98,6 +98,31 @@ export class LucidMembershipStore implements MembershipStore {
     return row ? toMembership(row as MembershipRow) : null
   }
 
+  async findById(scope: TenantScope, membershipId: string) {
+    const row = await this.rows.findById(scope, membershipId)
+    return row ? toMembership(row) : null
+  }
+
+  async bumpAuthorization(scope: TenantScope, membershipIds: readonly string[]) {
+    if (membershipIds.length === 0) return
+    const { trx, context } = scope as LucidTenantScope
+    await trx
+      .from('tenant_memberships')
+      .where('tenant_id', context.tenantId)
+      .whereIn('id', [...membershipIds])
+      .update({ updated_at: new Date() })
+      .increment({ authorization_version: 1, version: 1 })
+  }
+
+  async bumpAllAuthorization(scope: TenantScope) {
+    const { trx, context } = scope as LucidTenantScope
+    await trx
+      .from('tenant_memberships')
+      .where('tenant_id', context.tenantId)
+      .update({ updated_at: new Date() })
+      .increment({ authorization_version: 1, version: 1 })
+  }
+
   async changeStatus(scope: TenantScope, membership: Membership, status: MembershipStatus) {
     const updated = await this.rows.update(scope, membership.id, membership.version, {
       status,

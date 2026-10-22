@@ -70,6 +70,11 @@ export class LucidTenantStore implements TenantStore {
     return row ? toTenant(row) : null
   }
 
+  async list() {
+    const rows = await conn().from('tenants').orderBy('code')
+    return (rows as TenantRow[]).map(toTenant)
+  }
+
   async findByIds(ids: string[]) {
     if (ids.length === 0) return []
     const rows = await conn().from('tenants').whereIn('id', ids)

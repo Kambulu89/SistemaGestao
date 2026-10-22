@@ -9,6 +9,7 @@ import {
   LucidTenantStore,
   RegisterTenantDomain,
   addMemberByEmail,
+  bootstrapTenantAdmin,
 } from '#platform/tenants/index'
 
 /** Dois tenants de demonstração, separados. Os domínios/emails usam TLDs reservados (`.test`, `.invalid`). */
@@ -30,7 +31,7 @@ const ignoreConflict = async (action: () => Promise<unknown>) => {
 
 /**
  * Idempotente. Nunca corre em produção. A palavra-passe vem de `DEMO_USER_PASSWORD`
- * (nada de credenciais no código). Papéis e permissões chegam com a fatia 1.4.
+ * (nada de credenciais no código). Cada administrador demo recebe o papel `tenant_admin`; `multi@` é membro sem papéis (nega por omissão).
  */
 export default class DemoSeeder extends BaseSeeder {
   static environment = ['development', 'test']
@@ -63,6 +64,7 @@ export default class DemoSeeder extends BaseSeeder {
         })
       })
       await ignoreConflict(() => addMemberByEmail(demo.code, demo.admin))
+      await bootstrapTenantAdmin(demo.code, demo.admin)
     }
 
     await ignoreConflict(async () => {

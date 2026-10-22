@@ -80,10 +80,10 @@ Sessão opaca em cookie `HttpOnly`/`Secure`/`SameSite` com protecção CSRF; sem
 contra a sessão e a membership activa; o frontend pode manter `/t/:slug` na URL. Substitui o `sessionStorage` do mock.
 A parte da sessão está em D-018 e o selector de tenant em D-023.
 
-## D-014 Nomenclatura de permissões (aberta — decidir antes da Fase 1.5)
-O frontend usa `<módulo>.read|manage` e `entities.<chave>.<op>`; a spec usa `<recurso>.<acção>` (ex.:
-`invoice.approve`, `dynamic.<code>.read`). **Proposta:** adoptar a nomenclatura da spec no backend e mapear no
-frontend por um único ponto (adaptador do contexto), mantendo as chaves do mock só até serem substituídas.
+## D-014 Nomenclatura de permissões (aceite — fatia 1.4)
+Backend: `<recurso>.<acção>` em minúsculas (`iam.manage`, `member.invite`, `invoice.approve`), com `code = resource || '.' ||
+action` garantido por CHECK. O frontend usa `<módulo>.read|manage` e `entities.<chave>.<op>`: o mapeamento faz-se num único
+ponto (adaptador do contexto, fatia 1.8); as chaves do mock mantêm-se só até serem substituídas.
 
 ## D-016 Transporte do contexto de tenant e acesso a dados (aceite — fatia 1.1)
 **Decisão.** `TenantContext` imutável (campos da spec §10.1; validação de UUIDs e coerência actor/identidades) transportado
@@ -157,6 +157,24 @@ entre separadores). **Limitações.** Sem `MembershipScope`/unidades (1.5): `uni
 `GET /context` devolve só o que existe (tenant, membership, utilizador, locale, `authorizationVersion`, âmbito);
 módulos, funcionalidades, permissões e configurações entram com C03/C06/C09. Não há API HTTP de membros: a gestão faz-se
 por `node ace membership:add|status` até aos convites (1.6).
+
+## D-024 Modelo de autorização RBAC + ABAC (aceite — fatia 1.4)
+**Decisão.** Catálogo `permissions` **global**, declarado no código (`PERMISSION_CATALOG`) e semeado por `iam:sync`
+(idempotente; também faz crescer o papel `tenant_admin`). Papéis, `role_permissions`, `role_assignments` (com janela de
+validade e unidade opcional) e `access_policies` são de tenant (RLS + FKs compostas). A decisão é uma função pura
+(`decide`): (1) RBAC — tem de haver atribuição válida cujo papel concede a permissão, senão nega; (2) qualquer política
+**DENY** activa aplicável cuja condição seja verdadeira — ou não avaliável — nega (falha fechada); (3) havendo políticas
+**ALLOW** aplicáveis, pelo menos uma tem de se verificar. As regras de campo (`HIDDEN` prevalece sobre `READ_ONLY`) vêm das
+políticas ALLOW que se aplicaram; `redactFields`/`forbiddenChanges` aplicam-nas. As condições são uma **AST declarativa**
+(and/or/not/eq/neq/gt/gte/lt/lte/in/exists; variáveis só `subject.`, `resource.`, `env.`; máx. 8 níveis e 50 nós; acesso
+só a propriedades próprias; decimais em string comparados como números); nunca se executa código do tenant. O sujeito da
+avaliação vem sempre do `TenantContext`. Atribuição limitada a uma unidade só vale para recursos dessa unidade (sem
+hierarquia até à 1.5). Rotas protegidas por `middleware.can({ permission })` depois de `auth` e `tenant`; a razão da
+recusa não vai para o cliente (`403 PERMISSION_DENIED`). Alterar papéis/atribuições/políticas incrementa a
+`authorizationVersion` (das memberships afectadas, ou de todas no caso das políticas) na mesma transacção. Sem cache de
+decisões por agora (cada pedido consulta a base), portanto a revogação é imediata. **Não incluído:** `MembershipScope`
+(precisa de organizações — 1.5), filtro de linhas antes da paginação (não há listagens de domínio ainda; o contrato é
+traduzir as condições para filtros SQL quando existirem), protecção do último administrador (1.6), auditoria (Fase 2).
 
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver

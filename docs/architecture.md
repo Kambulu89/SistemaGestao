@@ -41,6 +41,9 @@ backend/
                   uso (login, logout, sessões, recuperação, verificação, criação de conta) e portas ·
                   infrastructure: repositórios Lucid, scrypt, rate limit Redis, CSRF HMAC, mailers · presentation:
                   controllers, validadores, middleware `auth`/`origin`, composição · index.ts
+      permissions/ (fatia 1.4) domain: catálogo, condições ABAC (AST), decisão RBAC+ABAC, regras de campo ·
+                  application: Authorize, papéis, atribuições, políticas, simulação, EnsureTenantAdmin ·
+                  infrastructure: stores Lucid · presentation: middleware `can`, controller IAM · index.ts
       membership/ (fatia 1.3) domain: estados da membership · application: AddMember, ChangeMembershipStatus ·
                   infrastructure: directório por utilizador (app.user_id) e store Lucid · index.ts
     platform/
@@ -50,7 +53,7 @@ backend/
   commands/       `node ace tenant:*`, `user:create` (gestão da plataforma sem API HTTP)
   openapi/        contrato `openapi.yaml` (teste de paridade com as rotas)
   database/
-    migrations/   baseline da plataforma · tenants/domínios · identidade (users, sessões, tokens) · memberships
+    migrations/   baseline da plataforma · tenants/domínios · identidade (users, sessões, tokens) · memberships · autorização
     seeders/      demo (dois tenants; só fora de produção)
     support/      helpers de migration: createTenantTable, createGlobalTable, tenantForeignKey
   tests/          unit + functional (Japa); support/ = fixtures, verificador de arquitectura
@@ -174,7 +177,7 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 
 | Item | Estado | Evidência |
 | --- | --- | --- |
-| Monólito modular — estrutura base | PARCIAL | `core/{http,health,tenancy,auth,membership}`, `platform/tenants`; restantes módulos por criar |
+| Monólito modular — estrutura base | PARCIAL | `core/{http,health,tenancy,auth,membership,permissions}`, `platform/tenants`; restantes módulos por criar |
 | Validação de ambiente e `.env.example` | FEITO | `start/env_schema.ts`, `tests/unit/env.spec.ts` |
 | Ligação à base e Redis; `health` / `ready` | FEITO | `GET /api/v1/health`, `/ready`; testes funcionais |
 | Formato comum de respostas/erros | FEITO | `core/http/*`, `app/exceptions/handler.ts`, `tests/functional/errors.spec.ts` |
@@ -193,7 +196,7 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 | C03 Registo de módulos e funcionalidades | AUSENTE | PARCIAL (catálogo e manifestos reais no frontend; activação por tenant é mock) |
 | C04 Identidade, autenticação, sessões | PARCIAL (fatia 1.2: login/logout, sessão opaca + CSRF, rate limit, sessões activas, recuperação, verificação de email; **sem** MFA/SSO, auditoria nem fornecedor de email) | MOCK (login simulado; token em `sessionStorage`) |
 | C05 Membros, convites, preferências | PARCIAL (fatia 1.3: `TenantMembership`, estados, `authorizationVersion`; **sem** convites, quotas, último administrador nem preferências) | AUSENTE |
-| C06 Papéis, permissões, políticas | AUSENTE | PARCIAL (permissões por chave e avaliador RBAC+ABAC no cliente; só conveniência) |
+| C06 Papéis, permissões, políticas | PARCIAL (fatia 1.4: catálogo, papéis, atribuições com validade, políticas ABAC por AST, regras de campo, simulação; **sem** `MembershipScope`, filtro de linhas, cache nem auditoria) | PARCIAL (permissões por chave e avaliador RBAC+ABAC no cliente; só conveniência) |
 | C07 Organizações, unidades, centros de custo | AUSENTE | AUSENTE |
 | C08 Pessoas, organizações externas, contactos | AUSENTE | AUSENTE |
 | C09 Configurações, impostos, sequências | AUSENTE | AUSENTE |

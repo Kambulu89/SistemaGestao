@@ -28,6 +28,8 @@ export const middleware = router.named({
   auth: () => import('#core/auth/presentation/auth_middleware'),
   /** Resolve o tenant do pedido (depois de `auth`): selector + membership activa + tenant activo. */
   tenant: () => import('#platform/tenants/presentation/tenant_middleware'),
+  /** Exige uma permissão (depois de `tenant`): `middleware.can({ permission: 'iam.manage' })`. */
+  can: () => import('#core/permissions/presentation/permission_middleware'),
   /** Rejeita `Origin` de browser fora da lista permitida nas escritas. */
   origin: async () => {
     const { OriginMiddleware } = await import('#core/auth/presentation/auth_middleware')

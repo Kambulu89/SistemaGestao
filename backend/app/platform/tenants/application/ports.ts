@@ -11,6 +11,7 @@ export interface TenantStore {
   findByCode(code: string): Promise<Tenant | null>
   findById(id: string): Promise<Tenant | null>
   findByIds(ids: string[]): Promise<Tenant[]>
+  list(): Promise<Tenant[]>
   /** Muda o estado só se a versão coincidir. Devolve `null` em conflito. */
   updateStatus(
     id: string,
