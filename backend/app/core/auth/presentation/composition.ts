@@ -46,6 +46,7 @@ export function buildAuthServices() {
 
   return {
     csrf: new HmacCsrfTokens(secret),
+    mailer,
     users,
     createUser: new CreateUser(users, tokens, hasher, mailer, clock),
     authenticate: new AuthenticateSession(users, sessions, clock),

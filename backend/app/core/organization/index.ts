@@ -12,3 +12,4 @@ export {
 } from '#core/organization/domain/organization'
 export { organizationServices } from '#core/organization/presentation/composition'
 export { LucidOrganizationStore } from '#core/organization/infrastructure/lucid_organization'
+export type { OrganizationStore } from '#core/organization/application/ports'

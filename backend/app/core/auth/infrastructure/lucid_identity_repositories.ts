@@ -65,6 +65,14 @@ export class LucidUserRepository implements UserRepository {
     return row ? toUser(row) : null
   }
 
+  async findByIds(ids: readonly string[]) {
+    if (ids.length === 0) return []
+    const rows = await conn()
+      .from('users')
+      .whereIn('id', [...ids])
+    return (rows as UserRow[]).map(toUser)
+  }
+
   async insert(user: NewUser) {
     const result = await conn().rawQuery(
       `insert into users (email, display_name, password_hash, status, email_verified_at, locale)

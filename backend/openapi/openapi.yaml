@@ -740,3 +740,180 @@ paths:
       responses:
         '204': { description: Removido. }
         '404': { description: Inexistente ou de outro tenant. }
+  /memberships:
+    get:
+      summary: Membros do tenant com utilizador e papéis (member.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Lista. }
+        '403': { description: PERMISSION_DENIED. }
+  /memberships/{id}:
+    get:
+      summary: Detalhe de um membro (member.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Membro. }
+        '404': { description: Inexistente ou de outro tenant. }
+    patch:
+      summary: Suspende, reactiva ou termina um membro (member.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, expectedVersion]
+              properties:
+                status: { type: string, enum: [ACTIVE, SUSPENDED, LEFT] }
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Actualizado; incrementa a authorizationVersion. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409':
+          {
+            description: VERSION_CONFLICT,
+            INVALID_STATE_TRANSITION ou LAST_ADMIN (o tenant ficaria sem administrador activo).,
+          }
+  /invitations:
+    get:
+      summary: Convites com estado efectivo (member.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Lista (EXPIRED é derivado do prazo). }
+    post:
+      summary: Convida um email (member.invite); o token vai só por email
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+                roleIds: { type: array, items: { type: string, format: uuid } }
+                unitIds: { type: array, items: { type: string, format: uuid } }
+                expiresInDays: { type: integer, minimum: 1, maximum: 30 }
+      responses:
+        '201': { description: Criado (cabeçalho Location); sem token na resposta. }
+        '409': { description: ALREADY_MEMBER ou INVITATION_PENDING. }
+        '422': { description: Email, prazo, papéis ou unidades inválidos. }
+  /invitations/{id}/revoke:
+    post:
+      summary: Revoga um convite pendente (member.invite)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Revogado. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: Já não está pendente. }
+  /invitations/accept:
+    post:
+      summary: Aceita um convite (sessão do convidado; o tenant vem do token)
+      description: |
+        O email da conta tem de ser o do convite. Token de uso único, quota de membros e estado do tenant são
+        verificados numa só transacção. Qualquer falha de token/email/estado responde igual (400).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '200': { description: Membership criada/reactivada (tenantId, membershipId). }
+        '400': { description: INVALID_OR_EXPIRED_TOKEN. }
+        '409': { description: ALREADY_MEMBER ou MEMBER_QUOTA_EXCEEDED. }
+  /me/preferences:
+    get:
+      summary: Preferências do próprio membro
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Mapa chave → valor. }
+  /me/preferences/{key}:
+    put:
+      summary: Define uma preferência (lista fechada de chaves)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - {
+            name: key,
+            in: path,
+            required: true,
+            schema: { type: string },
+            description: 'Ex.: ui.theme, ui.timezone, notifications.email.',
+          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value: {}
+      responses:
+        '200': { description: Preferências actuais. }
+        '422': { description: UNKNOWN_PREFERENCE ou INVALID_VALUE. }
+    delete:
+      summary: Remove uma preferência
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - {
+            name: key,
+            in: path,
+            required: true,
+            schema: { type: string },
+            description: 'Ex.: ui.theme, ui.timezone, notifications.email.',
+          }
+      responses:
+        '204': { description: Removida. }
+        '404': { description: Não definida. }
+  /me/default-organization:
+    put:
+      summary: Define a organização por omissão do próprio membro
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId]
+              properties:
+                organizationId: { type: string, format: uuid, nullable: true }
+      responses:
+        '200': { description: Membro actualizado. }
+        '422': { description: Organização inexistente neste tenant. }

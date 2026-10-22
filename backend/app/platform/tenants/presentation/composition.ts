@@ -1,5 +1,7 @@
 import { LucidMembershipDirectory } from '#core/membership/index'
 import { organizationServices } from '#core/organization/index'
+import { memberServices } from '#core/members/index'
+import { isOperational } from '#platform/tenants/domain/tenant'
 import { LucidTenantStore } from '#platform/tenants/infrastructure/lucid_tenant_store'
 import {
   ListMyTenants,
@@ -14,6 +16,16 @@ function build() {
       resolve: (context, membershipId) =>
         organizationServices().resolveUnitScope.execute(context, membershipId),
     }),
+    /** A aceitação de convites usa o estado e a quota do tenant (plano de controlo). */
+    acceptInvitation: memberServices().acceptInvitation(
+      {
+        isOperational: async (tenantId) => {
+          const tenant = await tenants.findById(tenantId)
+          return tenant !== null && isOperational(tenant.status)
+        },
+      },
+      { limit: (tenantId) => tenants.maxMembers(tenantId) }
+    ),
     listMyTenants: new ListMyTenants(tenants, memberships),
   }
 }

@@ -196,6 +196,27 @@ unidade continua a valer só para essa unidade (sem herança; a herança faz-se 
 quando existirem lançamentos (módulos financeiros); por agora a alteração é permitida. Sem verificação de impacto na
 reorganização nem "unidade com documentos".
 
+## D-026 Convites, quota de membros e último administrador (aceite — fatia 1.6)
+**Convites.** `invitations` guarda só o SHA-256 do token; o token é `<tenantId>.<segredo de 256 bits>` (o id do tenant serve
+apenas para localizar a linha sob RLS; a prova é o segredo). Vai **só por email** (a resposta da API nunca o contém). Validade
+7 dias por omissão (1–30; parâmetro de demonstração). Um convite pendente por email e tenant (índice parcial); um expirado é
+marcado `EXPIRED` ao convidar de novo. A aceitação exige **sessão** (conta existente ou registada e verificada) cujo **email
+coincide** com o do convite, e corre numa transacção com lock por tenant: uso único mesmo sob concorrência, tenant activo e
+quota. Qualquer falha de token/email/estado/prazo responde igual (`400 INVALID_OR_EXPIRED_TOKEN`). Quem já é membro activo →
+409; suspenso não se auto-reactiva; quem saiu (`LEFT`) volta com um convite novo e **a mesma membership** (única saída de
+`LEFT`). Papéis e unidades do convite são revalidados ao aceitar (o que entretanto desapareceu é ignorado). A mesma conta
+mantém a identidade única entre tenants.
+**Quota (provisória).** `tenants.max_members` (NULL = sem limite; `node ace tenant:limit`) conta tudo o que não é `LEFT`; é
+verificada na aceitação sob o lock de membros. Será substituída pelos limites do plano quando existir C02.
+**Último administrador.** `AdminGuard` serializa (lock por tenant) as alterações que podem retirar administradores e recusa
+(409 `LAST_ADMIN`, transacção anulada) a que deixe o tenant sem nenhum membro ACTIVE com atribuição sem limite de unidade de
+um papel que concede `iam.manage`. Aplica-se a suspender/terminar um membro, revogar uma atribuição e alterar as permissões
+de um papel. Só actua se havia administrador antes. **Não cobre** políticas DENY que bloqueiem todos nem apagar o utilizador.
+**Preferências.** Lista **fechada** de chaves (`ui.theme|density|locale|timezone`, `notifications.email|digest`,
+`table.pageSize`) com valores validados; impostos, moeda e limites de segurança não são preferências e são recusados
+(`UNKNOWN_PREFERENCE`). **Módulos.** `core/members` (convites, membros, preferências) depende de `membership`, `permissions`,
+`organization` e `auth` só pelos `index.ts`; a aceitação é exposta pela plataforma, que injecta o estado e a quota do tenant.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

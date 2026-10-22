@@ -57,6 +57,10 @@ export interface PolicyView extends AccessPolicy {
 export interface IamStore {
   effectiveGrants(scope: TenantScope, membershipId: string, now: Date): Promise<Grant[]>
   activePolicies(scope: TenantScope): Promise<AccessPolicy[]>
+  /** Serializa as alterações que podem retirar administradores (lock por tenant até ao fim da transacção). */
+  lockAdmins(scope: TenantScope): Promise<void>
+  /** Memberships ACTIVE com uma atribuição válida, sem limite de unidade, de um papel que concede `iam.manage`. */
+  countActiveAdmins(scope: TenantScope, now: Date): Promise<number>
 
   listRoles(scope: TenantScope): Promise<RoleView[]>
   findRole(scope: TenantScope, id: string): Promise<RoleView | null>

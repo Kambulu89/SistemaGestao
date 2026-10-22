@@ -136,6 +136,28 @@ export class LucidIamStore implements IamStore {
     }))
   }
 
+  async lockAdmins(scope: TenantScope) {
+    await trxOf(scope).rawQuery('select pg_advisory_xact_lock(hashtextextended(?, 0))', [
+      `iam-admins:${tenantOf(scope)}`,
+    ])
+  }
+
+  async countActiveAdmins(scope: TenantScope, now: Date) {
+    // Leitura (só) da tabela de memberships para saber quem está activo.
+    const result = await trxOf(scope).rawQuery(
+      `select count(distinct m.id)::int as total
+         from tenant_memberships m
+         join role_assignments a on a.tenant_id = m.tenant_id and a.membership_id = m.id
+         join role_permissions rp on rp.tenant_id = a.tenant_id and rp.role_id = a.role_id
+         join permissions p on p.id = rp.permission_id and p.code = 'iam.manage'
+        where m.tenant_id = ? and m.status = 'ACTIVE' and a.organization_unit_id is null
+          and (a.valid_from is null or a.valid_from <= ?)
+          and (a.valid_until is null or a.valid_until > ?)`,
+      [tenantOf(scope), now, now]
+    )
+    return (result.rows as { total: number }[])[0].total
+  }
+
   async activePolicies(scope: TenantScope) {
     const rows = await trxOf(scope)
       .from('access_policies')

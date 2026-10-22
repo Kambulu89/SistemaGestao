@@ -2,6 +2,7 @@ import { LucidTenantDatabase } from '#core/tenancy/index'
 import { LucidMembershipStore } from '#core/membership/index'
 import { LucidOrganizationStore } from '#core/organization/index'
 import {
+  AdminGuard,
   AssignmentUseCases,
   Authorize,
   EnsureTenantAdmin,
@@ -21,6 +22,7 @@ function build() {
   const organizations = new LucidOrganizationStore()
   const catalog = new LucidPermissionCatalog()
   const clock = { now: () => new Date() }
+  const guard = new AdminGuard(store, clock)
   return {
     authorize: new Authorize(uow, store, clock),
     effectivePermissions: new ListEffectivePermissions(uow, store, clock),
@@ -28,14 +30,17 @@ function build() {
       organizations.expandUnitScope(scope, membershipId)
     ),
     permissions: new ListPermissions(catalog),
-    roles: new RoleUseCases(uow, store, memberships),
+    roles: new RoleUseCases(uow, store, memberships, guard),
     assignments: new AssignmentUseCases(
       uow,
       store,
       memberships,
-      async (scope, unitId) => (await organizations.findUnit(scope, unitId)) !== null
+      async (scope, unitId) => (await organizations.findUnit(scope, unitId)) !== null,
+      guard
     ),
     policies: new PolicyUseCases(uow, store, memberships),
+    guard,
+    store,
     syncCatalog: new SyncPermissionCatalog(catalog),
     ensureTenantAdmin: new EnsureTenantAdmin(uow, store, memberships),
   }

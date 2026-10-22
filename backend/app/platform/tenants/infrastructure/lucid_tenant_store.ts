@@ -75,6 +75,19 @@ export class LucidTenantStore implements TenantStore {
     return (rows as TenantRow[]).map(toTenant)
   }
 
+  async maxMembers(tenantId: string) {
+    const row = await conn().from('tenants').where('id', tenantId).first()
+    return row ? ((row.max_members as number | null) ?? null) : null
+  }
+
+  async setMaxMembers(tenantId: string, max: number | null) {
+    await conn()
+      .from('tenants')
+      .where('id', tenantId)
+      .update({ max_members: max, updated_at: new Date() })
+      .increment('version', 1)
+  }
+
   async findByIds(ids: string[]) {
     if (ids.length === 0) return []
     const rows = await conn().from('tenants').whereIn('id', ids)

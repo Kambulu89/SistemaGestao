@@ -185,6 +185,31 @@ export class ListPermissions {
   }
 }
 
+/**
+ * Protege o último administrador: uma alteração que retire o único `iam.manage` activo do tenant é
+ * recusada (409 `LAST_ADMIN`) e a transacção anulada. Só se aplica se havia administrador antes (um
+ * tenant ainda sem administrador não fica bloqueado). Serializa as alterações por tenant com um lock.
+ */
+export class AdminGuard {
+  constructor(
+    private readonly store: IamStore,
+    private readonly clock: Clock
+  ) {}
+
+  async run<T>(scope: TenantScope, mutate: () => Promise<T>): Promise<T> {
+    await this.store.lockAdmins(scope)
+    const before = await this.store.countActiveAdmins(scope, this.clock.now())
+    const result = await mutate()
+    if (before > 0 && (await this.store.countActiveAdmins(scope, this.clock.now())) === 0) {
+      throw ApiError.conflict(
+        'LAST_ADMIN',
+        'O tenant ficaria sem nenhum administrador activo. Atribua primeiro a permissão a outro membro.'
+      )
+    }
+    return result
+  }
+}
+
 // --- papéis --------------------------------------------------------------------------------------
 
 function checkPermissionCodes(codes: string[], path = 'permissionCodes') {
@@ -204,7 +229,8 @@ export class RoleUseCases {
   constructor(
     private readonly uow: TenantUnitOfWork,
     private readonly store: IamStore,
-    private readonly memberships: MembershipStore
+    private readonly memberships: MembershipStore,
+    private readonly guard: AdminGuard
   ) {}
 
   list(context: TenantContext): Promise<RoleView[]> {
@@ -275,11 +301,14 @@ export class RoleUseCases {
         ...(input.description !== undefined ? { description: input.description } : {}),
       })
       if (input.permissionCodes) {
-        await this.store.setRolePermissions(scope, id, [...new Set(input.permissionCodes)])
-        await this.memberships.bumpAuthorization(
-          scope,
-          await this.store.membershipsWithRole(scope, id)
-        )
+        const codes = [...new Set(input.permissionCodes)]
+        await this.guard.run(scope, async () => {
+          await this.store.setRolePermissions(scope, id, codes)
+          await this.memberships.bumpAuthorization(
+            scope,
+            await this.store.membershipsWithRole(scope, id)
+          )
+        })
       }
       return (await this.store.findRole(scope, id)) ?? updated
     }, context)
@@ -310,7 +339,8 @@ export class AssignmentUseCases {
     private readonly store: IamStore,
     private readonly memberships: MembershipStore,
     /** A unidade tem de existir neste tenant (fornecido pelo módulo de organização). */
-    private readonly unitExists: (scope: TenantScope, unitId: string) => Promise<boolean>
+    private readonly unitExists: (scope: TenantScope, unitId: string) => Promise<boolean>,
+    private readonly guard: AdminGuard
   ) {}
 
   list(context: TenantContext, membershipId?: string): Promise<AssignmentView[]> {
@@ -362,9 +392,11 @@ export class AssignmentUseCases {
 
   revoke(context: TenantContext, assignmentId: string): Promise<void> {
     return this.uow.run(async (scope) => {
-      const membershipId = await this.store.deleteAssignment(scope, assignmentId)
-      if (!membershipId) throw ApiError.notFound('Atribuição não encontrada.')
-      await this.memberships.bumpAuthorization(scope, [membershipId])
+      await this.guard.run(scope, async () => {
+        const membershipId = await this.store.deleteAssignment(scope, assignmentId)
+        if (!membershipId) throw ApiError.notFound('Atribuição não encontrada.')
+        await this.memberships.bumpAuthorization(scope, [membershipId])
+      })
     }, context)
   }
 }

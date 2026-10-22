@@ -40,6 +40,8 @@ export function api(client: any, tenant: Tenant, actor: Actor) {
     get: (url: string) => base(client.get(url), false) as Promise<ApiResponse>,
     post: (url: string, body: unknown) =>
       base(client.post(url), true).json(body) as Promise<ApiResponse>,
+    put: (url: string, body: unknown) =>
+      base(client.put(url), true).json(body) as Promise<ApiResponse>,
     patch: (url: string, body: unknown) =>
       base(client.patch(url), true).json(body) as Promise<ApiResponse>,
     delete: (url: string) => base(client.delete(url), true) as Promise<ApiResponse>,

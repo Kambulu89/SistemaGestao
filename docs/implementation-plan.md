@@ -58,7 +58,7 @@ isolamento por tenant e testes negativos com dois tenants.
 | 1.3 | ✅ **Membership e contexto** (feita — ver secção 2.3) (C05 parte 1) | 1.2 | `TenantMembership`; pipeline de resolução do tenant (spec §10.1) como middleware; `GET /context` com `authorizationVersion`; troca de tenant; suspensão de tenant bloqueia operações |
 | 1.4 | ✅ **Autorização** (C06; feita — ver secção 2.4) | 1.3 | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); *default deny*, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar |
 | 1.5 | ✅ **Organização** (C07; feita — ver secção 2.5) | 1.4 | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas |
-| 1.6 | **Convites e membros** (C05 parte 2) | 1.4, 1.5 | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências |
+| 1.6 | ✅ **Convites e membros** (C05 parte 2; feita — ver secção 2.6) | 1.4, 1.5 | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências |
 | 1.7 | **Party** (C08) | 1.5 | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). *Item da spec F1 que não constava do pedido: confirmar se entra nesta fase.* |
 | 1.8 | **Frontend real** | 1.2–1.6 | adaptadores HTTP para auth/tenant/contexto/membros/papéis/organização; remover os mocks correspondentes; mapeamento de permissões (D-014); selector de tenant que cancela pedidos e limpa caches; sessão em cookie |
 | 1.9 | **Matriz de isolamento** | todas | dois tenants de demonstração + utilizadores com papéis distintos; testes negativos (abaixo) em CI |
@@ -202,6 +202,36 @@ migrations numa base limpa (6), seeder duas vezes e `iam:sync` a passar; servido
   reorganizar. Sem permissão `organization.*` por unidade (a estrutura é só RBAC).
 - Sem API para `default_organization_id` da membership (preferências/convites: 1.6). Sem auditoria (Fase 2).
 - O lock consultivo serializa a edição da estrutura de um tenant (adequado a edições raras; rever se houver importações em massa).
+
+### 2.6 Fatia 1.6 — concluída
+**Entregue:** migration `invitations`, `user_preferences` e `tenants.max_members`; módulo `core/members` (convites, membros,
+preferências); `AdminGuard` no módulo de permissões; API `/invitations` (listar, criar, revogar), `POST /invitations/accept`,
+`/memberships` (listar, ver, suspender/reactivar/terminar), `/me/preferences`, `/me/default-organization`; comando
+`tenant:limit`; OpenAPI actualizado. ADR D-026. O mailer passa a aceitar a finalidade `INVITATION`.
+
+**Evidência (executada):** 199 testes backend a passar (17 novos). Convites: exige `member.invite`; resposta sem token e hash na
+base; validações (email, prazo 1–30, papéis/unidades inexistentes com caminho, já membro, pendente duplicado, re-convite depois
+de revogar); aceitar com a **mesma conta** que já pertence a outro tenant (conta única, papéis e âmbito aplicados, `/me/tenants`
+com 2); uso único (reuso → 400); sem sessão 401, sem CSRF 403, email de outra conta, token adulterado, tenant trocado → 400 e o
+token certo continua válido; expirado (estado `EXPIRED`, liberta o email), revogado, tenant suspenso; `LEFT` volta com a mesma
+membership e suspenso não; quota (recusa e aceita ao subir o limite); **concorrência**: com um lugar livre só um de dois
+convidados entra, e o mesmo token aceite 3× em paralelo → 1 sucesso; RLS. Membros: listagem com utilizador e papéis; suspender
+corta o acesso de imediato só nesse tenant; `expectedVersion`; transições; **último administrador** protegido ao suspender,
+terminar, revogar a atribuição e retirar a permissão ao papel (transacção anulada, estado intacto), com segundo administrador já
+pode sair; **concorrência**: dois administradores a suspenderem-se mutuamente → 1×200 e 1×409 `LAST_ADMIN`. Preferências: só
+chaves conhecidas (impostos/moeda/segurança recusados), valores validados, privadas por membro, apagar/atualizar. Organização por
+omissão. Lint, `format:check`, `typecheck`, `build`, migrations numa base limpa (7), seeder duas vezes e `iam:sync` a passar;
+servidor compilado: o admin demo cria um convite e lista os membros.
+
+**Por verificar / limitações:**
+- Sem fornecedor de email o convite só chega via `dev-redis` (D-021). Nada reenvia um convite (revoga-se e cria-se outro).
+- Quota provisória por tenant (`max_members`), não por plano (C02). O limite não impede que um convite seja **criado** acima do
+  limite, só aceite.
+- "Registo verificado" no aceite: a aceitação usa uma conta existente com sessão; o fluxo de registo público de novas contas
+  (auto-registo) não existe (só `user:create` e `CreateUser`); um convidado sem conta tem de a ter criado antes.
+- Sem auditoria dos convites/alterações de membros (Fase 2). O `AdminGuard` não cobre políticas DENY que excluam todos.
+- Sem rate limit específico em `POST /invitations`/`accept`.
+- Alterar a organização por omissão não valida unidades; preferências sem versões/expectedVersion (última escrita ganha).
 
 ### Critérios de aceitação da Fase 1
 Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios de aceitação de cada componente:

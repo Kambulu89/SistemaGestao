@@ -16,6 +16,7 @@ export interface NewUser {
 export interface UserRepository {
   findByEmail(normalizedEmail: string): Promise<User | null>
   findById(id: string): Promise<User | null>
+  findByIds(ids: readonly string[]): Promise<User[]>
   /** Devolve `null` se o email já existir (a unicidade é decidida pela base, não por uma consulta prévia). */
   insert(user: NewUser): Promise<User | null>
   updatePasswordHash(userId: string, passwordHash: string): Promise<void>
@@ -97,7 +98,8 @@ export interface RateLimiter {
 
 export interface TokenMessage {
   to: string
-  purpose: TokenPurpose
+  /** `INVITATION`: convite para um tenant (o token é gerido pelo módulo de membros). */
+  purpose: TokenPurpose | 'INVITATION'
   token: string
   expiresAt: Date
 }

@@ -41,6 +41,8 @@ export async function deleteTestTenants() {
     await owner.transaction(async (trx) => {
       await trx.rawQuery("select set_config('app.tenant_id', ?, true)", [id])
       for (const table of [
+        'invitations',
+        'user_preferences',
         'role_assignments',
         'role_permissions',
         'roles',

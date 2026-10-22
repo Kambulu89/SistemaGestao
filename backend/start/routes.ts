@@ -16,6 +16,8 @@ const ContextController = () => import('#platform/tenants/presentation/context_c
 const IamController = () => import('#core/permissions/presentation/iam_controller')
 const OrganizationController = () =>
   import('#core/organization/presentation/organization_controller')
+const MembersController = () => import('#core/members/presentation/members_controller')
+const InvitationsController = () => import('#platform/tenants/presentation/invitations_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
 
 router
@@ -41,6 +43,7 @@ router
         router.delete('/me/sessions/:id', [MeController, 'revokeSession'])
         router.post('/me/password', [MeController, 'changePassword'])
         router.get('/me/tenants', [ContextController, 'myTenants'])
+        router.post('/invitations/accept', [InvitationsController, 'accept'])
       })
       .use(middleware.auth())
   })
@@ -120,6 +123,37 @@ router
         router.delete('/membership-scopes/:id', [OrganizationController, 'removeScope'])
       })
       .use(middleware.can({ permission: 'iam.manage' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/** Membros e convites (C05): leitura `member.read`, convites `member.invite`, gestão `member.manage`. */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/memberships', [MembersController, 'listMembers'])
+        router.get('/memberships/:id', [MembersController, 'showMember'])
+        router.get('/invitations', [MembersController, 'listInvitations'])
+      })
+      .use(middleware.can({ permission: 'member.read' }))
+
+    router
+      .group(() => {
+        router.post('/invitations', [MembersController, 'createInvitation'])
+        router.post('/invitations/:id/revoke', [MembersController, 'revokeInvitation'])
+      })
+      .use(middleware.can({ permission: 'member.invite' }))
+
+    router
+      .patch('/memberships/:id', [MembersController, 'changeMemberStatus'])
+      .use(middleware.can({ permission: 'member.manage' }))
+
+    // O próprio membro (sem permissão extra): preferências e organização por omissão.
+    router.get('/me/preferences', [MembersController, 'preferences'])
+    router.put('/me/preferences/:key', [MembersController, 'setPreference'])
+    router.delete('/me/preferences/:key', [MembersController, 'removePreference'])
+    router.put('/me/default-organization', [MembersController, 'setDefaultOrganization'])
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

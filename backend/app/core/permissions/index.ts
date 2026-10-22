@@ -21,3 +21,6 @@ export {
   type EvalContext,
 } from '#core/permissions/domain/condition'
 export { iamServices } from '#core/permissions/presentation/composition'
+export { AdminGuard } from '#core/permissions/application/use_cases'
+export { LucidIamStore } from '#core/permissions/infrastructure/lucid_iam'
+export type { IamStore } from '#core/permissions/application/ports'

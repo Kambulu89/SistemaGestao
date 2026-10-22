@@ -11,6 +11,7 @@ export {
   ChangeTenantStatus,
   CreateTenant,
   RegisterTenantDomain,
+  SetMemberLimit,
   VerifyTenantDomain,
 } from '#platform/tenants/application/use_cases'
 export { LucidTenantStore } from '#platform/tenants/infrastructure/lucid_tenant_store'

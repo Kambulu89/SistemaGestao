@@ -103,6 +103,47 @@ export class LucidMembershipStore implements MembershipStore {
     return row ? toMembership(row) : null
   }
 
+  async list(scope: TenantScope) {
+    const rows = await this.rows.list(scope, { limit: 100 })
+    return rows.map(toMembership)
+  }
+
+  async lockMembers(scope: TenantScope) {
+    const { trx, context } = scope as LucidTenantScope
+    await trx.rawQuery('select pg_advisory_xact_lock(hashtextextended(?, 0))', [
+      `members:${context.tenantId}`,
+    ])
+  }
+
+  async countOccupied(scope: TenantScope) {
+    const { trx, context } = scope as LucidTenantScope
+    const result = await trx.rawQuery(
+      `select count(*)::int as total from tenant_memberships where tenant_id = ? and status <> 'LEFT'`,
+      [context.tenantId]
+    )
+    return (result.rows as { total: number }[])[0].total
+  }
+
+  async reinstate(scope: TenantScope, membership: Membership) {
+    const updated = await this.rows.update(scope, membership.id, membership.version, {
+      status: 'ACTIVE',
+      joined_at: new Date(),
+      authorization_version: membership.authorizationVersion + 1,
+    })
+    return toMembership(updated)
+  }
+
+  async setDefaultOrganization(
+    scope: TenantScope,
+    membership: Membership,
+    organizationId: string | null
+  ) {
+    const updated = await this.rows.update(scope, membership.id, membership.version, {
+      default_organization_id: organizationId,
+    })
+    return toMembership(updated)
+  }
+
   async bumpAuthorization(scope: TenantScope, membershipIds: readonly string[]) {
     if (membershipIds.length === 0) return
     const { trx, context } = scope as LucidTenantScope
