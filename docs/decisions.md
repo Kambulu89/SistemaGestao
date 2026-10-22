@@ -324,6 +324,32 @@ em `GET /context`). **Fora desta fatia:** validar as listas do plano contra o re
 validar), configuração por módulo (`configuration` existe mas não tem API), tratamento de processos em curso na desactivação (não
 existem processos), estado `DISABLING` (a desactivação é imediata), API de plataforma para o catálogo, e a ligação do frontend.
 
+## D-032 Configurações com precedência declarada, impostos por período e sequências sob lock (aceite — fatia 2.4)
+**Configurações.** As *definições* (chave, tipo, valor por omissão, **âmbitos permitidos**) são entregues por código
+(`core/settings/domain/setting.ts`); o tenant só guarda *valores* (`setting_values`, um por âmbito: unicidade na base, combinação
+filial+módulo = `BRANCH` com `module_code`). Valor efectivo, do menos ao mais específico: omissão < tenant < organização < filial <
+módulo < filial+módulo < membership, restringido aos âmbitos que a chave admite — por isso as regras fiscais (`tax.*`) só admitem
+tenant e organização e **nunca override pessoal** (`422 SCOPE_NOT_ALLOWED`); um valor guardado fora dos âmbitos permitidos é ignorado.
+`GET /settings/effective` mostra valor e nível de origem; repor a herança é apagar o valor do âmbito (o histórico fica na auditoria).
+Actualizar um valor existente exige `expectedVersion`. As referências (organização, filial do tipo `BRANCH`, membership) têm de existir
+no tenant e a filial na organização indicada. Preferências pessoais: só via `/me/settings/{key}`, no próprio âmbito. Não existe
+tabela de definições nem o campo `sensitive` (nenhuma chave actual é sensível; entra com a primeira que o seja).
+**Impostos.** `tax_rates` por organização e código, com validade `[valid_from, valid_to]`; a sobreposição é rejeitada **na base**
+(trigger com lock consultivo, `409 TAX_RATE_OVERLAP`, também sob concorrência). A taxa, o código e o início são imutáveis (a taxa é
+copiada para as linhas emitidas): só nome, categoria, motivo e fim de validade mudam; taxa zero exige motivo de isenção.
+**Unidades.** `units_of_measure` com unidades base e derivadas (factor > 0), sem cadeias, mesma dimensão; dimensão, base e factor
+imutáveis; conversão com aritmética inteira exacta (6 casas), arredondamento meio-para-cima à precisão do destino, só entre
+dimensões compatíveis. **Sequências.** Uma por organização, filial opcional, tipo de documento, série e período (`ALL`/`AAAA`/`AAAA-MM`);
+modelo com tokens fechados (`{YYYY} {YY} {MM} {SERIES} {ORG} {BRANCH}`, nunca código do tenant). `SequenceIssuer.issue()` corre **na
+transacção do chamador**: `UPDATE … RETURNING` bloqueia a linha, serializa as emissões e devolve números distintos e contíguos; confirmada a
+transacção o número nunca se reutiliza (cancelar o documento não o devolve); se anular, volta. Escolhe-se a sequência da filial antes da da
+organização e o período mais específico; sem sequência configurada falha (`409 SEQUENCE_NOT_CONFIGURED`) em vez de criar uma. O
+próximo número só sobe; a pré-visualização é só renderização. **Auditoria:** as quatro tabelas têm trigger de auditoria; cada emissão
+gera uma entrada em `audit_logs` (rasto da alocação, com custo de escrita por emissão que não foi medido).
+**Fora desta fatia:** moedas e idiomas como catálogo de referência, criação automática de sequências para um período novo (hoje um
+período sem sequência falha), preços com imposto incluído/arredondamento aplicados (só as chaves existem), UI, API de plataforma
+e valores por omissão de plataforma geríveis (são o `defaultValue` do código).
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

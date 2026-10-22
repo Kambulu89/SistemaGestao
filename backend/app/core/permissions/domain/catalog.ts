@@ -49,6 +49,21 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Alterar pessoas, contactos, moradas e relações.',
   },
   {
+    code: 'settings.read',
+    moduleCode: 'settings',
+    description: 'Ver configurações, impostos, unidades de medida e sequências.',
+  },
+  {
+    code: 'settings.manage',
+    moduleCode: 'settings',
+    description: 'Alterar configurações, impostos e unidades de medida.',
+  },
+  {
+    code: 'sequence.manage',
+    moduleCode: 'settings',
+    description: 'Criar e alterar sequências de numeração.',
+  },
+  {
     code: 'module.read',
     moduleCode: 'modules',
     description: 'Ver o catálogo de módulos e funcionalidades do tenant.',

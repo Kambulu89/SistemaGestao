@@ -23,6 +23,7 @@ const AuditController = () => import('#core/audit/presentation/audit_controller'
 const SubscriptionController = () =>
   import('#platform/billing/presentation/subscription_controller')
 const ModulesController = () => import('#platform/modules/presentation/modules_controller')
+const SettingsController = () => import('#core/settings/presentation/settings_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
 
 router
@@ -245,6 +246,49 @@ router
         router.put('/tenant/features/:code', [ModulesController, 'setOverride'])
       })
       .use(middleware.can({ permission: 'module.manage' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Configurações, impostos, unidades e sequências (C09). Valores efectivos e preferências pessoais não exigem
+ * permissão extra (cada um só altera o seu âmbito MEMBERSHIP); o resto: leitura `settings.read`, escrita
+ * `settings.manage` e, para sequências, `sequence.manage`.
+ */
+router
+  .group(() => {
+    router.get('/settings/effective', [SettingsController, 'effective'])
+    router.put('/me/settings/:key', [SettingsController, 'setPersonal'])
+    router.delete('/me/settings/:key', [SettingsController, 'resetPersonal'])
+
+    router
+      .group(() => {
+        router.get('/settings', [SettingsController, 'list'])
+        router.get('/tax-rates', [SettingsController, 'listTaxRates'])
+        router.get('/units', [SettingsController, 'listUnits'])
+        router.get('/units/convert', [SettingsController, 'convert'])
+        router.get('/sequences', [SettingsController, 'listSequences'])
+      })
+      .use(middleware.can({ permission: 'settings.read' }))
+
+    router
+      .group(() => {
+        router.put('/settings/:key', [SettingsController, 'set'])
+        router.delete('/settings/:key', [SettingsController, 'reset'])
+        router.post('/tax-rates', [SettingsController, 'createTaxRate'])
+        router.patch('/tax-rates/:id', [SettingsController, 'updateTaxRate'])
+        router.post('/units', [SettingsController, 'createUnit'])
+        router.patch('/units/:id', [SettingsController, 'updateUnit'])
+      })
+      .use(middleware.can({ permission: 'settings.manage' }))
+
+    router
+      .group(() => {
+        router.post('/sequences', [SettingsController, 'createSequence'])
+        router.patch('/sequences/:id', [SettingsController, 'updateSequence'])
+        router.post('/sequences/preview', [SettingsController, 'previewSequence'])
+      })
+      .use(middleware.can({ permission: 'sequence.manage' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

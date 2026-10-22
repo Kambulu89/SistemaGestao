@@ -2,13 +2,13 @@
 
 Fases da especificação (§11) com estado real. Cada fase entrega **fatias verticais** (migration, domínio, API, UI,
 autorização, auditoria, testes). Uma fase só passa quando as verificações aplicáveis correram e a documentação foi
-actualizada. Estado actualizado em: Fase 2, fatia 2.3.
+actualizada. Estado actualizado em: Fase 2, fatia 2.4.
 
 | Fase | Âmbito (spec) | Estado |
 | --- | --- | --- |
 | **F0** Preparação | repositório, versões, Docker, CI, estrutura modular, ADRs | **Concluída** (com 2 verificações por executar — ver abaixo) |
 | **F1** Fundação | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party | **Próxima** (detalhada na secção 2) |
-| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos), backend, concluídas; 2.4–2.5 por fazer (ver secção 2b) |
+| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos) e 2.4 (configurações/sequências), backend, concluídas; 2.5 por fazer (ver secção 2b) |
 | F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | Não iniciada (existem contratos/motores no frontend — ver `architecture.md` §7) |
 | F4 Operação comercial | M01–M08, S01 | Não iniciada |
 | F5 Gestão empresarial | M09–M14, S02–S03 | Não iniciada |
@@ -371,7 +371,7 @@ Sem decomposição prévia no plano; proposta (uma fatia de cada vez, ordem suje
 | 2.1 | Auditoria mínima (S06): `audit_logs` imutável por triggers, `security_events`, consulta com RBAC e regras de campo | **Concluída** |
 | 2.2 | C02 planos, assinaturas e limites no backend (substitui a quota provisória de convites). Os entitlements provisórios do frontend ficam para depois de 2.3 | **Concluída** (backend) |
 | 2.3 | C03 registo de módulos e funcionalidades por tenant | **Concluída** (backend) |
-| 2.4 | C09 configurações, impostos e sequências (numeração sem lacunas e concorrente) | Por fazer |
+| 2.4 | C09 configurações, impostos, unidades e sequências (numeração sem lacunas e concorrente) | **Concluída** (backend) |
 | 2.5 | API de administração da plataforma (C01/C02) e fecho dos mocks restantes do frontend | Por fazer |
 
 ### 2b.1 Fatia 2.1 — concluída
@@ -417,6 +417,21 @@ duplicados, licença, descontinuado, núcleo, desactivação com dependentes sem
 **Limites / por verificar:** o código só declara o módulo `core` (nenhum módulo de negócio existe); o plano não valida os códigos
 de módulos/funcionalidades contra o registo; sem API de configuração por módulo nem de plataforma; frontend ainda com
 `provisional-entitlements.ts` (não ligado a `GET /context`/`/modules`); sem estado `DISABLING` nem tratamento de processos em curso.
+
+### 2b.4 Fatia 2.4 — concluída (backend)
+**Entregue** (ver D-032): migration `create_settings` (`setting_values`, `tax_rates`, `units_of_measure`, `sequences`; RLS, FKs
+compostas, auditoria, unicidade por âmbito e trigger anti-sobreposição de taxas), módulo `core/settings` (definições por código,
+precedência, validação, conversão de unidades exacta, formatação de sequências e `SequenceIssuer`), permissões `settings.read`,
+`settings.manage` e `sequence.manage`, rotas `GET /settings/effective`, `GET|PUT|DELETE /settings…`, `PUT|DELETE /me/settings/{key}`,
+`/tax-rates`, `/units` (+ `/units/convert`), `/sequences` (+ `/sequences/preview`), OpenAPI, matriz de isolamento e seeder demo
+(unidades, IVA e sequência por tenant).
+**Evidência:** 306 testes (novos: `settings_domain.spec.ts` — precedência de 6 níveis, âmbitos fiscais, conversão e formatos;
+`settings.spec.ts` — efectivo e origem, repor herança, preferência de idioma não altera imposto, versões e referências de outro
+tenant, permissões, auditoria, taxas sobrepostas (incl. concorrência), imutabilidade da taxa, unidades, **100 emissões concorrentes
+distintas e contíguas**, não-reutilização e devolução em rollback, escolha de filial/período, isolamento entre tenants).
+**Limites / por verificar:** sem catálogo de moedas/idiomas; períodos novos exigem criar a sequência (falha em vez de criar);
+as chaves fiscais existem mas ainda não há cálculo de impostos; o custo de auditar cada emissão não foi medido; sem UI; o frontend
+continua sem ligação a esta API.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

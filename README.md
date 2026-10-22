@@ -5,7 +5,7 @@ Plataforma SaaS **multi-tenant, modular e configurável**. Este repositório tem
 | Parte | Pasta | Estado |
 | --- | --- | --- |
 | Frontend (Angular 22 · Tailwind 4) | raiz (`src/`) | ligado à API para identidade, tenants, membros, convites, organização e perfis; o resto (core dinâmico, plataforma) ainda sobre **dados mock** |
-| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0, Fase 1 (fatias 1.1–1.9) e Fase 2 fatias 2.1–2.3**: tenants, autenticação, membros e convites, autorização RBAC+ABAC, organização, Party, matriz de isolamento, auditoria mínima, planos e assinaturas e registo de módulos. Sem módulos de negócio |
+| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0, Fase 1 (fatias 1.1–1.9) e Fase 2 fatias 2.1–2.4**: tenants, autenticação, membros e convites, autorização RBAC+ABAC, organização, Party, matriz de isolamento, auditoria mínima, planos e assinaturas, registo de módulos e configurações/sequências. Sem módulos de negócio |
 
 Contrato funcional: [`docs/especificacao-v2.docx`](docs/especificacao-v2.docx). Regras permanentes: [`CLAUDE.md`](CLAUDE.md).
 Arquitectura: [`docs/architecture.md`](docs/architecture.md) · decisões: [`docs/decisions.md`](docs/decisions.md) ·

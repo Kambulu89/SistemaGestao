@@ -5,6 +5,7 @@ import { ApiError } from '#core/http/api_error'
 import { authServices } from '#core/auth/index'
 import { organizationServices } from '#core/organization/index'
 import { partyServices } from '#core/party/index'
+import { settingsServices } from '#core/settings/index'
 import { LucidMembershipDirectory } from '#core/membership/index'
 import { serviceTenantContext } from '#core/tenancy/index'
 import { billingServices } from '#platform/billing/index'
@@ -222,6 +223,73 @@ export default class DemoSeeder extends BaseSeeder {
         organizationId: organization.id,
         organizationUnitId: null,
         includeDescendants: false,
+      })
+    )
+    await this.seedReference(context, organization.id)
+  }
+
+  /** Unidades, imposto e sequência de demonstração (C09); repetir não duplica (conflitos ignorados). */
+  private async seedReference(
+    context: ReturnType<typeof serviceTenantContext>,
+    organizationId: string
+  ) {
+    const { units, taxRates, sequences } = settingsServices()
+    await ignoreConflict(() =>
+      units.create(context, {
+        code: 'UN',
+        name: 'Unidade',
+        dimension: 'COUNT',
+        precision: 0,
+        baseUnitId: null,
+        factor: null,
+      })
+    )
+    await ignoreConflict(() =>
+      units.create(context, {
+        code: 'KG',
+        name: 'Quilograma',
+        dimension: 'MASS',
+        precision: 3,
+        baseUnitId: null,
+        factor: null,
+      })
+    )
+    const existing = await units.list(context)
+    const kg = existing.find((u) => u.code === 'KG')
+    if (kg) {
+      await ignoreConflict(() =>
+        units.create(context, {
+          code: 'G',
+          name: 'Grama',
+          dimension: 'MASS',
+          precision: 0,
+          baseUnitId: kg.id,
+          factor: '0.001',
+        })
+      )
+    }
+    await ignoreConflict(() =>
+      taxRates.create(context, {
+        organizationId,
+        code: 'IVA',
+        name: 'IVA normal (demonstração)',
+        rate: '14',
+        validFrom: '2026-01-01',
+        validTo: null,
+        category: 'VAT',
+        exemptionReason: null,
+      })
+    )
+    await ignoreConflict(() =>
+      sequences.create(context, {
+        organizationId,
+        branchId: null,
+        documentType: 'INVOICE',
+        series: 'A',
+        period: 'ALL',
+        prefixTemplate: 'FT {SERIES}/{YYYY}/',
+        nextValue: '1',
+        padding: 6,
       })
     )
   }

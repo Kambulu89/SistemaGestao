@@ -283,6 +283,353 @@ paths:
         - $ref: '#/components/parameters/TenantId'
       responses:
         '200': { description: 'Lista de code, moduleCode, enabled e reason.' }
+  /settings/effective:
+    get:
+      summary: Valores efectivos das configurações, com o nível de origem
+      description: |
+        Precedência (menor → maior): omissão < tenant < organização < filial < módulo < filial+módulo < membership,
+        restringida aos âmbitos que cada chave admite (as regras fiscais só admitem tenant e organização; nunca
+        override pessoal). Não exige permissão extra. `source.level` diz de onde veio o valor.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - { name: branchId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: moduleCode, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: 'Uma entrada por chave: value, source, category e allowedScopes.' }
+        '422': { $ref: '#/components/responses/Error' }
+  /settings:
+    get:
+      summary: Valores guardados por âmbito (settings.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: key, in: query, required: false, schema: { type: string } }
+        - { name: scopeType, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: 'Valores com key, scopeType, scopeId, moduleCode, value e version.' }
+        '403': { $ref: '#/components/responses/Error' }
+  /settings/{key}:
+    put:
+      summary: Define o valor de uma chave num âmbito (settings.manage)
+      description: |
+        Actualizar um valor existente exige `expectedVersion` (409 `VERSION_REQUIRED` / `VERSION_CONFLICT`).
+        `422 SCOPE_NOT_ALLOWED` se a chave não admite o âmbito. A combinação filial+módulo é `BRANCH` com `moduleCode`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: key, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scopeType, value]
+              properties:
+                scopeType: { type: string, enum: [TENANT, ORGANIZATION, BRANCH, MODULE] }
+                scopeId: { type: string, format: uuid, nullable: true }
+                moduleCode: { type: string, nullable: true }
+                value: {}
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Valor guardado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Repõe a herança (remove o valor do âmbito) (settings.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: key, in: path, required: true, schema: { type: string } }
+        - { name: scopeType, in: query, required: true, schema: { type: string } }
+        - { name: scopeId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: moduleCode, in: query, required: false, schema: { type: string } }
+      responses:
+        '204': { description: Removido. }
+        '404': { $ref: '#/components/responses/Error' }
+  /me/settings/{key}:
+    put:
+      summary: Preferência pessoal (âmbito MEMBERSHIP do próprio membro)
+      description: Só chaves que admitem o âmbito MEMBERSHIP (as regras fiscais não admitem).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: key, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value: {}
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Valor guardado. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Repõe a herança da preferência pessoal
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: key, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Removido. }
+        '404': { $ref: '#/components/responses/Error' }
+  /tax-rates:
+    get:
+      summary: Taxas de imposto (settings.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - { name: code, in: query, required: false, schema: { type: string } }
+        - {
+            name: on,
+            in: query,
+            required: false,
+            schema: { type: string, format: date },
+            description: Só as válidas nesta data.,
+          }
+      responses:
+        '200': { description: 'Taxas com `rate` em string e intervalo de validade.' }
+    post:
+      summary: Cria uma taxa (settings.manage)
+      description: |
+        `409 TAX_RATE_OVERLAP` se o período se sobrepuser a outro do mesmo código e organização. Uma taxa zero exige
+        `exemptionReason`. A taxa copia-se para as linhas emitidas; não se altera depois (feche o período e crie outra).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, code, name, rate, validFrom, category]
+              properties:
+                organizationId: { type: string, format: uuid }
+                code: { type: string }
+                name: { type: string }
+                rate: { type: string }
+                validFrom: { type: string, format: date }
+                validTo: { type: string, format: date, nullable: true }
+                category: { type: string }
+                exemptionReason: { type: string, nullable: true }
+      responses:
+        '201': { description: Criada. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /tax-rates/{id}:
+    patch:
+      summary: Altera nome, categoria, motivo ou fim de validade (settings.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                validTo: { type: string, format: date, nullable: true }
+                category: { type: string }
+                exemptionReason: { type: string, nullable: true }
+      responses:
+        '200': { description: Taxa actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /units:
+    get:
+      summary: Unidades de medida (settings.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Unidades com dimensão, precisão, base e factor. }
+    post:
+      summary: Cria uma unidade (settings.manage)
+      description: Uma unidade derivada indica a unidade base (da mesma dimensão, sem cadeias) e o factor.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name, dimension, precision]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                dimension: { type: string }
+                precision: { type: integer, minimum: 0, maximum: 6 }
+                baseUnitId: { type: string, format: uuid, nullable: true }
+                conversionFactor: { type: string, nullable: true }
+      responses:
+        '201': { description: Criada. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /units/convert:
+    get:
+      summary: Converte uma quantidade entre unidades da mesma dimensão (settings.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: from, in: query, required: true, schema: { type: string } }
+        - { name: to, in: query, required: true, schema: { type: string } }
+        - { name: quantity, in: query, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Resultado em string, arredondado à precisão do destino.' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /units/{id}:
+    patch:
+      summary: Altera nome ou precisão (settings.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                precision: { type: integer }
+      responses:
+        '200': { description: Unidade actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /sequences:
+    get:
+      summary: Sequências de numeração (settings.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - { name: documentType, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: 'Sequências; `nextValue` em string.' }
+    post:
+      summary: Cria uma sequência (sequence.manage)
+      description: |
+        Uma por organização, filial (opcional), tipo de documento, série e período (`ALL`, `AAAA` ou `AAAA-MM`).
+        Modelo com os tokens {YYYY} {YY} {MM} {SERIES} {ORG} {BRANCH}.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, documentType, series, prefixTemplate]
+              properties:
+                organizationId: { type: string, format: uuid }
+                branchId: { type: string, format: uuid, nullable: true }
+                documentType: { type: string }
+                series: { type: string }
+                period: { type: string }
+                prefixTemplate: { type: string }
+                nextValue: { type: string }
+                padding: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '201': { description: Criada. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /sequences/{id}:
+    patch:
+      summary: Altera modelo, preenchimento ou sobe o próximo número (sequence.manage)
+      description: O próximo número nunca diminui (`422 NEXT_VALUE_DECREASE`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                prefixTemplate: { type: string }
+                padding: { type: integer }
+                nextValue: { type: string }
+      responses:
+        '200': { description: Sequência actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /sequences/preview:
+    post:
+      summary: Pré-visualiza o formato sem consumir número (sequence.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, series, prefixTemplate]
+              properties:
+                organizationId: { type: string, format: uuid }
+                branchId: { type: string, format: uuid, nullable: true }
+                series: { type: string }
+                prefixTemplate: { type: string }
+                padding: { type: integer }
+                nextValue: { type: string }
+                date: { type: string, format: date-time }
+      responses:
+        '200': { description: 'example: o número que seria emitido.' }
+        '422': { $ref: '#/components/responses/Error' }
   /tenant/subscription:
     get:
       summary: Plano contratado, consumo, limites e bloqueios do tenant (subscription.read)

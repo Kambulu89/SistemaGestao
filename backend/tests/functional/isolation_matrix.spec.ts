@@ -125,6 +125,9 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['patch', `/memberships/${m}`, { ...stale, status: 'SUSPENDED' }],
     ['put', `/memberships/${m}/person`, { partyId: null }],
     ['post', `/invitations/${o.invitation}/revoke`],
+    ['patch', `/tax-rates/${o.taxRate}`, { ...stale, name: 'x' }],
+    ['patch', `/units/${o.unit}`, { ...stale, name: 'x' }],
+    ['patch', `/sequences/${o.sequence}`, { ...stale, padding: 8 }],
     ['get', `/parties/${o.personParty}`],
     ['patch', `/parties/${o.personParty}`, { ...stale, displayName: 'x' }],
     ['get', `/parties/${o.personParty}/possible-duplicates`],
@@ -513,7 +516,10 @@ test.group('matriz de isolamento', (group) => {
 
     const url = (path: string) => path.replace('{id}', UUID0).replace('{key}', 'ui.theme')
     const noPermissionNeeded = (path: string) =>
-      path === '/context' || path === '/context/features' || path.startsWith('/me/')
+      path === '/context' ||
+      path === '/context/features' ||
+      path === '/settings/effective' ||
+      path.startsWith('/me/')
 
     for (const { method, path } of operations) {
       const label = `${method.toUpperCase()} ${path}`

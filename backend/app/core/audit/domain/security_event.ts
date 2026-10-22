@@ -63,6 +63,10 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   tenant_domains: 'iam.read',
   subscriptions: 'subscription.read',
   tenant_modules: 'module.read',
+  setting_values: 'settings.read',
+  tax_rates: 'settings.read',
+  units_of_measure: 'settings.read',
+  sequences: 'settings.read',
   tenant_features: 'module.read',
 }
 

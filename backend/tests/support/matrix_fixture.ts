@@ -34,6 +34,9 @@ export interface World {
     address: string
     relationship: string
     invitation: string
+    taxRate: string
+    unit: string
+    sequence: string
   }
 }
 
@@ -205,6 +208,62 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     await http.post('/api/v1/invitations', { email: SHARED.inviteEmail }),
     201
   )
+  // C09: os mesmos códigos nos dois tenants; só o valor das configurações difere.
+  await must(
+    await http.put('/api/v1/settings/ui.locale', {
+      scopeType: 'TENANT',
+      value: label === 'A' ? 'en' : 'pt-PT',
+    }),
+    200
+  )
+  await must(
+    await http.put('/api/v1/settings/ui.dateFormat', {
+      scopeType: 'ORGANIZATION',
+      scopeId: organization.id,
+      value: 'yyyy-MM-dd',
+    }),
+    200
+  )
+  const taxRate = await must<{ id: string }>(
+    await http.post('/api/v1/tax-rates', {
+      organizationId: organization.id,
+      code: 'IVA',
+      name: 'IVA normal',
+      rate: '14',
+      validFrom: '2026-01-01',
+      category: 'VAT',
+    }),
+    201
+  )
+  const kg = await must<{ id: string }>(
+    await http.post('/api/v1/units', {
+      code: 'KG',
+      name: 'Quilograma',
+      dimension: 'MASS',
+      precision: 3,
+    }),
+    201
+  )
+  await must(
+    await http.post('/api/v1/units', {
+      code: 'G',
+      name: 'Grama',
+      dimension: 'MASS',
+      precision: 0,
+      baseUnitId: kg.id,
+      conversionFactor: '0.001',
+    }),
+    201
+  )
+  const sequence = await must<{ id: string }>(
+    await http.post('/api/v1/sequences', {
+      organizationId: organization.id,
+      documentType: 'INVOICE',
+      series: 'A',
+      prefixTemplate: 'FT {SERIES}/{YYYY}/',
+    }),
+    201
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -233,6 +292,9 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       address: address.id,
       relationship: relationship.id,
       invitation: invitation.id,
+      taxRate: taxRate.id,
+      unit: kg.id,
+      sequence: sequence.id,
     },
   }
 }

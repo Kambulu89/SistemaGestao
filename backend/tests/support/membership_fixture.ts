@@ -48,7 +48,17 @@ export async function deleteTestTenants() {
       // A auditoria é imutável: só a conta dona, com o interruptor de retenção, a pode apagar.
       await trx.from('audit_logs').where('tenant_id', id).delete()
       await trx.from('tenant_memberships').where('tenant_id', id).update({ person_id: null })
+      // Unidades derivadas primeiro (a FK para a base é RESTRICT).
+      await trx
+        .from('units_of_measure')
+        .where('tenant_id', id)
+        .whereNotNull('base_unit_id')
+        .delete()
       for (const table of [
+        'sequences',
+        'tax_rates',
+        'units_of_measure',
+        'setting_values',
         'tenant_features',
         'tenant_modules',
         'party_relationships',
