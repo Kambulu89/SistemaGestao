@@ -18,6 +18,7 @@ const OrganizationController = () =>
   import('#core/organization/presentation/organization_controller')
 const MembersController = () => import('#core/members/presentation/members_controller')
 const InvitationsController = () => import('#platform/tenants/presentation/invitations_controller')
+const PartyController = () => import('#core/party/presentation/party_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
 
 router
@@ -154,6 +155,46 @@ router
     router.put('/me/preferences/:key', [MembersController, 'setPreference'])
     router.delete('/me/preferences/:key', [MembersController, 'removePreference'])
     router.put('/me/default-organization', [MembersController, 'setDefaultOrganization'])
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/** Party (C08): ler `party.read`, criar `party.create`, alterar `party.update`; ligar a membro `member.manage`. */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/parties', [PartyController, 'list'])
+        router.get('/parties/:id', [PartyController, 'show'])
+        router.get('/parties/:id/possible-duplicates', [PartyController, 'duplicates'])
+        router.get('/parties/:id/relationships', [PartyController, 'listRelationships'])
+      })
+      .use(middleware.can({ permission: 'party.read' }))
+
+    router
+      .group(() => {
+        router.post('/people', [PartyController, 'createPerson'])
+        router.post('/organization-parties', [PartyController, 'createOrganization'])
+      })
+      .use(middleware.can({ permission: 'party.create' }))
+
+    router
+      .group(() => {
+        router.patch('/parties/:id', [PartyController, 'update'])
+        router.post('/parties/:id/contacts', [PartyController, 'addContact'])
+        router.patch('/contacts/:id', [PartyController, 'updateContact'])
+        router.delete('/contacts/:id', [PartyController, 'removeContact'])
+        router.post('/parties/:id/addresses', [PartyController, 'addAddress'])
+        router.patch('/addresses/:id', [PartyController, 'updateAddress'])
+        router.delete('/addresses/:id', [PartyController, 'removeAddress'])
+        router.post('/parties/:id/relationships', [PartyController, 'addRelationship'])
+        router.delete('/party-relationships/:id', [PartyController, 'removeRelationship'])
+      })
+      .use(middleware.can({ permission: 'party.update' }))
+
+    router
+      .put('/memberships/:id/person', [PartyController, 'linkMembership'])
+      .use(middleware.can({ permission: 'member.manage' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

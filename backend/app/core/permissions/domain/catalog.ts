@@ -37,6 +37,17 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     moduleCode: 'organization',
     description: 'Gerir organizações e unidades.',
   },
+  { code: 'party.read', moduleCode: 'party', description: 'Ver pessoas e organizações externas.' },
+  {
+    code: 'party.create',
+    moduleCode: 'party',
+    description: 'Criar pessoas e organizações externas.',
+  },
+  {
+    code: 'party.update',
+    moduleCode: 'party',
+    description: 'Alterar pessoas, contactos, moradas e relações.',
+  },
 ]
 
 const CODE = /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/

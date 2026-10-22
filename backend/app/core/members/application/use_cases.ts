@@ -293,6 +293,7 @@ export interface MemberView {
   status: MembershipStatus
   joinedAt: Date | null
   defaultOrganizationId: string | null
+  personId: string | null
   authorizationVersion: number
   version: number
   roles: { assignmentId: string; roleId: string; roleCode: string }[]
@@ -393,6 +394,7 @@ export class MemberUseCases {
       status: m.status,
       joinedAt: m.joinedAt,
       defaultOrganizationId: m.defaultOrganizationId,
+      personId: m.personId,
       authorizationVersion: m.authorizationVersion,
       version: m.version,
       roles: assignments

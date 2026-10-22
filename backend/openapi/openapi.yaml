@@ -917,3 +917,342 @@ paths:
       responses:
         '200': { description: Membro actualizado. }
         '422': { description: Organização inexistente neste tenant. }
+  /parties:
+    get:
+      summary: Lista parties (party.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: kind,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [PERSON, ORGANIZATION] },
+          }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [ACTIVE, INACTIVE] },
+          }
+        - {
+            name: q,
+            in: query,
+            required: false,
+            schema: { type: string },
+            description: 'Nome, referência e contactos; nunca campos sensíveis.',
+          }
+        - { name: limit, in: query, required: false, schema: { type: integer, maximum: 100 } }
+        - { name: offset, in: query, required: false, schema: { type: integer } }
+      responses:
+        '200': { description: Lista paginada por limit/offset. }
+  /parties/{id}:
+    get:
+      summary: Detalhe com subtipo, contactos e moradas (party.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          { description: 'Party; os campos escondidos pelas regras de campo (C06) não constam.' }
+        '404': { description: Inexistente ou de outro tenant. }
+    patch:
+      summary: Corrige dados base e do subtipo (party.update)
+      description: |
+        Alterar o NIF ou o nome não reescreve documentos emitidos (guardam snapshot).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                displayName: { type: string }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+                externalReference: { type: string, nullable: true }
+                person: { type: object }
+                organization: { type: object }
+      responses:
+        '200': { description: Actualizado. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: VERSION_CONFLICT. }
+        '422': { $ref: '#/components/responses/Error' }
+        '403': { description: FIELD_FORBIDDEN (campo protegido pelas regras de campo). }
+  /parties/{id}/possible-duplicates:
+    get:
+      summary: Possíveis duplicados por identificação ou contacto (party.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Lista com os motivos; nunca se funde automaticamente. }
+        '404': { description: Inexistente. }
+  /people:
+    post:
+      summary: Cria uma pessoa (party.create)
+      description: |
+        Cria o party (PERSON) e o subtipo na mesma transacção.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [givenNames, familyName]
+              properties:
+                displayName: { type: string, nullable: true }
+                givenNames: { type: string }
+                familyName: { type: string }
+                birthDate: { type: string, format: date, nullable: true }
+                nationality: { type: string, nullable: true }
+                identityType: { type: string, nullable: true }
+                identityNumber: { type: string, nullable: true }
+                externalReference: { type: string, nullable: true }
+                contacts: { type: array, items: { type: object } }
+                addresses: { type: array, items: { type: object } }
+      responses:
+        '201':
+          {
+            description: Criado (Location); inclui possibleDuplicates (aviso,
+            nunca bloqueio nem fusão).,
+          }
+        '422': { $ref: '#/components/responses/Error' }
+  /organization-parties:
+    post:
+      summary: Cria uma organização externa (party.create)
+      description: |
+        Um fornecedor empresarial não exige Person.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [legalName]
+              properties:
+                displayName: { type: string, nullable: true }
+                legalName: { type: string }
+                taxCountry: { type: string, nullable: true }
+                taxId: { type: string, nullable: true }
+                registrationNumber: { type: string, nullable: true }
+                externalReference: { type: string, nullable: true }
+                contacts: { type: array, items: { type: object } }
+                addresses: { type: array, items: { type: object } }
+      responses:
+        '201':
+          {
+            description: Criado (Location); inclui possibleDuplicates (aviso,
+            nunca bloqueio nem fusão).,
+          }
+        '422': { $ref: '#/components/responses/Error' }
+  /parties/{id}/contacts:
+    post:
+      summary: Acrescenta um contacto (party.update); o primeiro de cada tipo é o principal
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, value]
+              properties:
+                type: { type: string, enum: [EMAIL, PHONE, WEBSITE] }
+                value: { type: string }
+                label: { type: string, nullable: true }
+                isPrimary: { type: boolean }
+      responses:
+        '201': { description: Criado. }
+        '404': { description: Party inexistente. }
+        '422': { $ref: '#/components/responses/Error' }
+  /contacts/{id}:
+    patch:
+      summary: Altera um contacto (party.update); novo valor deixa de estar verificado
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                value: { type: string }
+                label: { type: string, nullable: true }
+                isPrimary: { type: boolean }
+      responses:
+        '200': { description: Actualizado. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: VERSION_CONFLICT. }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Remove um contacto (party.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removido. }
+        '404': { description: Inexistente. }
+  /parties/{id}/addresses:
+    post:
+      summary: Acrescenta uma morada (party.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, line1, city, countryCode]
+              properties:
+                type: { type: string, enum: [BILLING, DELIVERY, OTHER] }
+                line1: { type: string }
+                line2: { type: string, nullable: true }
+                city: { type: string }
+                province: { type: string, nullable: true }
+                countryCode: { type: string, description: ISO 3166-1 alfa-2 }
+                postalCode: { type: string, nullable: true }
+                isPrimary: { type: boolean }
+      responses:
+        '201': { description: Criada. }
+        '404': { description: Party inexistente. }
+        '422': { $ref: '#/components/responses/Error' }
+  /addresses/{id}:
+    patch:
+      summary: Altera uma morada (party.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                type: { type: string, enum: [BILLING, DELIVERY, OTHER] }
+                line1: { type: string }
+                line2: { type: string, nullable: true }
+                city: { type: string }
+                province: { type: string, nullable: true }
+                countryCode: { type: string, description: ISO 3166-1 alfa-2 }
+                postalCode: { type: string, nullable: true }
+                isPrimary: { type: boolean }
+      responses:
+        '200': { description: Actualizado. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: VERSION_CONFLICT. }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Remove uma morada (party.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removida. }
+        '404': { description: Inexistente. }
+  /parties/{id}/relationships:
+    get:
+      summary: Relações do party, como origem ou destino (party.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Relações. }
+        '404': { description: Inexistente. }
+    post:
+      summary: Cria uma relação para outro party do mesmo tenant (party.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetPartyId, relationshipType]
+              properties:
+                targetPartyId: { type: string, format: uuid }
+                relationshipType: { type: string }
+                startsOn: { type: string, format: date, nullable: true }
+                endsOn: { type: string, format: date, nullable: true }
+      responses:
+        '201': { description: Criada. }
+        '404': { description: Party inexistente neste tenant. }
+        '409': { description: RELATIONSHIP_EXISTS. }
+        '422': { $ref: '#/components/responses/Error' }
+  /party-relationships/{id}:
+    delete:
+      summary: Remove uma relação (party.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removida. }
+        '404': { description: Inexistente. }
+  /memberships/{id}/person:
+    put:
+      summary: Liga (ou desliga, com null) a membership a uma pessoa (member.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [partyId]
+              properties:
+                partyId: { type: string, format: uuid, nullable: true }
+      responses:
+        '200': { description: Membership com personId. }
+        '404': { description: Membership ou party inexistentes neste tenant. }
+        '409': { description: PERSON_ALREADY_LINKED. }
+        '422': { description: O party não é uma pessoa. }

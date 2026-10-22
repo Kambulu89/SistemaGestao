@@ -41,6 +41,9 @@ backend/
                   uso (login, logout, sessões, recuperação, verificação, criação de conta) e portas ·
                   infrastructure: repositórios Lucid, scrypt, rate limit Redis, CSRF HMAC, mailers · presentation:
                   controllers, validadores, middleware `auth`/`origin`, composição · index.ts
+      party/      (fatia 1.7) domain: tipos, chaves de duplicados, validação · application: criação/alteração de pessoas e
+                  organizações externas, contactos, moradas, relações, ligação a membership · infrastructure: store Lucid ·
+                  presentation: controller (aplica as regras de campo) · index.ts
       members/    (fatia 1.6) domain: convite (token com tenant, estado efectivo), preferências (lista fechada) ·
                   application: convites, aceitação, membros, preferências · infrastructure: stores Lucid ·
                   presentation: controller · index.ts (a aceitação é ligada pela plataforma)
@@ -59,7 +62,7 @@ backend/
   commands/       `node ace tenant:*`, `user:create` (gestão da plataforma sem API HTTP)
   openapi/        contrato `openapi.yaml` (teste de paridade com as rotas)
   database/
-    migrations/   baseline da plataforma · tenants/domínios · identidade (users, sessões, tokens) · memberships · autorização · organização · convites e preferências
+    migrations/   baseline da plataforma · tenants/domínios · identidade (users, sessões, tokens) · memberships · autorização · organização · convites e preferências · party
     seeders/      demo (dois tenants; só fora de produção)
     support/      helpers de migration: createTenantTable, createGlobalTable, tenantForeignKey
   tests/          unit + functional (Japa); support/ = fixtures, verificador de arquitectura
@@ -183,7 +186,7 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 
 | Item | Estado | Evidência |
 | --- | --- | --- |
-| Monólito modular — estrutura base | PARCIAL | `core/{http,health,tenancy,auth,membership,permissions,organization,members}`, `platform/tenants`; restantes módulos por criar |
+| Monólito modular — estrutura base | PARCIAL | `core/{http,health,tenancy,auth,membership,permissions,organization,members,party}`, `platform/tenants`; restantes módulos por criar |
 | Validação de ambiente e `.env.example` | FEITO | `start/env_schema.ts`, `tests/unit/env.spec.ts` |
 | Ligação à base e Redis; `health` / `ready` | FEITO | `GET /api/v1/health`, `/ready`; testes funcionais |
 | Formato comum de respostas/erros | FEITO | `core/http/*`, `app/exceptions/handler.ts`, `tests/functional/errors.spec.ts` |
@@ -204,7 +207,7 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 | C05 Membros, convites, preferências | PARCIAL (fatias 1.3 e 1.6: membership, convites por token, aceitação com controlo do email, quota provisória, último administrador protegido, preferências; **sem** planos (C02), reenvio, auto-registo nem auditoria) | AUSENTE |
 | C06 Papéis, permissões, políticas | PARCIAL (fatia 1.4: catálogo, papéis, atribuições com validade, políticas ABAC por AST, regras de campo, simulação; âmbito por unidade nas decisões (1.5); **sem** filtro de linhas, cache nem auditoria) | PARCIAL (permissões por chave e avaliador RBAC+ABAC no cliente; só conveniência) |
 | C07 Organizações, unidades, centros de custo | PARCIAL (fatia 1.5: organizações, árvore de unidades sem ciclos e do mesmo pai-organização, centros de custo, equipas, `MembershipScope`; **sem** preview de impacto, regra de documentos nem moeda-base bloqueada por lançamentos) | AUSENTE |
-| C08 Pessoas, organizações externas, contactos | AUSENTE | AUSENTE |
+| C08 Pessoas, organizações externas, contactos | PARCIAL (fatia 1.7: Party/Person/OrganizationParty, contactos, moradas, relações, aviso de duplicados, campos sensíveis por regras de campo, ligação a membership; **sem** fusão assistida nem auditoria) | AUSENTE |
 | C09 Configurações, impostos, sequências | AUSENTE | AUSENTE |
 | C10 Metadados, entidades dinâmicas, campos | AUSENTE | PARCIAL/MOCK (contratos e motores no cliente; persistência mock) |
 | C11 Formulários | AUSENTE | PARCIAL (contratos, motores e integridade; sem Form Builder visual) |

@@ -4,6 +4,7 @@ import env from '#start/env'
 import { ApiError } from '#core/http/api_error'
 import { authServices } from '#core/auth/index'
 import { organizationServices } from '#core/organization/index'
+import { partyServices } from '#core/party/index'
 import { LucidMembershipDirectory } from '#core/membership/index'
 import { serviceTenantContext } from '#core/tenancy/index'
 import {
@@ -81,7 +82,55 @@ export default class DemoSeeder extends BaseSeeder {
     for (const demo of DEMO) {
       await ignoreConflict(() => addMemberByEmail(demo.code, MULTI_TENANT_USER))
       await this.seedOrganization(store, demo)
+      await this.seedParties(store, demo)
     }
+  }
+
+  /** Dois cadastros de demonstração por tenant (uma pessoa e um fornecedor), só se ainda não houver nenhum. */
+  private async seedParties(store: LucidTenantStore, demo: (typeof DEMO)[number]) {
+    const tenant = await store.findByCode(demo.code)
+    if (!tenant) return
+    const context = serviceTenantContext(
+      tenant.id,
+      `seed-parties-${demo.code}`,
+      tenant.defaultLocale
+    )
+    const parties = partyServices().parties
+    const existing = await parties.list(context, { limit: 1, offset: 0 })
+    if (existing.length > 0) return
+
+    await parties.createPerson(context, {
+      givenNames: 'Maria',
+      familyName: 'Demonstração',
+      birthDate: null,
+      nationality: 'AO',
+      identityType: null,
+      identityNumber: null,
+      externalReference: null,
+      contacts: [
+        { type: 'EMAIL', value: `maria@${demo.host}`, label: null, isPrimary: true },
+        { type: 'PHONE', value: '+244 900 000 000', label: null, isPrimary: true },
+      ],
+    })
+    await parties.createOrganization(context, {
+      legalName: `Fornecedor ${demo.name}, Lda.`,
+      taxCountry: 'AO',
+      taxId: demo.code === 'demo_a' ? '5000000001' : '5000000002',
+      registrationNumber: null,
+      externalReference: null,
+      addresses: [
+        {
+          type: 'BILLING',
+          line1: 'Rua da Demonstração 1',
+          line2: null,
+          city: 'Luanda',
+          province: 'Luanda',
+          countryCode: 'AO',
+          postalCode: null,
+          isPrimary: true,
+        },
+      ],
+    })
   }
 
   /** Organização de demonstração com uma árvore de unidades e um âmbito total para o administrador. */

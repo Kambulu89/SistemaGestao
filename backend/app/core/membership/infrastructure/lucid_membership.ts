@@ -25,6 +25,7 @@ const toMembership = (row: MembershipRow): Membership => ({
   status: row.status,
   joinedAt: row.joined_at,
   defaultOrganizationId: row.default_organization_id,
+  personId: row.person_id,
   authorizationVersion: row.authorization_version,
   version: row.version,
 })
@@ -106,6 +107,22 @@ export class LucidMembershipStore implements MembershipStore {
   async list(scope: TenantScope) {
     const rows = await this.rows.list(scope, { limit: 100 })
     return rows.map(toMembership)
+  }
+
+  async findByPerson(scope: TenantScope, personId: string) {
+    const { trx, context } = scope as LucidTenantScope
+    const row = await trx
+      .from('tenant_memberships')
+      .where({ tenant_id: context.tenantId, person_id: personId })
+      .first()
+    return row ? toMembership(row as MembershipRow) : null
+  }
+
+  async setPerson(scope: TenantScope, membership: Membership, personId: string | null) {
+    const updated = await this.rows.update(scope, membership.id, membership.version, {
+      person_id: personId,
+    })
+    return toMembership(updated)
   }
 
   async lockMembers(scope: TenantScope) {

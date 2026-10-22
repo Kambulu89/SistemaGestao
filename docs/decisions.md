@@ -217,6 +217,26 @@ de um papel. Só actua se havia administrador antes. **Não cobre** políticas D
 (`UNKNOWN_PREFERENCE`). **Módulos.** `core/members` (convites, membros, preferências) depende de `membership`, `permissions`,
 `organization` e `auth` só pelos `index.ts`; a aceitação é exposta pela plataforma, que injecta o estado e a quota do tenant.
 
+## D-027 Party, subtipos coerentes, duplicados e campos sensíveis (aceite — fatia 1.7)
+**Modelo.** `parties` (PERSON | ORGANIZATION), `people`, `organization_parties`, `contacts`, `addresses`, `party_relationships`
+(todas de tenant). "Exactamente um subtipo coerente com o `kind`" é imposto pela base: cada subtipo tem uma coluna `kind` fixa
+(CHECK) e uma FK composta `(tenant_id, party_id, kind) → parties (tenant_id, id, kind)`, mais `unique(tenant, party_id)`. A
+**existência** do subtipo garante-a a aplicação (cria party e subtipo na mesma transacção); não há restrição diferida que impeça
+um party sem subtipo se alguém escrever SQL directo. Um contacto/morada principal por tipo e party (índice parcial único; o
+primeiro de cada tipo é o principal e pedir principal demove o anterior, sob lock por party). Fornecedor empresarial não exige
+Person. `tenant_memberships.person_id` passa a ter FK composta para `people` e é único por tenant (uma pessoa por membership);
+a API liga pelo **id do party** (`PUT /memberships/:id/person`) e a membership expõe `personId` (= `people.id`).
+**Duplicados.** Chaves normalizadas guardadas (`identity_key`, `tax_key`, `contacts.value_key`: documento sem pontuação,
+email em minúsculas, telefone só dígitos, site sem esquema/www) servem o **aviso** `possibleDuplicates` (na criação/alteração e em
+`GET /parties/:id/possible-duplicates`). Nunca bloqueia nem funde. **Fusão assistida (`party.merge`) não foi implementada:** exige
+trilho de auditoria (Fase 2) e remapeamento de ligações de módulos que ainda não existem; a permissão não consta do catálogo.
+**Campos sensíveis.** `birthDate`, `nationality`, `identityType` e `identityNumber` são alvo das regras de campo de C06: um
+`HIDDEN` para `party.read` retira-os de todas as respostas (detalhe, criação, alteração) e um `READ_ONLY`/`HIDDEN` para
+`party.update` recusa a alteração (`403 FIELD_FORBIDDEN`). A pesquisa (`q`) só olha para nome, referência e contactos, nunca
+para identificação. Alterar o NIF/nome não reescreve documentos emitidos: os módulos de documentos guardarão o seu snapshot.
+**Limites.** Contactos e moradas não têm regras de campo próprias; não há arquivamento em cascata; `organizations.address_id` (a
+organização interna) continua sem FK para `addresses`.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

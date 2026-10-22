@@ -20,6 +20,12 @@ export interface MembershipStore {
   findByUser(scope: TenantScope, userId: string): Promise<Membership | null>
   findById(scope: TenantScope, membershipId: string): Promise<Membership | null>
   list(scope: TenantScope): Promise<Membership[]>
+  findByPerson(scope: TenantScope, personId: string): Promise<Membership | null>
+  setPerson(
+    scope: TenantScope,
+    membership: Membership,
+    personId: string | null
+  ): Promise<Membership>
   /** Serializa as entradas de membros do tenant até ao fim da transacção (quota sob concorrência). */
   lockMembers(scope: TenantScope): Promise<void>
   /** Lugares ocupados: tudo o que não é `LEFT`. */

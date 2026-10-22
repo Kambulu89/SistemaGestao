@@ -59,7 +59,7 @@ isolamento por tenant e testes negativos com dois tenants.
 | 1.4 | ✅ **Autorização** (C06; feita — ver secção 2.4) | 1.3 | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); *default deny*, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar |
 | 1.5 | ✅ **Organização** (C07; feita — ver secção 2.5) | 1.4 | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas |
 | 1.6 | ✅ **Convites e membros** (C05 parte 2; feita — ver secção 2.6) | 1.4, 1.5 | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências |
-| 1.7 | **Party** (C08) | 1.5 | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). *Item da spec F1 que não constava do pedido: confirmar se entra nesta fase.* |
+| 1.7 | ✅ **Party** (C08; feita — ver secção 2.7) | 1.5 | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). *Item da spec F1 que não constava do pedido: confirmar se entra nesta fase.* |
 | 1.8 | **Frontend real** | 1.2–1.6 | adaptadores HTTP para auth/tenant/contexto/membros/papéis/organização; remover os mocks correspondentes; mapeamento de permissões (D-014); selector de tenant que cancela pedidos e limpa caches; sessão em cookie |
 | 1.9 | **Matriz de isolamento** | todas | dois tenants de demonstração + utilizadores com papéis distintos; testes negativos (abaixo) em CI |
 
@@ -232,6 +232,36 @@ servidor compilado: o admin demo cria um convite e lista os membros.
 - Sem auditoria dos convites/alterações de membros (Fase 2). O `AdminGuard` não cobre políticas DENY que excluam todos.
 - Sem rate limit específico em `POST /invitations`/`accept`.
 - Alterar a organização por omissão não valida unidades; preferências sem versões/expectedVersion (última escrita ganha).
+
+### 2.7 Fatia 1.7 — concluída
+**Entregue:** migration `parties`, `people`, `organization_parties`, `contacts`, `addresses`, `party_relationships` e a FK
+`tenant_memberships.person_id → people`; módulo `core/party` (casos de uso, store Lucid, API `/parties`, `/people`,
+`/organization-parties`, `/parties/:id/contacts|addresses|relationships|possible-duplicates`, `/contacts/:id`, `/addresses/:id`,
+`/party-relationships/:id`, `PUT /memberships/:id/person`); permissões `party.read|create|update` no catálogo; seeder com uma
+pessoa e um fornecedor por tenant demo; OpenAPI actualizado. ADR D-027. (O pedido original não incluía Party; entrou a seu
+pedido, nesta fase.)
+
+**Evidência (executada):** 219 testes backend a passar (20 novos). Unit: chaves de duplicados (documento, NIF, email, telefone,
+site), validação de contactos por tipo, pessoa (datas, país, documento completo), organização, morada, datas ISO. Funcionais:
+RBAC `party.*`; criação de pessoa com subtipo, contactos e moradas numa operação (404/422 com caminhos completos);
+fornecedor empresarial sem `Person` (0 linhas em `people`); a **base recusa** pessoa sobre party de organização,
+organização sobre party de pessoa e dois subtipos (`people_party_kind_fk`, `organization_parties_party_kind_fk`,
+`people_party_unique`); um contacto principal por tipo (também na base, `contacts_one_primary`); novo valor deixa de estar
+verificado; moradas; duplicados por identificação, contacto e NIF (sem fundir: continuam dois registos), desaparecem ao corrigir
+o NIF, e o mesmo email noutro tenant não conta; `expectedVersion`, `KIND_MISMATCH`, estado `INACTIVE`; pesquisa por nome e
+contacto, `%` literal, paginação, e sem procurar por identificação; relações (duplicada 409, mesma party 422, alheia 404, visível
+dos dois lados); **regras de campo** a esconder `birthDate`/`identityNumber` em leitura/criação/alteração e a recusar a alteração
+de `nationality` (403); ligação membership↔pessoa (única, só PERSON, desligar); isolamento (404 e RLS em 6 tabelas). Lint,
+`format:check`, `typecheck`, `build`, migrations numa base limpa (8), seeder duas vezes e `iam:sync` a passar; servidor
+compilado lista os dois cadastros demo.
+
+**Por verificar / limitações:**
+- **Fusão assistida (`party.merge`) não feita:** precisa de auditoria (Fase 2) e de módulos com ligações a remapear.
+- "Uma pessoa pode ser cliente e colaborador": o modelo permite (um party, vários perfis), mas Customer/Employee ainda não
+  existem; só está testado que não se duplica contacto e que o aviso de duplicados não dispara entre tenants.
+- "Alteração de NIF não muda fatura emitida" depende de documentos (snapshot) que ainda não existem.
+- Sem restrição de base de dados que force a existência do subtipo (só a aplicação); sem regras de campo em contactos/moradas.
+- Sem auditoria das alterações a dados pessoais (Fase 2) — relevante para dados sensíveis/RGPD.
 
 ### Critérios de aceitação da Fase 1
 Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios de aceitação de cada componente:

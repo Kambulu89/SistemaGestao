@@ -7,6 +7,8 @@ export interface Membership {
   status: MembershipStatus
   joinedAt: Date | null
   defaultOrganizationId: string | null
+  /** `people.id` da Person ligada (vínculo opcional; uma Person por membership). */
+  personId: string | null
   /** Incrementa sempre que os acessos mudam; faz parte do `TenantContext.permissionsVersion`. */
   authorizationVersion: number
   version: number
