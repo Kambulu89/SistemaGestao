@@ -121,11 +121,14 @@ export function validateCondition(ast: unknown): ConditionIssue[] {
     if ((COMPARISONS as readonly string[]).includes(op)) {
       validateOperand(node.left, `${path}.left`, issues)
       validateOperand(node.right, `${path}.right`, issues)
-      if (op === 'in' && !(isRecord(node.right) && Array.isArray(node.right.value))) {
+      // A lista pode ser literal ou uma variável (ex.: subject.unitIds); se não for lista, avalia a falso.
+      const listOperand =
+        isRecord(node.right) && ('var' in node.right || Array.isArray(node.right.value))
+      if (op === 'in' && !listOperand) {
         issues.push({
           path: `${path}.right`,
           code: 'IN_NEEDS_LIST',
-          message: '"in" exige uma lista de valores.',
+          message: '"in" exige uma lista de valores ou uma variável que seja uma lista.',
         })
       }
       return

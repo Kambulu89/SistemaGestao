@@ -13,6 +13,11 @@ export interface TenantSelector {
   host?: string
 }
 
+/** Porta: unidades acessíveis à membership (MembershipScope), pedidas já dentro do tenant validado. */
+export interface UnitScopeResolver {
+  resolve(context: TenantContext, membershipId: string): Promise<string[]>
+}
+
 export interface ResolvedTenantContext {
   context: TenantContext
   tenant: Tenant
@@ -32,7 +37,8 @@ const badSelector = (code: string, message: string) => new ApiError(400, code, m
 export class ResolveTenantContext {
   constructor(
     private readonly tenants: TenantStore,
-    private readonly memberships: MembershipDirectory
+    private readonly memberships: MembershipDirectory,
+    private readonly units: UnitScopeResolver
   ) {}
 
   async execute(input: {
@@ -49,18 +55,22 @@ export class ResolveTenantContext {
       throw new ApiError(403, 'TENANT_NOT_ACTIVE', 'O tenant não está activo.')
     }
 
-    const context = TenantContext.create({
+    const base = {
       tenantId: tenant.id,
       userId: input.user.id,
       membershipId: membership.id,
       organizationId: membership.defaultOrganizationId,
-      // Sem âmbitos atribuídos (MembershipScope chega com a autorização/organização): nega por omissão.
-      unitScope: { kind: 'UNITS', unitIds: [] },
-      actorType: 'USER',
+      actorType: 'USER' as const,
       permissionsVersion: membership.authorizationVersion,
       correlationId: input.correlationId,
       locale: input.user.locale ?? tenant.defaultLocale,
-    })
+    }
+    // Sem âmbitos atribuídos, o actor não tem acesso a nenhuma unidade (nega por omissão).
+    const unitIds = await this.units.resolve(
+      TenantContext.create({ ...base, unitScope: { kind: 'UNITS', unitIds: [] } }),
+      membership.id
+    )
+    const context = TenantContext.create({ ...base, unitScope: { kind: 'UNITS', unitIds } })
     return { context, tenant, membership }
   }
 

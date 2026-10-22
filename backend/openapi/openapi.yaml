@@ -442,3 +442,301 @@ paths:
       responses:
         '200': { description: Decisão, origem (papéis e políticas) e campos ocultos/só de leitura. }
         '404': { description: Membership inexistente neste tenant. }
+  /organizations:
+    get:
+      summary: Organizações (organization.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: OK. }
+    post:
+      summary: Cria uma organização (organization.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, legalName, countryCode, baseCurrency]
+              properties:
+                code: { type: string }
+                legalName: { type: string }
+                tradeName: { type: string, nullable: true }
+                countryCode: { type: string, description: ISO 3166-1 alfa-2 }
+                taxId: { type: string, nullable: true }
+                baseCurrency: { type: string, description: ISO 4217 }
+                fiscalYearStartMonth: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '201': { description: Criado (cabeçalho Location). }
+        '409': { description: Código duplicado. }
+        '422': { $ref: '#/components/responses/Error' }
+  /organizations/{id}:
+    get:
+      summary: Detalhe de uma organização
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: OK. }
+        '404': { description: Inexistente ou de outro tenant. }
+    patch:
+      summary: Altera uma organização com expectedVersion (organization.manage; o código não muda)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                code: { type: string }
+                legalName: { type: string }
+                tradeName: { type: string, nullable: true }
+                countryCode: { type: string, description: ISO 3166-1 alfa-2 }
+                taxId: { type: string, nullable: true }
+                baseCurrency: { type: string, description: ISO 4217 }
+                fiscalYearStartMonth: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '200': { description: Actualizado. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: VERSION_CONFLICT. }
+        '422': { $ref: '#/components/responses/Error' }
+  /organization-units:
+    get:
+      summary: Unidades organizacionais (filtro organizationId)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        '200': { description: OK. }
+    post:
+      summary: Cria uma unidade (a unidade pai tem de ser da mesma organização)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, code, name]
+              properties:
+                organizationId: { type: string, format: uuid }
+                parentId: { type: string, format: uuid, nullable: true }
+                code: { type: string }
+                name: { type: string }
+                type: { type: string, enum: [BRANCH, DEPARTMENT, SECTION, TEAM, OTHER] }
+                managerMembershipId: { type: string, format: uuid, nullable: true }
+                timezone: { type: string, nullable: true }
+      responses:
+        '201': { description: Criado (cabeçalho Location). }
+        '409': { description: Código duplicado. }
+        '422': { $ref: '#/components/responses/Error' }
+  /organization-units/{id}:
+    get:
+      summary: Detalhe de uma unidade
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: OK. }
+        '404': { description: Inexistente ou de outro tenant. }
+    patch:
+      summary: Altera uma unidade; rejeita ciclos (a organização e o código não mudam)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                parentId: { type: string, format: uuid, nullable: true }
+                name: { type: string }
+                type: { type: string, enum: [BRANCH, DEPARTMENT, SECTION, TEAM, OTHER] }
+                managerMembershipId: { type: string, format: uuid, nullable: true }
+                timezone: { type: string, nullable: true }
+                active: { type: boolean }
+      responses:
+        '200': { description: Actualizado. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: VERSION_CONFLICT. }
+        '422': { $ref: '#/components/responses/Error' }
+  /organization-units/{id}/members:
+    get:
+      summary: Membros da equipa de uma unidade
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: OK. }
+        '404': { description: Unidade inexistente. }
+    post:
+      summary: Acrescenta um membro à equipa (unidade activa)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [membershipId, startsOn]
+              properties:
+                membershipId: { type: string, format: uuid }
+                startsOn: { type: string, format: date }
+                endsOn: { type: string, format: date, nullable: true }
+                roleLabel: { type: string, nullable: true }
+      responses:
+        '201': { description: Criado. }
+        '404': { description: Unidade ou membership inexistentes. }
+        '409': { description: UNIT_INACTIVE. }
+        '422': { $ref: '#/components/responses/Error' }
+  /team-members/{id}:
+    delete:
+      summary: Remove um membro de equipa
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removido. }
+        '404': { description: Inexistente ou de outro tenant. }
+  /cost-centers:
+    get:
+      summary: Centros de custo (filtro organizationId)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        '200': { description: OK. }
+    post:
+      summary: Cria um centro de custo (o pai tem de ser da mesma organização)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, code, name]
+              properties:
+                organizationId: { type: string, format: uuid }
+                parentId: { type: string, format: uuid, nullable: true }
+                code: { type: string }
+                name: { type: string }
+                responsibleMembershipId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201': { description: Criado (cabeçalho Location). }
+        '409': { description: Código duplicado. }
+        '422': { $ref: '#/components/responses/Error' }
+  /cost-centers/{id}:
+    patch:
+      summary: Altera um centro de custo; rejeita ciclos
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                parentId: { type: string, format: uuid, nullable: true }
+                name: { type: string }
+                responsibleMembershipId: { type: string, format: uuid, nullable: true }
+                active: { type: boolean }
+      responses:
+        '200': { description: Actualizado. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: VERSION_CONFLICT. }
+        '422': { $ref: '#/components/responses/Error' }
+  /membership-scopes:
+    get:
+      summary: Âmbitos de acesso (iam.read; filtro membershipId)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: membershipId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: OK. }
+    post:
+      summary: Atribui um âmbito (organização inteira ou unidade ± descendentes) (iam.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [membershipId, organizationId]
+              properties:
+                membershipId: { type: string, format: uuid }
+                organizationId: { type: string, format: uuid }
+                organizationUnitId: { type: string, format: uuid, nullable: true }
+                includeDescendants: { type: boolean }
+      responses:
+        '201': { description: Criado; invalida a authorizationVersion da membership. }
+        '404': { description: Membership ou organização inexistentes. }
+        '409': { description: SCOPE_EXISTS. }
+        '422': { description: A unidade não pertence à organização. }
+  /membership-scopes/{id}:
+    delete:
+      summary: Remove um âmbito (iam.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removido. }
+        '404': { description: Inexistente ou de outro tenant. }

@@ -42,6 +42,7 @@ export interface Grant {
 export type DecisionReason =
   | 'NO_PERMISSION'
   | 'UNIT_MISMATCH'
+  | 'UNIT_OUT_OF_SCOPE'
   | 'POLICY_DENY'
   | 'POLICY_ERROR'
   | 'NO_ALLOW_POLICY_MATCHED'
@@ -74,16 +75,22 @@ function conditionHolds(condition: Condition | null, context: EvalContext): bool
 
 /**
  * Decisão de autorização (RBAC + ABAC), função pura:
+ *  0. âmbito: se o recurso indica a unidade, o actor tem de ter essa unidade no seu âmbito (MembershipScope);
  *  1. RBAC: tem de existir uma atribuição válida cujo papel concede a permissão (senão, nega);
  *  2. qualquer política DENY activa aplicável cuja condição seja verdadeira — ou não avaliável — nega;
  *  3. se existirem políticas ALLOW aplicáveis, pelo menos uma tem de ter a condição verdadeira.
  * As regras de campo vêm das políticas ALLOW que se aplicaram; prevalece a mais restritiva.
  */
+export type UnitScope =
+  { readonly kind: 'ALL' } | { readonly kind: 'UNITS'; readonly unitIds: readonly string[] }
+
 export function decide(input: {
   permission: string
   grants: readonly Grant[]
   policies: readonly AccessPolicy[]
   context: EvalContext
+  /** Unidades a que o actor tem acesso (MembershipScope). Um recurso de outra unidade é recusado. */
+  unitScope?: UnitScope
 }): Decision {
   const { resource, action } = splitPermission(input.permission)
   const base = { grantedBy: [] as Decision['grantedBy'], policies: [] as Decision['policies'] }
@@ -100,6 +107,13 @@ export function decide(input: {
   if (candidates.length === 0) return deny('NO_PERMISSION')
 
   const resourceUnit = input.context.resource.unitId
+  if (
+    typeof resourceUnit === 'string' &&
+    input.unitScope?.kind === 'UNITS' &&
+    !input.unitScope.unitIds.includes(resourceUnit)
+  ) {
+    return deny('UNIT_OUT_OF_SCOPE')
+  }
   const applicable = candidates.filter((g) => g.unitId === null || g.unitId === resourceUnit)
   if (applicable.length === 0) return deny('UNIT_MISMATCH')
   const grantedBy = [

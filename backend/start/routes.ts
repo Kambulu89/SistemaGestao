@@ -14,6 +14,8 @@ const AuthController = () => import('#core/auth/presentation/auth_controller')
 const MeController = () => import('#core/auth/presentation/me_controller')
 const ContextController = () => import('#platform/tenants/presentation/context_controller')
 const IamController = () => import('#core/permissions/presentation/iam_controller')
+const OrganizationController = () =>
+  import('#core/organization/presentation/organization_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
 
 router
@@ -76,6 +78,46 @@ router
         router.post('/access-policies', [IamController, 'createPolicy'])
         router.patch('/access-policies/:id', [IamController, 'updatePolicy'])
         router.post('/authorization/simulate', [IamController, 'simulate'])
+      })
+      .use(middleware.can({ permission: 'iam.manage' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/** Organização (C07) e âmbitos de acesso: leitura com `*.read`, escrita com `*.manage`. */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/organizations', [OrganizationController, 'listOrganizations'])
+        router.get('/organizations/:id', [OrganizationController, 'showOrganization'])
+        router.get('/organization-units', [OrganizationController, 'listUnits'])
+        router.get('/organization-units/:id', [OrganizationController, 'showUnit'])
+        router.get('/organization-units/:id/members', [OrganizationController, 'listTeam'])
+        router.get('/cost-centers', [OrganizationController, 'listCostCenters'])
+      })
+      .use(middleware.can({ permission: 'organization.read' }))
+
+    router
+      .group(() => {
+        router.post('/organizations', [OrganizationController, 'createOrganization'])
+        router.patch('/organizations/:id', [OrganizationController, 'updateOrganization'])
+        router.post('/organization-units', [OrganizationController, 'createUnit'])
+        router.patch('/organization-units/:id', [OrganizationController, 'updateUnit'])
+        router.post('/organization-units/:id/members', [OrganizationController, 'addTeamMember'])
+        router.delete('/team-members/:id', [OrganizationController, 'removeTeamMember'])
+        router.post('/cost-centers', [OrganizationController, 'createCostCenter'])
+        router.patch('/cost-centers/:id', [OrganizationController, 'updateCostCenter'])
+      })
+      .use(middleware.can({ permission: 'organization.manage' }))
+
+    router
+      .get('/membership-scopes', [OrganizationController, 'listScopes'])
+      .use(middleware.can({ permission: 'iam.read' }))
+    router
+      .group(() => {
+        router.post('/membership-scopes', [OrganizationController, 'addScope'])
+        router.delete('/membership-scopes/:id', [OrganizationController, 'removeScope'])
       })
       .use(middleware.can({ permission: 'iam.manage' }))
   })

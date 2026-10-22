@@ -1,5 +1,5 @@
 import { ApiError, type ApiErrorDetail } from '#core/http/api_error'
-import type { TenantContext, TenantUnitOfWork } from '#core/tenancy/index'
+import type { TenantContext, TenantScope, TenantUnitOfWork } from '#core/tenancy/index'
 import { grantsAccess, type MembershipStore } from '#core/membership/index'
 import {
   PERMISSION_CATALOG,
@@ -35,6 +35,7 @@ function evalContext(
       membershipId: context.membershipId,
       userId: context.userId,
       organizationId: context.organizationId,
+      ...(context.unitScope.kind === 'UNITS' ? { unitIds: [...context.unitScope.unitIds] } : {}),
     },
     resource,
     env: { now: now.toISOString() },
@@ -76,7 +77,13 @@ export class Authorize {
         this.store.effectiveGrants(scope, context.membershipId as string, now),
         this.store.activePolicies(scope),
       ])
-      return decide({ permission, grants, policies, context: evalContext(context, resource, now) })
+      return decide({
+        permission,
+        grants,
+        policies,
+        context: evalContext(context, resource, now),
+        unitScope: context.unitScope,
+      })
     }, context)
   }
 
@@ -124,7 +131,9 @@ export class SimulateAuthorization {
     private readonly uow: TenantUnitOfWork,
     private readonly store: IamStore,
     private readonly memberships: MembershipStore,
-    private readonly clock: Clock
+    private readonly clock: Clock,
+    /** Unidades acessíveis à membership simulada (MembershipScope), fornecidas pelo módulo de organização. */
+    private readonly unitScopeOf: (scope: TenantScope, membershipId: string) => Promise<string[]>
   ) {}
 
   async execute(
@@ -148,15 +157,18 @@ export class SimulateAuthorization {
         ? await this.store.effectiveGrants(scope, membership.id, now)
         : []
       const policies = await this.store.activePolicies(scope)
+      const unitIds = await this.unitScopeOf(scope, membership.id)
       return decide({
         permission: input.permission,
         grants,
         policies,
+        unitScope: { kind: 'UNITS', unitIds },
         context: {
           subject: {
             membershipId: membership.id,
             userId: membership.userId,
             organizationId: membership.defaultOrganizationId,
+            unitIds,
           },
           resource: input.resource ?? {},
           env: { now: now.toISOString() },
@@ -296,7 +308,9 @@ export class AssignmentUseCases {
   constructor(
     private readonly uow: TenantUnitOfWork,
     private readonly store: IamStore,
-    private readonly memberships: MembershipStore
+    private readonly memberships: MembershipStore,
+    /** A unidade tem de existir neste tenant (fornecido pelo módulo de organização). */
+    private readonly unitExists: (scope: TenantScope, unitId: string) => Promise<boolean>
   ) {}
 
   list(context: TenantContext, membershipId?: string): Promise<AssignmentView[]> {
@@ -329,6 +343,9 @@ export class AssignmentUseCases {
       }
       if (!(await this.store.findRole(scope, input.roleId))) {
         throw ApiError.notFound('Papel não encontrado.')
+      }
+      if (input.organizationUnitId && !(await this.unitExists(scope, input.organizationUnitId))) {
+        throw ApiError.notFound('Unidade não encontrada.')
       }
       const assignment = await this.store.insertAssignment(scope, {
         membershipId: input.membershipId,

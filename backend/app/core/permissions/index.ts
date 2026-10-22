@@ -12,6 +12,7 @@ export {
   type Decision,
   type FieldRule,
   type Grant,
+  type UnitScope,
 } from '#core/permissions/domain/decision'
 export {
   evaluateCondition,

@@ -176,6 +176,26 @@ decisões por agora (cada pedido consulta a base), portanto a revogação é ime
 (precisa de organizações — 1.5), filtro de linhas antes da paginação (não há listagens de domínio ainda; o contrato é
 traduzir as condições para filtros SQL quando existirem), protecção do último administrador (1.6), auditoria (Fase 2).
 
+## D-025 Organização, unidades e âmbitos de acesso (aceite — fatia 1.5)
+**Decisão.** `organizations`, `organization_units`, `cost_centers`, `team_members` e `membership_scopes` são de tenant (RLS +
+FKs compostas). "Pai da mesma organização" é imposto **pela base**: a FK do pai é
+`(tenant_id, organization_id, parent_id) → (tenant_id, organization_id, id)`; "não ser pai de si" é um CHECK. Os **ciclos**
+não se exprimem em FKs: a aplicação rejeita-os (`wouldCreateCycle`, 422 `INVALID_PARENT`) sob um lock consultivo por tenant
+(`pg_advisory_xact_lock`) que serializa as alterações às árvores. O código e a organização de uma unidade/centro não mudam
+(mudar de organização exigiria tratar documentos, que ainda não existem). Inactivar uma unidade preserva o histórico e
+recusa novos registos (`UNIT_INACTIVE` nas equipas; os módulos futuros devem fazer o mesmo). Centros de custo são uma árvore
+própria, independente da operacional. **Âmbitos (`MembershipScope`).** Sem unidade = todas as unidades da organização; com
+unidade = essa unidade e, se `include_descendants`, a subárvore. O `TenantContext.unitScope` passa a ser a lista plana
+expandida (`UNITS [...]`) calculada ao resolver o tenant; **sem âmbitos não há acesso a nenhuma unidade** (nega por omissão)
+e `ALL` não é atribuído a utilizadores. A estrutura (organizações, unidades, centros) é governada só por RBAC
+(`organization.read|manage`); o âmbito aplica-se aos **dados de domínio** com `unitId` (módulos futuros): `decide` recusa
+(`UNIT_OUT_OF_SCOPE`) um recurso de uma unidade fora do âmbito, e as políticas podem usar `resource.unitId in
+subject.unitIds`. Atribuições de papel por unidade passam a ter FK composta para `organization_units`; uma atribuição por
+unidade continua a valer só para essa unidade (sem herança; a herança faz-se pelos âmbitos). Alterar âmbitos incrementa a
+`authorizationVersion`. **Por fazer / limites.** Moeda base e país: a regra "não muda após lançamentos" só pode ser imposta
+quando existirem lançamentos (módulos financeiros); por agora a alteração é permitida. Sem verificação de impacto na
+reorganização nem "unidade com documentos".
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

@@ -57,7 +57,7 @@ isolamento por tenant e testes negativos com dois tenants.
 | 1.2 | ✅ **Tenant e utilizadores** (feita — ver secção 2.2) (C01 mínimo, C04) | 1.1 | `Tenant`, `TenantDomain`, `User`, `AuthSession`; login/logout com sessão opaca em cookie HttpOnly+Secure+SameSite, CSRF, hash de palavra-passe, rate limit em Redis, sessões activas/revogação; recuperação com token de uso único. MFA e SSO ficam **fora** (documentar) |
 | 1.3 | ✅ **Membership e contexto** (feita — ver secção 2.3) (C05 parte 1) | 1.2 | `TenantMembership`; pipeline de resolução do tenant (spec §10.1) como middleware; `GET /context` com `authorizationVersion`; troca de tenant; suspensão de tenant bloqueia operações |
 | 1.4 | ✅ **Autorização** (C06; feita — ver secção 2.4) | 1.3 | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); *default deny*, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar |
-| 1.5 | **Organização** (C07) | 1.4 | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas |
+| 1.5 | ✅ **Organização** (C07; feita — ver secção 2.5) | 1.4 | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas |
 | 1.6 | **Convites e membros** (C05 parte 2) | 1.4, 1.5 | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências |
 | 1.7 | **Party** (C08) | 1.5 | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). *Item da spec F1 que não constava do pedido: confirmar se entra nesta fase.* |
 | 1.8 | **Frontend real** | 1.2–1.6 | adaptadores HTTP para auth/tenant/contexto/membros/papéis/organização; remover os mocks correspondentes; mapeamento de permissões (D-014); selector de tenant que cancela pedidos e limpa caches; sessão em cookie |
@@ -170,6 +170,38 @@ tenant dá 403.
 - Sem protecção do último administrador (um admin pode retirar-se `tenant_admin`; 1.6) nem auditoria (Fase 2).
 - Sem cache de decisões; sem rate limit específico nos endpoints de IAM.
 - O catálogo só tem permissões do núcleo (`iam`, `member`, `organization`); cada módulo acrescenta as suas.
+
+### 2.5 Fatia 1.5 — concluída
+**Entregue:** migration `organizations`, `organization_units`, `cost_centers`, `team_members`, `membership_scopes` (mais as FKs
+compostas de `role_assignments.organization_unit_id` e `tenant_memberships.default_organization_id`); módulo `core/organization`
+(casos de uso, store Lucid, API `/organizations`, `/organization-units`, `/organization-units/:id/members`, `/team-members/:id`,
+`/cost-centers`, `/membership-scopes`); `unitScope` real no `TenantContext` e em `GET /context`; `decide` com
+`UNIT_OUT_OF_SCOPE`; simulação e atribuições de papel por unidade validadas; seeder com organização, árvore de unidades e
+âmbito total para os administradores demo; OpenAPI actualizado. ADR D-025. Higiene: `backend/dump.rdb` (dump do Redis que
+entrou por engano no commit da 1.4) deixou de ser versionado e passou a estar no `.gitignore`.
+
+**Evidência (executada):** 182 testes backend a passar (22 novos). Unit: antepassados, ciclos (si próprio, descendente, dados
+corrompidos), campos da organização, `UNIT_OUT_OF_SCOPE`, `ALL`, `in` com lista em variável. Funcionais: RBAC `organization.*`;
+organização (201+Location, 422 de país/moeda/mês/nome/código, 409 de código, `expectedVersion`, código imutável); unidades
+(árvore, pai de outra organização → 422, código único 409, tipo inválido, organização inexistente → 404); "unidade não pode ser
+pai de si nem de antepassado" (3 casos) e mover para ramo válido/raiz; **a base de dados recusa** pai de outra organização
+(`organization_units_parent_fk`) e pai de si (`…_not_own_parent`) mesmo por SQL directo; gestor de outro tenant → 422; inactivar
+preserva leitura; centros de custo (pai de outra organização → 422, ciclo → 422, código 409, responsável); equipas (janela,
+unidade inactiva → 409, remoção); isolamento entre tenants (404) e RLS; âmbitos: sem âmbito = nenhuma unidade, organização
+inteira, unidade ± descendentes, soma de âmbitos, duplicado 409, unidade de outra organização 422, membership/organização
+alheias 404, `authorizationVersion` sobe ao adicionar e remover; o âmbito limita a decisão (simulação com `unitId` fora →
+`UNIT_OUT_OF_SCOPE`); atribuição de papel com unidade de outro tenant → 404. Lint, `format:check`, `typecheck`, `build`,
+migrations numa base limpa (6), seeder duas vezes e `iam:sync` a passar; servidor compilado: o admin demo lista as 3 unidades e o
+`/context` traz o `unitScope` com as 3.
+
+**Por verificar / limitações:**
+- O filtro por âmbito de unidade nos **dados de domínio** (linhas, pesquisa, exportações) não tem onde aplicar-se ainda: só
+  existem decisões individuais (`decide`) e a lista `subject.unitIds`; o filtro de linhas antes de paginar fica para o primeiro
+  módulo com listagens por unidade.
+- Moeda base/país e "unidade com documentos": regras dependentes de lançamentos/documentos (D-025). Sem preview de impacto ao
+  reorganizar. Sem permissão `organization.*` por unidade (a estrutura é só RBAC).
+- Sem API para `default_organization_id` da membership (preferências/convites: 1.6). Sem auditoria (Fase 2).
+- O lock consultivo serializa a edição da estrutura de um tenant (adequado a edições raras; rever se houver importações em massa).
 
 ### Critérios de aceitação da Fase 1
 Gate da spec: *"Testes negativos em dois tenants aprovados"*, mais os critérios de aceitação de cada componente:
