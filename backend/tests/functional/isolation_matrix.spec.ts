@@ -504,6 +504,20 @@ test.group('matriz de isolamento', (group) => {
       'get /me/security-events',
       'get /me/tenants',
       'post /invitations/accept',
+      // Administração da plataforma: sem selector de tenant (política própria `platform.*`; testada em platform.spec.ts)
+      'get /platform/tenants',
+      'post /platform/tenants',
+      'get /platform/tenants/{id}',
+      'post /platform/tenants/{id}/suspend',
+      'post /platform/tenants/{id}/resume',
+      'get /platform/plans',
+      'post /platform/plans',
+      'post /platform/plans/{code}/revisions/{revision}/publish',
+      'post /platform/plans/{code}/revisions/{revision}/retire',
+      'get /platform/tenants/{id}/subscription',
+      'post /platform/tenants/{id}/subscription',
+      'put /platform/tenants/{id}/subscription/plan',
+      'put /platform/tenants/{id}/subscription/status',
     ])
     const declared = new Set(operations.map((o) => `${o.method} ${o.path}`))
     const undeclared = Object.entries(spec.paths).flatMap(([path, ops]) =>

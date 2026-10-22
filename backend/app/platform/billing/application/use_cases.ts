@@ -424,3 +424,26 @@ export class ResolveEntitlements {
     return { entitled: true, ...plan.entitlements }
   }
 }
+
+export interface SubscriptionSummary {
+  planCode: string
+  revision: number
+  status: SubscriptionStatus
+}
+
+/** Resumo mínimo (plano e estado) para listagens de plataforma; sem consumo nem histórico. */
+export class GetSubscriptionSummary {
+  constructor(
+    private readonly plans: PlanStore,
+    private readonly subscriptions: SubscriptionStore
+  ) {}
+
+  async execute(tenantId: string): Promise<SubscriptionSummary | null> {
+    const subscription = await this.subscriptions.findCurrent(tenantId)
+    if (!subscription) return null
+    const plan = await this.plans.findById(subscription.planVersionId)
+    return plan
+      ? { planCode: plan.planCode, revision: plan.revision, status: subscription.status }
+      : null
+  }
+}

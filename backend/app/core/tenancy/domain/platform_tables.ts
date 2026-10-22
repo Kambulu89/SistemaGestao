@@ -25,6 +25,8 @@ export const PLATFORM_TABLES: ReadonlySet<string> = new Set<string>([
   'public.modules',
   'public.module_dependencies',
   'public.features',
+  // Concessões de permissões de plataforma (D-033): só o plano de controlo lhes acede
+  'public.platform_grants',
   // Eventos de segurança (S06): tenant_id opcional, só INSERT/SELECT; a leitura por tenant filtra no repositório
   'public.security_events',
 ])

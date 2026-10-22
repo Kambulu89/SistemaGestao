@@ -350,6 +350,28 @@ gera uma entrada em `audit_logs` (rasto da alocação, com custo de escrita por 
 período sem sequência falha), preços com imposto incluído/arredondamento aplicados (só as chaves existem), UI, API de plataforma
 e valores por omissão de plataforma geríveis (são o `defaultValue` do código).
 
+## D-033 Administração da plataforma: concessões explícitas, rotas sem tenant e provisionamento idempotente (aceite — fatia 2.5)
+**Identidade de plataforma.** Não existe um "super-utilizador": uma conta ganha `platform.tenant.manage` ou `platform.billing.manage` por
+**concessão explícita** (`platform_grants`, tabela global: motivo obrigatório, prazo opcional, nunca se apaga — revogar preenche
+`revoked_at`; um trigger só admite essa transição). As concessões criam-se e revogam-se por comando de operação
+(`node ace platform:grant|platform:revoke|platform:list`), nunca por API, para que ninguém se promova a si próprio; cada alteração fica em
+`security_events` (`PLATFORM_GRANT_CHANGED`, severidade HIGH). **Política própria.** As rotas `/api/v1/platform/*` usam sessão + CSRF
+(`auth`) e o middleware `platform` — **sem** `tenant`, sem selector. Sem concessão em vigor (não revogada, não expirada) → `403
+PLATFORM_PERMISSION_DENIED` e evento `PLATFORM_ACCESS_DENIED`; sem sessão → 401. Um papel de administrador de tenant não dá nenhuma
+permissão de plataforma e uma concessão de plataforma **não dá acesso a dados de nenhum tenant** (sem membership o selector é recusado
+como em qualquer utilizador). **Âmbito.** `platform.tenant.manage`: listar tenants, provisionar, ver o estado do provisionamento,
+suspender e reactivar (com motivo). `platform.billing.manage`: planos (criar revisão, publicar, retirar) e assinaturas de um tenant
+(ver, atribuir, mudar de plano com adequação, mudar de estado). As respostas de plataforma mostram estado, plano e contagens, nunca dados de
+negócio. Cada mutação regista `PLATFORM_ACTION` (quem, acção, tenant, motivo). **Provisionamento.** `POST /platform/tenants` cria o tenant em
+`PROVISIONING`, atribui o plano, garante o papel `tenant_admin` e a organização inicial, convida o administrador por email — o formulário não
+pede palavra-passe; o convite leva o papel — e só então activa. Cada passo é idempotente (tenant por código, assinatura do mesmo plano,
+papel, "já há organização", convite pendente ou já membro contam como feito): repetir o pedido ou retomar após uma falha não duplica a
+organização nem o convite, e uma falha deixa `PROVISIONING`. `GET /platform/tenants/{id}` mostra os passos feitos e em falta. Um tenant que
+já não está em `PROVISIONING`/`ACTIVE` não se provisiona de novo. **Fora desta fatia:** MFA/reautenticação para acções de plataforma (o MFA não
+existe: D-019), suporte excepcional com acesso limitado no tempo a dados de um tenant (concessão própria, justificada e auditada — não
+implementado, por isso o suporte **não** tem acesso), fecho de tenant com exportação/retenção, `ProvisioningStep` persistido (o estado deriva das
+próprias entidades), domínio personalizado no provisionamento, e a UI de plataforma.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

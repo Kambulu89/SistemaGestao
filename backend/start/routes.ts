@@ -24,6 +24,7 @@ const SubscriptionController = () =>
   import('#platform/billing/presentation/subscription_controller')
 const ModulesController = () => import('#platform/modules/presentation/modules_controller')
 const SettingsController = () => import('#core/settings/presentation/settings_controller')
+const PlatformController = () => import('#platform/administration/presentation/platform_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
 
 router
@@ -292,3 +293,35 @@ router
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Administração da plataforma (SaaS): rotas **sem** selector de tenant, com política própria (`platform.*`).
+ * Uma concessão de plataforma não dá acesso a dados empresariais de nenhum tenant.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/tenants', [PlatformController, 'listTenants'])
+        router.post('/tenants', [PlatformController, 'provision'])
+        router.get('/tenants/:id', [PlatformController, 'showTenant'])
+        router.post('/tenants/:id/suspend', [PlatformController, 'suspend'])
+        router.post('/tenants/:id/resume', [PlatformController, 'resume'])
+      })
+      .use(middleware.platform({ permission: 'platform.tenant.manage' }))
+
+    router
+      .group(() => {
+        router.get('/plans', [PlatformController, 'listPlans'])
+        router.post('/plans', [PlatformController, 'createPlan'])
+        router.post('/plans/:code/revisions/:revision/publish', [PlatformController, 'publishPlan'])
+        router.post('/plans/:code/revisions/:revision/retire', [PlatformController, 'retirePlan'])
+        router.get('/tenants/:id/subscription', [PlatformController, 'showSubscription'])
+        router.post('/tenants/:id/subscription', [PlatformController, 'assign'])
+        router.put('/tenants/:id/subscription/plan', [PlatformController, 'changePlan'])
+        router.put('/tenants/:id/subscription/status', [PlatformController, 'setStatus'])
+      })
+      .use(middleware.platform({ permission: 'platform.billing.manage' }))
+  })
+  .prefix('/api/v1/platform')
+  .use([middleware.origin(), middleware.auth()])

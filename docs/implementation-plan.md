@@ -2,13 +2,13 @@
 
 Fases da especificação (§11) com estado real. Cada fase entrega **fatias verticais** (migration, domínio, API, UI,
 autorização, auditoria, testes). Uma fase só passa quando as verificações aplicáveis correram e a documentação foi
-actualizada. Estado actualizado em: Fase 2, fatia 2.4.
+actualizada. Estado actualizado em: Fase 2, fatia 2.5.
 
 | Fase | Âmbito (spec) | Estado |
 | --- | --- | --- |
 | **F0** Preparação | repositório, versões, Docker, CI, estrutura modular, ADRs | **Concluída** (com 2 verificações por executar — ver abaixo) |
 | **F1** Fundação | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party | **Próxima** (detalhada na secção 2) |
-| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos) e 2.4 (configurações/sequências), backend, concluídas; 2.5 por fazer (ver secção 2b) |
+| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos) e 2.4 (configurações/sequências) e 2.5 (administração da plataforma), backend, concluídas; falta o frontend da Fase 2 (ver secção 2b) |
 | F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | Não iniciada (existem contratos/motores no frontend — ver `architecture.md` §7) |
 | F4 Operação comercial | M01–M08, S01 | Não iniciada |
 | F5 Gestão empresarial | M09–M14, S02–S03 | Não iniciada |
@@ -372,7 +372,7 @@ Sem decomposição prévia no plano; proposta (uma fatia de cada vez, ordem suje
 | 2.2 | C02 planos, assinaturas e limites no backend (substitui a quota provisória de convites). Os entitlements provisórios do frontend ficam para depois de 2.3 | **Concluída** (backend) |
 | 2.3 | C03 registo de módulos e funcionalidades por tenant | **Concluída** (backend) |
 | 2.4 | C09 configurações, impostos, unidades e sequências (numeração sem lacunas e concorrente) | **Concluída** (backend) |
-| 2.5 | API de administração da plataforma (C01/C02) e fecho dos mocks restantes do frontend | Por fazer |
+| 2.5 | API de administração da plataforma (C01/C02) | **Concluída** (backend); o fecho dos mocks do frontend **não** foi feito |
 
 ### 2b.1 Fatia 2.1 — concluída
 **Entregue** (ver D-029): migration `create_audit` (`audit_logs` tenant + imutável; `security_events` global; funções e triggers de
@@ -432,6 +432,21 @@ distintas e contíguas**, não-reutilização e devolução em rollback, escolha
 **Limites / por verificar:** sem catálogo de moedas/idiomas; períodos novos exigem criar a sequência (falha em vez de criar);
 as chaves fiscais existem mas ainda não há cálculo de impostos; o custo de auditar cada emissão não foi medido; sem UI; o frontend
 continua sem ligação a esta API.
+
+### 2b.5 Fatia 2.5 — concluída (backend)
+**Entregue** (ver D-033): migration `create_platform_grants` (concessões imutáveis, revogáveis), módulo `platform/administration`
+(autorização de plataforma, concessões, provisionamento idempotente, ciclo de vida), middleware `platform`, rotas `/api/v1/platform/*`
+(`tenants`, provisionar, estado, `suspend|resume`, `plans` com publicar/retirar, assinatura: ver/atribuir/mudar plano/estado), eventos
+`PLATFORM_ACCESS_DENIED`/`PLATFORM_ACTION`/`PLATFORM_GRANT_CHANGED`, comandos `platform:grant|revoke|list`, utilizador demo
+`platform@demo.invalid` (só `platform.*`), OpenAPI.
+**Evidência:** 318 testes (novos: `platform.spec.ts` — acesso negado e registado a quem não tem concessão (incl. administrador de tenant),
+permissões separadas, revogação e expiração, concessões imutáveis na base, a concessão não dá acesso a dados de tenants, provisionamento
+completo e idempotente (um convite/email, uma organização), aceitação do convite pelo administrador, retoma após falha, validação,
+suspensão com efeito imediato por URL directa e reactivação, planos e assinaturas pela API incl. adequação).
+**Limites / por verificar:** não existe MFA nem reautenticação para acções de plataforma; sem acesso de suporte a dados de um tenant (a
+concessão excepcional, limitada no tempo e auditada, não foi implementada); sem fecho de tenant; o frontend de administração da
+plataforma continua mock (nenhuma UI foi ligada a estas rotas) e `provisional-entitlements.ts` mantém-se: **o fecho dos mocks do
+frontend fica por fazer** e é a lacuna principal da Fase 2.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

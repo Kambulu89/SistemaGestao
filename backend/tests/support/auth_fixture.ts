@@ -20,6 +20,13 @@ export async function resetAuthState() {
 /** Remove os utilizadores de teste com a conta dona (a conta de runtime não apaga). */
 export async function deleteTestUsers() {
   const owner = db.connection('owner')
+  // As concessões de plataforma são imutáveis: só a conta dona, com o interruptor de expurgo, as apaga.
+  await owner.transaction(async (trx) => {
+    await trx.rawQuery(`select set_config('app.audit_purge', 'on', true)`)
+    await trx.rawQuery(
+      `delete from platform_grants where user_id in (select id from users where email like '%@teste.invalid')`
+    )
+  })
   await owner.rawQuery(
     `delete from one_time_tokens where user_id in (select id from users where email like '%@teste.invalid')`
   )

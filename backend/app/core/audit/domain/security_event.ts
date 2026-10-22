@@ -10,6 +10,9 @@ export const SECURITY_EVENT_TYPES = [
   'ORIGIN_REJECTED',
   'TENANT_ACCESS_DENIED',
   'PERMISSION_DENIED',
+  'PLATFORM_ACCESS_DENIED',
+  'PLATFORM_GRANT_CHANGED',
+  'PLATFORM_ACTION',
   // Gerados pelos triggers da base (não pela aplicação):
   'USER_CREATED',
   'PASSWORD_CHANGED',

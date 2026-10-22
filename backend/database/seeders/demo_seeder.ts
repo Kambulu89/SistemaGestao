@@ -8,6 +8,7 @@ import { partyServices } from '#core/party/index'
 import { settingsServices } from '#core/settings/index'
 import { LucidMembershipDirectory } from '#core/membership/index'
 import { serviceTenantContext } from '#core/tenancy/index'
+import { administrationServices } from '#platform/administration/index'
 import { billingServices } from '#platform/billing/index'
 import {
   ChangeTenantStatus,
@@ -33,6 +34,9 @@ const DEMO_PLAN_OF: Record<string, string> = { demo_a: 'demo_basic', demo_b: 'de
 
 /** Conta presente nos dois tenants: serve para exercitar a troca de tenant. */
 const MULTI_TENANT_USER = 'multi@demo.invalid'
+
+/** Administrador da plataforma de demonstração: só tem `platform.*`, nenhuma membership em tenants. */
+const PLATFORM_ADMIN = 'platform@demo.invalid'
 
 const ignoreConflict = async (action: () => Promise<unknown>) => {
   try {
@@ -85,6 +89,8 @@ export default class DemoSeeder extends BaseSeeder {
       await bootstrapTenantAdmin(demo.code, demo.admin)
     }
 
+    await this.seedPlatformAdmin(password)
+
     await ignoreConflict(async () => {
       await authServices().createUser.execute({
         email: MULTI_TENANT_USER,
@@ -97,6 +103,28 @@ export default class DemoSeeder extends BaseSeeder {
       await ignoreConflict(() => addMemberByEmail(demo.code, MULTI_TENANT_USER))
       await this.seedOrganization(store, demo)
       await this.seedParties(store, demo)
+    }
+  }
+
+  private async seedPlatformAdmin(password: string) {
+    await ignoreConflict(async () => {
+      await authServices().createUser.execute({
+        email: PLATFORM_ADMIN,
+        displayName: 'Administrador da plataforma',
+        password,
+        verified: true,
+      })
+    })
+    const user = await authServices().users.findByEmail(PLATFORM_ADMIN)
+    if (!user) return
+    for (const permission of ['platform.tenant.manage', 'platform.billing.manage']) {
+      await ignoreConflict(async () => {
+        await administrationServices().grant.execute({
+          userId: user.id,
+          permission,
+          reason: 'Administrador de demonstração',
+        })
+      })
     }
   }
 

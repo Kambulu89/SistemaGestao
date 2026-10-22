@@ -630,6 +630,229 @@ paths:
       responses:
         '200': { description: 'example: o número que seria emitido.' }
         '422': { $ref: '#/components/responses/Error' }
+  /platform/tenants:
+    get:
+      summary: Tenants da plataforma, com estado e plano (platform.tenant.manage)
+      description: |
+        Rotas de plataforma **não** têm selector de tenant e usam política própria (`platform.*`, concessão explícita).
+        Uma concessão de plataforma não dá acesso a dados empresariais de nenhum tenant.
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: 'Lista com id, code, name, status e plan.' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Provisiona um tenant (platform.tenant.manage)
+      description: |
+        Cria o tenant em PROVISIONING, atribui o plano, garante o papel de administrador e a organização
+        inicial, convida o administrador por email (nenhuma palavra-passe é pedida) e só então o activa.
+        Cada passo é idempotente: repetir o pedido (ou retomar após falha) não duplica a organização nem o
+        convite. `201` se criou o tenant, `200` se já existia.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name, adminEmail, planCode]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                adminEmail: { type: string }
+                planCode: { type: string }
+                planRevision: { type: integer }
+                trialDays: { type: integer }
+      responses:
+        '200': { description: Tenant já existia; estado do provisionamento. }
+        '201': { description: Tenant criado e provisionado. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /platform/tenants/{id}:
+    get:
+      summary: Estado do provisionamento de um tenant (platform.tenant.manage)
+      description: Passos concluídos e em falta, contagens de organizações e convites pendentes (sem dados de negócio).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'tenant, done, pending, organizations e pendingInvitations.' }
+        '404': { $ref: '#/components/responses/Error' }
+  /platform/tenants/{id}/suspend:
+    post:
+      summary: Suspende um tenant (platform.tenant.manage)
+      description: Impede novas operações empresariais; o motivo fica nos eventos de segurança.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200': { description: Tenant suspenso. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /platform/tenants/{id}/resume:
+    post:
+      summary: Reactiva um tenant suspenso (platform.tenant.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200': { description: Tenant activo. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /platform/plans:
+    get:
+      summary: Versões de planos (platform.billing.manage)
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: 'Versões com `price` em string, limites e direitos.' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma nova revisão (rascunho) de um plano (platform.billing.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planCode, name, currency, price, billingInterval, limits]
+              properties:
+                planCode: { type: string }
+                name: { type: string }
+                currency: { type: string }
+                price: { type: string }
+                billingInterval: { type: string, enum: [MONTH, YEAR] }
+                limits: { type: object }
+                entitlements: { type: object }
+      responses:
+        '201': { description: Rascunho criado. }
+        '422': { $ref: '#/components/responses/Error' }
+  /platform/plans/{code}/revisions/{revision}/publish:
+    post:
+      summary: Publica uma revisão (fica imutável) (platform.billing.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: code, in: path, required: true, schema: { type: string } }
+        - { name: revision, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Revisão publicada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /platform/plans/{code}/revisions/{revision}/retire:
+    post:
+      summary: Retira uma revisão publicada (platform.billing.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: code, in: path, required: true, schema: { type: string } }
+        - { name: revision, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Revisão retirada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /platform/tenants/{id}/subscription:
+    get:
+      summary: Assinatura de um tenant, com consumo e histórico (platform.billing.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'plan, subscription, entitled, usage e history.' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Atribui um plano publicado a um tenant (platform.billing.manage)
+      description: Idempotente para o mesmo plano; outro plano exige a mudança de plano.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planCode]
+              properties:
+                planCode: { type: string }
+                revision: { type: integer }
+                trialDays: { type: integer }
+      responses:
+        '200': { description: Assinatura. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /platform/tenants/{id}/subscription/plan:
+    put:
+      summary: Muda o plano de um tenant (platform.billing.manage)
+      description: |
+        Upgrade aplica-se logo. Se o consumo exceder os novos limites, `409 PLAN_LIMITS_EXCEEDED`, excepto com
+        `adequacyDays`: nada é eliminado e o excesso só bloqueia novos consumos.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planCode]
+              properties:
+                planCode: { type: string }
+                revision: { type: integer }
+                adequacyDays: { type: integer }
+      responses:
+        '200': { description: Assinatura actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /platform/tenants/{id}/subscription/status:
+    put:
+      summary: Muda o estado da assinatura (platform.billing.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [ACTIVE, PAST_DUE, SUSPENDED, CANCELLED] }
+                graceDays: { type: integer }
+      responses:
+        '200': { description: Assinatura actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /tenant/subscription:
     get:
       summary: Plano contratado, consumo, limites e bloqueios do tenant (subscription.read)

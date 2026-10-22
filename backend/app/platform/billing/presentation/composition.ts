@@ -2,6 +2,7 @@ import {
   AssignSubscription,
   ChangePlan,
   CreatePlanVersion,
+  GetSubscriptionSummary,
   GetTenantSubscription,
   ListPlans,
   PublishPlanVersion,
@@ -29,6 +30,7 @@ function build() {
     changePlan: new ChangePlan(plans, subscriptions, usage),
     setSubscriptionStatus: new SetSubscriptionStatus(subscriptions),
     tenantSubscription: new GetTenantSubscription(plans, subscriptions, usage),
+    subscriptionSummary: new GetSubscriptionSummary(plans, subscriptions),
     resolveLimit: new ResolveLimit(plans, subscriptions),
     resolveEntitlements: new ResolveEntitlements(plans, subscriptions),
   }
