@@ -10,10 +10,12 @@ import {
 import type { DefinitionFailure } from '../data-access/custom-field.gateway';
 import type { DefinitionIssue } from '../engine/definition-integrity';
 import type { EntityDefinition } from '../models/entity-definition.model';
-import type { EntityDetailDto, EntityDto, FieldInputDto } from './dynamic-dto';
+import type { EntityDetailDto, EntityDto, FieldInputDto, FormDto } from './dynamic-dto';
+import type { FormDefinition } from '../models/form-definition.model';
 import { toDefinitionFailure } from './dynamic-errors';
 import {
   definitionsFromServer,
+  formsFromServer,
   entityCodeOf,
   fieldToServer,
   UnrepresentableDefinitionError,
@@ -46,7 +48,11 @@ export class HttpEntityDefinitionGateway extends EntityDefinitionGateway {
           : forkJoin(
               entities.map((e) =>
                 this.api.get<EntityDetailDto>(`${PATH}/${e.id}`).pipe(
-                  map((detail) => definitionsFromServer(tenantId, detail)),
+                  switchMap((detail) =>
+                    this.formsOf(tenantId, detail).pipe(
+                      map((forms) => definitionsFromServer(tenantId, detail, forms)),
+                    ),
+                  ),
                   // Uma entidade que a interface não sabe representar não impede as restantes.
                   catchError((error: unknown) =>
                     error instanceof UnrepresentableDefinitionError
@@ -58,6 +64,21 @@ export class HttpEntityDefinitionGateway extends EntityDefinitionGateway {
             ),
       ),
       map((groups) => groups.flat()),
+    );
+  }
+
+  /**
+   * Os formulários publicados da entidade (C11). Quem não os pode ler, ou um erro ao lê-los, não impede de usar a
+   * entidade: volta-se ao formulário gerado a partir dos campos.
+   */
+  private formsOf(
+    tenantId: string,
+    detail: EntityDetailDto,
+  ): Observable<readonly FormDefinition[]> {
+    if (!detail.published || detail.entity.status === 'ARCHIVED') return of([]);
+    return this.api.get<readonly FormDto[]>(`dynamic/${detail.entity.code}/forms`).pipe(
+      map((forms) => formsFromServer(tenantId, forms)),
+      catchError(() => of([] as FormDefinition[])),
     );
   }
 

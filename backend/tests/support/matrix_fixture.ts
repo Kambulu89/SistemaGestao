@@ -40,6 +40,7 @@ export interface World {
     entity: string
     record: string
     rule: string
+    form: string
   }
 }
 
@@ -57,6 +58,7 @@ export const SHARED = {
   entityCode: 'vehicle',
   plate: 'AB-12-CD',
   ruleCode: 'matricula_proibida',
+  formCode: 'ficha',
   forbiddenPlate: 'ZZ-99-ZZ',
 }
 
@@ -324,6 +326,31 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await http.post(`/api/v1/dynamic/${SHARED.entityCode}/records`, {
     data: { matricula: SHARED.forbiddenPlate },
   })
+  // C11: o mesmo formulário publicado nos dois tenants.
+  const form = await must<{ id: string; version: number }>(
+    await http.post('/api/v1/forms', {
+      entityCode: SHARED.entityCode,
+      code: SHARED.formCode,
+      name: 'Ficha',
+      isDefault: true,
+      sections: [
+        {
+          key: 'dados',
+          title: 'Dados',
+          columns: 2,
+          items: [
+            { kind: 'field', field: 'matricula', span: 2, help: 'Única por tenant' },
+            { kind: 'field', field: 'condutor' },
+          ],
+        },
+      ],
+    }),
+    201
+  )
+  await must(
+    await http.post(`/api/v1/forms/${form.id}/publish`, { expectedVersion: form.version }),
+    200
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -358,6 +385,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       entity: entity.entity.id,
       record: record.id,
       rule: rule.id,
+      form: form.id,
     },
   }
 }

@@ -481,6 +481,16 @@ pelo que os registos de versões anteriores também mostram o valor. Sem cadeias
 nem a existência nem o conteúdo se revelam (como o 404 de IDs alheios). `onMissing: error` valida apenas a presença da relação ao escrever (a existência já era validada pela referência). **Limites:** leitura N+1 por registo de origem
 distinto (sem cache entre pedidos); retirar a origem do destino deixa o valor vazio sem avisar quem a usa; `snapshot` por fazer; a aplicação da permissão faz-se com os mesmos `AccessControl` e ports de D-035.
 
+## D-040 Formulários: layout em JSON validado, ligações por código, nada duplicado (aceite — fatia 3.6)
+`form_definitions` guarda o layout como JSON validado pelo servidor (secções e ligações a campos **por código**) em vez de tabelas `FormSection`/`FormFieldBinding` separadas: o formulário nunca duplica a definição de um campo
+e é versionado e imutável como um todo (a spec pede um layout json e a imutabilidade da revisão publicada). Condições: as da interface (`eq/neq/gt/gte/lt/lte`, `in/nin`, `empty/notEmpty`, `and/or/not`) com códigos de campo,
+só sobre campos activos **não sensíveis**; nunca código. **Desvios assinalados à especificação:** largura da ligação `span` 1–3 e secção `columns` 1–3 (a spec indica `width` 1–12); `FormSubmission` não existe (o CRUD escreve directamente na
+entidade, como a spec prevê); a política «preservar ou limpar» de valores escondidos não existe (o cliente não envia o que está escondido); `FormFieldBinding.widget` e itens em grupo ficam por fazer; os formulários não ligam a uma versão
+específica da entidade mas à publicada em vigor, e a publicação regista a revisão verificada. **Regras:** publicar volta a verificar contra os campos em vigor; escrever num formulário exige `form.design`, publicar/retirar `form.publish`, ler `form.read`;
+quem lê os registos vê os publicados (`/dynamic/{entity}/forms`) com `issues` — o cliente ignora os que têm problemas (entidade mudou) e usa o formulário gerado. Um formulário **só restringe**: o servidor valida e autoriza os registos como sempre
+(campo escondido no pedido continua sujeito a `dynamic.sensitive`, validação e regras). O renderer passou a aplicar a configuração do formulário (`applyFormConfiguration`), que existia mas não era usada. **Limites:** um formulário só de criação pode
+não incluir campos opcionais (ficam por preencher); o Form Builder visual e a vista móvel/papéis simulados são a fatia 3.7.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

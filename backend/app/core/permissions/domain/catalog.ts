@@ -134,6 +134,21 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Criar, simular, publicar e desactivar regras de validação.',
   },
   {
+    code: 'form.read',
+    moduleCode: 'dynamic',
+    description: 'Ver formulários, as suas revisões e a verificação contra a entidade.',
+  },
+  {
+    code: 'form.design',
+    moduleCode: 'dynamic',
+    description: 'Criar formulários e alterar rascunhos.',
+  },
+  {
+    code: 'form.publish',
+    moduleCode: 'dynamic',
+    description: 'Publicar e retirar formulários.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

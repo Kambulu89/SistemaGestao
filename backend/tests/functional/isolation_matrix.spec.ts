@@ -83,6 +83,8 @@ async function snapshot(world: World) {
     entity: await get(`/api/v1/entity-definitions/${world.ids.entity}`),
     rules: await get('/api/v1/rules'),
     evaluations: await get(`/api/v1/rules/${world.ids.rule}/evaluations`),
+    forms: await get('/api/v1/forms'),
+    publishedForms: await get(`/api/v1/dynamic/${SHARED.entityCode}/forms`),
     records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
@@ -140,6 +142,12 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['post', `/rules/${o.rule}/simulate`, { values: {} }],
     ['post', `/rules/${o.rule}/publish`, stale],
     ['post', `/rules/${o.rule}/disable`, stale],
+    ['get', `/forms/${o.form}`],
+    ['patch', `/forms/${o.form}`, { ...stale, name: 'x' }],
+    ['post', `/forms/${o.form}/revisions`],
+    ['post', `/forms/${o.form}/preview`],
+    ['post', `/forms/${o.form}/publish`, stale],
+    ['post', `/forms/${o.form}/retire`, stale],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
     ['delete', `/entity-definitions/${o.entity}`],
@@ -257,6 +265,8 @@ test.group('matriz de isolamento', (group) => {
       'records',
       'rules',
       'evaluations',
+      'forms',
+      'publishedForms',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)
@@ -842,11 +852,12 @@ test.group('matriz de isolamento', (group) => {
         'entity_schema_versions',
         'field_definitions',
         'rule_definitions',
+        'form_definitions',
       ].includes(table)
       assert.match(
         moved.message,
         immutable
-          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE/
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE/
           : /row-level security/,
         `${table}: mover linhas para B`
       )

@@ -1,8 +1,13 @@
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpResponse,
+  provideHttpClient,
+  withInterceptors,
+  type HttpInterceptorFn,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import type { ApiError } from '../../api/api-error.model';
 import { AuthService } from '../../auth/auth.service';
 import { APP_ENVIRONMENT } from '../../config/app-environment';
@@ -10,7 +15,7 @@ import { errorInterceptor } from '../../interceptors/error.interceptor';
 import { TenantContextService } from '../../tenant-context/tenant-context.service';
 import type { DefinitionFailure } from '../data-access/custom-field.gateway';
 import { defineField } from '../engine/define-entity';
-import type { EntityDetailDto, EntityDto, FieldDto, VersionDto } from './dynamic-dto';
+import type { EntityDetailDto, EntityDto, FieldDto, FormDto, VersionDto } from './dynamic-dto';
 import { HttpEntityDefinitionGateway } from './http-entity-definition.gateway';
 
 const API = 'http://api.test/api/v1';
@@ -67,18 +72,26 @@ const input = (over: Partial<Parameters<HttpEntityDefinitionGateway['saveDraft']
   ...over,
 });
 
+/** Os formulários publicados chegam por um pedido próprio; aqui respondem-se à parte (por omissão: nenhum). */
+let publishedForms: readonly FormDto[] | 'forbidden' = [];
+const formsInterceptor: HttpInterceptorFn = (req, next) =>
+  /\/dynamic\/[^/]+\/forms$/.test(req.url) && publishedForms !== 'forbidden'
+    ? of(new HttpResponse({ body: { data: publishedForms, meta: {} } }))
+    : next(req);
+
 describe('HttpEntityDefinitionGateway', () => {
   let gateway: HttpEntityDefinitionGateway;
   let http: HttpTestingController;
 
   beforeEach(() => {
+    publishedForms = [];
     TestBed.configureTestingModule({
       providers: [
         { provide: APP_ENVIRONMENT, useValue: { apiUrl: API } },
         { provide: TenantContextService, useValue: { tenant: () => ({ id: 't1', slug: 'demo' }) } },
         { provide: AuthService, useValue: { isAuthenticated: () => false } },
         { provide: Router, useValue: {} },
-        provideHttpClient(withInterceptors([errorInterceptor])),
+        provideHttpClient(withInterceptors([formsInterceptor, errorInterceptor])),
         provideHttpClientTesting(),
         HttpEntityDefinitionGateway,
       ],
@@ -100,6 +113,88 @@ describe('HttpEntityDefinitionGateway', () => {
       ['vehicle', 'published', 1],
       ['vehicle', 'draft', 2],
     ]);
+  });
+
+  it('os formulários publicados do servidor passam para a entidade publicada; os com problemas ficam de fora', async () => {
+    const form = (over: Partial<FormDto> = {}): FormDto => ({
+      id: 'f1',
+      entityCode: 'vehicle',
+      code: 'ficha_curta',
+      name: 'Ficha curta',
+      description: null,
+      revision: 3,
+      status: 'PUBLISHED',
+      modes: ['create', 'edit'],
+      isDefault: true,
+      sections: [
+        {
+          key: 'dados_basicos',
+          title: 'Dados',
+          columns: 2,
+          visibleWhen: { op: 'notEmpty', field: 'marca' },
+          items: [
+            { kind: 'field', field: 'marca', span: 2, help: 'Marca do fabricante' },
+            {
+              kind: 'field',
+              field: 'data_compra',
+              requiredWhen: { op: 'in', field: 'marca', values: ['a', 'b'] },
+            },
+          ],
+        },
+      ],
+      publishedAt: '2026-02-01T00:00:00Z',
+      issues: [],
+      ...over,
+    });
+    publishedForms = [
+      form(),
+      form({
+        id: 'f2',
+        code: 'partida',
+        issues: [{ path: 'x', code: 'FORM_UNKNOWN_FIELD', message: 'm' }],
+      }),
+    ];
+    const promise = firstValueFrom(gateway.list());
+    http.expectOne(`${API}/entity-definitions`).flush(envelope([entity()]));
+    http
+      .expectOne(`${API}/entity-definitions/e1`)
+      .flush(envelope(detail({ draft: version(2, false) })));
+    const [published, draft] = await promise;
+    expect(published!.forms).toHaveLength(1);
+    expect(published!.forms[0]).toMatchObject({
+      key: 'ficha-curta',
+      name: 'Ficha curta',
+      version: 3,
+      state: 'published',
+      scope: 'tenant',
+      modes: ['create', 'edit'],
+      isDefault: true,
+    });
+    const [section] = published!.forms[0]!.sections;
+    expect(section).toMatchObject({
+      key: 'dados-basicos',
+      columns: 2,
+      visibleWhen: { op: 'notEmpty', field: 'marca' },
+    });
+    expect(section!.items[1]).toMatchObject({
+      field: 'dataCompra',
+      requiredWhen: { op: 'in', field: 'marca', values: ['a', 'b'] },
+    });
+    expect(draft!.forms).toEqual([]);
+  });
+
+  it('sem permissão para ler os formulários, a entidade continua utilizável sem eles', async () => {
+    publishedForms = 'forbidden';
+    const promise = firstValueFrom(gateway.list());
+    http.expectOne(`${API}/entity-definitions`).flush(envelope([entity()]));
+    http.expectOne(`${API}/entity-definitions/e1`).flush(envelope(detail()));
+    http
+      .expectOne(`${API}/dynamic/vehicle/forms`)
+      .flush(
+        { error: { code: 'PERMISSION_DENIED', message: 'Sem permissão.' } },
+        { status: 403, statusText: 'Forbidden' },
+      );
+    expect((await promise)[0]!.forms).toEqual([]);
   });
 
   it('sem entidades não faz mais pedidos; uma entidade não representável não impede as outras', async () => {

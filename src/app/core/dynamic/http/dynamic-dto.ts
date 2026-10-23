@@ -95,3 +95,64 @@ export interface AuditLogDto {
   readonly before: Readonly<Record<string, unknown>> | null;
   readonly after: Readonly<Record<string, unknown>> | null;
 }
+
+// --- formulários (C11) ---------------------------------------------------------------------------
+
+export type ConditionDto =
+  | {
+      readonly op: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte';
+      readonly field: string;
+      readonly value: string | number | boolean | null;
+    }
+  | {
+      readonly op: 'in' | 'nin';
+      readonly field: string;
+      readonly values: readonly (string | number | boolean | null)[];
+    }
+  | { readonly op: 'empty' | 'notEmpty'; readonly field: string }
+  | { readonly op: 'and' | 'or'; readonly conditions: readonly ConditionDto[] }
+  | { readonly op: 'not'; readonly condition: ConditionDto };
+
+export interface FormBindingDto {
+  readonly kind: 'field';
+  readonly field: string;
+  readonly span?: number;
+  readonly label?: string;
+  readonly placeholder?: string;
+  readonly help?: string;
+  readonly visible?: boolean;
+  readonly editable?: boolean;
+  readonly required?: boolean;
+  readonly visibleWhen?: ConditionDto;
+  readonly editableWhen?: ConditionDto;
+  readonly requiredWhen?: ConditionDto;
+}
+
+export interface FormSectionDto {
+  readonly key: string;
+  readonly title: string;
+  readonly description?: string;
+  readonly columns: number;
+  readonly visibleWhen?: ConditionDto;
+  readonly items: readonly FormBindingDto[];
+}
+
+export interface FormDto {
+  readonly id: string;
+  readonly entityCode: string;
+  readonly code: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly revision: number;
+  readonly status: 'DRAFT' | 'PUBLISHED' | 'RETIRED';
+  readonly modes: readonly ('create' | 'edit' | 'read')[];
+  readonly isDefault: boolean;
+  readonly sections: readonly FormSectionDto[];
+  readonly publishedAt: string | null;
+  /** Problemas que o servidor verifica agora contra a entidade (vazio = utilizável). */
+  readonly issues: readonly {
+    readonly path: string;
+    readonly code: string;
+    readonly message: string;
+  }[];
+}

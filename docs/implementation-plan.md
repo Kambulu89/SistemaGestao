@@ -478,10 +478,11 @@ Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a
 | 3.3 | C12 no servidor: campo FORMULA (gramática restrita → AST, ordem topológica, ciclos) e regras de validação por AST (publicação imutável, simulação, avaliações registadas); FORMULA no designer | **Concluída** (ver 2c.3); LOOKUP e a UI de regras ficam por fazer |
 | 3.4 | Editor de regras (UI) sobre `/rules`: construtor de condições, simulação, publicação, revisões e avaliações | **Concluída** (ver 2c.4) |
 | 3.5 | Tipo LOOKUP (valor lido em tempo real de um registo referenciado, com a autorização do destino) | **Concluída** (ver 2c.5) |
-| 3.6 | C11 formulários (secções, bindings, condições) | Por fazer |
-| 3.7 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
-| 3.8 | C14 workflows, tarefas e delegações | Por fazer |
-| 3.9 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
+| 3.6 | C11 formulários no servidor (secções, ligações a campos, condições de apresentação, publicação imutável, verificação contra a entidade) e usados pelos registos no frontend | **Concluída** (ver 2c.6); Form Builder visual e submissões por fazer |
+| 3.7 | Form Builder visual sobre `/forms` (arrastar campos, condições, vista móvel, teste com papéis simulados) | Por fazer |
+| 3.8 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
+| 3.9 | C14 workflows, tarefas e delegações | Por fazer |
+| 3.10 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
 
 ### 2c.1 Fatia 3.1 — C10 no backend (concluída; ver D-035)
 **Entregue:** migration `create_metadata` (5 tabelas de tenant com RLS, FKs compostas e auditoria; triggers de imutabilidade de versões
@@ -553,6 +554,19 @@ obrigatório, sem valor por omissão, sem pesquisa/filtro/ordenação, fora das 
 ver o valor (decimal formatado) na lista e no detalhe, incluindo num registo escrito antes do campo, ver a alteração da origem reflectir-se, e o valor ficar vazio quando uma política impede ler o destino.
 **Não verificado / limites:** o E2E correu por script local, em duas execuções sobre o mesmo ambiente (designer e leitura); sem teste no browser de `onMissing: error`; um valor relacionado cuja origem for retirada do destino
 mostra vazio (a publicação do destino não verifica quem o usa); N leituras por página de resultados (uma por registo de origem distinto, sem cache entre pedidos); `snapshot` (cópia ao gravar) não existe.
+
+### 2c.6 Fatia 3.6 — formulários (concluída; ver D-040)
+**Servidor.** Módulo `app/dynamic/forms` (migration 18, `form_definitions`): formulário por entidade e código, revisões `DRAFT → PUBLISHED → RETIRED`, publicada imutável (trigger; só passa a `RETIRED`), um rascunho e
+uma publicada por código, `schema_revision` com a revisão da entidade verificada. Layout = secções (`columns` 1–3, `visibleWhen`) com ligações a campos **por código** (`span`, `label`, `placeholder`, `help`,
+`visible`, `editable`, `required`, `visibleWhen/editableWhen/requiredWhen`); condições declarativas (`eq…lte`, `in/nin`, `empty/notEmpty`, `and/or/not`; ≤ 8 níveis, ≤ 50 nós). Rascunho só precisa de estar bem
+formado; **publicar** verifica contra os campos em vigor: existem e estão activos, cada um uma vez, condições só sobre campos não sensíveis, e nada que impeça preencher um obrigatório (`FORM_HIDES_REQUIRED`,
+`FORM_MISSING_REQUIRED`); um formulário por omissão por modo. API: `/forms` (+ `preview`, `publish`, `retire`, `revisions`) com `form.read|design|publish`, e `GET /dynamic/{entity}/forms` (publicados, com `issues`) para quem lê
+registos. Os registos escrevem-se sempre na entidade (autorização e validação inalteradas: um campo escondido no pedido continua sujeito a elas).
+**Frontend.** O gateway carrega os formulários publicados (sem `issues`) para `entity.forms`; o renderer passou a aplicar `applyFormConfiguration` (rótulos, ajudas, condições, campos não incluídos escondidos e não enviados).
+**Verificado:** backend lint, typecheck, format, build e `npm test` (410 testes; matriz de isolamento estendida); frontend lint, format, `check:generic`, `ng test` (753) e build; E2E em browser real sobre a API real:
+secções e título, rótulo/ajuda do formulário, secção condicionada, campo não incluído, gravação na entidade, e regresso ao formulário gerado ao retirar.
+**Não verificado / limites:** o E2E correu por script local; sem Form Builder visual (3.7), sem `FormSubmission` (o CRUD escreve directamente), sem política de valores escondidos (preservar/limpar), sem grupos nem valores por omissão por formulário,
+`span`/`columns` até 3 (a spec fala em 1–12 para a largura) — ver D-040.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

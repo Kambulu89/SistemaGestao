@@ -8,12 +8,22 @@ import type {
   FieldValue,
 } from '../models/field-definition.model';
 import { hasOptions } from '../models/field-definition.model';
+import type { Condition } from '../models/condition.model';
+import type {
+  FormColumns,
+  FormDefinition,
+  FormFieldItem,
+  FormSection,
+} from '../models/form-definition.model';
 import type { RecordData } from '../models/entity-record.model';
 import type { ValidationRule } from '../models/validation-rule.model';
 import type {
   EntityDetailDto,
+  ConditionDto,
   EntityDto,
   FieldDto,
+  FormDto,
+  FormSectionDto,
   FieldInputDto,
   FieldPresentationDto,
   VersionDto,
@@ -280,6 +290,7 @@ function versionToDefinition(
   entity: EntityDto,
   version: VersionDto,
   state: EntityDefinition['state'],
+  forms: readonly FormDefinition[] = [],
 ): EntityDefinition {
   const key = entityKeyOf(entity.code);
   const base = defineEntity({
@@ -293,6 +304,7 @@ function versionToDefinition(
     description: entity.description ?? undefined,
     icon: entity.presentation.icon ?? 'cube',
     fields: version.fields.map((f) => fieldFromServer(f)),
+    forms,
     publishedAt: version.publishedAt ?? undefined,
     meta: {
       createdAt: entity.createdAt,
@@ -309,10 +321,88 @@ function versionToDefinition(
   };
 }
 
+// --- formulários ---------------------------------------------------------------------------------
+
+/** Condição do servidor (códigos de campo) → condição da interface (chaves de campo). */
+function conditionFromServer(dto: ConditionDto): Condition {
+  switch (dto.op) {
+    case 'and':
+    case 'or':
+      return { op: dto.op, conditions: dto.conditions.map(conditionFromServer) };
+    case 'not':
+      return { op: 'not', condition: conditionFromServer(dto.condition) };
+    case 'in':
+    case 'nin':
+      return { op: dto.op, field: checkedFieldKey(dto.field), values: dto.values };
+    case 'empty':
+    case 'notEmpty':
+      return { op: dto.op, field: checkedFieldKey(dto.field) };
+    default:
+      return { op: dto.op, field: checkedFieldKey(dto.field), value: dto.value };
+  }
+}
+
+function sectionFromServer(dto: FormSectionDto): FormSection {
+  return {
+    key: dto.key.replaceAll('_', '-'),
+    title: dto.title,
+    ...(dto.description ? { description: dto.description } : {}),
+    columns: dto.columns as FormColumns,
+    ...(dto.visibleWhen ? { visibleWhen: conditionFromServer(dto.visibleWhen) } : {}),
+    items: dto.items.map<FormFieldItem>((item) => ({
+      kind: 'field',
+      field: checkedFieldKey(item.field),
+      ...(item.span ? { span: item.span as FormColumns } : {}),
+      ...(item.label ? { label: item.label } : {}),
+      ...(item.placeholder ? { placeholder: item.placeholder } : {}),
+      ...(item.help ? { help: item.help } : {}),
+      ...(item.visible === undefined ? {} : { visible: item.visible }),
+      ...(item.editable === undefined ? {} : { editable: item.editable }),
+      ...(item.required === undefined ? {} : { required: item.required }),
+      ...(item.visibleWhen ? { visibleWhen: conditionFromServer(item.visibleWhen) } : {}),
+      ...(item.editableWhen ? { editableWhen: conditionFromServer(item.editableWhen) } : {}),
+      ...(item.requiredWhen ? { requiredWhen: conditionFromServer(item.requiredWhen) } : {}),
+    })),
+  };
+}
+
+/**
+ * Formulários publicados do servidor → formulários da interface. Um formulário que o servidor já não considera
+ * utilizável (campos retirados, por exemplo) ou que a interface não representa fica de fora: a entidade volta ao
+ * formulário gerado, em vez de mostrar um formulário partido.
+ */
+export function formsFromServer(tenantId: string, forms: readonly FormDto[]): FormDefinition[] {
+  const result: FormDefinition[] = [];
+  for (const dto of forms) {
+    if (dto.status !== 'PUBLISHED' || dto.issues.length > 0) continue;
+    try {
+      result.push({
+        id: dto.id,
+        key: entityKeyOf(dto.code),
+        name: dto.name,
+        ...(dto.description ? { description: dto.description } : {}),
+        entityKey: entityKeyOf(dto.entityCode),
+        scope: 'tenant',
+        tenantId,
+        version: dto.revision,
+        state: 'published',
+        modes: dto.modes,
+        isDefault: dto.isDefault,
+        sections: dto.sections.map(sectionFromServer),
+        ...(dto.publishedAt ? { publishedAt: dto.publishedAt } : {}),
+      });
+    } catch (error) {
+      if (!(error instanceof UnrepresentableDefinitionError)) throw error;
+    }
+  }
+  return result;
+}
+
 /** Uma entidade do servidor → as suas definições para a interface: a publicada (ou arquivada) e o rascunho. */
 export function definitionsFromServer(
   tenantId: string,
   detail: EntityDetailDto,
+  forms: readonly FormDefinition[] = [],
 ): EntityDefinition[] {
   const result: EntityDefinition[] = [];
   const { entity, published, draft } = detail;
@@ -323,6 +413,7 @@ export function definitionsFromServer(
         entity,
         published,
         entity.status === 'ARCHIVED' ? 'archived' : 'published',
+        forms,
       ),
     );
   }

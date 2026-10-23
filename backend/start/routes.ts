@@ -25,6 +25,7 @@ const SubscriptionController = () =>
 const ModulesController = () => import('#platform/modules/presentation/modules_controller')
 const MetadataController = () => import('#dynamic/metadata/presentation/metadata_controller')
 const RulesController = () => import('#dynamic/rules/presentation/rules_controller')
+const FormsController = () => import('#dynamic/forms/presentation/forms_controller')
 const SettingsController = () => import('#core/settings/presentation/settings_controller')
 const PlatformController = () => import('#platform/administration/presentation/platform_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
@@ -377,6 +378,42 @@ router
         router.post('/rules/:id/disable', [RulesController, 'disable'])
       })
       .use(middleware.can({ permission: 'rule.manage' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Formulários (C11): `form.read` para ver, `form.design` para criar e alterar rascunhos e `form.publish` para publicar e
+ * retirar. Quem lê os registos de uma entidade (`dynamic.read`) vê os formulários **publicados** dela, para os usar.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/forms', [FormsController, 'list'])
+        router.get('/forms/:id', [FormsController, 'show'])
+        router.post('/forms/:id/preview', [FormsController, 'preview'])
+      })
+      .use(middleware.can({ permission: 'form.read' }))
+
+    router
+      .group(() => {
+        router.post('/forms', [FormsController, 'create'])
+        router.patch('/forms/:id', [FormsController, 'update'])
+        router.post('/forms/:id/revisions', [FormsController, 'createRevision'])
+      })
+      .use(middleware.can({ permission: 'form.design' }))
+
+    router
+      .group(() => {
+        router.post('/forms/:id/publish', [FormsController, 'publish'])
+        router.post('/forms/:id/retire', [FormsController, 'retire'])
+      })
+      .use(middleware.can({ permission: 'form.publish' }))
+
+    router
+      .get('/dynamic/:entityCode/forms', [FormsController, 'published'])
+      .use(middleware.can({ permission: 'dynamic.read', resource: { entity: 'entityCode' } }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])
