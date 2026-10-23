@@ -41,6 +41,8 @@ export interface World {
     record: string
     rule: string
     form: string
+    machine: string
+    stateRecord: string
   }
 }
 
@@ -59,6 +61,8 @@ export const SHARED = {
   plate: 'AB-12-CD',
   ruleCode: 'matricula_proibida',
   formCode: 'ficha',
+  machineCode: 'ciclo',
+  statePlate: 'EF-56-GH',
   forbiddenPlate: 'ZZ-99-ZZ',
 }
 
@@ -351,6 +355,42 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     await http.post(`/api/v1/forms/${form.id}/publish`, { expectedVersion: form.version }),
     200
   )
+  // C13: a mesma máquina de estados nos dois tenants; um registo novo nasce no estado inicial e faz uma transição
+  // (estado, histórico e evento de outbox na mesma transacção).
+  const machine = await must<{ id: string; version: number }>(
+    await http.post('/api/v1/state-machines', {
+      entityCode: SHARED.entityCode,
+      code: SHARED.machineCode,
+      name: 'Ciclo da viatura',
+      states: [
+        { code: 'activo', label: 'Activo', category: 'INITIAL' },
+        { code: 'em_oficina', label: 'Em oficina', category: 'ACTIVE' },
+      ],
+      transitions: [
+        { code: 'enviar', label: 'Enviar para oficina', from: ['activo'], to: 'em_oficina' },
+      ],
+    }),
+    201
+  )
+  await must(
+    await http.post(`/api/v1/state-machines/${machine.id}/publish`, {
+      expectedVersion: machine.version,
+    }),
+    200
+  )
+  const stateRecord = await must<{ id: string }>(
+    await http.post(`/api/v1/dynamic/${SHARED.entityCode}/records`, {
+      data: { matricula: SHARED.statePlate },
+    }),
+    201
+  )
+  await must(
+    await http.post(
+      `/api/v1/dynamic/${SHARED.entityCode}/records/${stateRecord.id}/transitions/enviar`,
+      { expectedVersion: 1 }
+    ),
+    200
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -386,6 +426,8 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       record: record.id,
       rule: rule.id,
       form: form.id,
+      machine: machine.id,
+      stateRecord: stateRecord.id,
     },
   }
 }

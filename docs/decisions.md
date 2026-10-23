@@ -499,6 +499,15 @@ O builder edita directamente as secções que o servidor guarda (códigos de cam
 com o caminho completo). **Permissões:** `form.read|design|publish` → `configuration.form-layouts.*` (navegação; o servidor decide). **Limites:** sem teste com papéis simulados (spec C11), sem grupos, valores por omissão por formulário nem política de
 valores escondidos; um formulário publicado nunca se edita (nova revisão).
 
+## D-042 Máquinas de estados: estado à parte, transição atómica, outbox sem worker (aceite — fatia 3.8)
+**Estado fora do registo.** O estado vive em `record_states` (com a sua `version`) e não em `dynamic_records`: o módulo de estados não escreve nas tabelas dos registos (regra de módulos) e o PATCH genérico **não consegue** alterar o estado (não existe campo `status`). O módulo de metadados
+chama uma porta (`RecordStates`, registada em `start/dynamic.ts`, falha fechada) para dar o estado inicial na transacção da criação, recusar alterações em estados fechados (`editable: false`) e juntar `state` às respostas. **Uma máquina em vigor por entidade**; estados e transições em JSON validado
+(como D-040). **Transição:** bloqueia a linha do estado, valida `expectedVersion`, lê os dados **actuais** pelo módulo de metadados (só o que a pessoa vê; uma guarda sobre campos escondidos falha fechada), exige `dynamic.transition` (ABAC com `resource.state`) mais a permissão da transição (só códigos do catálogo: o tenant não inventa permissões),
+avalia a guarda (condição declarativa, nunca código) e escreve estado + histórico + evento na mesma transacção; transição inexistente a partir do estado → 409 `TRANSITION_NOT_AVAILABLE`, dois comandos concorrentes → só um executa. Registo inexistente ou alheio → 404 antes de qualquer consulta de estado.
+**Revisões:** um registo segue a máquina em vigor se o seu estado existir nela; publicar uma revisão que remova um estado **em uso** é recusado (a migração de registos em curso exige mapeamento explícito — não existe). Registos anteriores à máquina ficam sem estado.
+**Outbox:** nasce `outbox_events` (core) e o evento `dynamic.record.state_changed` escreve-se com a alteração; **não há worker nem inbox**: ficam `PENDING` até haver o primeiro consumidor real (D-015) — a garantia entregue é a atomicidade, não a publicação.
+**Categorias:** `INITIAL/ACTIVE/FINAL/CANCELLED` definem a edição por omissão; nomes de estado nunca produzem efeitos de negócio (faturar, movimentar stock…), que são comandos próprios. **Limites:** sem designer visual (fatia 3.9), sem `action_code`, a listagem não mostra o estado.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

@@ -5,7 +5,7 @@ Plataforma SaaS **multi-tenant, modular e configurável**. Este repositório tem
 | Parte | Pasta | Estado |
 | --- | --- | --- |
 | Frontend (Angular 22 · Tailwind 4) | raiz (`src/`) | ligado à API para identidade, tenants, membros, convites, organização, perfis, administração da plataforma, plano, módulos e configurações; o core dinâmico (C10–C15) ainda sobre **dados mock** |
-| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0, Fase 1 (fatias 1.1–1.9), Fase 2 fatias 2.1–2.5 (backend) e Fase 3 fatias 3.1–3.7 (C10, C11 e C12 no servidor, valores relacionados, editor de regras e Form Builder no frontend)**: tenants, autenticação, membros e convites, autorização RBAC+ABAC, organização, Party, matriz de isolamento, auditoria mínima, planos e assinaturas, registo de módulos, configurações/sequências, administração da plataforma e metadados/entidades dinâmicas. Sem módulos de negócio |
+| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0, Fase 1 (fatias 1.1–1.9), Fase 2 fatias 2.1–2.5 (backend) e Fase 3 fatias 3.1–3.8 (C10, C11, C12 e C13 no servidor, valores relacionados, editor de regras e Form Builder no frontend)**: tenants, autenticação, membros e convites, autorização RBAC+ABAC, organização, Party, matriz de isolamento, auditoria mínima, planos e assinaturas, registo de módulos, configurações/sequências, administração da plataforma e metadados/entidades dinâmicas. Sem módulos de negócio |
 
 Contrato funcional: [`docs/especificacao-v2.docx`](docs/especificacao-v2.docx). Regras permanentes: [`CLAUDE.md`](CLAUDE.md).
 Arquitectura: [`docs/architecture.md`](docs/architecture.md) · decisões: [`docs/decisions.md`](docs/decisions.md) ·

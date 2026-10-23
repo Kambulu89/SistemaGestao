@@ -7,5 +7,11 @@ export {
   type RecordRuleCheck,
   type RecordRules,
 } from '#dynamic/metadata/application/record_rules'
+export {
+  registerRecordStates,
+  type RecordState,
+  type RecordStates,
+  type RecordStateTarget,
+} from '#dynamic/metadata/application/record_states'
 export type { FieldSpec, Issue } from '#dynamic/metadata/domain/field_types'
 export type { RecordValues } from '#dynamic/metadata/domain/record'

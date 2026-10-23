@@ -55,6 +55,10 @@ export async function deleteTestTenants() {
         .whereNotNull('base_unit_id')
         .delete()
       for (const table of [
+        'outbox_events',
+        'state_history',
+        'record_states',
+        'state_machines',
         'form_definitions',
         'rule_evaluations',
         'rule_definitions',

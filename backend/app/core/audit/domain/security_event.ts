@@ -78,6 +78,8 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   dynamic_unique_values: 'dynamic.read',
   rule_definitions: 'rule.read',
   form_definitions: 'form.read',
+  state_machines: 'state.read',
+  record_states: 'dynamic.read',
 }
 
 /** Tabelas de tenant que não são auditadas, com o motivo (o teste de conformidade exige o resto). */
@@ -87,6 +89,10 @@ export const AUDIT_EXEMPT_TABLES: Readonly<Record<string, string>> = {
     'Histórico próprio e imutável da assinatura (C02), consultável em GET /tenant/subscription.',
   rule_evaluations:
     'Registo próprio e só de acrescentar das avaliações de regras (C12), consultável em GET /rules/{id}/evaluations.',
+  state_history:
+    'Histórico próprio e só de acrescentar das transições de estado (C13), consultável em GET /dynamic/{entity}/records/{id}/state-history.',
+  outbox_events:
+    'Fila técnica do outbox transaccional: o evento é escrito com a alteração que o originou (já auditada) e só muda de estado ao ser publicado.',
   user_preferences:
     'Preferências pessoais de apresentação; sem efeito em acessos nem dados de negócio.',
 }

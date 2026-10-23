@@ -480,9 +480,10 @@ Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a
 | 3.5 | Tipo LOOKUP (valor lido em tempo real de um registo referenciado, com a autorização do destino) | **Concluída** (ver 2c.5) |
 | 3.6 | C11 formulários no servidor (secções, ligações a campos, condições de apresentação, publicação imutável, verificação contra a entidade) e usados pelos registos no frontend | **Concluída** (ver 2c.6); Form Builder visual e submissões por fazer |
 | 3.7 | Form Builder visual sobre `/forms`: secções, arrastar campos, ajuda e condições, pré-visualização, verificação e publicação | **Concluída** (ver 2c.7); teste com papéis simulados por fazer |
-| 3.8 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
-| 3.9 | C14 workflows, tarefas e delegações | Por fazer |
-| 3.10 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
+| 3.8 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox): servidor, estado e acções nos registos | **Concluída** (ver 2c.8); designer visual por fazer |
+| 3.9 | Designer visual de máquinas de estados sobre `/state-machines` (estados, transições, guardas, verificação) | Por fazer |
+| 3.10 | C14 workflows, tarefas e delegações | Por fazer |
+| 3.11 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
 
 ### 2c.1 Fatia 3.1 — C10 no backend (concluída; ver D-035)
 **Entregue:** migration `create_metadata` (5 tabelas de tenant com RLS, FKs compostas e auditoria; triggers de imutabilidade de versões
@@ -578,6 +579,19 @@ condições «mostrar/editável/obrigatório quando» (construtor de comparaçõ
 guardar, verificar, publicar, uso do formulário nos registos (rótulo, ajuda e secção condicionada), e recusa do servidor a um formulário sem o campo obrigatório.
 **Não verificado / limites:** o E2E correu por script local, em duas execuções (a segunda só falhou no último passo por reutilizar o código do formulário de teste, já verificado na primeira); o «modo móvel» não reproduz os pontos de quebra do
 ecrã (só limita a largura); sem teste com papéis simulados; sem grupos nem valores por omissão por formulário; arrastar só com rato (os botões cobrem o teclado); sem `@angular/cdk` (sem ADR para nova dependência).
+
+### 2c.8 Fatia 3.8 — máquinas de estados (concluída; ver D-042)
+**Servidor.** Módulo `app/dynamic/states` (migrations 19–20): `state_machines` (revisões DRAFT → PUBLISHED → RETIRED, estados e transições em JSON validado, imutável depois de publicada, **uma em vigor por entidade**), `record_states` (o estado
+de cada registo e a sua `version`, à parte dos registos), `state_history` (só de acrescentar) e `outbox_events` (módulo `core/outbox`). Estados: `code`, `label`, `category` (INITIAL/ACTIVE/FINAL/CANCELLED), `editable`, `color`. Transições: `from[]`, `to`, `permission?` (do catálogo),
+`guard?` (condição das políticas de acesso sobre `resource.<campo não sensível>`/`subject.*`/`env.now`), `reasonRequired`. Publicar verifica: um só estado inicial, estados alcançáveis, nenhuma saída de um estado final/cancelado, guardas contra a entidade, permissões conhecidas e que nenhum
+estado em uso por registos desapareça (`STATE_IN_USE`). Os registos criados com a máquina em vigor nascem no estado inicial (na mesma transacção); um estado `editable: false` recusa alterações de valores (409 `RECORD_STATE_LOCKED`); as respostas dos registos trazem `state`.
+API: `/state-machines` (+ `preview`, `publish`, `retire`, `revisions`; `state.read|design|publish`) e, por registo, `GET …/available-actions`, `POST …/transitions/{code}` (`dynamic.transition`) e `GET …/state-history`. A transição bloqueia o estado (`FOR UPDATE`), verifica `expectedVersion`, `dynamic.transition` com os
+atributos do registo **incluindo `resource.state`** (políticas ABAC por estado), a permissão da transição e a guarda sobre os dados actuais (falha fechada), e escreve estado, histórico e evento de outbox **na mesma transacção**.
+**Frontend.** O gateway lê o estado e as acções do servidor; o detalhe do registo mostra o estado, só as acções que o servidor devolve, pede confirmação (e o motivo, quando exigido), envia a versão do estado e mostra conflitos; «Editar» some em estados fechados.
+**Verificado:** backend lint, typecheck, format, build e `npm test` (422 testes; matriz de isolamento estendida, incluindo 404 para registos alheios e a concorrência de dois comandos); frontend lint, format, `check:generic`, `ng test` (780) e build; E2E em browser real sobre a API real: estado e acções,
+transição, guarda que esconde «Concluir», motivo obrigatório, estado final sem acções nem «Editar», recusa do servidor a editar, histórico com o motivo e conflito de versão.
+**Não verificado / limites:** o E2E correu por script local (as máquinas criam-se por API); **sem worker nem consumidores do outbox** (os eventos ficam `PENDING`; sem inbox) — D-015; os registos criados **antes** da máquina ficam sem estado (409 `RECORD_WITHOUT_STATE`; a migração exige um mapeamento explícito, não feito); um só ramo de
+guarda por transição, sem `action_code`; categorias semânticas fiscais/financeiras/de stock não aplicam efeitos (por desenho: nenhum estado emite documentos); a guarda lê os dados que a pessoa pode ver (campos escondidos/sensíveis não contam); a listagem de registos não mostra o estado.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

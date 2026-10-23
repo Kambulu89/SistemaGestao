@@ -26,6 +26,7 @@ const ModulesController = () => import('#platform/modules/presentation/modules_c
 const MetadataController = () => import('#dynamic/metadata/presentation/metadata_controller')
 const RulesController = () => import('#dynamic/rules/presentation/rules_controller')
 const FormsController = () => import('#dynamic/forms/presentation/forms_controller')
+const StatesController = () => import('#dynamic/states/presentation/states_controller')
 const SettingsController = () => import('#core/settings/presentation/settings_controller')
 const PlatformController = () => import('#platform/administration/presentation/platform_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
@@ -414,6 +415,54 @@ router
     router
       .get('/dynamic/:entityCode/forms', [FormsController, 'published'])
       .use(middleware.can({ permission: 'dynamic.read', resource: { entity: 'entityCode' } }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Máquinas de estados (C13): `state.read` para ver, `state.design` para desenhar rascunhos e `state.publish` para publicar e
+ * retirar. As transições executam-se com `dynamic.transition` (com o código da entidade como atributo, como os registos);
+ * as acções disponíveis e o histórico exigem `dynamic.read`.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/state-machines', [StatesController, 'list'])
+        router.get('/state-machines/:id', [StatesController, 'show'])
+        router.post('/state-machines/:id/preview', [StatesController, 'preview'])
+      })
+      .use(middleware.can({ permission: 'state.read' }))
+
+    router
+      .group(() => {
+        router.post('/state-machines', [StatesController, 'create'])
+        router.patch('/state-machines/:id', [StatesController, 'update'])
+        router.post('/state-machines/:id/revisions', [StatesController, 'createRevision'])
+      })
+      .use(middleware.can({ permission: 'state.design' }))
+
+    router
+      .group(() => {
+        router.post('/state-machines/:id/publish', [StatesController, 'publish'])
+        router.post('/state-machines/:id/retire', [StatesController, 'retire'])
+      })
+      .use(middleware.can({ permission: 'state.publish' }))
+
+    const onEntity = (permission: string) =>
+      middleware.can({ permission, resource: { entity: 'entityCode' } })
+    router
+      .get('/dynamic/:entityCode/records/:id/available-actions', [
+        StatesController,
+        'availableActions',
+      ])
+      .use(onEntity('dynamic.read'))
+    router
+      .get('/dynamic/:entityCode/records/:id/state-history', [StatesController, 'history'])
+      .use(onEntity('dynamic.read'))
+    router
+      .post('/dynamic/:entityCode/records/:id/transitions/:code', [StatesController, 'transition'])
+      .use(onEntity('dynamic.transition'))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

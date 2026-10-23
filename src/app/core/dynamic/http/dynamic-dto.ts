@@ -85,6 +85,26 @@ export interface RecordDto {
   readonly updatedAt: string;
   readonly createdByMembershipId: string | null;
   readonly updatedByMembershipId: string | null;
+  /** Estado na máquina de estados da entidade (`null` se não tem máquina ou o registo é anterior a ela). */
+  readonly state?: {
+    readonly code: string;
+    readonly label: string;
+    readonly category: 'INITIAL' | 'ACTIVE' | 'FINAL' | 'CANCELLED';
+    readonly editable: boolean;
+    readonly color: string | null;
+    readonly version: number;
+  } | null;
+}
+
+export interface ActionsDto {
+  readonly state: { readonly code: string; readonly label: string; readonly version: number };
+  readonly actions: readonly {
+    readonly code: string;
+    readonly label: string;
+    readonly to: string;
+    readonly toLabel: string;
+    readonly reasonRequired: boolean;
+  }[];
 }
 
 export interface AuditLogDto {

@@ -15,6 +15,7 @@ import { validationError } from '#dynamic/metadata/application/entity_use_cases'
 import { resourceOf } from '#dynamic/metadata/application/access_resource'
 import { LookupReader } from '#dynamic/metadata/application/lookup_reader'
 import { currentRecordRules } from '#dynamic/metadata/application/record_rules'
+import { currentRecordStates, type RecordState } from '#dynamic/metadata/application/record_states'
 import type {
   AccessControl,
   AccessDecision,
@@ -40,6 +41,8 @@ export interface RecordView {
   updatedAt: Date
   createdByMembershipId: string | null
   updatedByMembershipId: string | null
+  /** Estado na máquina de estados da entidade (`null` se não tem máquina ou o registo é anterior a ela). */
+  state: RecordState | null
 }
 
 interface Loaded {
@@ -105,6 +108,7 @@ export class RecordUseCases {
         organizationUnitId: entity.ownershipMode === 'UNIT' ? input.organizationUnitId : null,
       })
       await this.claimUniqueKeys(scope, entity, inserted.id, loaded.current.fields, values)
+      await currentRecordStates().onCreated(scope, context, entity, inserted.id)
       return inserted
     }, context)
     return this.present(context, entity, [first.current], row)
@@ -204,6 +208,7 @@ export class RecordUseCases {
       decision.hiddenFields,
       showSensitive
     )
+    await this.attachStates(context, entity, items)
     return { items, total }
   }
 
@@ -236,6 +241,7 @@ export class RecordUseCases {
       const loaded = await this.loadForWrite(scope, entityCode)
       if (loaded.current.id !== first.current.id) this.staleSchema()
       await this.checkReferences(scope, loaded.current.fields, values, provided)
+      await currentRecordStates().assertEditable(scope, entity, id)
       const { data, sensitive } = partition(loaded.current.fields, values)
       const written = await this.records.update(scope, id, input.expectedVersion, {
         schemaVersionId: loaded.current.id,
@@ -509,6 +515,7 @@ export class RecordUseCases {
       (await this.canSeeSensitive(context, entity))
     const view = this.toView(entity, versions, row, decision.hiddenFields, showSensitive)
     if (!decision.allowed) return { ...view, data: {} }
+    await this.attachStates(context, entity, [view])
     await this.attachLookups(
       context,
       entity,
@@ -519,6 +526,21 @@ export class RecordUseCases {
       showSensitive
     )
     return view
+  }
+
+  /** O estado de cada registo na máquina de estados da entidade (C13). */
+  private async attachStates(
+    context: TenantContext,
+    entity: EntityDefinition,
+    views: readonly RecordView[]
+  ) {
+    if (views.length === 0) return
+    const states = await currentRecordStates().describe(
+      context,
+      entity,
+      views.map((v) => v.id)
+    )
+    for (const view of views) view.state = states.get(view.id) ?? null
   }
 
   /**
@@ -585,6 +607,7 @@ export class RecordUseCases {
       updatedAt: row.updatedAt,
       createdByMembershipId: row.createdByMembershipId,
       updatedByMembershipId: row.updatedByMembershipId,
+      state: null,
     }
   }
 }

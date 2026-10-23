@@ -85,6 +85,10 @@ async function snapshot(world: World) {
     evaluations: await get(`/api/v1/rules/${world.ids.rule}/evaluations`),
     forms: await get('/api/v1/forms'),
     publishedForms: await get(`/api/v1/dynamic/${SHARED.entityCode}/forms`),
+    machines: await get('/api/v1/state-machines'),
+    stateHistory: await get(
+      `/api/v1/dynamic/${SHARED.entityCode}/records/${world.ids.stateRecord}/state-history`
+    ),
     records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
@@ -148,6 +152,15 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['post', `/forms/${o.form}/preview`],
     ['post', `/forms/${o.form}/publish`, stale],
     ['post', `/forms/${o.form}/retire`, stale],
+    ['get', `/state-machines/${o.machine}`],
+    ['patch', `/state-machines/${o.machine}`, { ...stale, name: 'x' }],
+    ['post', `/state-machines/${o.machine}/revisions`],
+    ['post', `/state-machines/${o.machine}/preview`],
+    ['post', `/state-machines/${o.machine}/publish`, stale],
+    ['post', `/state-machines/${o.machine}/retire`, stale],
+    ['get', `/dynamic/${SHARED.entityCode}/records/${o.stateRecord}/available-actions`],
+    ['get', `/dynamic/${SHARED.entityCode}/records/${o.stateRecord}/state-history`],
+    ['post', `/dynamic/${SHARED.entityCode}/records/${o.stateRecord}/transitions/enviar`, stale],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
     ['delete', `/entity-definitions/${o.entity}`],
@@ -267,6 +280,8 @@ test.group('matriz de isolamento', (group) => {
       'evaluations',
       'forms',
       'publishedForms',
+      'machines',
+      'stateHistory',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)
@@ -803,7 +818,7 @@ test.group('matriz de isolamento', (group) => {
         `${table}: A não vê linhas de B`
       )
 
-      if (table === 'rule_evaluations') {
+      if (table === 'rule_evaluations' || table === 'state_history') {
         // Registo de avaliações: só acrescenta (trigger de imutabilidade); RLS continua a filtrar a leitura.
         for (const sql of [
           `delete from ${table} where tenant_id = '${a.tenant.id}'`,
@@ -853,11 +868,12 @@ test.group('matriz de isolamento', (group) => {
         'field_definitions',
         'rule_definitions',
         'form_definitions',
+        'state_machines',
       ].includes(table)
       assert.match(
         moved.message,
         immutable
-          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE/
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE/
           : /row-level security/,
         `${table}: mover linhas para B`
       )

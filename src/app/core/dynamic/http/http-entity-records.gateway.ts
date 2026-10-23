@@ -12,14 +12,17 @@ import {
   type AuditEntry,
   type CreateRecordInput,
   type EntityRecord,
+  type RecordActions,
   type RecordQuery,
   type ReferenceLookupQuery,
   type ReferenceOption,
+  type TransitionOptions,
   type UpdateRecordInput,
   USER_DIRECTORY_KEY,
 } from '../models/entity-record.model';
 import type { FieldValue } from '../models/field-definition.model';
-import type { AuditLogDto, RecordDto } from './dynamic-dto';
+import type { SemanticColor } from '../models/status.model';
+import type { ActionsDto, AuditLogDto, RecordDto } from './dynamic-dto';
 import { toRecordFailure } from './dynamic-errors';
 import {
   entityCodeOf,
@@ -30,12 +33,32 @@ import {
   recordDataToServer,
 } from './dynamic-mapper';
 
+const SEMANTIC_COLORS: readonly SemanticColor[] = [
+  'neutral',
+  'brand',
+  'success',
+  'warning',
+  'danger',
+];
+const CATEGORY_COLOR: Record<'INITIAL' | 'ACTIVE' | 'FINAL' | 'CANCELLED', SemanticColor> = {
+  INITIAL: 'neutral',
+  ACTIVE: 'brand',
+  FINAL: 'success',
+  CANCELLED: 'danger',
+};
+
+/** A cor do estado no servidor é um nome livre; só as cores semânticas da interface se usam (senão, a da categoria). */
+const stateColor = (
+  color: string | null,
+  category: 'INITIAL' | 'ACTIVE' | 'FINAL' | 'CANCELLED',
+): SemanticColor => SEMANTIC_COLORS.find((c) => c === color) ?? CATEGORY_COLOR[category];
+
 const records = (entityKey: string) => `dynamic/${entityCodeOf(entityKey)}/records`;
 
 /**
  * Registos de entidades dinâmicas sobre a API real (C10). O servidor valida (incl. unicidade), isola por
- * tenant, aplica permissões e campos sensíveis, audita e controla a concorrência. As transições de estado
- * ainda não existem no servidor (C13).
+ * tenant, aplica permissões e campos sensíveis, audita e controla a concorrência. As transições de estado (C13) e as acções
+ * disponíveis também são do servidor.
  */
 @Injectable()
 export class HttpEntityRecordsGateway extends EntityRecordsGateway {
@@ -121,13 +144,52 @@ export class HttpEntityRecordsGateway extends EntityRecordsGateway {
     );
   }
 
-  transition(): Observable<EntityRecord> {
-    return throwError(
-      () =>
-        ({
-          status: 501,
-          message: 'As transições de estado ainda não existem no servidor.',
-        }) satisfies ApiError,
+  /** As transições que o servidor deixa executar agora; um registo sem estado (sem máquina) devolve `null`. */
+  availableActions(entityKey: string, id: string): Observable<RecordActions | null> {
+    return this.api.get<ActionsDto>(`${records(entityKey)}/${id}/available-actions`).pipe(
+      map((dto) => ({
+        version: dto.state.version,
+        actions: dto.actions.map((a) => ({
+          code: a.code,
+          label: a.label,
+          toLabel: a.toLabel,
+          reasonRequired: a.reasonRequired,
+        })),
+      })),
+      catchError((error: ApiError) =>
+        error.code === 'RECORD_WITHOUT_STATE' ? of(null) : throwError(() => error),
+      ),
+    );
+  }
+
+  /** Executa uma transição no servidor (com `expectedVersion`) e devolve o registo já no novo estado. */
+  transition(
+    entityKey: string,
+    id: string,
+    transitionKey: string,
+    options?: TransitionOptions,
+  ): Observable<EntityRecord> {
+    if (!options) {
+      return throwError(
+        () =>
+          ({
+            status: 400,
+            message: 'Uma transição precisa da versão do estado em que a interface a viu.',
+          }) satisfies ApiError,
+      );
+    }
+    return this.definition(entityKey).pipe(
+      switchMap((entity) =>
+        this.api
+          .post<unknown>(`${records(entityKey)}/${id}/transitions/${transitionKey}`, {
+            expectedVersion: options.expectedVersion,
+            ...(options.reason ? { reason: options.reason } : {}),
+          })
+          .pipe(
+            switchMap(() => this.api.get<RecordDto>(`${records(entityKey)}/${id}`)),
+            map((dto) => this.record(entity, dto)),
+          ),
+      ),
     );
   }
 
@@ -204,7 +266,19 @@ export class HttpEntityRecordsGateway extends EntityRecordsGateway {
       entityKey: entity.key,
       tenantId: this.tenantContext.tenant()?.id ?? '',
       definitionVersion: dto.schemaVersion.revision,
-      status: null,
+      status: dto.state?.code ?? null,
+      ...(dto.state
+        ? {
+            state: {
+              code: dto.state.code,
+              label: dto.state.label,
+              color: stateColor(dto.state.color, dto.state.category),
+              category: dto.state.category,
+              editable: dto.state.editable,
+              version: dto.state.version,
+            },
+          }
+        : {}),
       data: recordDataFromServer(dto.data, fieldsByCode(entity.fields)),
       rowVersion: dto.version,
       createdAt: dto.createdAt,

@@ -30,6 +30,10 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'form.read': ['configuration.form-layouts.read'],
   'form.design': ['configuration.form-layouts.read', 'configuration.form-layouts.manage'],
   'form.publish': ['configuration.form-layouts.read', 'configuration.form-layouts.publish'],
+  // Máquinas de estados (C13): desenhar e publicar; executar transições vem de `dynamic.transition` (registos).
+  'state.read': ['configuration.state-machines.read'],
+  'state.design': ['configuration.state-machines.read', 'configuration.state-machines.manage'],
+  'state.publish': ['configuration.state-machines.read', 'configuration.state-machines.publish'],
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],
   'rule.manage': ['configuration.rules.read', 'configuration.rules.manage'],

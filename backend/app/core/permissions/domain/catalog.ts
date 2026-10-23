@@ -149,6 +149,26 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Publicar e retirar formulários.',
   },
   {
+    code: 'dynamic.transition',
+    moduleCode: 'dynamic',
+    description: 'Executar transições de estado nos registos das entidades dinâmicas.',
+  },
+  {
+    code: 'state.read',
+    moduleCode: 'dynamic',
+    description: 'Ver máquinas de estados e as suas revisões.',
+  },
+  {
+    code: 'state.design',
+    moduleCode: 'dynamic',
+    description: 'Criar máquinas de estados e alterar rascunhos.',
+  },
+  {
+    code: 'state.publish',
+    moduleCode: 'dynamic',
+    description: 'Publicar e retirar máquinas de estados.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

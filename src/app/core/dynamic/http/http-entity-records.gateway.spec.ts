@@ -209,8 +209,124 @@ describe('HttpEntityRecordsGateway', () => {
     await promise;
   });
 
-  it('as transições de estado não existem no servidor: recusa com 501, sem pedidos', async () => {
-    await expect(firstValueFrom(gateway.transition())).rejects.toMatchObject({ status: 501 });
+  it('o registo traz o estado do servidor (com cor semântica ou a da categoria)', async () => {
+    const promise = firstValueFrom(gateway.get('viatura', 'r1'));
+    http.expectOne(`${API}/dynamic/viatura/records/r1`).flush(
+      envelope(
+        dto({
+          state: {
+            code: 'em_curso',
+            label: 'Em curso',
+            category: 'ACTIVE',
+            editable: true,
+            color: 'cor-livre',
+            version: 3,
+          },
+        }),
+      ),
+    );
+    const record = await promise;
+    expect(record.status).toBe('em_curso');
+    expect(record.state).toEqual({
+      code: 'em_curso',
+      label: 'Em curso',
+      color: 'brand',
+      category: 'ACTIVE',
+      editable: true,
+      version: 3,
+    });
+  });
+
+  it('acções disponíveis: o que o servidor devolve, e vazio (null) num registo sem máquina de estados', async () => {
+    const promise = firstValueFrom(gateway.availableActions('viatura', 'r1'));
+    http.expectOne(`${API}/dynamic/viatura/records/r1/available-actions`).flush(
+      envelope({
+        state: { code: 'aberto', label: 'Aberto', version: 2 },
+        actions: [
+          {
+            code: 'iniciar',
+            label: 'Iniciar',
+            to: 'em_curso',
+            toLabel: 'Em curso',
+            reasonRequired: false,
+          },
+          {
+            code: 'cancelar',
+            label: 'Cancelar',
+            to: 'cancelado',
+            toLabel: 'Cancelado',
+            reasonRequired: true,
+          },
+        ],
+      }),
+    );
+    expect(await promise).toEqual({
+      version: 2,
+      actions: [
+        { code: 'iniciar', label: 'Iniciar', toLabel: 'Em curso', reasonRequired: false },
+        { code: 'cancelar', label: 'Cancelar', toLabel: 'Cancelado', reasonRequired: true },
+      ],
+    });
+
+    const none = firstValueFrom(gateway.availableActions('viatura', 'r2'));
+    http
+      .expectOne(`${API}/dynamic/viatura/records/r2/available-actions`)
+      .flush(
+        { error: { code: 'RECORD_WITHOUT_STATE', message: 'Sem estado.' } },
+        { status: 409, statusText: 'Conflict' },
+      );
+    expect(await none).toBeNull();
+
+    const forbidden = firstValueFrom(gateway.availableActions('viatura', 'r3'));
+    http
+      .expectOne(`${API}/dynamic/viatura/records/r3/available-actions`)
+      .flush(
+        { error: { code: 'PERMISSION_DENIED', message: 'Sem permissão.' } },
+        { status: 403, statusText: 'Forbidden' },
+      );
+    await expect(forbidden).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('executa a transição no servidor com a versão do estado e o motivo, e devolve o registo actualizado', async () => {
+    const promise = firstValueFrom(
+      gateway.transition('viatura', 'r1', 'cancelar', { expectedVersion: 2, reason: 'Duplicado' }),
+    );
+    const post = http.expectOne(`${API}/dynamic/viatura/records/r1/transitions/cancelar`);
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({ expectedVersion: 2, reason: 'Duplicado' });
+    post.flush(envelope({ recordId: 'r1', fromState: 'aberto', toState: 'cancelado', version: 3 }));
+    http.expectOne(`${API}/dynamic/viatura/records/r1`).flush(
+      envelope(
+        dto({
+          state: {
+            code: 'cancelado',
+            label: 'Cancelado',
+            category: 'CANCELLED',
+            editable: false,
+            color: null,
+            version: 3,
+          },
+        }),
+      ),
+    );
+    const record = await promise;
+    expect(record.state).toMatchObject({ code: 'cancelado', color: 'danger', editable: false });
+  });
+
+  it('um conflito de versão ou uma guarda falhada chega à interface como erro; sem versão não há pedido', async () => {
+    const promise = firstValueFrom(
+      gateway.transition('viatura', 'r1', 'concluir', { expectedVersion: 1 }),
+    );
+    http
+      .expectOne(`${API}/dynamic/viatura/records/r1/transitions/concluir`)
+      .flush(
+        { error: { code: 'TRANSITION_GUARD_FAILED', message: 'A condição não se verifica.' } },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await expect(promise).rejects.toMatchObject({ status: 409, code: 'TRANSITION_GUARD_FAILED' });
+    await expect(firstValueFrom(gateway.transition('viatura', 'r1', 'x'))).rejects.toMatchObject({
+      status: 400,
+    });
   });
 
   it('o histórico vem da auditoria: diferenças por campo, sem os valores sensíveis, com o nome de quem alterou', async () => {

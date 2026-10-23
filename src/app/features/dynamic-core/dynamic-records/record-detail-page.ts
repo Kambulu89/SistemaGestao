@@ -1,7 +1,9 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import type { RecordAction } from '../../../core/dynamic/models/entity-record.model';
 import type { ApiError } from '../../../core/api/api-error.model';
 import { errorMessage } from '../../../core/api/error-message';
 import { EntityRecordsGateway } from '../../../core/dynamic/data-access/entity-records.gateway';
@@ -25,11 +27,14 @@ import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { LoadingState } from '../../../shared/ui/loading-state/loading-state';
 import { PageHeader } from '../../../shared/ui/page-header/page-header';
+import { Textarea } from '../../../shared/ui/textarea/textarea';
 
 /** Detalhe de um registo: dados, estado, transições do workflow e histórico de auditoria. */
 @Component({
   selector: 'app-record-detail-page',
   imports: [
+    FormsModule,
+    Textarea,
     PageHeader,
     DynamicFormRenderer,
     Alert,
@@ -55,7 +60,11 @@ import { PageHeader } from '../../../shared/ui/page-header/page-header';
       } @else if (record.value(); as rec) {
         <app-page-header [title]="label()" [description]="entity.names.singular">
           <div pageActions class="flex flex-wrap items-center gap-2">
-            @if (status(); as s) {
+            @if (rec.state; as state) {
+              <app-badge [tone]="state.color" data-testid="state-badge">{{
+                state.label
+              }}</app-badge>
+            } @else if (status(); as s) {
               <app-badge [tone]="s.color">{{ s.name }}</app-badge>
             }
             @if (canUpdate()) {
@@ -74,7 +83,25 @@ import { PageHeader } from '../../../shared/ui/page-header/page-header';
           <app-alert class="mb-4" tone="danger">{{ message }}</app-alert>
         }
 
-        @if (visibleTransitions().length > 0) {
+        @if (serverActions(); as server) {
+          @if (server.actions.length > 0) {
+            <app-card class="mb-6" title="Mudar de estado">
+              <ul class="flex flex-wrap gap-3" data-testid="server-actions">
+                @for (action of server.actions; track action.code) {
+                  <li>
+                    <app-button
+                      variant="secondary"
+                      [disabled]="transitioning()"
+                      (click)="ask(action)"
+                      >{{ action.label }}</app-button
+                    >
+                    <p class="mt-1 text-xs text-fg-muted">Passa a {{ action.toLabel }}</p>
+                  </li>
+                }
+              </ul>
+            </app-card>
+          }
+        } @else if (visibleTransitions().length > 0) {
           <app-card class="mb-6" title="Mudar de estado">
             <ul class="flex flex-wrap gap-4">
               @for (item of visibleTransitions(); track item.transition.key) {
@@ -137,6 +164,37 @@ import { PageHeader } from '../../../shared/ui/page-header/page-header';
         }
 
         <app-dialog
+          [open]="pending() !== null"
+          [title]="pending()?.label ?? ''"
+          (closed)="pending.set(null)"
+        >
+          @if (pending(); as action) {
+            <p>
+              O registo <strong>{{ label() }}</strong> passa a <strong>{{ action.toLabel }}</strong
+              >.
+            </p>
+            <div class="mt-3 text-fg">
+              <app-textarea
+                label="Motivo"
+                [required]="action.reasonRequired"
+                [rows]="3"
+                [ngModel]="reason()"
+                (ngModelChange)="reason.set($event ?? '')"
+              />
+            </div>
+          }
+          <ng-container dialogActions>
+            <app-button variant="secondary" (click)="pending.set(null)">Cancelar</app-button>
+            <app-button
+              [loading]="transitioning()"
+              [disabled]="pending()?.reasonRequired === true && !reason().trim()"
+              (click)="confirmAction()"
+              >Confirmar</app-button
+            >
+          </ng-container>
+        </app-dialog>
+
+        <app-dialog
           [open]="confirming()"
           [title]="'Eliminar ' + entity.names.singular.toLowerCase() + '?'"
           (closed)="confirming.set(false)"
@@ -178,6 +236,18 @@ export class RecordDetailPage {
     stream: ({ params }) => this.gateway.get(params.key, params.id),
   });
 
+  /** As acções que o servidor deixa executar agora (`null`: sem máquina de estados no servidor). */
+  protected readonly actions = rxResource({
+    params: () => (this.entity() ? { key: this.entityKey(), id: this.id() } : undefined),
+    stream: ({ params }) => this.gateway.availableActions(params.key, params.id),
+  });
+  protected readonly serverActions = computed(() =>
+    this.actions.hasValue() ? this.actions.value() : null,
+  );
+
+  protected readonly pending = signal<RecordAction | null>(null);
+  protected readonly reason = signal('');
+
   protected readonly audit = rxResource({
     params: () =>
       this.entity()?.audit.enabled ? { key: this.entityKey(), id: this.id() } : undefined,
@@ -205,7 +275,9 @@ export class RecordDetailPage {
     return entity ? statusOf(entity, this.record.value()?.status ?? null) : undefined;
   });
 
-  protected readonly canUpdate = computed(() => this.can('update'));
+  protected readonly canUpdate = computed(
+    () => this.can('update') && this.record.value()?.state?.editable !== false,
+  );
   protected readonly canDelete = computed(() => this.can('delete'));
 
   /**
@@ -234,6 +306,42 @@ export class RecordDetailPage {
   protected describe(change: Parameters<typeof describeChange>[1]) {
     const entity = this.entity();
     return entity ? describeChange(entity, change) : null;
+  }
+
+  protected ask(action: RecordAction): void {
+    this.reason.set('');
+    this.pending.set(action);
+  }
+
+  protected confirmAction(): void {
+    const action = this.pending();
+    const server = this.serverActions();
+    if (!action || !server) return;
+    this.transitioning.set(true);
+    this.actionError.set(null);
+    this.notice.set(null);
+    this.gateway
+      .transition(this.entityKey(), this.id(), action.code, {
+        expectedVersion: server.version,
+        reason: this.reason().trim() || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.transitioning.set(false);
+          this.pending.set(null);
+          this.notice.set(`${action.label}: concluído.`);
+          this.record.reload();
+          this.actions.reload();
+        },
+        error: (e: ApiError) => {
+          this.transitioning.set(false);
+          this.pending.set(null);
+          // Conflito (outra pessoa mudou o estado) ou condição falhada: mostra o motivo e recarrega o que é possível.
+          this.actionError.set(e.message);
+          this.record.reload();
+          this.actions.reload();
+        },
+      });
   }
 
   protected run(transitionKey: string, name: string): void {
