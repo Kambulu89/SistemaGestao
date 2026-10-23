@@ -67,6 +67,16 @@ export const TENANT_ROUTES: Routes = [
     canActivate: [requirePermission(TENANT_PERMISSIONS.settingsRead)],
     loadComponent: () => import('./settings/settings').then((m) => m.TenantSettings),
   },
+  // Caixa de aprovações (C14): tarefas por decidir, já tratadas e delegações.
+  {
+    path: 'approvals',
+    pathMatch: 'full',
+    title: 'Aprovações',
+    data: { breadcrumb: 'Aprovações' },
+    canActivate: [requirePermission(TENANT_PERMISSIONS.approvalsDecide)],
+    loadComponent: () =>
+      import('../dynamic-core/workflows/approvals-page').then((m) => m.ApprovalsPage),
+  },
   // Core Dinâmico (C10): definição de entidades e campos. Cada página tem a sua permissão.
   {
     path: 'entities',

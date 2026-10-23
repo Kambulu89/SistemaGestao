@@ -33,6 +33,8 @@ export const TENANT_PERMISSIONS = {
   modulesManage: 'tenant.modules.manage',
   /** Definição de entidades dinâmicas (C10): traduzida de `entity.read` pelo servidor. */
   entitiesRead: 'configuration.forms.read',
+  /** Caixa de aprovações (C14): o código do servidor, tal e qual. */
+  approvalsDecide: 'approval.decide',
 } as const;
 
 export const PLATFORM_NAMESPACE = 'platform.';

@@ -13,5 +13,9 @@ export {
   type RecordStates,
   type RecordStateTarget,
 } from '#dynamic/metadata/application/record_states'
+export {
+  registerRecordWorkflows,
+  type RecordWorkflows,
+} from '#dynamic/metadata/application/record_workflows'
 export type { FieldSpec, Issue } from '#dynamic/metadata/domain/field_types'
 export type { RecordValues } from '#dynamic/metadata/domain/record'

@@ -102,6 +102,12 @@ export class NavigationService {
             permission: TENANT_PERMISSIONS.settingsRead,
           },
           {
+            label: 'Aprovações',
+            path: `${base}/approvals`,
+            icon: 'check',
+            permission: TENANT_PERMISSIONS.approvalsDecide,
+          },
+          {
             label: 'Entidades',
             path: `${base}/entities`,
             icon: 'cube',

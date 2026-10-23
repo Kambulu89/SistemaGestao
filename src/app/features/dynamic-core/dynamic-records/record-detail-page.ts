@@ -11,6 +11,7 @@ import { EntityAccessService } from '../../../core/dynamic/entity-access.service
 import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
 import { AUDIT_ACTION_LABELS, describeChange } from '../../../core/dynamic/engine/audit-summary';
 import { recordLabel } from '../../../core/dynamic/engine/record-label';
+import { entityCodeOf } from '../../../core/dynamic/http/dynamic-mapper';
 import {
   availableTransitions,
   statusOf,
@@ -27,6 +28,7 @@ import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { EmptyState } from '../../../shared/ui/empty-state/empty-state';
 import { LoadingState } from '../../../shared/ui/loading-state/loading-state';
 import { PageHeader } from '../../../shared/ui/page-header/page-header';
+import { RecordApprovals } from '../workflows/record-approvals';
 import { Textarea } from '../../../shared/ui/textarea/textarea';
 
 /** Detalhe de um registo: dados, estado, transições do workflow e histórico de auditoria. */
@@ -44,6 +46,7 @@ import { Textarea } from '../../../shared/ui/textarea/textarea';
     Dialog,
     EmptyState,
     LoadingState,
+    RecordApprovals,
     RouterLink,
     DatePipe,
   ],
@@ -123,6 +126,12 @@ import { Textarea } from '../../../shared/ui/textarea/textarea';
             </ul>
           </app-card>
         }
+
+        <app-record-approvals
+          [entityCode]="entityCode()"
+          [recordId]="id()"
+          [refreshKey]="rec.updatedAt"
+        />
 
         <app-dynamic-form
           [entity]="entity"
@@ -230,6 +239,8 @@ export class RecordDetailPage {
   readonly id = input.required<string>();
 
   protected readonly entity = computed(() => this.registry.find(this.entityKey()));
+  /** O código do servidor (`ordem_servico`) da chave do URL (`ordem-servico`). */
+  protected readonly entityCode = computed(() => entityCodeOf(this.entityKey()));
 
   protected readonly record = rxResource({
     params: () => (this.entity() ? { key: this.entityKey(), id: this.id() } : undefined),

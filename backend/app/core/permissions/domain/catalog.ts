@@ -169,6 +169,37 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Publicar e retirar máquinas de estados.',
   },
   {
+    code: 'workflow.read',
+    moduleCode: 'dynamic',
+    description: 'Ver workflows, as suas revisões e todos os processos de aprovação.',
+  },
+  {
+    code: 'workflow.design',
+    moduleCode: 'dynamic',
+    description: 'Criar workflows e alterar rascunhos.',
+  },
+  {
+    code: 'workflow.publish',
+    moduleCode: 'dynamic',
+    description: 'Publicar e retirar workflows.',
+  },
+  {
+    code: 'workflow.submit',
+    moduleCode: 'dynamic',
+    description: 'Submeter registos das entidades dinâmicas a um processo de aprovação.',
+  },
+  {
+    code: 'approval.decide',
+    moduleCode: 'dynamic',
+    description:
+      'Ver a caixa de aprovações, reclamar tarefas de grupo e aprovar, rejeitar ou devolver.',
+  },
+  {
+    code: 'approval.delegate',
+    moduleCode: 'dynamic',
+    description: 'Delegar as próprias aprovações noutro membro, por um período limitado.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

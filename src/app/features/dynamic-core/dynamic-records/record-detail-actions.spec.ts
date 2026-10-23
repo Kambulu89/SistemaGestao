@@ -9,6 +9,7 @@ import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-regis
 import type { EntityRecord, RecordActions } from '../../../core/dynamic/models/entity-record.model';
 import { PermissionService } from '../../../core/permissions/permission.service';
 import { TenantContextService } from '../../../core/tenant-context/tenant-context.service';
+import { ApprovalsApi } from '../workflows/workflows.api';
 import { RecordDetailPage } from './record-detail-page';
 
 const entity = defineEntity({
@@ -61,6 +62,14 @@ async function render(gateway: Partial<EntityRecordsGateway>) {
       provideRouter([]),
       { provide: DynamicEntityRegistryService, useValue: { find: () => entity } },
       { provide: PermissionService, useValue: { can: () => true } },
+      {
+        provide: ApprovalsApi,
+        useValue: {
+          instancesOf: () => of([]),
+          instance: () => of(null),
+          submittable: () => of([]),
+        },
+      },
       {
         provide: EntityAccessService,
         useValue: { fieldAccess: fieldAccessFromPermissions(() => true), can: () => true },
@@ -115,8 +124,8 @@ describe('Detalhe do registo com máquina de estados do servidor', () => {
     });
     button('Iniciar')!.click();
     await settle();
-    expect(el.querySelector('dialog')?.textContent).toContain('Em curso');
-    const confirm = [...el.querySelectorAll('dialog button')].find(
+    expect(el.querySelector('dialog[open]')?.textContent).toContain('Em curso');
+    const confirm = [...el.querySelectorAll('dialog[open] button')].find(
       (b) => b.textContent?.trim() === 'Confirmar',
     ) as HTMLButtonElement;
     expect(confirm.disabled).toBe(false);
@@ -137,7 +146,7 @@ describe('Detalhe do registo com máquina de estados do servidor', () => {
     button('Cancelar pedido')!.click();
     await settle();
     const confirm = () =>
-      [...el.querySelectorAll('dialog button')].find(
+      [...el.querySelectorAll('dialog[open] button')].find(
         (b) => b.textContent?.trim() === 'Confirmar',
       ) as HTMLButtonElement;
     expect(confirm().disabled).toBe(true);
@@ -168,7 +177,7 @@ describe('Detalhe do registo com máquina de estados do servidor', () => {
     button('Iniciar')!.click();
     await settle();
     (
-      [...el.querySelectorAll('dialog button')].find(
+      [...el.querySelectorAll('dialog[open] button')].find(
         (b) => b.textContent?.trim() === 'Confirmar',
       ) as HTMLButtonElement
     ).click();

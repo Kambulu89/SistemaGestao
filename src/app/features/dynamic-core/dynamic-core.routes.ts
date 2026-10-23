@@ -40,6 +40,13 @@ export const DYNAMIC_CORE_ROUTES: readonly ModuleRouteDef[] = [
     loadComponent: () => import('./states/entity-states-page').then((m) => m.EntityStatesPage),
   },
   {
+    path: ':entityKey/fluxos',
+    title: 'Aprovações da entidade',
+    permission: 'configuration.workflows.read',
+    loadComponent: () =>
+      import('./workflows/entity-workflows-page').then((m) => m.EntityWorkflowsPage),
+  },
+  {
     path: ':entityKey/formularios',
     title: 'Formulários da entidade',
     permission: 'configuration.form-layouts.read',

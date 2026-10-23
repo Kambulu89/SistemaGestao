@@ -55,6 +55,10 @@ export async function deleteTestTenants() {
         .whereNotNull('base_unit_id')
         .delete()
       for (const table of [
+        'approval_delegations',
+        'workflow_tasks',
+        'workflow_instances',
+        'workflow_definitions',
         'outbox_events',
         'state_history',
         'record_states',

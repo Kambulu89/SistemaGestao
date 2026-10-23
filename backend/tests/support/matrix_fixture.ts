@@ -43,6 +43,10 @@ export interface World {
     form: string
     machine: string
     stateRecord: string
+    workflow: string
+    instance: string
+    task: string
+    delegation: string
   }
 }
 
@@ -63,6 +67,8 @@ export const SHARED = {
   formCode: 'ficha',
   machineCode: 'ciclo',
   statePlate: 'EF-56-GH',
+  workflowCode: 'aprovacao',
+  workflowPlate: 'IJ-78-KL',
   forbiddenPlate: 'ZZ-99-ZZ',
 }
 
@@ -391,6 +397,72 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     ),
     200
   )
+  // C14: o mesmo workflow nos dois tenants (aprovador: o administrador); quem submete é outro membro. Um processo com a
+  // tarefa aberta e uma delegação do administrador para o membro.
+  const requester = await newActor(client, t)
+  const requesterRole = await must<{ id: string }>(
+    await http.post('/api/v1/roles', {
+      code: 'solicitante',
+      name: 'Solicitante',
+      permissionCodes: ['dynamic.read', 'dynamic.create', 'workflow.submit'],
+    }),
+    201
+  )
+  await must(
+    await http.post('/api/v1/role-assignments', {
+      membershipId: requester.membershipId,
+      roleId: requesterRole.id,
+    }),
+    201
+  )
+  const workflow = await must<{ id: string; version: number }>(
+    await http.post('/api/v1/workflows', {
+      entityCode: SHARED.entityCode,
+      code: SHARED.workflowCode,
+      name: 'Aprovação de viatura',
+      graph: {
+        stages: [
+          {
+            code: 'chefia',
+            label: 'Chefia',
+            criteria: 'ALL',
+            approvers: [{ type: 'MEMBERSHIP', id: admin.membershipId }],
+            dueInHours: 24,
+          },
+        ],
+      },
+    }),
+    201
+  )
+  await must(
+    await http.post(`/api/v1/workflows/${workflow.id}/publish`, {
+      expectedVersion: workflow.version,
+    }),
+    200
+  )
+  const requesterHttp = api(client, t, requester)
+  const workflowRecord = await must<{ id: string }>(
+    await requesterHttp.post(`/api/v1/dynamic/${SHARED.entityCode}/records`, {
+      data: { matricula: SHARED.workflowPlate },
+    }),
+    201
+  )
+  const submitted = await must<{ instance: { id: string }; tasks: { id: string }[] }>(
+    await requesterHttp.post('/api/v1/workflow-instances', {
+      entityCode: SHARED.entityCode,
+      workflowCode: SHARED.workflowCode,
+      recordId: workflowRecord.id,
+    }),
+    201
+  )
+  const delegation = await must<{ id: string }>(
+    await http.post('/api/v1/approval-delegations', {
+      toMembershipId: member.membershipId,
+      validUntil: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+      reason: 'Substituição comum',
+    }),
+    201
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -428,6 +500,10 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       form: form.id,
       machine: machine.id,
       stateRecord: stateRecord.id,
+      workflow: workflow.id,
+      instance: submitted.instance.id,
+      task: submitted.tasks[0]?.id as string,
+      delegation: delegation.id,
     },
   }
 }

@@ -2837,6 +2837,419 @@ paths:
         '200': { description: Máquina retirada (nada se apaga). }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /workflows:
+    get:
+      summary: Workflows de aprovação, com todas as revisões e a verificação das publicadas (workflow.read)
+      description: |
+        As publicadas trazem `issues`: o que o servidor verifica agora (entidade, condições, campos e responsáveis resolvíveis).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: entityCode, in: query, required: false, schema: { type: string } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, PUBLISHED, RETIRED] },
+          }
+      responses:
+        '200': { description: Workflows (mais recente primeiro dentro de cada código). }
+    post:
+      summary: Cria um workflow em rascunho (revisão 1) (workflow.design)
+      description: |
+        `graph.stages` (1 a 20, em sequência): `code`, `label`, `approvers[]` (`MEMBERSHIP` ou `ROLE` com `id`; um papel gera uma
+        tarefa de grupo que um titular reclama), `criteria` (`ALL`, `ANY` ou `QUORUM` com `quorum`), `condition?` (AST das políticas
+        de acesso sobre `resource.<campo não sensível>`; dispensa a etapa quando é falsa), `dueInHours?` e `allowSelfApproval?`
+        (por omissão `false`). `graph.amountField?` (campo decimal) e `graph.currencyField?` dão o montante que limita as
+        delegações e aparece na caixa de aprovações. Publicar exige responsáveis resolvíveis (membro activo, ou papel com pelo menos
+        um titular activo). Nunca se executa código do tenant.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entityCode, code, name, graph]
+              properties:
+                entityCode: { type: string }
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                graph: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: Workflow em rascunho. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /workflows/{id}:
+    get:
+      summary: Uma revisão de um workflow (workflow.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Workflow. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera um rascunho (workflow.design)
+      description: Um workflow publicado ou retirado é imutável (`WORKFLOW_NOT_DRAFT`); abra uma nova revisão.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                graph: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Rascunho actualizado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /workflows/{id}/revisions:
+    post:
+      summary: Abre a próxima revisão em rascunho (workflow.design)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '201': { description: Nova revisão em rascunho (cópia da mais recente). }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /workflows/{id}/preview:
+    post:
+      summary: Verifica o workflow, sem gravar nada (workflow.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`issues` (vazio = publicável) e `publishable`.' }
+        '404': { $ref: '#/components/responses/Error' }
+  /workflows/{id}/publish:
+    post:
+      summary: Publica o rascunho (revisão imutável) e retira a anterior do mesmo código (workflow.publish)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Workflow publicado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /workflows/{id}/retire:
+    post:
+      summary: Retira um workflow publicado (workflow.publish)
+      description: Os processos em curso mantêm a revisão com que foram submetidos.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Workflow retirado (nada se apaga). }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /workflow-instances:
+    get:
+      summary: Processos de aprovação (workflow.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema:
+              { type: string, enum: [RUNNING, WAITING, APPROVED, REJECTED, CANCELLED, FAILED] },
+          }
+        - { name: entityCode, in: query, required: false, schema: { type: string } }
+        - { name: mine, in: query, required: false, schema: { type: boolean } }
+      responses:
+        '200': { description: Processos (mais recentes primeiro, até 200). }
+    post:
+      summary: Submete um registo à revisão publicada de um workflow (workflow.submit)
+      description: |
+        Congela o registo (`snapshot` e `resourceVersion`) e a definição usada, e abre as tarefas da primeira etapa aplicável.
+        Um registo só tem um processo em curso (`WORKFLOW_ALREADY_RUNNING`). Responde 409 `NO_RESOLVABLE_APPROVER` se algum
+        responsável da etapa não for resolvível (membro inactivo, papel sem titulares, ou quem submete como único aprovador) e
+        `NO_APPLICABLE_STAGE` se nenhuma etapa se aplicar ao registo. O registo tem de ser legível por quem submete (404 se não).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entityCode, workflowCode, recordId]
+              properties:
+                entityCode: { type: string }
+                workflowCode: { type: string }
+                recordId: { type: string, format: uuid }
+      responses:
+        '201': { description: Processo e tarefas abertas. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /workflow-instances/{id}:
+    get:
+      summary: Um processo e as suas tarefas
+      description: Visível a quem submeteu, a quem tem (ou teve) uma tarefa e a quem tem `workflow.read`; para os outros é 404.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Processo e tarefas. }
+        '404': { $ref: '#/components/responses/Error' }
+  /workflow-instances/{id}/cancel:
+    post:
+      summary: Cancela o processo (só quem o submeteu) (workflow.submit)
+      description: As tarefas por decidir ficam canceladas e sai o evento `workflow.instance.cancelled`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Processo cancelado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dynamic/{entityCode}/workflows:
+    get:
+      summary: Workflows publicados a que se pode submeter um registo da entidade (workflow.submit)
+      description: Só o código, o nome, a revisão e as etapas (rótulos); os responsáveis e as condições não se revelam a quem submete.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: entityCode, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Workflows publicados. }
+        '404': { $ref: '#/components/responses/Error' }
+  /dynamic/{entityCode}/records/{id}/workflow-instances:
+    get:
+      summary: Processos de aprovação de um registo (dynamic.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: entityCode, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Processos do registo, mais recente primeiro. }
+        '404': { $ref: '#/components/responses/Error' }
+  /approval-tasks:
+    get:
+      summary: Minha caixa de aprovações (approval.decide)
+      description: |
+        `view=pending` (por omissão) lista o que está por decidir, incluindo o que posso tratar por delegação em vigor;
+        `view=decided`, o que já tratei. Cada item traz o montante, a moeda, o solicitante, a etapa, o prazo (`overdue` quando
+        vencido — nunca aprova por si), a versão do recurso e o que o utilizador pode fazer agora (`can`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: view,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [pending, decided] },
+          }
+      responses:
+        '200': { description: Tarefas. }
+  /approval-tasks/{id}:
+    get:
+      summary: Uma tarefa (approval.decide)
+      description: Quem não é responsável (nem por delegação) nem interveio na tarefa recebe 404.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Tarefa. }
+        '404': { $ref: '#/components/responses/Error' }
+  /approval-tasks/{id}/claim:
+    post:
+      summary: Reclama atomicamente uma tarefa de grupo (approval.decide)
+      description: Só um dos candidatos a obtém (409 `TASK_NOT_OPEN` aos outros). Repetir a reclamação é inofensivo.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Tarefa reclamada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /approval-tasks/{id}/approve:
+    post:
+      summary: Aprova a tarefa (approval.decide)
+      description: |
+        Idempotente: repetir a mesma decisão devolve o resultado com `idempotent=true` e sem novos efeitos. Contradizê-la é 409
+        `TASK_ALREADY_DECIDED`. Quem submeteu não decide (403 `TASK_NOT_ALLOWED`) e ninguém decide duas tarefas da mesma etapa.
+        Uma delegação só vale dentro do período, do âmbito e do montante máximo. Ao concluir o processo sai
+        `workflow.instance.approved` por outbox, na mesma transacção; o workflow nunca escreve no recurso.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, nullable: true, maxLength: 2000 }
+      responses:
+        '200': { description: Tarefa decidida. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /approval-tasks/{id}/reject:
+    post:
+      summary: Rejeita a tarefa (approval.decide)
+      description: O motivo é obrigatório. Um ALL rejeita o processo; ANY e QUORUM só quando já não é possível aprovar.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, nullable: true, maxLength: 2000 }
+      responses:
+        '200': { description: Tarefa decidida. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /approval-tasks/{id}/return:
+    post:
+      summary: Devolve o pedido a quem o submeteu (approval.decide)
+      description: O motivo é obrigatório. O processo termina (`RETURNED`) e as outras tarefas ficam canceladas.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, nullable: true, maxLength: 2000 }
+      responses:
+        '200': { description: Tarefa devolvida. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /approval-delegations:
+    get:
+      summary: Delegações que dei e recebi (approval.delegate)
+      description: Cada item traz `direction`, `GIVEN` (dada por mim) ou `RECEIVED`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Delegações (mais recentes primeiro). }
+    post:
+      summary: Delega as minhas aprovações noutro membro (approval.delegate)
+      description: |
+        Quem delega é sempre o próprio utilizador. Duração máxima de um ano, destinatário activo, `scope.workflowCodes?` e um
+        `maxAmount` opcional (decimal em texto) com `currency`. Não há cadeias: o delegado age em nome de quem lhe delegou.
+        Uma delegação que fecharia um ciclo é 409 `DELEGATION_CYCLE`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toMembershipId, validUntil, reason]
+              properties:
+                toMembershipId: { type: string, format: uuid }
+                validFrom: { type: string, format: date-time }
+                validUntil: { type: string, format: date-time }
+                scope: { type: object, additionalProperties: true }
+                maxAmount: { type: string, nullable: true }
+                currency: { type: string, nullable: true }
+                reason: { type: string }
+      responses:
+        '201': { description: Delegação. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /approval-delegations/{id}/revoke:
+    post:
+      summary: Revoga uma delegação (só quem a deu) (approval.delegate)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Delegação revogada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /dynamic/{entityCode}/records/{id}/available-actions:
     get:
       summary: Transições que o utilizador pode executar agora neste registo (dynamic.read)

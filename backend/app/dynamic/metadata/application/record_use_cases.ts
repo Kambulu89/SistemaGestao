@@ -16,6 +16,7 @@ import { resourceOf } from '#dynamic/metadata/application/access_resource'
 import { LookupReader } from '#dynamic/metadata/application/lookup_reader'
 import { currentRecordRules } from '#dynamic/metadata/application/record_rules'
 import { currentRecordStates, type RecordState } from '#dynamic/metadata/application/record_states'
+import { currentRecordWorkflows } from '#dynamic/metadata/application/record_workflows'
 import type {
   AccessControl,
   AccessDecision,
@@ -250,6 +251,7 @@ export class RecordUseCases {
         searchText: searchText(loaded.current.fields, values),
       })
       await this.claimUniqueKeys(scope, entity, written.id, loaded.current.fields, values)
+      await currentRecordWorkflows().onChanged(scope, id)
       return written
     }, context)
     return this.present(context, entity, [first.current], row)
@@ -272,6 +274,7 @@ export class RecordUseCases {
       const closed = await this.records.archive(scope, id, expectedVersion)
       // O valor deixa de estar reservado: um registo arquivado não bloqueia valores únicos.
       await this.records.replaceUniqueKeys(scope, entity.id, id, [])
+      await currentRecordWorkflows().onChanged(scope, id)
       return {
         archived: closed,
         version: await this.versions.findById(scope, closed.schemaVersionId),

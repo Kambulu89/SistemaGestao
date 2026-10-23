@@ -103,6 +103,13 @@ const yesNo = (value: boolean): string => (value ? 'Sim' : 'Não');
               >Estados</a
             >
           }
+          @if (canReadWorkflows()) {
+            <a
+              routerLink="fluxos"
+              class="text-sm text-brand-700 hover:underline dark:text-brand-300"
+              >Aprovações</a
+            >
+          }
           @if (canReadForms()) {
             <a
               routerLink="formularios"
@@ -312,6 +319,9 @@ export class EntityAdminDetailPage {
     () =>
       this.entity()?.scope === 'tenant' &&
       this.permissions.can('configuration.state-machines.read'),
+  );
+  protected readonly canReadWorkflows = computed(
+    () => this.entity()?.scope === 'tenant' && this.permissions.can('configuration.workflows.read'),
   );
   protected readonly canReadForms = computed(
     () =>

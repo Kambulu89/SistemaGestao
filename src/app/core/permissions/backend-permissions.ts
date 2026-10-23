@@ -34,6 +34,11 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'state.read': ['configuration.state-machines.read'],
   'state.design': ['configuration.state-machines.read', 'configuration.state-machines.manage'],
   'state.publish': ['configuration.state-machines.read', 'configuration.state-machines.publish'],
+  // Workflows de aprovação (C14): desenhar e publicar; submeter (`workflow.submit`), decidir (`approval.decide`) e delegar
+  // (`approval.delegate`) usam o código do servidor tal e qual.
+  'workflow.read': ['configuration.workflows.read'],
+  'workflow.design': ['configuration.workflows.read', 'configuration.workflows.manage'],
+  'workflow.publish': ['configuration.workflows.read', 'configuration.workflows.publish'],
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],
   'rule.manage': ['configuration.rules.read', 'configuration.rules.manage'],

@@ -43,6 +43,7 @@ describe('NavigationService', () => {
       'Utilizadores',
       'Permissões',
       'Configurações',
+      'Aprovações',
       'Entidades',
       'Clientes',
       'Clientes e contactos',

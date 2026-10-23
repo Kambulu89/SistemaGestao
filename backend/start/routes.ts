@@ -27,6 +27,7 @@ const MetadataController = () => import('#dynamic/metadata/presentation/metadata
 const RulesController = () => import('#dynamic/rules/presentation/rules_controller')
 const FormsController = () => import('#dynamic/forms/presentation/forms_controller')
 const StatesController = () => import('#dynamic/states/presentation/states_controller')
+const WorkflowsController = () => import('#dynamic/workflows/presentation/workflows_controller')
 const SettingsController = () => import('#core/settings/presentation/settings_controller')
 const PlatformController = () => import('#platform/administration/presentation/platform_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
@@ -463,6 +464,78 @@ router
     router
       .post('/dynamic/:entityCode/records/:id/transitions/:code', [StatesController, 'transition'])
       .use(onEntity('dynamic.transition'))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Workflows de aprovação (C14): `workflow.read` para ver, `workflow.design` para desenhar rascunhos e `workflow.publish` para
+ * publicar e retirar. Submeter exige `workflow.submit` (com a entidade como atributo, verificada no caso de uso); a caixa
+ * de aprovações e as decisões exigem `approval.decide`, e as delegações `approval.delegate`. Que processo ou tarefa cada
+ * pessoa vê e decide é verificado no servidor, por tarefa (responsável, papel ou delegação em vigor).
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/workflows', [WorkflowsController, 'list'])
+        router.get('/workflows/:id', [WorkflowsController, 'show'])
+        router.post('/workflows/:id/preview', [WorkflowsController, 'preview'])
+        router.get('/workflow-instances', [WorkflowsController, 'listInstances'])
+      })
+      .use(middleware.can({ permission: 'workflow.read' }))
+
+    router
+      .group(() => {
+        router.post('/workflows', [WorkflowsController, 'create'])
+        router.patch('/workflows/:id', [WorkflowsController, 'update'])
+        router.post('/workflows/:id/revisions', [WorkflowsController, 'createRevision'])
+      })
+      .use(middleware.can({ permission: 'workflow.design' }))
+
+    router
+      .group(() => {
+        router.post('/workflows/:id/publish', [WorkflowsController, 'publish'])
+        router.post('/workflows/:id/retire', [WorkflowsController, 'retire'])
+      })
+      .use(middleware.can({ permission: 'workflow.publish' }))
+
+    router
+      .group(() => {
+        router.post('/workflow-instances', [WorkflowsController, 'submit'])
+        router.post('/workflow-instances/:id/cancel', [WorkflowsController, 'cancelInstance'])
+      })
+      .use(middleware.can({ permission: 'workflow.submit' }))
+    // A leitura de um processo é decidida por processo (quem submeteu, quem tem tarefas, ou `workflow.read`).
+    router.get('/workflow-instances/:id', [WorkflowsController, 'showInstance'])
+    router
+      .get('/dynamic/:entityCode/workflows', [WorkflowsController, 'submittable'])
+      .use(middleware.can({ permission: 'workflow.submit', resource: { entity: 'entityCode' } }))
+    router
+      .get('/dynamic/:entityCode/records/:id/workflow-instances', [
+        WorkflowsController,
+        'recordInstances',
+      ])
+      .use(middleware.can({ permission: 'dynamic.read', resource: { entity: 'entityCode' } }))
+
+    router
+      .group(() => {
+        router.get('/approval-tasks', [WorkflowsController, 'inbox'])
+        router.get('/approval-tasks/:id', [WorkflowsController, 'showTask'])
+        router.post('/approval-tasks/:id/claim', [WorkflowsController, 'claim'])
+        router.post('/approval-tasks/:id/approve', [WorkflowsController, 'approve'])
+        router.post('/approval-tasks/:id/reject', [WorkflowsController, 'reject'])
+        router.post('/approval-tasks/:id/return', [WorkflowsController, 'return'])
+      })
+      .use(middleware.can({ permission: 'approval.decide' }))
+
+    router
+      .group(() => {
+        router.get('/approval-delegations', [WorkflowsController, 'listDelegations'])
+        router.post('/approval-delegations', [WorkflowsController, 'createDelegation'])
+        router.post('/approval-delegations/:id/revoke', [WorkflowsController, 'revokeDelegation'])
+      })
+      .use(middleware.can({ permission: 'approval.delegate' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

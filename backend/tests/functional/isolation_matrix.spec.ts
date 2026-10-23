@@ -89,6 +89,10 @@ async function snapshot(world: World) {
     stateHistory: await get(
       `/api/v1/dynamic/${SHARED.entityCode}/records/${world.ids.stateRecord}/state-history`
     ),
+    workflows: await get('/api/v1/workflows'),
+    instances: await get('/api/v1/workflow-instances'),
+    inbox: await get('/api/v1/approval-tasks'),
+    delegations: await get('/api/v1/approval-delegations'),
     records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
@@ -161,6 +165,20 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['get', `/dynamic/${SHARED.entityCode}/records/${o.stateRecord}/available-actions`],
     ['get', `/dynamic/${SHARED.entityCode}/records/${o.stateRecord}/state-history`],
     ['post', `/dynamic/${SHARED.entityCode}/records/${o.stateRecord}/transitions/enviar`, stale],
+    ['get', `/workflows/${o.workflow}`],
+    ['patch', `/workflows/${o.workflow}`, { ...stale, name: 'x' }],
+    ['post', `/workflows/${o.workflow}/revisions`],
+    ['post', `/workflows/${o.workflow}/preview`],
+    ['post', `/workflows/${o.workflow}/publish`, stale],
+    ['post', `/workflows/${o.workflow}/retire`, stale],
+    ['get', `/workflow-instances/${o.instance}`],
+    ['post', `/workflow-instances/${o.instance}/cancel`],
+    ['get', `/approval-tasks/${o.task}`],
+    ['post', `/approval-tasks/${o.task}/claim`],
+    ['post', `/approval-tasks/${o.task}/approve`],
+    ['post', `/approval-tasks/${o.task}/reject`, { reason: 'x' }],
+    ['post', `/approval-tasks/${o.task}/return`, { reason: 'x' }],
+    ['post', `/approval-delegations/${o.delegation}/revoke`, stale],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
     ['delete', `/entity-definitions/${o.entity}`],
@@ -282,6 +300,10 @@ test.group('matriz de isolamento', (group) => {
       'publishedForms',
       'machines',
       'stateHistory',
+      'workflows',
+      'instances',
+      'inbox',
+      'delegations',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)
@@ -869,11 +891,12 @@ test.group('matriz de isolamento', (group) => {
         'rule_definitions',
         'form_definitions',
         'state_machines',
+        'workflow_definitions',
       ].includes(table)
       assert.match(
         moved.message,
         immutable
-          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE/
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE/
           : /row-level security/,
         `${table}: mover linhas para B`
       )

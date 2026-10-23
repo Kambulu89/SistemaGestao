@@ -80,6 +80,10 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   form_definitions: 'form.read',
   state_machines: 'state.read',
   record_states: 'dynamic.read',
+  workflow_definitions: 'workflow.read',
+  workflow_instances: 'workflow.read',
+  workflow_tasks: 'workflow.read',
+  approval_delegations: 'workflow.read',
 }
 
 /** Tabelas de tenant que não são auditadas, com o motivo (o teste de conformidade exige o resto). */
