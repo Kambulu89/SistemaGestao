@@ -60,6 +60,50 @@ components:
         email: { type: string }
         displayName: { type: string }
         locale: { type: string, nullable: true }
+    FieldInput:
+      type: object
+      required: [code, label, type]
+      properties:
+        code: { type: string, description: 'a-z, 0-9 e _; imutável depois de publicado.' }
+        label: { type: string }
+        type:
+          type: string
+          enum:
+            [
+              TEXT,
+              TEXTAREA,
+              NUMBER,
+              DECIMAL,
+              BOOLEAN,
+              DATE,
+              DATETIME,
+              EMAIL,
+              PHONE,
+              URL,
+              SELECT,
+              RADIO,
+              MULTISELECT,
+              ENTITY_REFERENCE,
+              USER_REFERENCE,
+            ]
+        required: { type: boolean }
+        defaultValue: { nullable: true }
+        validation:
+          type: object
+          additionalProperties: true
+          description: 'minLength, maxLength, pattern, min, max, precision, scale, minSelected, maxSelected, unique (conforme o tipo).'
+        options:
+          type: array
+          items:
+            type: object
+            required: [code, label]
+            properties:
+              code: { type: string }
+              label: { type: string }
+        referenceEntityCode:
+          { type: string, description: 'Entidade de destino (ENTITY_REFERENCE).' }
+        sensitive: { type: boolean }
+        readOnly: { type: boolean }
   responses:
     Error:
       description: Erro no formato comum.
@@ -1990,3 +2034,281 @@ paths:
         '404': { description: Membership ou party inexistentes neste tenant. }
         '409': { description: PERSON_ALREADY_LINKED. }
         '422': { description: O party não é uma pessoa. }
+  /entity-definitions:
+    get:
+      summary: Entidades dinâmicas do tenant (entity.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          { description: 'Entidades com estado, revisão publicada em vigor e modo de propriedade.' }
+    post:
+      summary: Cria uma entidade com o primeiro rascunho (entity.design)
+      description: |
+        Os campos seguem a matriz de tipos (C10). Tipos ainda não disponíveis (CURRENCY, CHECKBOX, FILE, IMAGE,
+        FORMULA, LOOKUP, AUTONUMBER) são recusados com `FIELD_TYPE_NOT_SUPPORTED`. Uma referência indica a entidade
+        de destino por `referenceEntityCode`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                kind: { type: string, enum: [DYNAMIC] }
+                ownershipMode: { type: string, enum: [TENANT, UNIT, OWNER] }
+                fields: { type: array, items: { $ref: '#/components/schemas/FieldInput' } }
+      responses:
+        '201': { description: 'Entidade, rascunho (revisão 1) e versões.' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /entity-definitions/{id}:
+    get:
+      summary: Detalhe da entidade, com rascunho e versão publicada (entity.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Entidade, rascunho, versão publicada e lista de versões.' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera nome, descrição ou (antes de publicar) o modo de propriedade (entity.design)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                ownershipMode: { type: string, enum: [TENANT, UNIT, OWNER] }
+      responses:
+        '200': { description: Entidade actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /entity-definitions/{id}/draft:
+    put:
+      summary: Substitui os campos do rascunho (entity.design)
+      description: A compatibilidade com a versão em vigor é verificada na pré-visualização e na publicação.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, fields]
+              properties:
+                expectedVersion: { type: integer }
+                fields: { type: array, items: { $ref: '#/components/schemas/FieldInput' } }
+      responses:
+        '200': { description: Entidade com o rascunho actualizado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Descarta o rascunho de uma entidade já publicada (entity.design)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Entidade sem rascunho. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /entity-definitions/{id}/drafts:
+    post:
+      summary: Abre uma nova revisão em rascunho a partir da versão publicada (entity.design)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '201': { description: Entidade com o novo rascunho. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /entity-definitions/{id}/publish-preview:
+    get:
+      summary: Alterações do rascunho e compatibilidade, sem publicar (entity.read)
+      description: Devolve campos acrescentados, retirados e alterados, os problemas bloqueantes e quantos registos estão em versões anteriores.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Pré-visualização da publicação. }
+        '404': { $ref: '#/components/responses/Error' }
+  /entity-definitions/{id}/publish:
+    post:
+      summary: Publica o rascunho (versão imutável) (entity.publish)
+      description: 'Alterações incompatíveis sem migração são recusadas com `INCOMPATIBLE_SCHEMA`; nada se apaga (campos e opções retirados ficam arquivados).'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Entidade publicada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /entity-definitions/{id}/archive:
+    post:
+      summary: Arquiva a entidade; os registos continuam legíveis (entity.publish)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Entidade arquivada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dynamic/{entityCode}/records:
+    get:
+      summary: Registos de uma entidade (dynamic.read)
+      description: |
+        `q` pesquisa nos campos de texto **não sensíveis**. Em entidades de modo OWNER só se vêem os registos próprios
+        (salvo `dynamic.all`); em modo UNIT, os das unidades do âmbito do actor.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: entityCode, in: path, required: true, schema: { type: string } }
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - { name: archived, in: query, required: false, schema: { type: boolean } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 100 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Registos com a revisão do esquema com que foram validados.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria um registo na versão publicada em vigor (dynamic.create)
+      description: 'Campos sensíveis exigem `dynamic.sensitive`. Valores únicos concorrentes: só um passa (`UNIQUE_VALUE_TAKEN`).'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: entityCode, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data: { type: object, additionalProperties: true }
+                organizationUnitId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201': { description: Registo criado. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /dynamic/{entityCode}/records/{id}:
+    get:
+      summary: Um registo, com a versão do esquema em que foi gravado (dynamic.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: entityCode, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Registo. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera valores (parcial; null apaga) e passa o registo à versão em vigor (dynamic.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: entityCode, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data, expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                data: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Registo actualizado. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /dynamic/{entityCode}/records/{id}/archive:
+    post:
+      summary: Arquiva um registo (dynamic.archive)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: entityCode, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Registo arquivado (os valores únicos ficam livres). }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }

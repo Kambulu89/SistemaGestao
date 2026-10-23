@@ -2,14 +2,14 @@
 
 Fases da especificação (§11) com estado real. Cada fase entrega **fatias verticais** (migration, domínio, API, UI,
 autorização, auditoria, testes). Uma fase só passa quando as verificações aplicáveis correram e a documentação foi
-actualizada. Estado actualizado em: Fase 2, fatia 2.6 (frontend).
+actualizada. Estado actualizado em: Fase 3, fatia 3.1 (C10, backend).
 
 | Fase | Âmbito (spec) | Estado |
 | --- | --- | --- |
 | **F0** Preparação | repositório, versões, Docker, CI, estrutura modular, ADRs | **Concluída** (com 2 verificações por executar — ver abaixo) |
 | **F1** Fundação | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party | **Próxima** (detalhada na secção 2) |
 | **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos) e 2.4 (configurações/sequências) e 2.5 (administração da plataforma) concluídas no backend; o frontend da Fase 2 está ligado (2b.6) (ver secção 2b) |
-| F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | Não iniciada (existem contratos/motores no frontend — ver `architecture.md` §7) |
+| F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | **Em curso**: fatia 3.1 (C10 no backend) concluída (ver secção 2c); existem contratos/motores mock no frontend — ver `architecture.md` §7 |
 | F4 Operação comercial | M01–M08, S01 | Não iniciada |
 | F5 Gestão empresarial | M09–M14, S02–S03 | Não iniciada |
 | F6 Informação | S04 | Não iniciada |
@@ -467,6 +467,36 @@ token em storage. Defeitos reais encontrados e corrigidos nessa verificação: o
 activação de módulos foi exercitada na API com módulos de teste inseridos só na base de desenvolvimento); configurações por filial/módulo e
 as páginas de papéis, políticas, Party e âmbitos (Fase 1) continuam sem UI real; sem UI de auditoria; E2E não automatizado no repositório
 (correu-se por script local); o core dinâmico (C10–C15) continua mock.
+
+## 2c. Fase 3 — motor configurável (em curso)
+Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a especificação não a fixa):
+
+| Fatia | Âmbito | Estado |
+| --- | --- | --- |
+| 3.1 | C10 no backend: entidades, versões imutáveis, campos tipados, registos com únicos concorrentes, sensíveis, propriedade, pesquisa e auditoria; «Viatura» como entidade definida por um tenant | **Concluída** (backend; ver 2c.1) |
+| 3.2 | Frontend de C10: Entity Designer, pré-visualização de publicação e listagem/formulário genérico de registos (fim do mock do core dinâmico) | Por fazer |
+| 3.3 | C12 regras e fórmulas por AST (validação, simulação, orçamento de custo, ciclos) — traz os tipos FORMULA/LOOKUP | Por fazer |
+| 3.4 | C11 formulários (secções, bindings, condições) | Por fazer |
+| 3.5 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
+| 3.6 | C14 workflows, tarefas e delegações | Por fazer |
+| 3.7 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
+
+### 2c.1 Fatia 3.1 — C10 no backend (concluída; ver D-035)
+**Entregue:** migration `create_metadata` (5 tabelas de tenant com RLS, FKs compostas e auditoria; triggers de imutabilidade de versões
+publicadas e campos), módulo `dynamic/metadata` (domínio: matriz de tipos, validação/normalização de valores, decimais exactos, compatibilidade
+entre versões, unicidade, referências, pesquisa; aplicação: definição de entidades com rascunho/pré-visualização/publicação/arquivo e registos
+com autorização por registo; infraestrutura Lucid), rotas `/entity-definitions…` e `/dynamic/{entityCode}/records…`, permissões
+`entity.read|design|publish` e `dynamic.read|create|update|archive|sensitive|all`, alias `#dynamic/*`, `can` com `resource` por parâmetro de
+rota, OpenAPI, matriz de isolamento estendida (entidade, registo, 11 ids alheios, referência cruzada, tabelas novas).
+**Evidência:** backend 353 testes (34 novos: `metadata_domain.spec.ts` — tipos, decimais, datas, padrões, validação de registos, compatibilidade;
+`metadata.spec.ts` — ciclo completo da Viatura (CRUD, pesquisa, arquivo), erros 422 com caminho completo, versão antiga legível e migrada ao
+alterar, publicação incompatível bloqueada sem alterar nada, imutabilidade por SQL directo, 6 criações concorrentes com o mesmo valor único →
+1 passa, referências de outro tenant recusadas, permissões por comando, campos sensíveis (leitura, escrita, pesquisa, auditoria), política ABAC por
+entidade e regra de campo, modos OWNER e UNIT), lint, `format:check`, typecheck, build e migrations numa base limpa (subida e descida das 14
+migrations pelo próprio `npm test`).
+**Limites / por verificar:** ver «Fora desta fatia» em D-035. Em particular: o frontend continua com o core dinâmico mock (3.2); não há
+mecanismo de migração de dados, por isso alterações incompatíveis só se fazem por um campo novo; a pesquisa é `LIKE` sem índice; a divergência
+das permissões `dynamic.{código}.*` face à especificação aguarda decisão. Não foi feito teste de carga nem E2E no browser (não há UI).
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

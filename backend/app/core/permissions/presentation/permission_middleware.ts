@@ -10,10 +10,28 @@ import { iamServices } from '#core/permissions/presentation/composition'
  * atributos) voltam a ser verificados pelo caso de uso, com os atributos do registo.
  */
 export default class PermissionMiddleware {
-  async handle(ctx: HttpContext, next: NextFn, options: { permission: string }) {
+  /**
+   * `resource` mapeia atributos do recurso para parâmetros da rota (ex.: `{ entity: 'entityCode' }`), para as
+   * políticas ABAC por entidade se aplicarem já à porta, antes da validação do corpo.
+   */
+  async handle(
+    ctx: HttpContext,
+    next: NextFn,
+    options: { permission: string; resource?: Record<string, string> }
+  ) {
+    const resource = Object.fromEntries(
+      Object.entries(options.resource ?? {}).map(([attribute, param]) => [
+        attribute,
+        ctx.params[param],
+      ])
+    )
     let decision
     try {
-      decision = await iamServices().authorize.require(ctx.tenantContext, options.permission)
+      decision = await iamServices().authorize.require(
+        ctx.tenantContext,
+        options.permission,
+        resource
+      )
     } catch (error) {
       if (error instanceof ApiError && error.status === 403) {
         await securityEvents.record({

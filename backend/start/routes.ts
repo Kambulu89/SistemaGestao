@@ -23,6 +23,7 @@ const AuditController = () => import('#core/audit/presentation/audit_controller'
 const SubscriptionController = () =>
   import('#platform/billing/presentation/subscription_controller')
 const ModulesController = () => import('#platform/modules/presentation/modules_controller')
+const MetadataController = () => import('#dynamic/metadata/presentation/metadata_controller')
 const SettingsController = () => import('#core/settings/presentation/settings_controller')
 const PlatformController = () => import('#platform/administration/presentation/platform_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
@@ -290,6 +291,62 @@ router
         router.post('/sequences/preview', [SettingsController, 'previewSequence'])
       })
       .use(middleware.can({ permission: 'sequence.manage' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Metadados e entidades dinâmicas (C10). A definição exige `entity.*`; os registos exigem `dynamic.*` já à porta,
+ * com o código da entidade como atributo do recurso (políticas ABAC por entidade), e o caso de uso volta a decidir
+ * com os atributos do registo (unidade, responsável).
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/entity-definitions', [MetadataController, 'listEntities'])
+        router.get('/entity-definitions/:id', [MetadataController, 'showEntity'])
+        router.get('/entity-definitions/:id/publish-preview', [
+          MetadataController,
+          'previewPublish',
+        ])
+      })
+      .use(middleware.can({ permission: 'entity.read' }))
+
+    router
+      .group(() => {
+        router.post('/entity-definitions', [MetadataController, 'createEntity'])
+        router.patch('/entity-definitions/:id', [MetadataController, 'updateEntity'])
+        router.put('/entity-definitions/:id/draft', [MetadataController, 'saveDraft'])
+        router.post('/entity-definitions/:id/drafts', [MetadataController, 'createDraft'])
+        router.delete('/entity-definitions/:id/draft', [MetadataController, 'discardDraft'])
+      })
+      .use(middleware.can({ permission: 'entity.design' }))
+
+    router
+      .group(() => {
+        router.post('/entity-definitions/:id/publish', [MetadataController, 'publish'])
+        router.post('/entity-definitions/:id/archive', [MetadataController, 'archiveEntity'])
+      })
+      .use(middleware.can({ permission: 'entity.publish' }))
+
+    const onEntity = (permission: string) =>
+      middleware.can({ permission, resource: { entity: 'entityCode' } })
+    router
+      .get('/dynamic/:entityCode/records', [MetadataController, 'listRecords'])
+      .use(onEntity('dynamic.read'))
+    router
+      .get('/dynamic/:entityCode/records/:id', [MetadataController, 'showRecord'])
+      .use(onEntity('dynamic.read'))
+    router
+      .post('/dynamic/:entityCode/records', [MetadataController, 'createRecord'])
+      .use(onEntity('dynamic.create'))
+    router
+      .patch('/dynamic/:entityCode/records/:id', [MetadataController, 'updateRecord'])
+      .use(onEntity('dynamic.update'))
+    router
+      .post('/dynamic/:entityCode/records/:id/archive', [MetadataController, 'archiveRecord'])
+      .use(onEntity('dynamic.archive'))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

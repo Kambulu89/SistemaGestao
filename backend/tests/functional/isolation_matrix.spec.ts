@@ -79,6 +79,9 @@ async function snapshot(world: World) {
     orgParty: await get(`/api/v1/parties/${world.ids.organizationParty}`),
     team: await get(`/api/v1/organization-units/${world.ids.unitRoot}/members`),
     preferences: await get('/api/v1/me/preferences'),
+    entities: await get('/api/v1/entity-definitions'),
+    entity: await get(`/api/v1/entity-definitions/${world.ids.entity}`),
+    records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
 
@@ -128,6 +131,21 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['patch', `/tax-rates/${o.taxRate}`, { ...stale, name: 'x' }],
     ['patch', `/units/${o.unit}`, { ...stale, name: 'x' }],
     ['patch', `/sequences/${o.sequence}`, { ...stale, padding: 8 }],
+    ['get', `/entity-definitions/${o.entity}`],
+    ['get', `/entity-definitions/${o.entity}/publish-preview`],
+    ['patch', `/entity-definitions/${o.entity}`, { ...stale, name: 'x' }],
+    ['put', `/entity-definitions/${o.entity}/draft`, { ...stale, fields: [] }],
+    ['post', `/entity-definitions/${o.entity}/drafts`],
+    ['delete', `/entity-definitions/${o.entity}/draft`],
+    ['post', `/entity-definitions/${o.entity}/publish`, stale],
+    ['post', `/entity-definitions/${o.entity}/archive`, stale],
+    ['get', `/dynamic/${SHARED.entityCode}/records/${o.record}`],
+    [
+      'patch',
+      `/dynamic/${SHARED.entityCode}/records/${o.record}`,
+      { ...stale, data: { notas: 'x' } },
+    ],
+    ['post', `/dynamic/${SHARED.entityCode}/records/${o.record}/archive`, stale],
     ['get', `/parties/${o.personParty}`],
     ['patch', `/parties/${o.personParty}`, { ...stale, displayName: 'x' }],
     ['get', `/parties/${o.personParty}/possible-duplicates`],
@@ -225,6 +243,8 @@ test.group('matriz de isolamento', (group) => {
       'invitations',
       'parties',
       'team',
+      'entities',
+      'records',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)
@@ -409,6 +429,13 @@ test.group('matriz de isolamento', (group) => {
         404,
       ],
       [
+        'registo dinâmico com condutor (membership) de B',
+        'post',
+        `/dynamic/${SHARED.entityCode}/records`,
+        { data: { matricula: 'ZZ-99-ZZ', condutor: b.admin.membershipId } },
+        422,
+      ],
+      [
         'simular membro de B',
         'post',
         '/authorization/simulate',
@@ -529,7 +556,8 @@ test.group('matriz de isolamento', (group) => {
     assert.isEmpty(undeclared, `rotas sem selector de tenant no OpenAPI: ${undeclared.join(', ')}`)
     assert.isAbove(operations.length, 50)
 
-    const url = (path: string) => path.replace('{id}', UUID0).replace('{key}', 'ui.theme')
+    const url = (path: string) =>
+      path.replace('{id}', UUID0).replace('{key}', 'ui.theme').replace('{entityCode}', 'vehicle')
     const noPermissionNeeded = (path: string) =>
       path === '/context' ||
       path === '/context/features' ||
@@ -783,7 +811,13 @@ test.group('matriz de isolamento', (group) => {
           )
         )
       )
-      assert.match(moved.message, /row-level security/, `${table}: mover linhas para B`)
+      // Versões publicadas e campos são imutáveis (trigger BEFORE UPDATE, que dispara antes do WITH CHECK da RLS).
+      const immutable = ['entity_schema_versions', 'field_definitions'].includes(table)
+      assert.match(
+        moved.message,
+        immutable ? /row-level security|PUBLISHED_VERSION_IMMUTABLE/ : /row-level security/,
+        `${table}: mover linhas para B`
+      )
     }
   })
 

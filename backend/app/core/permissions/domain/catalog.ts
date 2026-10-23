@@ -79,6 +79,51 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Ver o plano contratado, o consumo e os limites do tenant.',
   },
   {
+    code: 'entity.read',
+    moduleCode: 'dynamic',
+    description: 'Ver as definições de entidades dinâmicas, os seus campos e versões.',
+  },
+  {
+    code: 'entity.design',
+    moduleCode: 'dynamic',
+    description: 'Criar e editar rascunhos de entidades dinâmicas e dos seus campos.',
+  },
+  {
+    code: 'entity.publish',
+    moduleCode: 'dynamic',
+    description: 'Publicar versões de entidades dinâmicas e arquivar entidades.',
+  },
+  {
+    code: 'dynamic.read',
+    moduleCode: 'dynamic',
+    description: 'Ver registos de entidades dinâmicas (restringível por entidade com políticas).',
+  },
+  {
+    code: 'dynamic.create',
+    moduleCode: 'dynamic',
+    description: 'Criar registos de entidades dinâmicas.',
+  },
+  {
+    code: 'dynamic.update',
+    moduleCode: 'dynamic',
+    description: 'Alterar registos de entidades dinâmicas.',
+  },
+  {
+    code: 'dynamic.archive',
+    moduleCode: 'dynamic',
+    description: 'Arquivar registos de entidades dinâmicas.',
+  },
+  {
+    code: 'dynamic.sensitive',
+    moduleCode: 'dynamic',
+    description: 'Ver e escrever campos marcados como sensíveis nas entidades dinâmicas.',
+  },
+  {
+    code: 'dynamic.all',
+    moduleCode: 'dynamic',
+    description: 'Aceder aos registos de todos os responsáveis em entidades de modo OWNER.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

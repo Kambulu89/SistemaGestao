@@ -25,6 +25,7 @@
   "imports": {
     "#core/*": "./app/core/*.js",
     "#platform/*": "./app/platform/*.js",
+    "#dynamic/*": "./app/dynamic/*.js",
     "#exceptions/*": "./app/exceptions/*.js",
     "#middleware/*": "./app/middleware/*.js",
     "#start/*": "./start/*.js",

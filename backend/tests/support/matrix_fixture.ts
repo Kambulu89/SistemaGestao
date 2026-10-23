@@ -37,6 +37,8 @@ export interface World {
     taxRate: string
     unit: string
     sequence: string
+    entity: string
+    record: string
   }
 }
 
@@ -51,6 +53,8 @@ export const SHARED = {
   personEmail: 'maria.comum@exemplo.invalid',
   taxId: '5000000099',
   inviteEmail: 'convidado.comum@exemplo.invalid',
+  entityCode: 'vehicle',
+  plate: 'AB-12-CD',
 }
 
 async function must<T>(response: { status(): number; body(): any }, status: number): Promise<T> {
@@ -264,6 +268,37 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // C10: a mesma entidade dinâmica, com o mesmo código e o mesmo valor único, nos dois tenants.
+  const entity = await must<{ entity: { id: string; version: number } }>(
+    await http.post('/api/v1/entity-definitions', {
+      code: SHARED.entityCode,
+      name: 'Viatura',
+      fields: [
+        {
+          code: 'matricula',
+          label: 'Matrícula',
+          type: 'TEXT',
+          required: true,
+          validation: { unique: true },
+        },
+        { code: 'notas', label: 'Notas', type: 'TEXT', sensitive: true },
+        { code: 'condutor', label: 'Condutor', type: 'USER_REFERENCE' },
+      ],
+    }),
+    201
+  )
+  await must(
+    await http.post(`/api/v1/entity-definitions/${entity.entity.id}/publish`, {
+      expectedVersion: entity.entity.version,
+    }),
+    200
+  )
+  const record = await must<{ id: string }>(
+    await http.post(`/api/v1/dynamic/${SHARED.entityCode}/records`, {
+      data: { matricula: SHARED.plate, notas: 'comum', condutor: admin.membershipId },
+    }),
+    201
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -295,6 +330,8 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       taxRate: taxRate.id,
       unit: kg.id,
       sequence: sequence.id,
+      entity: entity.entity.id,
+      record: record.id,
     },
   }
 }

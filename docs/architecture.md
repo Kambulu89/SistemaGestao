@@ -215,7 +215,7 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 | C08 Pessoas, organizações externas, contactos | PARCIAL (fatia 1.7: Party/Person/OrganizationParty, contactos, moradas, relações, aviso de duplicados, campos sensíveis por regras de campo, ligação a membership; **sem** fusão assistida nem auditoria) | AUSENTE |
 | S06 Auditoria mínima | PARCIAL (fatia 2.1: `audit_logs` imutável por triggers com actor/correlação, `security_events`, consulta com RBAC e regras de campo; **sem** hash encadeado, exportação, retenção automática nem UI) | AUSENTE |
 | C09 Configurações, impostos, sequências | PARCIAL (fatia 2.4: chaves com âmbitos permitidos e precedência, impostos por período sem sobreposição, unidades com conversão exacta, sequências emitidas sob lock na transacção do documento; **sem** catálogo de moedas/idiomas, cálculo de impostos nem UI) | PARCIAL (preferências com origem, impostos, unidades e sequências com pré-visualização; sem configurações por filial/módulo) |
-| C10 Metadados, entidades dinâmicas, campos | AUSENTE | PARCIAL/MOCK (contratos e motores no cliente; persistência mock) |
+| C10 Metadados, entidades dinâmicas, campos | PARCIAL (fatia 3.1: entidades, versões imutáveis, 15 tipos de campo, registos JSONB validados por versão, únicos concorrentes pela base, sensíveis, propriedade TENANT/UNIT/OWNER, pesquisa, auditoria; **sem** FORMULA/LOOKUP/AUTONUMBER/FILE/IMAGE/CURRENCY/CHECKBOX, `EntityExtension`, migração de dados nem estado do registo) | PARCIAL/MOCK (contratos e motores no cliente; persistência mock; ainda não liga à API de C10) |
 | C11 Formulários | AUSENTE | PARCIAL (contratos, motores e integridade; sem Form Builder visual) |
 | C12 Regras e fórmulas | AUSENTE | PARCIAL (condições declarativas e fórmulas no cliente; sem editor/AST persistido) |
 | C13 Máquinas de estados | AUSENTE | PARCIAL (motor local de workflow de entidade) |
@@ -230,5 +230,7 @@ Legenda: **AUSENTE** (não existe), **MOCK** (existe só no frontend com dados s
 - **Nomes de permissões:** o frontend usa `<módulo>.read|manage` e `entities.<chave>.<op>`; a spec usa
   `<recurso>.<acção>` (`invoice.approve`, `platform.tenant.manage`, `dynamic.vehicle.*`). A reconciliar antes de a
   Fase 1 criar o catálogo de permissões (D-014, **aberta**).
+- **Permissões dinâmicas:** a especificação usa `dynamic.{código}.*`; o catálogo é global e de dois segmentos, por isso adoptou-se
+  `dynamic.read|create|update|archive` com restrição por entidade via ABAC (`resource.entity`) — D-035, **a corrigir na especificação**.
 - **Selector de tenant:** o frontend usa `/t/:slug`; o servidor tem de o tratar apenas como selector (D-013).
 - O dicionário de dados da especificação (B/G, `version`, `created_by_membership_id`…) ainda não tem tabelas.

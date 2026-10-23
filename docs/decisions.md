@@ -392,6 +392,39 @@ frontend como **strings**. Um diálogo cujo estado de carga fecha o `<dialog>` n
 **Fora desta fatia:** configurações por filial/módulo na interface (a API suporta), ligação a `Party`/papéis/políticas (Fase 1, por fazer), UI de
 auditoria, e activação de módulos de negócio reais (não existem).
 
+## D-035 Metadados e entidades dinâmicas: versões imutáveis, JSONB validado e permissões `dynamic.*` com ABAC por entidade (aceite — fatia 3.1)
+**Modelo.** Módulo `dynamic/metadata` (primeiro do grupo `dynamic`, alias `#dynamic/*`). Tabelas de tenant: `entity_definitions`,
+`entity_schema_versions`, `field_definitions`, `dynamic_records` e `dynamic_unique_values`; nunca se criam tabelas ou colunas por cliente. Os
+valores ficam em JSONB (`data`), validados no servidor contra a **versão exacta** do esquema com que o registo foi gravado; os valores de campos
+**sensíveis** vivem à parte (`sensitive_data`), redigidos na auditoria, fora da pesquisa e sem unicidade. **Versões.** Cada entidade tem no máximo um
+rascunho (índice parcial) e revisões publicadas **imutáveis**: um trigger recusa UPDATE/DELETE da versão publicada e dos seus campos a qualquer
+conta (excepto a dona, com o interruptor de retenção da auditoria, usado só na limpeza de tenants de teste). Publicar nunca apaga: o campo
+retirado e a opção retirada ficam **arquivados** (valores antigos legíveis, sem novas escritas, código nunca reutilizável). Sem mecanismo de
+migração, uma alteração que invalidaria dados existentes **bloqueia a publicação** (409 `INCOMPATIBLE_SCHEMA` com um detalhe por campo): mudar o
+tipo ou o destino de uma referência, mudar a sensibilidade, tornar obrigatório sem valor por omissão, tornar único um campo publicado, novo campo
+obrigatório sem omissão, restringir limites (comprimento, mínimo/máximo, precisão/escala, padrão, selecções). A pré-visualização
+(`publish-preview`) lista o mesmo e quantos registos ficam em versões anteriores. Um registo criado usa a revisão publicada; ao ser alterado passa
+a ela (validação completa, valores de campos arquivados preservados). **Tipos de campo.** Implementados: TEXT, TEXTAREA, NUMBER, DECIMAL (string
+na API, precisão/escala declaradas, canónico com a escala, BigInt — nunca float), BOOLEAN, DATE, DATETIME (ISO com fuso, normalizado a UTC),
+EMAIL, PHONE, URL (só http/https, sem pedidos remotos), SELECT, RADIO, MULTISELECT, ENTITY_REFERENCE (mesmo tenant, entidade certa, não
+arquivada) e USER_REFERENCE (membership activa). Os restantes da matriz (CURRENCY, CHECKBOX, FILE, IMAGE, FORMULA, LOOKUP, AUTONUMBER) são
+recusados com `FIELD_TYPE_NOT_SUPPORTED` até terem a sua fatia. Padrões de texto: sem grupos repetidos sem limite, retrovisores nem asserções
+(evita retrocesso exponencial) e com o comprimento do valor limitado. Chaves de `validation` desconhecidas são recusadas. **Unicidade.**
+`validation.unique` mantém `dynamic_unique_values` na mesma transacção do registo, com índice único da base `(tenant, entidade, campo,
+valor normalizado)`: dois pedidos concorrentes com o mesmo valor não passam (409 `UNIQUE_VALUE_TAKEN`); arquivar o registo liberta o valor; um
+campo que deixa de ser único liberta os seus valores na publicação. **Permissões (divergência assinalada da especificação).** A especificação
+indica `dynamic.{código}.read|create|update|archive`. O catálogo de permissões é global e `<recurso>.<acção>` (D-014), por isso permissões
+com o código de entidades de cada tenant não cabem nele sem expor esses códigos entre tenants. Adoptou-se `dynamic.read|create|update|archive`
+mais `dynamic.sensitive` (campos sensíveis) e `dynamic.all` (registos de todos os responsáveis), e `entity.read|design|publish` para a definição;
+a restrição **por entidade** faz-se com políticas ABAC sobre o atributo `resource.entity` (o middleware `can` aceita `resource` mapeado a
+parâmetros de rota, por isso a política vale já à porta). **A especificação deve ser corrigida** (ou, se se preferir, reabrir D-014).
+**Propriedade.** `ownership_mode`: TENANT; UNIT (o registo tem unidade, validada e dentro do âmbito do actor; as listas só mostram as unidades do
+âmbito); OWNER (o responsável é o autor; os outros só vêem com `dynamic.all`, senão 404). O modo não muda depois de publicada a entidade.
+**Fora desta fatia:** formulários (C11), regras e fórmulas (C12), máquinas de estados (C13: o registo ainda não tem `state_code`), workflows
+(C14), automações (C15), `EntityExtension` (precisa do `ResourceRegistry`, sem recursos ainda), anexos, migração de dados entre versões,
+UI (Entity Designer e listagens continuam mock no frontend), pesquisa indexada (usa `LIKE` em texto não sensível; sem índice trigram),
+exportações e outbox (inexistente), grants limitados a uma unidade sem âmbito de acesso (como nos restantes módulos, a porta usa `can`).
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
