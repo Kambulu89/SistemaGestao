@@ -34,6 +34,12 @@ export const DYNAMIC_CORE_ROUTES: readonly ModuleRouteDef[] = [
       import('./custom-fields/custom-fields-page').then((m) => m.CustomFieldsPage),
   },
   {
+    path: ':entityKey/regras',
+    title: 'Regras da entidade',
+    permission: 'configuration.rules.read',
+    loadComponent: () => import('./rules/entity-rules-page').then((m) => m.EntityRulesPage),
+  },
+  {
     path: ':entityKey',
     title: 'Definição da entidade',
     permission: 'configuration.forms.read',

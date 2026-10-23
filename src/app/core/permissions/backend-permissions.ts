@@ -26,6 +26,9 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'entity.read': ['configuration.forms.read'],
   'entity.design': ['configuration.forms.read', 'configuration.forms.manage'],
   'entity.publish': ['configuration.forms.read', 'configuration.forms.publish'],
+  // Regras de validação (C12).
+  'rule.read': ['configuration.rules.read'],
+  'rule.manage': ['configuration.rules.read', 'configuration.rules.manage'],
 };
 
 /** Códigos do servidor → chaves do frontend (com os códigos originais incluídos). */

@@ -96,6 +96,13 @@ const yesNo = (value: boolean): string => (value ? 'Sim' : 'Não');
               >Campos personalizados</a
             >
           }
+          @if (canReadRules()) {
+            <a
+              routerLink="regras"
+              class="text-sm text-brand-700 hover:underline dark:text-brand-300"
+              >Regras</a
+            >
+          }
           @if (canOpenRecords()) {
             <a
               [routerLink]="dataLink(entity.key)"
@@ -287,6 +294,9 @@ export class EntityAdminDetailPage {
     return ['/t', this.tenant()?.slug ?? '', 'data', key];
   }
   protected readonly canManage = computed(() => this.permissions.can('configuration.forms.manage'));
+  protected readonly canReadRules = computed(
+    () => this.entity()?.scope === 'tenant' && this.permissions.can('configuration.rules.read'),
+  );
   protected readonly fieldAccess = this.access.fieldAccess;
 
   /** Parâmetro de rota `:entityKey`. */

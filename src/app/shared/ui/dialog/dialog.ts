@@ -18,7 +18,9 @@ import {
   template: `
     <dialog
       #dialog
-      class="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-line bg-surface p-0 text-fg shadow-xl backdrop:bg-slate-900/50"
+      class="m-auto w-[calc(100%-2rem)] rounded-xl border border-line bg-surface p-0 text-fg shadow-xl backdrop:bg-slate-900/50"
+      [class.max-w-md]="!wide()"
+      [class.max-w-2xl]="wide()"
       [attr.aria-labelledby]="'dialog-title-' + uid"
       (close)="closed.emit()"
       (cancel)="closed.emit()"
@@ -36,6 +38,8 @@ import {
 export class Dialog {
   readonly open = input.required<boolean>();
   readonly title = input.required<string>();
+  /** Para conteúdo em colunas (formulários com várias listas). */
+  readonly wide = input(false);
   /** Emitido quando o utilizador fecha o diálogo (Escape ou programaticamente). */
   readonly closed = output();
 

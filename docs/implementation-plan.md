@@ -476,11 +476,12 @@ Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a
 | 3.1 | C10 no backend: entidades, versões imutáveis, campos tipados, registos com únicos concorrentes, sensíveis, propriedade, pesquisa e auditoria; «Viatura» como entidade definida por um tenant | **Concluída** (backend; ver 2c.1) |
 | 3.2 | Frontend de C10: Entity Designer, publicação e listagem/formulário genérico de registos sobre a API (fim do mock do core dinâmico) | **Concluída** (ver 2c.2) |
 | 3.3 | C12 no servidor: campo FORMULA (gramática restrita → AST, ordem topológica, ciclos) e regras de validação por AST (publicação imutável, simulação, avaliações registadas); FORMULA no designer | **Concluída** (ver 2c.3); LOOKUP e a UI de regras ficam por fazer |
-| 3.4 | Editor de regras (UI) sobre `/rules` + LOOKUP | Por fazer |
-| 3.5 | C11 formulários (secções, bindings, condições) | Por fazer |
-| 3.6 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
-| 3.7 | C14 workflows, tarefas e delegações | Por fazer |
-| 3.8 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
+| 3.4 | Editor de regras (UI) sobre `/rules`: construtor de condições, simulação, publicação, revisões e avaliações | **Concluída** (ver 2c.4) |
+| 3.5 | Tipo LOOKUP (valor lido de um registo referenciado) | Por fazer |
+| 3.6 | C11 formulários (secções, bindings, condições) | Por fazer |
+| 3.7 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
+| 3.8 | C14 workflows, tarefas e delegações | Por fazer |
+| 3.9 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
 
 ### 2c.1 Fatia 3.1 — C10 no backend (concluída; ver D-035)
 **Entregue:** migration `create_metadata` (5 tabelas de tenant com RLS, FKs compostas e auditoria; triggers de imutabilidade de versões
@@ -530,6 +531,16 @@ permissões, rascunho/publicada/desactivada, revisões, janela de vigência, pri
 **Frontend.** `FORMULA` passou a tipo do servidor: o mapper traduz a expressão (identificadores camelCase ⇄ snake_case), a escala e o valor calculado (texto ⇄ número); o campo é só de leitura.
 **Verificado:** backend lint, typecheck, format, build e `npm test` (385 testes); frontend lint, format, `check:generic`, 732 testes unitários e build.
 **Não verificado:** E2E em browser com campo FORMULA (só testes unitários dos mappers; o servidor está coberto por testes funcionais).
+
+### 2c.4 Fatia 3.4 — editor de regras (concluída; ver D-038)
+**Frontend.** Página `/t/:slug/entities/:entityKey/regras` (`features/dynamic-core/rules`), ligada ao detalhe da entidade; permissões `rule.read`/`rule.manage` traduzidas para `configuration.rules.*`.
+Lista as revisões de cada regra com mensagem, prioridade, vigência e estado; cria e edita rascunhos (construtor de condições: comparações de campos ligadas por «e»/«ou», «preenchido»/«vazio»);
+publica, desactiva e abre revisões (`expectedVersion`); simula com valores de exemplo (só os campos que a condição lê) e consulta as avaliações recusadas. Uma condição que o construtor
+não representa (aninhada, sobre `subject`/`env`, `in`) mostra-se como JSON e grava-se tal como está, nunca é descartada. Decimais seguem como texto. O servidor não mudou.
+**Verificado:** frontend lint, format, `check:generic`, 746 testes unitários e build; E2E em browser real (Chromium) sobre a API real: criar rascunho, simular (bloqueia/não bloqueia), publicar,
+o servidor bloquear a gravação de um registo com a mensagem, gravar com valor dentro da alçada, avaliação FAIL registada, nova revisão, editar, publicar a revisão 2 desactivando a 1; zero erros de página.
+**Não verificado / limites:** o E2E correu por script local (não está no repositório); sem teste de acessibilidade dedicado nem de leitura sem `rule.manage` no browser (só em teste unitário);
+LOOKUP continua por fazer (fatia 3.5); sem remoção de rascunhos (a API não a tem).
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

@@ -464,6 +464,15 @@ sobreviver à escrita recusada); PASS não se regista. Falha de avaliação **ne
 **Limites:** uma regra que referencia um campo entretanto arquivado deixa de corresponder (a publicação verifica as referências, o arquivamento posterior não); sem BEFORE/AFTER_COMMIT nem
 outras acções; LOOKUP e AUTONUMBER por fazer; ler regras e avaliações no histórico exige `rule.read` e `audit.read`; a UI de regras é a fatia 3.4.
 
+## D-038 Editor de regras: construtor limitado, o resto preservado (aceite — fatia 3.4)
+A página de regras de uma entidade (`/regras`) usa só a API de D-037; não há regras locais nem simuladas. O **construtor** representa o caso comum — comparações (`=, ≠, >, ≥, <, ≤`, preenchido, vazio)
+sobre campos do registo, ligadas por «e» ou «ou», sem aninhamento — e converte-o para a AST do servidor (`rule-condition.ts`, num só ponto, com testes de ida e volta). Valores: decimais e fórmulas
+como **texto**, números como número, booleanos `true/false`; campos sensíveis, arquivados e multi-selecção não se oferecem (o servidor também os recusa). Uma condição fora desse subconjunto (aninhada,
+`subject.*`, `env.*`, `in`) **não se perde**: mostra-se como JSON e grava-se igual a não ser que a pessoa a refaça. Só se edita um rascunho; uma publicada ou desactivada muda por **nova revisão**
+(a que está em vigor mantém-se até a nova ser publicada). A simulação pede só os campos que a condição lê. As avaliações listam apenas FAIL/ERROR (as últimas 50), como regista o servidor.
+Permissões: `rule.read` → `configuration.rules.read`; `rule.manage` → também `configuration.rules.manage` (conveniência de navegação; o servidor decide). **Fora desta fatia:** condições aninhadas e sobre o
+utilizador/tempo, eliminar rascunhos, comparar revisões, filtros por estado, e o tipo LOOKUP (fatia 3.5).
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
