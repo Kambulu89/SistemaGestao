@@ -1,5 +1,6 @@
 import { iamServices } from '#core/permissions/index'
 import { serviceTenantContext } from '#core/tenancy/index'
+import { automationServices } from '#dynamic/automations/index'
 import type { Tenant } from '#platform/tenants/index'
 import { api, newActor, type Actor } from '#tests/support/api_fixture'
 import { license, syncTestRegistry } from '#tests/support/modules_fixture'
@@ -47,6 +48,8 @@ export interface World {
     instance: string
     task: string
     delegation: string
+    automation: string
+    run: string
   }
 }
 
@@ -463,6 +466,48 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // C15: a mesma automação nos dois tenants, com uma execução já despachada (pendente) por um evento posterior à activação.
+  const automation = await must<{ id: string; version: number }>(
+    await http.post('/api/v1/automations', {
+      code: 'enviar_oficina',
+      name: 'Enviar para a oficina',
+      eventType: 'dynamic.record.state_changed',
+      condition: { op: 'eq', left: { var: 'resource.toState' }, right: { value: 'em_oficina' } },
+      actions: [
+        {
+          type: 'dynamic.record.transition',
+          params: {
+            entityCode: SHARED.entityCode,
+            recordId: { from: 'payload.recordId' },
+            transition: 'enviar',
+          },
+        },
+      ],
+    }),
+    201
+  )
+  await must(
+    await http.post(`/api/v1/automations/${automation.id}/activate`, {
+      expectedVersion: automation.version,
+    }),
+    200
+  )
+  const triggerRecord = await must<{ id: string }>(
+    await http.post(`/api/v1/dynamic/${SHARED.entityCode}/records`, {
+      data: { matricula: 'MN-90-PQ' },
+    }),
+    201
+  )
+  await must(
+    await http.post(
+      `/api/v1/dynamic/${SHARED.entityCode}/records/${triggerRecord.id}/transitions/enviar`,
+      { expectedVersion: 1 }
+    ),
+    200
+  )
+  await automationServices().engine.dispatchEvents(serviceTenantContext(t.id, 'matriz'))
+  const [run] = await must<{ id: string }[]>(await http.get('/api/v1/automation-runs'), 200)
+  if (!run) throw new Error('O cenário não produziu nenhuma execução de automação.')
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -504,6 +549,8 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       instance: submitted.instance.id,
       task: submitted.tasks[0]?.id as string,
       delegation: delegation.id,
+      automation: automation.id,
+      run: run.id,
     },
   }
 }

@@ -200,6 +200,17 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Delegar as próprias aprovações noutro membro, por um período limitado.',
   },
   {
+    code: 'automation.read',
+    moduleCode: 'dynamic',
+    description:
+      'Ver automações, o catálogo de eventos e acções, simular e consultar o histórico de execuções.',
+  },
+  {
+    code: 'automation.manage',
+    moduleCode: 'dynamic',
+    description: 'Definir, activar e pausar automações e reprocessar execuções falhadas.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

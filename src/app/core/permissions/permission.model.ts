@@ -35,6 +35,8 @@ export const TENANT_PERMISSIONS = {
   entitiesRead: 'configuration.forms.read',
   /** Caixa de aprovações (C14): o código do servidor, tal e qual. */
   approvalsDecide: 'approval.decide',
+  /** Automações (C15): o código do servidor, tal e qual. */
+  automationsRead: 'automation.read',
 } as const;
 
 export const PLATFORM_NAMESPACE = 'platform.';

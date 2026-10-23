@@ -44,6 +44,7 @@ describe('NavigationService', () => {
       'Permissões',
       'Configurações',
       'Aprovações',
+      'Automações',
       'Entidades',
       'Clientes',
       'Clientes e contactos',

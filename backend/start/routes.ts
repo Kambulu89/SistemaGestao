@@ -27,6 +27,8 @@ const MetadataController = () => import('#dynamic/metadata/presentation/metadata
 const RulesController = () => import('#dynamic/rules/presentation/rules_controller')
 const FormsController = () => import('#dynamic/forms/presentation/forms_controller')
 const StatesController = () => import('#dynamic/states/presentation/states_controller')
+const AutomationsController = () =>
+  import('#dynamic/automations/presentation/automations_controller')
 const WorkflowsController = () => import('#dynamic/workflows/presentation/workflows_controller')
 const SettingsController = () => import('#core/settings/presentation/settings_controller')
 const PlatformController = () => import('#platform/administration/presentation/platform_controller')
@@ -536,6 +538,36 @@ router
         router.post('/approval-delegations/:id/revoke', [WorkflowsController, 'revokeDelegation'])
       })
       .use(middleware.can({ permission: 'approval.delegate' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Automações (C15): `automation.read` para ver o catálogo, as automações, simular e consultar o histórico; `automation.manage`
+ * para definir, activar, pausar e reprocessar execuções falhadas. Uma automação executa em nome de quem a activa.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/automations/catalog', [AutomationsController, 'catalog'])
+        router.get('/automations', [AutomationsController, 'list'])
+        router.get('/automations/:id', [AutomationsController, 'show'])
+        router.post('/automations/:id/simulate', [AutomationsController, 'simulate'])
+        router.get('/automation-runs', [AutomationsController, 'listRuns'])
+        router.get('/automation-runs/:id', [AutomationsController, 'showRun'])
+      })
+      .use(middleware.can({ permission: 'automation.read' }))
+
+    router
+      .group(() => {
+        router.post('/automations', [AutomationsController, 'create'])
+        router.patch('/automations/:id', [AutomationsController, 'update'])
+        router.post('/automations/:id/activate', [AutomationsController, 'activate'])
+        router.post('/automations/:id/pause', [AutomationsController, 'pause'])
+        router.post('/automation-runs/:id/retry', [AutomationsController, 'retryRun'])
+      })
+      .use(middleware.can({ permission: 'automation.manage' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

@@ -483,7 +483,7 @@ Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a
 | 3.8 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox): servidor, estado e acções nos registos | **Concluída** (ver 2c.8); designer visual por fazer |
 | 3.9 | Designer visual de máquinas de estados sobre `/state-machines` (estados, transições, guardas, mapa, verificação, publicação) | **Concluída** (ver 2c.9) |
 | 3.10 | C14 workflows de aprovação, tarefas e delegações: servidor, caixa de aprovações, painel do registo e designer | **Concluída** (ver 2c.10) |
-| 3.11 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
+| 3.11 | C15 automações (servidor, trabalhador e interface) e a prova de «Viatura» ponta a ponta | **Concluída** (ver 2c.11) |
 
 ### 2c.1 Fatia 3.1 — C10 no backend (concluída; ver D-035)
 **Entregue:** migration `create_metadata` (5 tabelas de tenant com RLS, FKs compostas e auditoria; triggers de imutabilidade de versões
@@ -617,6 +617,20 @@ matriz de isolamento estendida a todas as rotas e tabelas; paridade do OpenAPI) 
 
 **Não verificado / limites:** o E2E correu por script local; **sem escalonamento, notificações nem calendário de SLA** (o prazo vencido só se assinala; nunca aprova), **sem substituição de aprovadores inactivos** (o processo falha ao abrir a etapa), sem worker/inbox do outbox (D-015) nem módulos que consumam `workflow.instance.approved`; sem ramificações nem devolução a uma etapa anterior;
 qualquer alteração do registo cancela o processo; o aprovador vê o `snapshot` sem precisar de `dynamic.read` (a confirmar); sem lista de «workflows» na listagem dos registos; o utilizador de um registo precisa de `entity.read` para a interface carregar a entidade (limitação anterior do registo de entidades no cliente).
+
+### 2c.11 Fatia 3.11 — automações e «Viatura» de ponta a ponta (concluída; ver D-045)
+**Servidor.** Módulo `app/dynamic/automations` (migration 22): `automations` (gatilho único: evento ou calendário com fuso; condição AST; acções; estado DRAFT/ACTIVE/PAUSED; versão a cada alteração; membro de execução; próxima execução), `automation_runs` (chave de deduplicação única, estado PENDING/RUNNING/SUCCEEDED/FAILED/DEAD, tentativas, progresso, profundidade e execução causadora, erro, quem reprocessou), `outbox_deliveries` (inbox) e, no outbox,
+`causation_run_id`/`causation_depth`. Os módulos de estados e de workflows registam os seus eventos e acções no catálogo. O motor (`AutomationEngine`) despacha os eventos novos e os calendários vencidos e executa as execuções devidas (bloqueio `SKIP LOCKED`, recuperação de execuções presas), em nome de quem activou; `automation:work` percorre os tenants operacionais. API: `GET /automations/catalog`, `/automations`
+(+ `activate`, `pause`, `simulate`; `automation.read|manage`), `/automation-runs` e `POST /automation-runs/{id}/retry`.
+**Frontend** (`features/dynamic-core/automations`, rota `/t/:slug/automations`, menu «Automações»): lista com gatilho, estado e **próxima execução com o fuso**, editor (gatilho do catálogo, condição sobre os campos do evento reutilizando o construtor das regras, acções com parâmetros fixos ou campos do evento, limite por hora), **simulação** com um evento de exemplo, activar/pausar,
+histórico de execuções (por automação ou todas) com a causa da falha e o **reprocessamento** das que o motor não fechou por regra.
+**Viatura de ponta a ponta** (`tests/functional/viatura_end_to_end.spec.ts`; «Viatura» é só um tenant a definir tudo pela API, o núcleo não conhece o sector): entidade com campo único, pesquisável e sensível, formulário publicado, regra de quilometragem, máquina de estados, workflow de manutenção com montante, automação «aprovada → enviar para manutenção»; uso com validação, duplicados, campos sensíveis, pesquisa,
+aprovação pela chefia, execução da automação em nome de quem a activou, cadeia de causalidade no outbox, auditoria sem valores sensíveis, versão 2 da entidade com o registo antigo legível e isolamento entre tenants.
+**Verificado:** backend lint, format, typecheck, build e `npm test` (474 testes; `automations.spec.ts` cobre catálogo e validações, activação em nome de quem activa, condição, evento duplicado, ciclo A→B→A e auto-causalidade, limite por hora, pausa, falha→recuo→fila de falhas→reprocessamento auditado que retoma a seguir à última acção, tenant suspenso, membro suspenso, falta de permissões, calendário e simulação; `automation_domain.spec.ts` cobre o calendário, incluindo fusos e mudança de hora;
+matriz de isolamento e paridade do OpenAPI estendidas) com a migration subida e descida numa base limpa; frontend lint, format, `check:generic`, `ng test` (844) e build; E2E em browser real sobre a API real (15 verificações, zero erros de página): menu, catálogo de eventos, condição e acção a partir do catálogo, simulação (executaria / não executaria), activar, o comando `automation:work --once` a processar um evento real,
+registo concluído em nome de quem activou, histórico, pausa que bloqueia execuções e uma falha visível na fila com o erro e a próxima tentativa.
+**Não verificado / limites:** o E2E correu por script local (`e2e311.mjs`, só na pasta temporária da sessão); a prova de «Viatura» é um teste de API — o registo, a pesquisa e a auditoria **na interface** já foram verificados em browser nas fatias anteriores mas não se repetiram aqui; o trabalhador é um processo à parte (não arranca com a API); sem acções de notificação ou de tarefas, sem retenção da inbox nem das execuções,
+at-least-once sem idempotência própria das acções, e um calendário só dispara com o trabalhador a correr (D-045).
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

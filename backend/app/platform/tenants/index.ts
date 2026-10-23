@@ -26,3 +26,4 @@ export {
   changeMemberStatusByEmail,
 } from '#platform/tenants/presentation/member_commands'
 export { bootstrapTenantAdmin, syncIam } from '#platform/tenants/presentation/iam_commands'
+export { tenantServices } from '#platform/tenants/presentation/composition'

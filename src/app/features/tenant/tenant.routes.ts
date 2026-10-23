@@ -77,6 +77,16 @@ export const TENANT_ROUTES: Routes = [
     loadComponent: () =>
       import('../dynamic-core/workflows/approvals-page').then((m) => m.ApprovalsPage),
   },
+  // Automações (C15): definição, simulação, activação e histórico de execuções.
+  {
+    path: 'automations',
+    pathMatch: 'full',
+    title: 'Automações',
+    data: { breadcrumb: 'Automações' },
+    canActivate: [requirePermission(TENANT_PERMISSIONS.automationsRead)],
+    loadComponent: () =>
+      import('../dynamic-core/automations/automations-page').then((m) => m.AutomationsPage),
+  },
   // Core Dinâmico (C10): definição de entidades e campos. Cada página tem a sua permissão.
   {
     path: 'entities',

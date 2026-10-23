@@ -84,6 +84,8 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   workflow_instances: 'workflow.read',
   workflow_tasks: 'workflow.read',
   approval_delegations: 'workflow.read',
+  automations: 'automation.read',
+  automation_runs: 'automation.read',
 }
 
 /** Tabelas de tenant que não são auditadas, com o motivo (o teste de conformidade exige o resto). */
@@ -95,6 +97,8 @@ export const AUDIT_EXEMPT_TABLES: Readonly<Record<string, string>> = {
     'Registo próprio e só de acrescentar das avaliações de regras (C12), consultável em GET /rules/{id}/evaluations.',
   state_history:
     'Histórico próprio e só de acrescentar das transições de estado (C13), consultável em GET /dynamic/{entity}/records/{id}/state-history.',
+  outbox_deliveries:
+    'Inbox técnica do consumo do outbox (um evento por consumidor); só regista que o evento foi entregue.',
   outbox_events:
     'Fila técnica do outbox transaccional: o evento é escrito com a alteração que o originou (já auditada) e só muda de estado ao ser publicado.',
   user_preferences:

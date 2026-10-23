@@ -3054,6 +3054,218 @@ paths:
         '200': { description: Processo cancelado. }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /automations/catalog:
+    get:
+      summary: Eventos e acções que os módulos oferecem às automações (automation.read)
+      description: |
+        Cada evento traz os campos do `payload` (usados em condições como `resource.<campo>` e em parâmetros como
+        `{ "from": "payload.<campo>" }`); cada acção, os seus parâmetros.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Catálogo. }
+  /automations:
+    get:
+      summary: Automações do tenant, com a verificação das não rascunho (automation.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          { description: Automações por código; `issues` lista o que o servidor verifica agora. }
+    post:
+      summary: Cria uma automação em rascunho (automation.manage)
+      description: |
+        Exactamente um gatilho: `eventType` (do catálogo) ou `schedule` (calendário de cinco campos no `timezone`, intervalo
+        mínimo de 5 minutos). `condition` é uma condição das políticas de acesso sobre os campos do evento
+        (`resource.<campo>`); `actions` são acções do catálogo com parâmetros literais ou `{ "from": "payload.<campo>" }`.
+        Nunca se executa código do tenant. A verificação contra o catálogo faz-se ao activar.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name, actions]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                eventType: { type: string, nullable: true }
+                schedule: { type: string, nullable: true }
+                timezone: { type: string }
+                condition: { type: object, additionalProperties: true, nullable: true }
+                actions: { type: array, items: { type: object, additionalProperties: true } }
+                maxRunsPerPeriod: { type: integer }
+      responses:
+        '201': { description: Automação em rascunho. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /automations/{id}:
+    get:
+      summary: Uma automação (automation.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Automação e `issues`. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera um rascunho ou uma automação pausada (automation.manage)
+      description: Cada alteração é uma nova versão (as execuções ficam ligadas à versão que as originou). Uma automação activa não se altera (`AUTOMATION_ACTIVE`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                eventType: { type: string, nullable: true }
+                schedule: { type: string, nullable: true }
+                timezone: { type: string }
+                condition: { type: object, additionalProperties: true, nullable: true }
+                actions: { type: array, items: { type: object, additionalProperties: true } }
+                maxRunsPerPeriod: { type: integer }
+      responses:
+        '200': { description: Automação actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /automations/{id}/activate:
+    post:
+      summary: Activa a automação em nome de quem a activa (automation.manage)
+      description: |
+        Verifica o gatilho, a condição e as acções contra o catálogo (422 com o caminho). A automação passa a executar com as
+        permissões **actuais** do membro que a activou (nunca as da plataforma); só reage a eventos posteriores à activação.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Automação activa (`nextRunAt` nos calendários). }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /automations/{id}/pause:
+    post:
+      summary: Pausa a automação (automation.manage)
+      description: Bloqueia novas execuções; as pendentes fecham com `AUTOMATION_NOT_ACTIVE`. O histórico mantém-se.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Automação pausada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /automations/{id}/simulate:
+    post:
+      summary: Simula a automação com um evento de exemplo, sem executar nada (automation.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload: { type: object, additionalProperties: true }
+                scheduledFor: { type: string, format: date-time }
+      responses:
+        '200':
+          {
+            description: '`conditionPassed`, as acções com os parâmetros resolvidos (ou o erro) e, nos calendários, as próximas cinco execuções.',
+          }
+        '404': { $ref: '#/components/responses/Error' }
+  /automation-runs:
+    get:
+      summary: Histórico de execuções (automation.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: automationId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [PENDING, RUNNING, SUCCEEDED, FAILED, DEAD] },
+          }
+      responses:
+        '200': { description: Execuções (mais recentes primeiro, até 200). }
+  /automation-runs/{id}:
+    get:
+      summary: Uma execução (automation.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Execução com tentativas, progresso, causalidade e erro. }
+        '404': { $ref: '#/components/responses/Error' }
+  /automation-runs/{id}/retry:
+    post:
+      summary: Reprocessa uma execução da fila de falhas (automation.manage)
+      description: |
+        Só `DEAD`/`FAILED`. Retoma a seguir à última acção concluída (mesma chave: não repete o que já foi feito) e regista quem
+        reprocessou (e a auditoria). As execuções fechadas por regras do motor (`CAUSALITY_DEPTH`, `CAUSALITY_LOOP`,
+        `PERIOD_LIMIT`, `CONDITION_ERROR`) respondem 409 `RUN_BLOCKED_BY_RULE`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Execução de novo na fila. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /dynamic/{entityCode}/workflows:
     get:
       summary: Workflows publicados a que se pode submeter um registo da entidade (workflow.submit)

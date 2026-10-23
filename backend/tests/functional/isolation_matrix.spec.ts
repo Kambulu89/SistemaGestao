@@ -93,6 +93,8 @@ async function snapshot(world: World) {
     instances: await get('/api/v1/workflow-instances'),
     inbox: await get('/api/v1/approval-tasks'),
     delegations: await get('/api/v1/approval-delegations'),
+    automations: await get('/api/v1/automations'),
+    automationRuns: await get('/api/v1/automation-runs'),
     records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
@@ -179,6 +181,13 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['post', `/approval-tasks/${o.task}/reject`, { reason: 'x' }],
     ['post', `/approval-tasks/${o.task}/return`, { reason: 'x' }],
     ['post', `/approval-delegations/${o.delegation}/revoke`, stale],
+    ['get', `/automations/${o.automation}`],
+    ['patch', `/automations/${o.automation}`, { ...stale, name: 'x' }],
+    ['post', `/automations/${o.automation}/activate`, stale],
+    ['post', `/automations/${o.automation}/pause`, stale],
+    ['post', `/automations/${o.automation}/simulate`, {}],
+    ['get', `/automation-runs/${o.run}`],
+    ['post', `/automation-runs/${o.run}/retry`, stale],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
     ['delete', `/entity-definitions/${o.entity}`],
@@ -304,6 +313,8 @@ test.group('matriz de isolamento', (group) => {
       'instances',
       'inbox',
       'delegations',
+      'automations',
+      'automationRuns',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)

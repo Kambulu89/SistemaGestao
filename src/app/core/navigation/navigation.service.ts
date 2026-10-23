@@ -108,6 +108,12 @@ export class NavigationService {
             permission: TENANT_PERMISSIONS.approvalsDecide,
           },
           {
+            label: 'Automações',
+            path: `${base}/automations`,
+            icon: 'bolt',
+            permission: TENANT_PERMISSIONS.automationsRead,
+          },
+          {
             label: 'Entidades',
             path: `${base}/entities`,
             icon: 'cube',
