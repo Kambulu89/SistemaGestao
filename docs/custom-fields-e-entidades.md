@@ -64,7 +64,7 @@ Capacidades em `FIELD_TYPE_CATALOG` (o designer, a integridade e o servidor cons
 | entity-reference | ✔ | — | — | — | — | a entidade existe; o registo existe **no mesmo tenant** |
 | user-reference | ✔ | — | — | — | — | só membros do tenant; o directório devolve apenas id e nome |
 | **formula** | ✘ (servidor) | — | — | ✔ | — | ver abaixo |
-| **lookup** | ✘ (servidor) | — | — | — | — | ver abaixo |
+| **lookup** | ✔ (servidor, fatia 3.5; ver D-039) | — | — | — | — | ver abaixo |
 | **auto-number** | ✘ (servidor) | ✔ | — | ✔ | — | ver abaixo |
 
 ### Fórmulas (`core/dynamic/engine/formula.ts`)

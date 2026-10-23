@@ -7,6 +7,8 @@ import {
 import { normalizeFields, type FieldInput } from '#dynamic/metadata/domain/field_spec'
 import type { FieldSpec, Issue } from '#dynamic/metadata/domain/field_types'
 import { checkFormulaSet } from '#dynamic/metadata/domain/formula'
+import { checkLookupSet } from '#dynamic/metadata/domain/lookup'
+import { checkLookupTargets } from '#dynamic/metadata/application/lookup_checks'
 import { normalizeEntityPresentation } from '#dynamic/metadata/domain/presentation'
 import type {
   EntityDefinition,
@@ -362,6 +364,19 @@ export class EntityDefinitionUseCases {
     for (const { code, issue: problem } of checkFormulaSet(report.effective)) {
       report.issues.push({ ...problem, path: `fields.${code}` })
     }
+    // O mesmo para os valores relacionados: a relação e o campo de origem têm de existir na publicação.
+    const lookups = [
+      ...checkLookupSet(report.effective),
+      ...(await checkLookupTargets(
+        scope,
+        { entities: this.entities, versions: this.versions },
+        entity,
+        report.effective
+      )),
+    ]
+    for (const { code, issue: problem } of lookups) {
+      report.issues.push({ ...problem, path: `fields.${code}` })
+    }
 
     for (const field of draft.fields) {
       if (!field.referenceEntityId || field.referenceEntityId === entity.id) continue
@@ -423,6 +438,17 @@ export class EntityDefinitionUseCases {
       : input
     const unresolved = new Set(issues.map((i) => i.path))
     const specs = normalizeFields(resolved, issues)
+    if (issues.length === 0) {
+      const indexOf = new Map(specs.map((s, i) => [s.code, i]))
+      for (const { code, issue: problem } of await checkLookupTargets(
+        scope,
+        { entities: this.entities, versions: this.versions },
+        entity,
+        specs
+      )) {
+        issues.push({ ...problem, path: `fields[${indexOf.get(code)}].${problem.path}` })
+      }
+    }
     // Uma entidade de destino já recusada não gera também «destino em falta».
     const details = issues.filter((i) => i.code !== 'REFERENCE_REQUIRED' || !unresolved.has(i.path))
     if (details.length > 0) throw validationError(details)

@@ -239,6 +239,35 @@ describe('servidor → interface', () => {
     expect(f.serverValidation).toBeUndefined();
   });
 
+  it('valores relacionados: chaves camelCase, onMissing, e sourceType/scale ficam fora do que a interface edita', () => {
+    const f = fieldOf(
+      field({
+        code: 'limite_cliente',
+        type: 'LOOKUP',
+        readOnly: true,
+        validation: {
+          relationField: 'cliente_final',
+          sourceField: 'limite_credito',
+          onMissing: 'error',
+          sourceType: 'DECIMAL',
+          scale: 2,
+        },
+      }),
+    );
+    expect(f).toMatchObject({
+      type: 'lookup',
+      editable: false,
+      lookup: { relationField: 'clienteFinal', sourceField: 'limiteCredito', onMissing: 'error' },
+    });
+    expect(f.serverValidation).toEqual({ sourceType: 'DECIMAL', scale: 2 });
+  });
+
+  it('um valor relacionado sem origem não se representa', () => {
+    expect(() =>
+      fieldOf(field({ type: 'LOOKUP', validation: { relationField: 'cliente' } })),
+    ).toThrow(UnrepresentableDefinitionError);
+  });
+
   it('uma fórmula sem expressão não se representa', () => {
     expect(() => fieldOf(field({ type: 'FORMULA', validation: { scale: 2 } }))).toThrow(
       UnrepresentableDefinitionError,
@@ -359,6 +388,26 @@ describe('interface → servidor', () => {
     });
   });
 
+  it('valores relacionados seguem com códigos snake_case e só de leitura; os derivados voltam intactos', () => {
+    const f = build({
+      type: 'lookup',
+      key: 'limiteCliente',
+      label: 'Limite',
+      editable: false,
+      serverValidation: { sourceType: 'DECIMAL', scale: 2 },
+      lookup: { relationField: 'clienteFinal', sourceField: 'limiteCredito', onMissing: 'empty' },
+    });
+    const dto = toServer(f).dto;
+    expect(dto).toMatchObject({ type: 'LOOKUP', required: false, readOnly: true });
+    expect(dto?.validation).toEqual({
+      relationField: 'cliente_final',
+      sourceField: 'limite_credito',
+      onMissing: 'empty',
+      sourceType: 'DECIMAL',
+      scale: 2,
+    });
+  });
+
   it('tipos, condições e regras que o servidor ainda não tem são recusados, nunca descartados', () => {
     const currency = build({ type: 'currency', key: 'valor', label: 'Valor', currency: 'AOA' });
     expect(toServer(currency).dto).toBeNull();
@@ -416,6 +465,38 @@ describe('registos', () => {
     defineField({ type: 'text', key: 'velho', label: 'Velho', archived: true }),
     defineField({ type: 'multiselect', key: 'tags', label: 'Tags', options: [] }),
   ];
+
+  it('um valor relacionado com origem decimal chega como número; os outros ficam como vêm', () => {
+    const related = [
+      defineField({
+        type: 'lookup',
+        key: 'limiteCliente',
+        label: 'Limite',
+        editable: false,
+        serverValidation: { sourceType: 'DECIMAL', scale: 2 },
+        lookup: { relationField: 'cliente', sourceField: 'limite', onMissing: 'empty' },
+      }),
+      defineField({
+        type: 'lookup',
+        key: 'nomeCliente',
+        label: 'Nome',
+        editable: false,
+        serverValidation: { sourceType: 'TEXT' },
+        lookup: { relationField: 'cliente', sourceField: 'nome', onMissing: 'empty' },
+      }),
+    ];
+    expect(
+      recordDataFromServer(
+        { limite_cliente: '1500.50', nome_cliente: '10.50' },
+        fieldsByCode(related),
+      ),
+    ).toEqual({ limiteCliente: 1500.5, nomeCliente: '10.50' });
+    expect(recordDataFromServer({ limite_cliente: null }, fieldsByCode(related))).toEqual({
+      limiteCliente: null,
+    });
+    // Só de leitura: nunca viajam de volta.
+    expect(recordDataToServer({ limiteCliente: 1 }, related)).toEqual({});
+  });
 
   it('os valores do servidor trazem chaves camelCase e decimais como número', () => {
     expect(

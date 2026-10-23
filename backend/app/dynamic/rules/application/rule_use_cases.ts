@@ -359,7 +359,9 @@ export class RuleUseCases {
     issues: RuleIssue[]
   ) {
     const usable = new Map(
-      fields.filter((f) => !f.archived && !f.sensitive).map((f) => [f.code, f])
+      fields
+        .filter((f) => !f.archived && !f.sensitive && f.type !== 'LOOKUP')
+        .map((f) => [f.code, f])
     )
     for (const variable of conditionVariables(condition)) {
       if (SUBJECT_VARIABLES.includes(variable) || ENV_VARIABLES.includes(variable)) continue

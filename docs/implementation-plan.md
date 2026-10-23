@@ -477,7 +477,7 @@ Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a
 | 3.2 | Frontend de C10: Entity Designer, publicação e listagem/formulário genérico de registos sobre a API (fim do mock do core dinâmico) | **Concluída** (ver 2c.2) |
 | 3.3 | C12 no servidor: campo FORMULA (gramática restrita → AST, ordem topológica, ciclos) e regras de validação por AST (publicação imutável, simulação, avaliações registadas); FORMULA no designer | **Concluída** (ver 2c.3); LOOKUP e a UI de regras ficam por fazer |
 | 3.4 | Editor de regras (UI) sobre `/rules`: construtor de condições, simulação, publicação, revisões e avaliações | **Concluída** (ver 2c.4) |
-| 3.5 | Tipo LOOKUP (valor lido de um registo referenciado) | Por fazer |
+| 3.5 | Tipo LOOKUP (valor lido em tempo real de um registo referenciado, com a autorização do destino) | **Concluída** (ver 2c.5) |
 | 3.6 | C11 formulários (secções, bindings, condições) | Por fazer |
 | 3.7 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
 | 3.8 | C14 workflows, tarefas e delegações | Por fazer |
@@ -541,6 +541,18 @@ não representa (aninhada, sobre `subject`/`env`, `in`) mostra-se como JSON e gr
 o servidor bloquear a gravação de um registo com a mensagem, gravar com valor dentro da alçada, avaliação FAIL registada, nova revisão, editar, publicar a revisão 2 desactivando a 1; zero erros de página.
 **Não verificado / limites:** o E2E correu por script local (não está no repositório); sem teste de acessibilidade dedicado nem de leitura sem `rule.manage` no browser (só em teste unitário);
 LOOKUP continua por fazer (fatia 3.5); sem remoção de rascunhos (a API não a tem).
+
+### 2c.5 Fatia 3.5 — valores relacionados, LOOKUP (concluída; ver D-039)
+**Servidor.** Campo `LOOKUP` (migration 17) com `validation {relationField, sourceField, onMissing}`; o servidor acrescenta `sourceType` e `scale` do campo de origem. **Nunca se guarda**: lê-se do registo de origem
+em cada `GET`/listagem/escrita (`LookupReader`), segundo a **versão em vigor** da entidade (os registos antigos também o mostram). Só aparece a quem pode ler o registo de origem (permissão `dynamic.read`, modo
+OWNER/`dynamic.all`, políticas ABAC da entidade de destino, regras de campo `HIDDEN`) e, se a origem for sensível, a quem tem `dynamic.sensitive`; caso contrário `null`. Definição verificada ao gravar o rascunho e
+ao publicar: relação existe, activa e é `ENTITY_REFERENCE`; origem existe, de tipo escalar (sem cadeias de lookups, sem multi-selecção/referências); origem sensível ⇒ valor relacionado sensível. Só de leitura, não
+obrigatório, sem valor por omissão, sem pesquisa/filtro/ordenação, fora das regras (C12) e das fórmulas. `onMissing: error` recusa gravar sem a relação (422 `LOOKUP_RELATION_REQUIRED`).
+**Frontend.** O mapper traduz o lookup (códigos snake_case ⇄ chaves camelCase) e converte para número a origem decimal; o designer já tinha a configuração de «Valor relacionado».
+**Verificado:** backend lint, typecheck, format, build e `npm test` (397 testes, migrations numa base limpa); frontend lint, format, `check:generic`, `ng test` (750 testes) e build; E2E em browser real sobre a API real: criar o campo no designer, publicar,
+ver o valor (decimal formatado) na lista e no detalhe, incluindo num registo escrito antes do campo, ver a alteração da origem reflectir-se, e o valor ficar vazio quando uma política impede ler o destino.
+**Não verificado / limites:** o E2E correu por script local, em duas execuções sobre o mesmo ambiente (designer e leitura); sem teste no browser de `onMissing: error`; um valor relacionado cuja origem for retirada do destino
+mostra vazio (a publicação do destino não verifica quem o usa); N leituras por página de resultados (uma por registo de origem distinto, sem cache entre pedidos); `snapshot` (cópia ao gravar) não existe.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

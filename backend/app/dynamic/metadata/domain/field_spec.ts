@@ -21,6 +21,7 @@ import {
 } from '#dynamic/metadata/domain/scalars'
 import { FORMULA_MAX_SCALE, checkFormulaSet, parseFormula } from '#dynamic/metadata/domain/formula'
 import { normalizeFieldPresentation } from '#dynamic/metadata/domain/presentation'
+import { LOOKUP_ON_MISSING, checkLookupSet } from '#dynamic/metadata/domain/lookup'
 import { validateValue } from '#dynamic/metadata/domain/value'
 
 /** Definição de um campo tal como chega da API (a entidade de destino já vem resolvida para id). */
@@ -56,6 +57,7 @@ const VALIDATION_KEYS: Record<FieldType, readonly string[]> = {
   ENTITY_REFERENCE: [],
   USER_REFERENCE: [],
   FORMULA: ['expression', 'scale', 'ast', 'dependencies'],
+  LOOKUP: ['relationField', 'sourceField', 'onMissing', 'sourceType', 'scale'],
 }
 
 const OPTION_TYPES: readonly FieldType[] = ['SELECT', 'RADIO', 'MULTISELECT']
@@ -204,6 +206,18 @@ function checkValidation(
     if (!isInt(v.scale, 0, FORMULA_MAX_SCALE))
       bad('scale', `scale é um inteiro de 0 a ${FORMULA_MAX_SCALE}.`)
   }
+  if (type === 'LOOKUP') {
+    for (const key of ['relationField', 'sourceField']) {
+      if (typeof v[key] !== 'string' || !CODE_PATTERN.test(v[key] as string))
+        bad(key, `${key} é o código de um campo.`)
+    }
+    if (!('onMissing' in v)) v.onMissing = 'empty'
+    if (!(LOOKUP_ON_MISSING as readonly string[]).includes(v.onMissing as string))
+      bad('onMissing', `onMissing é ${LOOKUP_ON_MISSING.join(' ou ')}.`)
+    // Derivados pelo servidor do campo de origem: o que o cliente envia nunca conta.
+    delete v.sourceType
+    delete v.scale
+  }
   return v
 }
 
@@ -319,6 +333,13 @@ export function normalizeField(
   }
 
   const sensitive = input.sensitive === true
+  if (type === 'LOOKUP') {
+    if (input.required === true)
+      add('required', 'LOOKUP_REQUIRED', 'Um valor relacionado não é obrigatório.')
+    if (input.defaultValue !== undefined && input.defaultValue !== null) {
+      add('defaultValue', 'DEFAULT_NOT_ALLOWED', 'Um valor relacionado não tem valor por omissão.')
+    }
+  }
   if (type === 'FORMULA') {
     if (input.required === true)
       add('required', 'FORMULA_REQUIRED', 'O resultado de uma fórmula não é obrigatório.')
@@ -353,7 +374,7 @@ export function normalizeField(
     position,
     referenceEntityId,
     sensitive,
-    readOnly: input.readOnly === true || type === 'FORMULA',
+    readOnly: input.readOnly === true || type === 'FORMULA' || type === 'LOOKUP',
     archived: false,
     presentation,
   }
@@ -419,7 +440,7 @@ export function normalizeFields(raw: unknown, issues: Issue[]): FieldSpec[] {
   const indexOf = new Map(
     specs.map((spec) => [spec.code, raw.findIndex((r) => isRecord(r) && r.code === spec.code)])
   )
-  for (const { code, issue } of checkFormulaSet(specs)) {
+  for (const { code, issue } of [...checkFormulaSet(specs), ...checkLookupSet(specs)]) {
     issues.push({ ...issue, path: `fields[${indexOf.get(code)}].${issue.path}` })
   }
   return specs

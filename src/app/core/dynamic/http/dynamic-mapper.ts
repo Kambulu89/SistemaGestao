@@ -73,6 +73,7 @@ const TYPE_TO_SERVER: Readonly<Partial<Record<FieldType, string>>> = {
   'entity-reference': 'ENTITY_REFERENCE',
   'user-reference': 'USER_REFERENCE',
   formula: 'FORMULA',
+  lookup: 'LOOKUP',
 };
 const TYPE_FROM_SERVER = new Map(
   Object.entries(TYPE_TO_SERVER).map(([type, server]) => [server, type as FieldType]),
@@ -169,6 +170,12 @@ function fieldFromServer(dto: FieldDto): FieldDefinition {
   delete server['ast'];
   delete server['dependencies'];
   delete server['expression'];
+  // O que a interface edita num valor relacionado vive em `lookup`; `sourceType` e `scale` (derivados pelo servidor) ficam em serverValidation.
+  if (type === 'lookup') {
+    delete server['relationField'];
+    delete server['sourceField'];
+    delete server['onMissing'];
+  }
   const key = checkedFieldKey(dto.code);
 
   const defaultValue =
@@ -226,6 +233,21 @@ function fieldFromServer(dto: FieldDto): FieldDefinition {
         type,
         scale,
         formula: { source: mapFormulaIdentifiers(expression, fieldKeyOf) },
+      } as FieldInput;
+      break;
+    }
+    case 'lookup': {
+      const { relationField, sourceField, onMissing } = dto.validation;
+      if (typeof relationField !== 'string' || typeof sourceField !== 'string')
+        throw new UnrepresentableDefinitionError(`O campo "${dto.code}" não tem origem.`);
+      input = {
+        ...base,
+        type,
+        lookup: {
+          relationField: checkedFieldKey(relationField),
+          sourceField: checkedFieldKey(sourceField),
+          onMissing: onMissing === 'error' ? 'error' : 'empty',
+        },
       } as FieldInput;
       break;
     }
@@ -373,6 +395,11 @@ export function fieldToServer(
     validation['scale'] = scale;
   }
 
+  if (field.type === 'lookup') {
+    validation['relationField'] = fieldCodeOf(field.lookup.relationField);
+    validation['sourceField'] = fieldCodeOf(field.lookup.sourceField);
+    validation['onMissing'] = field.lookup.onMissing;
+  }
   if (field.type === 'formula') {
     validation['expression'] = mapFormulaIdentifiers(field.formula.source, fieldCodeOf);
     validation['scale'] = scale;
@@ -412,7 +439,7 @@ export function fieldToServer(
       ? { referenceEntityCode: entityCodeOf(field.entityKey) }
       : {}),
     sensitive: field.sensitivity === 'sensitive',
-    readOnly: field.editable === false || field.type === 'formula',
+    readOnly: field.editable === false || field.type === 'formula' || field.type === 'lookup',
     presentation,
   };
 }
@@ -424,6 +451,21 @@ type FieldsByCode = ReadonlyMap<string, FieldDefinition>;
 export const fieldsByCode = (fields: readonly FieldDefinition[]): FieldsByCode =>
   new Map(fields.map((f) => [fieldCodeOf(f.key), f]));
 
+/** Decimais, fórmulas e valores relacionados cuja origem é decimal chegam como texto. */
+function isDecimalValue(field: FieldDefinition): boolean {
+  if (field.type === 'decimal' || field.type === 'formula') return true;
+  return (
+    field.type === 'lookup' &&
+    ['DECIMAL', 'FORMULA'].includes(String(field.serverValidation?.['sourceType']))
+  );
+}
+
+function decimalScaleOf(field: FieldDefinition): number {
+  if (field.type === 'decimal' || field.type === 'formula') return field.scale ?? DEFAULT_SCALE;
+  const scale = field.serverValidation?.['scale'];
+  return typeof scale === 'number' ? scale : DEFAULT_SCALE;
+}
+
 /** `data` do servidor → valores da interface (chaves `camelCase`, decimais como número). */
 export function recordDataFromServer(
   data: Readonly<Record<string, unknown>>,
@@ -433,8 +475,8 @@ export function recordDataFromServer(
   for (const [code, value] of Object.entries(data)) {
     const field = fields.get(code);
     result[checkedFieldKey(code)] = (
-      (field?.type === 'decimal' || field?.type === 'formula') && typeof value === 'string'
-        ? decimalToNumber(value, field.scale ?? DEFAULT_SCALE)
+      typeof value === 'string' && field && isDecimalValue(field)
+        ? decimalToNumber(value, decimalScaleOf(field))
         : value
     ) as FieldValue;
   }

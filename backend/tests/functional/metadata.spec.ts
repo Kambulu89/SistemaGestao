@@ -552,7 +552,7 @@ test.group('metadados | versões, compatibilidade e imutabilidade', (group) => {
       code: 'coisa',
       name: 'Coisa',
       fields: [
-        { code: 'total', label: 'Total', type: 'LOOKUP' },
+        { code: 'total', label: 'Total', type: 'CURRENCY' },
         {
           code: 'destino',
           label: 'Destino',

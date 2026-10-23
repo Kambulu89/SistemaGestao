@@ -12,6 +12,8 @@ import {
 import { resolveListQuery } from '#dynamic/metadata/domain/list_query'
 import { isSearchable } from '#dynamic/metadata/domain/presentation'
 import { validationError } from '#dynamic/metadata/application/entity_use_cases'
+import { resourceOf } from '#dynamic/metadata/application/access_resource'
+import { LookupReader } from '#dynamic/metadata/application/lookup_reader'
 import { currentRecordRules } from '#dynamic/metadata/application/record_rules'
 import type {
   AccessControl,
@@ -63,7 +65,11 @@ export class RecordUseCases {
     private readonly records: RecordStore,
     private readonly lookup: ReferenceLookup,
     private readonly access: AccessControl
-  ) {}
+  ) {
+    this.lookups = new LookupReader(uow, entities, versions, records, access)
+  }
+
+  private readonly lookups: LookupReader
 
   async create(
     context: TenantContext,
@@ -186,12 +192,19 @@ export class RecordUseCases {
     const showSensitive =
       versions.some((v) => v.fields.some((f) => f.sensitive)) &&
       (await this.canSeeSensitive(context, entity))
-    return {
-      items: rows.map((row) =>
-        this.toView(entity, versions, row, decision.hiddenFields, showSensitive)
-      ),
-      total,
-    }
+    const items = rows.map((row) =>
+      this.toView(entity, versions, row, decision.hiddenFields, showSensitive)
+    )
+    await this.attachLookups(
+      context,
+      entity,
+      versions,
+      rows,
+      items,
+      decision.hiddenFields,
+      showSensitive
+    )
+    return { items, total }
   }
 
   async update(
@@ -313,12 +326,7 @@ export class RecordUseCases {
     entity: EntityDefinition,
     extra: { unitId?: string | null; ownerMembershipId?: string | null }
   ) {
-    return {
-      entity: entity.code,
-      ownershipMode: entity.ownershipMode,
-      ...(extra.unitId ? { unitId: extra.unitId } : {}),
-      ...(extra.ownerMembershipId ? { ownerMembershipId: extra.ownerMembershipId } : {}),
-    }
+    return resourceOf(entity, extra)
   }
 
   private async decide(
@@ -500,7 +508,54 @@ export class RecordUseCases {
       versions.some((v) => v.fields.some((f) => f.sensitive)) &&
       (await this.canSeeSensitive(context, entity))
     const view = this.toView(entity, versions, row, decision.hiddenFields, showSensitive)
-    return decision.allowed ? view : { ...view, data: {} }
+    if (!decision.allowed) return { ...view, data: {} }
+    await this.attachLookups(
+      context,
+      entity,
+      versions,
+      [row],
+      [view],
+      decision.hiddenFields,
+      showSensitive
+    )
+    return view
+  }
+
+  /**
+   * Junta os valores relacionados (lidos em tempo real do registo de origem, com a autorização do destino).
+   * Seguem as mesmas regras de visibilidade dos restantes campos: escondidos ou sensíveis sem direito, nunca.
+   */
+  private async attachLookups(
+    context: TenantContext,
+    entity: EntityDefinition,
+    versions: readonly SchemaVersion[],
+    rows: readonly DynamicRecord[],
+    views: readonly RecordView[],
+    hiddenFields: readonly string[],
+    showSensitive: boolean
+  ) {
+    const lookupFields = (current: SchemaVersion | null) =>
+      (current?.fields ?? []).filter((f) => f.type === 'LOOKUP' && !f.archived)
+    // Os valores relacionados seguem a versão em vigor, mesmo nos registos escritos com versões anteriores.
+    const current =
+      versions.find((v) => v.revision === entity.publishedVersion) ??
+      (entity.publishedVersion === null
+        ? null
+        : await this.uow.run(
+            (scope) =>
+              this.versions.findByRevision(scope, entity.id, entity.publishedVersion as number),
+            context
+          ))
+    const fields = lookupFields(current)
+    if (!current || fields.length === 0) return
+    const values = await this.lookups.read(context, rows, current)
+    const hidden = new Set(hiddenFields)
+    for (const view of views) {
+      for (const field of fields) {
+        if (hidden.has(field.code) || (field.sensitive && !showSensitive)) continue
+        view.data[field.code] = values.get(view.id)?.[field.code] ?? null
+      }
+    }
   }
 
   private toView(

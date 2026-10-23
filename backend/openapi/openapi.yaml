@@ -86,13 +86,14 @@ components:
               ENTITY_REFERENCE,
               USER_REFERENCE,
               FORMULA,
+              LOOKUP,
             ]
         required: { type: boolean }
         defaultValue: { nullable: true }
         validation:
           type: object
           additionalProperties: true
-          description: 'minLength, maxLength, pattern, min, max, precision, scale, minSelected, maxSelected, unique (conforme o tipo). FORMULA: expression (texto; + - * / round min max abs e códigos de campos numéricos) e scale (0 a 10); a árvore e as dependências são calculadas pelo servidor.'
+          description: 'minLength, maxLength, pattern, min, max, precision, scale, minSelected, maxSelected, unique (conforme o tipo). FORMULA: expression (texto; + - * / round min max abs e códigos de campos numéricos) e scale (0 a 10); a árvore e as dependências são calculadas pelo servidor. LOOKUP (valor relacionado, lido em tempo real do registo de origem; só de leitura): relationField (campo ENTITY_REFERENCE desta entidade), sourceField (campo escalar da entidade de destino) e onMissing (empty ou error); o servidor acrescenta sourceType e scale. O valor só aparece a quem pode ler o registo de origem.'
         options:
           type: array
           items:

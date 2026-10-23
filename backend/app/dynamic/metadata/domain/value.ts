@@ -136,6 +136,8 @@ export function validateValue(spec: FieldSpec, raw: unknown, previous: unknown):
     }
     case 'FORMULA':
       return fail('READ_ONLY', 'O resultado de uma fórmula é calculado pelo servidor.')
+    case 'LOOKUP':
+      return fail('READ_ONLY', 'Um valor relacionado é lido do registo de origem.')
     case 'ENTITY_REFERENCE':
     case 'USER_REFERENCE':
       return typeof raw === 'string' && UUID.test(raw)

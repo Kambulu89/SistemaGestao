@@ -473,6 +473,14 @@ como **texto**, números como número, booleanos `true/false`; campos sensíveis
 Permissões: `rule.read` → `configuration.rules.read`; `rule.manage` → também `configuration.rules.manage` (conveniência de navegação; o servidor decide). **Fora desta fatia:** condições aninhadas e sobre o
 utilizador/tempo, eliminar rascunhos, comparar revisões, filtros por estado, e o tipo LOOKUP (fatia 3.5).
 
+## D-039 Valores relacionados (LOOKUP): leitura em tempo real, nada copiado (aceite — fatia 3.5)
+A spec pede declarar «live ou snapshot». Escolheu-se **live**: o valor relacionado **não se guarda** no registo; lê-se do registo de origem em cada resposta. Assim a autorização do destino (RBAC + modo OWNER + ABAC +
+regras de campo + `dynamic.sensitive`) aplica-se **a cada leitura** e o valor nunca sobrevive a uma mudança de permissões nem fica desactualizado; a contrapartida é não se poder pesquisar, filtrar, ordenar nem usar em regras
+ou fórmulas (o servidor recusa-o). Definição: `{relationField, sourceField, onMissing}` em `validation`; o servidor deriva `sourceType`/`scale` (a interface precisa deles para formatar). Segue a versão **em vigor** da entidade,
+pelo que os registos de versões anteriores também mostram o valor. Sem cadeias (origem não pode ser outro lookup), tipos escalares apenas, e uma origem sensível exige um valor relacionado sensível. Quem não pode ler o destino vê `null`:
+nem a existência nem o conteúdo se revelam (como o 404 de IDs alheios). `onMissing: error` valida apenas a presença da relação ao escrever (a existência já era validada pela referência). **Limites:** leitura N+1 por registo de origem
+distinto (sem cache entre pedidos); retirar a origem do destino deixa o valor vazio sem avisar quem a usa; `snapshot` por fazer; a aplicação da permissão faz-se com os mesmos `AccessControl` e ports de D-035.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

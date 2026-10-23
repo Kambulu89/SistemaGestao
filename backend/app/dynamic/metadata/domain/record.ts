@@ -5,6 +5,7 @@ import {
   type Issue,
 } from '#dynamic/metadata/domain/field_types'
 import { computeFormulaValues } from '#dynamic/metadata/domain/formula'
+import { missingLookupRelations } from '#dynamic/metadata/domain/lookup'
 import { isSearchable } from '#dynamic/metadata/domain/presentation'
 import { validateValue } from '#dynamic/metadata/domain/value'
 
@@ -92,6 +93,7 @@ export function validateRecordData(
     if (result === null) delete values[code]
     else values[code] = result
   }
+  issues.push(...missingLookupRelations(fields, values))
   return { values, issues }
 }
 
