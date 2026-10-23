@@ -71,6 +71,11 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   units_of_measure: 'settings.read',
   sequences: 'settings.read',
   tenant_features: 'module.read',
+  entity_definitions: 'entity.read',
+  entity_schema_versions: 'entity.read',
+  field_definitions: 'entity.read',
+  dynamic_records: 'dynamic.read',
+  dynamic_unique_values: 'dynamic.read',
 }
 
 /** Tabelas de tenant que não são auditadas, com o motivo (o teste de conformidade exige o resto). */

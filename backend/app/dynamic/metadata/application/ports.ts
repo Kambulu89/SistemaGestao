@@ -1,5 +1,7 @@
 import type { TenantContext, TenantScope } from '#core/tenancy/index'
 import type { FieldSpec } from '#dynamic/metadata/domain/field_types'
+import type { EntityPresentation } from '#dynamic/metadata/domain/presentation'
+import type { ResolvedFilter, ResolvedSort } from '#dynamic/metadata/domain/list_query'
 import type { RecordValues } from '#dynamic/metadata/domain/record'
 
 export type EntityStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
@@ -15,6 +17,7 @@ export interface EntityDefinition {
   /** Revisão publicada em vigor (os registos novos usam sempre esta). */
   publishedVersion: number | null
   ownershipMode: OwnershipMode
+  presentation: EntityPresentation
   version: number
   createdAt: Date
   updatedAt: Date
@@ -43,9 +46,11 @@ export interface DynamicRecord {
   version: number
   createdAt: Date
   updatedAt: Date
+  createdByMembershipId: string | null
+  updatedByMembershipId: string | null
 }
 
-export interface EntityStore {
+export interface EntityStore extends EntityRemoval {
   /** Serializa as alterações a uma entidade (lock até ao fim da transacção). */
   lock(scope: TenantScope, entityId: string): Promise<void>
   list(scope: TenantScope): Promise<EntityDefinition[]>
@@ -54,7 +59,13 @@ export interface EntityStore {
   /** `null` se o código já existir neste tenant. */
   insert(
     scope: TenantScope,
-    values: { code: string; name: string; description: string | null; ownershipMode: OwnershipMode }
+    values: {
+      code: string
+      name: string
+      description: string | null
+      ownershipMode: OwnershipMode
+      presentation: EntityPresentation
+    }
   ): Promise<EntityDefinition | null>
   /** Controlo de versão: 404 se não existe, 409 `VERSION_CONFLICT` se mudou. */
   update(
@@ -65,10 +76,16 @@ export interface EntityStore {
       name?: string
       description?: string | null
       ownershipMode?: OwnershipMode
+      presentation?: EntityPresentation
       status?: EntityStatus
       publishedVersion?: number
     }
   ): Promise<EntityDefinition>
+}
+
+export interface EntityRemoval {
+  /** Apaga uma entidade que nunca foi publicada. Recusa (409 `ENTITY_IN_USE`) se outra a referencia. */
+  delete(scope: TenantScope, id: string): Promise<void>
 }
 
 export interface VersionStore {
@@ -99,6 +116,8 @@ export interface RecordFilter {
   unitIds?: readonly string[]
   limit: number
   offset: number
+  sort: ResolvedSort | null
+  filters: ResolvedFilter[]
 }
 
 export interface RecordWrite {
@@ -115,7 +134,11 @@ export interface RecordStore {
     values: RecordWrite & { ownerMembershipId: string | null; organizationUnitId: string | null }
   ): Promise<DynamicRecord>
   find(scope: TenantScope, entityId: string, id: string): Promise<DynamicRecord | null>
-  list(scope: TenantScope, entityId: string, filter: RecordFilter): Promise<DynamicRecord[]>
+  list(
+    scope: TenantScope,
+    entityId: string,
+    filter: RecordFilter
+  ): Promise<{ rows: DynamicRecord[]; total: number }>
   update(
     scope: TenantScope,
     id: string,

@@ -1,6 +1,12 @@
 import { ApiError } from '#core/http/api_error'
 import { LucidTenantScope, type TenantScope } from '#core/tenancy/index'
-import type { FieldOption, FieldSpec, FieldType } from '#dynamic/metadata/domain/field_types'
+import type {
+  FieldOption,
+  FieldPresentation,
+  FieldSpec,
+  FieldType,
+} from '#dynamic/metadata/domain/field_types'
+import type { EntityPresentation } from '#dynamic/metadata/domain/presentation'
 import type {
   DynamicRecord,
   EntityDefinition,
@@ -67,13 +73,14 @@ interface EntityRow {
   status: EntityStatus
   published_version: number | null
   ownership_mode: OwnershipMode
+  presentation: EntityPresentation
   version: number
   created_at: Date
   updated_at: Date
 }
 
 const ENTITY_COLUMNS = `id, code, name, description, kind, status, published_version, ownership_mode,
-  version, created_at, updated_at`
+  presentation, version, created_at, updated_at`
 
 const toEntity = (r: EntityRow): EntityDefinition => ({
   id: r.id,
@@ -84,6 +91,7 @@ const toEntity = (r: EntityRow): EntityDefinition => ({
   status: r.status,
   publishedVersion: r.published_version,
   ownershipMode: r.ownership_mode,
+  presentation: r.presentation,
   version: r.version,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -124,12 +132,19 @@ export class LucidEntityStore implements EntityStore {
 
   async insert(
     scope: TenantScope,
-    v: { code: string; name: string; description: string | null; ownershipMode: OwnershipMode }
+    v: {
+      code: string
+      name: string
+      description: string | null
+      ownershipMode: OwnershipMode
+      presentation: EntityPresentation
+    }
   ) {
     const result = await trxOf(scope).rawQuery(
       `insert into entity_definitions
-         (tenant_id, code, name, description, ownership_mode, created_by_membership_id, updated_by_membership_id)
-       values (?, ?, ?, ?, ?, ?, ?)
+         (tenant_id, code, name, description, ownership_mode, presentation,
+          created_by_membership_id, updated_by_membership_id)
+       values (?, ?, ?, ?, ?, ?::jsonb, ?, ?)
        on conflict (tenant_id, code) do nothing
        returning ${ENTITY_COLUMNS}`,
       [
@@ -138,12 +153,28 @@ export class LucidEntityStore implements EntityStore {
         v.name,
         v.description as never,
         v.ownershipMode,
+        json(v.presentation),
         actorOf(scope),
         actorOf(scope),
       ]
     )
     const [row] = result.rows as EntityRow[]
     return row ? toEntity(row) : null
+  }
+
+  async delete(scope: TenantScope, id: string) {
+    try {
+      await trxOf(scope).rawQuery('delete from entity_definitions where tenant_id = ? and id = ?', [
+        tenantOf(scope),
+        id,
+      ])
+    } catch (error) {
+      // 23503: outra entidade tem um campo de referência para esta.
+      if ((error as { code?: string }).code === '23503') {
+        throw ApiError.conflict('ENTITY_IN_USE', 'Outra entidade refere esta entidade.')
+      }
+      throw error
+    }
   }
 
   async update(
@@ -154,6 +185,7 @@ export class LucidEntityStore implements EntityStore {
       name?: string
       description?: string | null
       ownershipMode?: OwnershipMode
+      presentation?: EntityPresentation
       status?: EntityStatus
       publishedVersion?: number
     }
@@ -169,6 +201,7 @@ export class LucidEntityStore implements EntityStore {
           name: patch.name,
           description: patch.description,
           ownership_mode: patch.ownershipMode,
+          presentation: patch.presentation === undefined ? undefined : json(patch.presentation),
           status: patch.status,
           published_version: patch.publishedVersion,
         }
@@ -199,6 +232,7 @@ interface FieldRow {
   sensitive: boolean
   read_only: boolean
   archived: boolean
+  presentation: FieldPresentation
 }
 
 const VERSION_COLUMNS = 'id, entity_definition_id, revision, published_at'
@@ -216,6 +250,7 @@ const toField = (r: FieldRow): FieldSpec => ({
   sensitive: r.sensitive,
   readOnly: r.read_only,
   archived: r.archived,
+  presentation: r.presentation,
 })
 
 export class LucidVersionStore implements VersionStore {
@@ -306,7 +341,7 @@ export class LucidVersionStore implements VersionStore {
     if (!row) return null
     const fields = await trxOf(scope).rawQuery(
       `select code, label, field_type, required, default_value, validation, options, position,
-              reference_entity_id, sensitive, read_only, archived
+              reference_entity_id, sensitive, read_only, archived, presentation
          from field_definitions where tenant_id = ? and entity_schema_version_id = ? order by position`,
       [tenantOf(scope), row.id]
     )
@@ -324,9 +359,9 @@ export class LucidVersionStore implements VersionStore {
       await trxOf(scope).rawQuery(
         `insert into field_definitions
            (tenant_id, entity_schema_version_id, code, label, field_type, required, default_value,
-            validation, options, position, reference_entity_id, sensitive, read_only, archived,
+            validation, options, position, reference_entity_id, sensitive, read_only, archived, presentation,
             created_by_membership_id, updated_by_membership_id)
-         values (?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?, ?)`,
+         values (?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?, ?, ?, ?, ?, ?::jsonb, ?, ?)`,
         [
           tenantOf(scope),
           versionId,
@@ -342,6 +377,7 @@ export class LucidVersionStore implements VersionStore {
           f.sensitive,
           f.readOnly,
           f.archived,
+          json(f.presentation),
           actorOf(scope),
           actorOf(scope),
         ]
@@ -364,10 +400,13 @@ interface RecordRow {
   version: number
   created_at: Date
   updated_at: Date
+  created_by_membership_id: string | null
+  updated_by_membership_id: string | null
 }
 
 const RECORD_COLUMNS = `id, entity_definition_id, schema_version_id, owner_membership_id, organization_unit_id,
-  data, sensitive_data, archived_at, version, created_at, updated_at`
+  data, sensitive_data, archived_at, version, created_at, updated_at,
+  created_by_membership_id, updated_by_membership_id`
 
 const toRecord = (r: RecordRow): DynamicRecord => ({
   id: r.id,
@@ -381,7 +420,40 @@ const toRecord = (r: RecordRow): DynamicRecord => ({
   version: r.version,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+  createdByMembershipId: r.created_by_membership_id,
+  updatedByMembershipId: r.updated_by_membership_id,
 })
+
+/** Comparação de igualdade por tipo, sobre `data ->> código` (o valor chega já normalizado). */
+const FILTER_EXPRESSION: Record<string, string> = {
+  TEXT: 'lower(data ->> ?) = ?',
+  EMAIL: 'lower(data ->> ?) = ?',
+  PHONE: 'lower(data ->> ?) = ?',
+  URL: 'lower(data ->> ?) = lower(?)',
+  NUMBER: '(data ->> ?)::bigint = ?',
+  DECIMAL: '(data ->> ?)::numeric = ?::numeric',
+  BOOLEAN: '(data ->> ?)::boolean = ?',
+}
+
+/** Ordenação por tipo (números e booleanos pelo valor, texto sem distinção de maiúsculas); desempate por id. */
+function orderBy(sort: RecordFilter['sort']): { sql: string; params: string[] } {
+  if (!sort) return { sql: 'created_at desc, id', params: [] }
+  const direction = sort.direction === 'desc' ? 'desc' : 'asc'
+  if (sort.kind === 'SYSTEM') return { sql: `${sort.column} ${direction}, id`, params: [] }
+  const expression: Record<string, string> = {
+    TEXT: 'lower(data ->> ?)',
+    EMAIL: 'lower(data ->> ?)',
+    PHONE: 'lower(data ->> ?)',
+    URL: 'lower(data ->> ?)',
+    NUMBER: '(data ->> ?)::bigint',
+    DECIMAL: '(data ->> ?)::numeric',
+    BOOLEAN: '(data ->> ?)::boolean',
+  }
+  return {
+    sql: `${expression[sort.field.type] ?? 'data ->> ?'} ${direction} nulls last, id`,
+    params: [sort.field.code],
+  }
+}
 
 export class LucidRecordStore implements RecordStore {
   async insert(
@@ -434,16 +506,30 @@ export class LucidRecordStore implements RecordStore {
       params.push(f.ownerMembershipId)
     }
     if (f.unitIds) {
-      if (f.unitIds.length === 0) return []
+      if (f.unitIds.length === 0) return { rows: [], total: 0 }
       where.push(`organization_unit_id in (${placeholders(f.unitIds)})`)
       params.push(...f.unitIds)
     }
+    // O código do campo nunca entra no SQL como texto: vai como parâmetro, já validado contra a versão.
+    for (const { field, value } of f.filters) {
+      where.push(`${FILTER_EXPRESSION[field.type] ?? FILTER_EXPRESSION.TEXT}`)
+      params.push(field.code, value)
+    }
+    const order = orderBy(f.sort)
+    const base = where.join(' and ')
     const result = await trxOf(scope).rawQuery(
-      `select ${RECORD_COLUMNS} from dynamic_records where ${where.join(' and ')}
-        order by created_at desc, id limit ? offset ?`,
-      [...(params as never[]), f.limit, f.offset]
+      `select ${RECORD_COLUMNS} from dynamic_records where ${base}
+        order by ${order.sql} limit ? offset ?`,
+      [...(params as never[]), ...(order.params as never[]), f.limit, f.offset]
     )
-    return (result.rows as RecordRow[]).map(toRecord)
+    const count = await trxOf(scope).rawQuery(
+      `select count(*)::int as total from dynamic_records where ${base}`,
+      params as never[]
+    )
+    return {
+      rows: (result.rows as RecordRow[]).map(toRecord),
+      total: (count.rows as { total: number }[])[0].total,
+    }
   }
 
   async update(scope: TenantScope, id: string, expectedVersion: number, v: RecordWrite) {

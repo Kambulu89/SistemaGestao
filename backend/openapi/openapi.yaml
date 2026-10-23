@@ -104,6 +104,21 @@ components:
           { type: string, description: 'Entidade de destino (ENTITY_REFERENCE).' }
         sensitive: { type: boolean }
         readOnly: { type: boolean }
+        presentation: { $ref: '#/components/schemas/FieldPresentation' }
+    FieldPresentation:
+      type: object
+      description: 'Apresentação do campo. searchable/filterable/sortable só nos tipos que a listagem suporta e nunca em campos sensíveis.'
+      properties:
+        description: { type: string, maxLength: 500 }
+        placeholder: { type: string, maxLength: 160 }
+        searchable: { type: boolean }
+        filterable: { type: boolean }
+        sortable: { type: boolean }
+    EntityPresentation:
+      type: object
+      properties:
+        pluralName: { type: string, maxLength: 160 }
+        icon: { type: string, pattern: '^[a-z][a-z0-9-]{0,39}$' }
   responses:
     Error:
       description: Erro no formato comum.
@@ -2066,6 +2081,7 @@ paths:
                 description: { type: string, nullable: true }
                 kind: { type: string, enum: [DYNAMIC] }
                 ownershipMode: { type: string, enum: [TENANT, UNIT, OWNER] }
+                presentation: { $ref: '#/components/schemas/EntityPresentation' }
                 fields: { type: array, items: { $ref: '#/components/schemas/FieldInput' } }
       responses:
         '201': { description: 'Entidade, rascunho (revisão 1) e versões.' }
@@ -2100,11 +2116,24 @@ paths:
                 name: { type: string }
                 description: { type: string, nullable: true }
                 ownershipMode: { type: string, enum: [TENANT, UNIT, OWNER] }
+                presentation: { $ref: '#/components/schemas/EntityPresentation' }
       responses:
         '200': { description: Entidade actualizada. }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Remove uma entidade que nunca foi publicada (entity.design)
+      description: 'Uma entidade publicada não se remove (arquiva-se). Recusada se outra entidade a referencia (`ENTITY_IN_USE`).'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removida. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /entity-definitions/{id}/draft:
     put:
       summary: Substitui os campos do rascunho (entity.design)
@@ -2210,7 +2239,9 @@ paths:
     get:
       summary: Registos de uma entidade (dynamic.read)
       description: |
-        `q` pesquisa nos campos de texto **não sensíveis**. Em entidades de modo OWNER só se vêem os registos próprios
+        Filtros por valor exacto: `filter.<campo>=valor` (até 10; só campos filtráveis e não sensíveis). Um campo escondido por
+        regra de campo não ordena, filtra nem pesquisa. A resposta traz `meta.total`, `meta.limit` e `meta.offset`.
+        `q` pesquisa nos campos de texto **não sensíveis** e pesquisáveis. Em entidades de modo OWNER só se vêem os registos próprios
         (salvo `dynamic.all`); em modo UNIT, os das unidades do âmbito do actor.
       security: [{ sessionCookie: [] }]
       parameters:

@@ -505,6 +505,44 @@ test.group('metadados | versões, compatibilidade e imutabilidade', (group) => {
     assert.equal(stale.body().error.code, 'VERSION_CONFLICT')
   })
 
+  test('uma entidade nunca publicada remove-se; uma publicada ou referenciada não', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    const draft = await must<Detail>(
+      await http.post('/api/v1/entity-definitions', { code: 'rascunho', name: 'Rascunho' }),
+      201
+    )
+    const user = await must<Detail>(
+      await http.post('/api/v1/entity-definitions', {
+        code: 'depende',
+        name: 'Depende',
+        fields: [
+          {
+            code: 'alvo',
+            label: 'Alvo',
+            type: 'ENTITY_REFERENCE',
+            referenceEntityCode: 'rascunho',
+          },
+        ],
+      }),
+      201
+    )
+    const inUse = await http.delete(`/api/v1/entity-definitions/${draft.entity.id}`)
+    inUse.assertStatus(409)
+    assert.equal(inUse.body().error.code, 'ENTITY_IN_USE')
+    ;(await http.delete(`/api/v1/entity-definitions/${user.entity.id}`)).assertStatus(204)
+    ;(await http.delete(`/api/v1/entity-definitions/${draft.entity.id}`)).assertStatus(204)
+    ;(await http.get(`/api/v1/entity-definitions/${draft.entity.id}`)).assertStatus(404)
+    assert.lengthOf((await http.get('/api/v1/entity-definitions')).body().data, 0)
+
+    const published = await publishedVehicle(http)
+    const refused = await http.delete(`/api/v1/entity-definitions/${published.entity.id}`)
+    refused.assertStatus(409)
+    assert.equal(refused.body().error.code, 'ENTITY_PUBLISHED')
+  })
+
   test('tipos por implementar e referências inválidas são recusados na definição', async ({
     client,
     assert,
@@ -655,6 +693,7 @@ test.group('metadados | unicidade, referências e isolamento', (group) => {
       }),
       201
     )
+    assert.equal(detailA.draft?.fields[0].referenceEntityCode, 'garage')
     await must(
       await a.http.post(`/api/v1/entity-definitions/${detailA.entity.id}/publish`, {
         expectedVersion: detailA.entity.version,
@@ -853,7 +892,11 @@ test.group('metadados | autorização, campos sensíveis e modos de propriedade'
     assert.isAbove(audit.length, 0)
     assert.notInclude(JSON.stringify(audit), 'segredo-do-registo')
     const logged = (await http.get('/api/v1/audit-logs?resourceType=dynamic_records')).body().data
-    assert.notInclude(JSON.stringify(logged), 'segredo-do-registo')
+    assert.isAbove(logged.length, 0) // com audit.read (administrador) o histórico do registo existe…
+    assert.include(JSON.stringify(logged), plate(1)) // …com os valores não sensíveis…
+    assert.notInclude(JSON.stringify(logged), 'segredo-do-registo') // …e nunca os sensíveis.
+    // Quem só pode ler registos (sem audit.read) não vê o histórico.
+    ;(await clerk.http.get('/api/v1/audit-logs?resourceType=dynamic_records')).assertStatus(403)
   })
 
   test('políticas ABAC restringem por entidade (resource.entity) e regras de campo escondem valores', async ({
@@ -1029,5 +1072,266 @@ test.group('metadados | autorização, campos sensíveis e modos de propriedade'
     })
     locked.assertStatus(409)
     assert.equal(locked.body().error.code, 'OWNERSHIP_LOCKED')
+  })
+})
+
+test.group('metadados | apresentação, ordenação, filtros e total', (group) => {
+  group.setup(async () => {
+    await iamServices().syncCatalog.execute()
+  })
+  group.each.setup(async () => {
+    await resetAuthState()
+    return async () => {
+      await deleteTestTenants()
+      await deleteTestUsers()
+    }
+  })
+
+  const seed = async (http: Http) => {
+    const rows = [
+      { matricula: plate(1), marca: 'Toyota', ano: 2020, preco: '9.00', tipo: 'car' },
+      { matricula: plate(2), marca: 'Volvo', ano: 2015, preco: '10.00', tipo: 'truck' },
+      { matricula: plate(3), marca: 'toyota', ano: 2022, preco: '100.50', tipo: 'car' },
+      { matricula: plate(4), marca: 'Audi', ano: 2018, preco: '2.25', tipo: 'truck' },
+      { matricula: plate(5), marca: 'Opel', ano: 2020, preco: '50.00', tipo: 'car' },
+    ]
+    for (const data of rows) await must(await http.post(records, { data }), 201)
+  }
+  const plates = async (http: Http, query: string) => {
+    const response = await http.get(`${records}?${query}`)
+    response.assertStatus(200)
+    return {
+      plates: response.body().data.map((r: any) => r.data.matricula) as string[],
+      meta: response.body().meta,
+    }
+  }
+
+  test('a apresentação da entidade e dos campos é guardada e devolvida; valores inválidos são recusados', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    const detail = await must<Detail>(
+      await http.post('/api/v1/entity-definitions', {
+        code: 'vehicle',
+        name: 'Viatura',
+        presentation: { pluralName: 'Viaturas', icon: 'truck' },
+        fields: [
+          {
+            code: 'marca',
+            label: 'Marca',
+            type: 'TEXT',
+            presentation: {
+              description: 'Fabricante',
+              placeholder: 'Ex.: Toyota',
+              searchable: true,
+              sortable: true,
+            },
+          },
+        ],
+      }),
+      201
+    )
+    assert.deepEqual((detail.entity as any).presentation, { pluralName: 'Viaturas', icon: 'truck' })
+    assert.deepEqual(detail.draft?.fields[0].presentation, {
+      description: 'Fabricante',
+      placeholder: 'Ex.: Toyota',
+      searchable: true,
+      sortable: true,
+    })
+    const changed = await must<Detail>(
+      await http.patch(`/api/v1/entity-definitions/${detail.entity.id}`, {
+        expectedVersion: detail.entity.version,
+        presentation: { pluralName: 'Veículos', icon: 'car' },
+      }),
+      200
+    )
+    assert.equal((changed.entity as any).presentation.pluralName, 'Veículos')
+
+    const badEntity = await http.post('/api/v1/entity-definitions', {
+      code: 'coisa',
+      name: 'Coisa',
+      presentation: { icon: 'Má Icone', alien: 1 },
+    })
+    badEntity.assertStatus(422)
+    assert.sameMembers(
+      badEntity.body().error.details.map((d: any) => `${d.path}:${d.code}`),
+      ['presentation.icon:INVALID_ICON', 'presentation.alien:UNKNOWN_PRESENTATION']
+    )
+    const badFields = await http.post('/api/v1/entity-definitions', {
+      code: 'coisa',
+      name: 'Coisa',
+      fields: [
+        { code: 'texto', label: 'Texto', type: 'TEXTAREA', presentation: { sortable: true } },
+        {
+          code: 'segredo',
+          label: 'Segredo',
+          type: 'TEXT',
+          sensitive: true,
+          presentation: { filterable: true },
+        },
+        {
+          code: 'nota',
+          label: 'Nota',
+          type: 'TEXT',
+          presentation: { description: 5, colour: 'x' },
+        },
+      ],
+    })
+    badFields.assertStatus(422)
+    assert.sameMembers(
+      badFields.body().error.details.map((d: any) => `${d.path}:${d.code}`),
+      [
+        'fields[0].presentation.sortable:NOT_SUPPORTED',
+        'fields[1].presentation.filterable:SENSITIVE',
+        'fields[2].presentation.description:INVALID_TEXT',
+        'fields[2].presentation.colour:UNKNOWN_PRESENTATION',
+      ]
+    )
+  })
+
+  test('total, paginação e ordenação (números e decimais pelo valor, texto sem distinção de maiúsculas)', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    await publishedVehicle(http)
+    await seed(http)
+
+    const first = await plates(http, 'limit=2&offset=0&sort=matricula:asc')
+    assert.deepEqual(first.plates, [plate(1), plate(2)])
+    assert.deepEqual(
+      { total: first.meta.total, limit: first.meta.limit, offset: first.meta.offset },
+      { total: 5, limit: 2, offset: 0 }
+    )
+    assert.deepEqual((await plates(http, 'limit=2&offset=4&sort=matricula:asc')).plates, [plate(5)])
+    // Inteiros pelo valor (2022 > 2020 > 2018 > 2015).
+    const byYear = (await plates(http, 'sort=ano:desc')).plates
+    assert.equal(byYear[0], plate(3))
+    assert.equal(byYear[4], plate(2))
+    // Decimais pelo valor: 2.25 < 9.00 < 10.00 < 50.00 < 100.50 (e não por texto).
+    assert.deepEqual((await plates(http, 'sort=preco:asc')).plates, [
+      plate(4),
+      plate(1),
+      plate(2),
+      plate(5),
+      plate(3),
+    ])
+    // Texto sem distinção de maiúsculas: Audi, Opel, Toyota/toyota, Volvo.
+    const byBrand = (await plates(http, 'sort=marca:asc')).plates
+    assert.equal(byBrand[0], plate(4))
+    assert.equal(byBrand[4], plate(2))
+    assert.deepEqual((await plates(http, 'sort=createdAt:desc')).plates[0], plate(5))
+  })
+
+  test('filtros por valor exacto (texto sem distinção de maiúsculas, inteiros, decimais, listas), com total', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    await publishedVehicle(http)
+    await seed(http)
+
+    const toyota = await plates(http, 'filter.marca=TOYOTA&sort=matricula:asc')
+    assert.deepEqual(toyota.plates, [plate(1), plate(3)])
+    assert.equal(toyota.meta.total, 2)
+    assert.deepEqual((await plates(http, 'filter.ano=2020&sort=matricula:asc')).plates, [
+      plate(1),
+      plate(5),
+    ])
+    assert.deepEqual((await plates(http, 'filter.preco=10&sort=matricula:asc')).plates, [plate(2)])
+    assert.deepEqual((await plates(http, 'filter.tipo=truck&sort=matricula:asc')).plates, [
+      plate(2),
+      plate(4),
+    ])
+    assert.deepEqual(
+      (await plates(http, 'filter.tipo=car&filter.ano=2020&sort=matricula:asc')).plates,
+      [plate(1), plate(5)]
+    )
+    const none = await plates(http, 'filter.marca=ferrari')
+    assert.deepEqual([none.plates.length, none.meta.total], [0, 0])
+    // A pesquisa continua a funcionar em conjunto com filtros.
+    assert.deepEqual((await plates(http, 'q=toyota&filter.ano=2022')).plates, [plate(3)])
+  })
+
+  test('ordenações e filtros inválidos, sensíveis ou desconhecidos são recusados com o caminho', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    await publishedVehicle(http)
+    await seed(http)
+    const refused = async (query: string, path: string, code: string) => {
+      const response = await http.get(`${records}?${query}`)
+      response.assertStatus(422)
+      assert.deepInclude(response.body().error.details[0], { path, code }, query)
+    }
+    await refused('sort=notas:asc', 'sort', 'NOT_SORTABLE') // sensível
+    await refused('sort=inexistente:asc', 'sort', 'NOT_SORTABLE')
+    await refused('sort=ano', 'sort', 'INVALID_SORT')
+    await refused('filter.notas=x', 'filter.notas', 'NOT_FILTERABLE') // sensível
+    await refused('filter.alien=x', 'filter.alien', 'NOT_FILTERABLE')
+    await refused('filter.ano=abc', 'filter.ano', 'INVALID_FILTER')
+    await refused('filter.preco=1.234', 'filter.preco', 'INVALID_FILTER')
+    await refused('filter.tipo=boat', 'filter.tipo', 'INVALID_FILTER')
+    // Nada de SQL: um código com aspas é só um campo desconhecido.
+    await refused("filter.ano'--=1", "filter.ano'--", 'NOT_FILTERABLE')
+  })
+
+  test('uma regra de campo que esconde um campo impede ordenar, filtrar e pesquisar por ele', async ({
+    client,
+    assert,
+  }) => {
+    const { tenant, http } = await setup(client)
+    await publishedVehicle(http)
+    await seed(http)
+    const reader = await memberWith(client, tenant, http, ['dynamic.read'])
+    await must(
+      await http.post('/api/v1/access-policies', {
+        name: 'Marca oculta',
+        resource: 'dynamic',
+        action: 'read',
+        effect: 'ALLOW',
+        status: 'ACTIVE',
+        condition: { op: 'eq', left: { var: 'resource.entity' }, right: { value: 'vehicle' } },
+        fieldRules: [{ field: 'marca', mode: 'HIDDEN' }],
+      }),
+      201
+    )
+    ;(await reader.http.get(`${records}?sort=ano:asc`)).assertStatus(200)
+    for (const query of ['sort=marca:asc', 'filter.marca=audi']) {
+      const response = await reader.http.get(`${records}?${query}`)
+      response.assertStatus(422)
+    }
+    const search = await reader.http.get(`${records}?q=audi`)
+    search.assertStatus(422)
+    assert.equal(search.body().error.details[0].code, 'SEARCH_UNAVAILABLE')
+  })
+
+  test('um campo com searchable=false deixa de entrar na pesquisa de texto', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    const detail = await must<Detail>(
+      await http.post('/api/v1/entity-definitions', {
+        code: 'vehicle',
+        name: 'Viatura',
+        fields: [
+          { code: 'marca', label: 'Marca', type: 'TEXT', presentation: { searchable: false } },
+          { code: 'modelo', label: 'Modelo', type: 'TEXT' },
+        ],
+      }),
+      201
+    )
+    await must(
+      await http.post(`/api/v1/entity-definitions/${detail.entity.id}/publish`, {
+        expectedVersion: detail.entity.version,
+      }),
+      200
+    )
+    await must(await http.post(records, { data: { marca: 'Zeta', modelo: 'Omega' } }), 201)
+    assert.lengthOf((await http.get(`${records}?q=omega`)).body().data, 1)
+    assert.lengthOf((await http.get(`${records}?q=zeta`)).body().data, 0)
   })
 })

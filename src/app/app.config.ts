@@ -27,7 +27,7 @@ import { TenantGateway } from './core/tenant-context/tenant.gateway';
 import { HttpTenantGateway } from './core/tenant-context/http-tenant.gateway';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { MODULE_MANIFESTS } from './core/modules/module-manifests.token';
-import { provideMockBackend } from './core/mock/provide-mock-backend';
+import { provideDynamicBackend } from './core/dynamic/http/provide-dynamic-backend';
 import { ALL_MODULE_MANIFESTS } from './module-catalog';
 
 registerLocaleData(localePt);
@@ -50,8 +50,8 @@ export const appConfig: ApplicationConfig = {
     // Identidade e tenants são HTTP (backend real, sessão em cookie).
     { provide: AuthGateway, useClass: HttpAuthGateway },
     { provide: TenantGateway, useClass: HttpTenantGateway },
-    // Ainda mock: entidades dinâmicas, campos personalizados e registos (sem backend para C10–C15).
-    provideMockBackend(),
+    // Entidades dinâmicas e registos (C10) também são HTTP; campos personalizados ainda sem servidor.
+    provideDynamicBackend(),
     // Recupera a sessão do cookie antes da primeira navegação (os guards já a encontram).
     provideAppInitializer(() => firstValueFrom(inject(AuthService).restore()).catch(() => null)),
     // Instancia o tema no arranque para aplicar a classe `dark` de imediato.

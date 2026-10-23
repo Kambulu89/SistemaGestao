@@ -12,7 +12,7 @@ Documentação: [`docs/architecture.md`](docs/architecture.md) · [`docs/decisio
 - `src/` (raiz): frontend **Angular 22 + Tailwind 4**. Identidade, tenants, membros, convites, organização e perfis, **administração
   da plataforma** (tenants, planos, subscrições), plano e módulos do tenant e configurações (preferências, impostos, unidades,
   sequências) já falam com a API real (sessão em cookie `HttpOnly`, CSRF, `X-Tenant-Id`; módulos e funcionalidades vêm do registo,
-  sem direitos provisórios). Continua **mock** o core dinâmico (entidades, campos, registos; o backend de C10 já existe, falta ligá-lo: fatia 3.2) e faltam UIs reais de papéis,
+  sem direitos provisórios). O core dinâmico (C10: designer de entidades, listagem, formulário, detalhe e histórico) também fala com a API real (D-036); formulários, regras, estados, workflows e automações (C11–C15) só têm contratos/motores no cliente, sem servidor, e faltam UIs reais de papéis,
   políticas, Party e âmbitos (Fase 1).
 - `backend/`: API **AdonisJS 6 + PostgreSQL 16 + Redis**. Fase 0 e fatias 1.1–1.9 feitas (a 1.8, frontend, ficou parcial: ver `docs/implementation-plan.md` 2.9) (arranque, ambiente, saúde, erros,
   correlation id, `TenantContext`, acesso a dados por tenant com RLS, helpers de migration, verificadores de esquema e de

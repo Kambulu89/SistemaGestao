@@ -31,6 +31,8 @@ export const TENANT_PERMISSIONS = {
   planRead: 'tenant.plan.read',
   modulesRead: 'tenant.modules.read',
   modulesManage: 'tenant.modules.manage',
+  /** Definição de entidades dinâmicas (C10): traduzida de `entity.read` pelo servidor. */
+  entitiesRead: 'configuration.forms.read',
 } as const;
 
 export const PLATFORM_NAMESPACE = 'platform.';

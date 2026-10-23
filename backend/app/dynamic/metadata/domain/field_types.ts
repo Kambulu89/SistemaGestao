@@ -40,6 +40,15 @@ export interface FieldOption {
   archived?: boolean
 }
 
+/** Apresentação do campo; os três booleanos só se aplicam onde a listagem os consegue honrar. */
+export interface FieldPresentation {
+  description?: string
+  placeholder?: string
+  searchable?: boolean
+  filterable?: boolean
+  sortable?: boolean
+}
+
 export interface FieldSpec {
   code: string
   label: string
@@ -51,11 +60,14 @@ export interface FieldSpec {
   position: number
   /** Entidade de destino de um `ENTITY_REFERENCE`. */
   referenceEntityId: string | null
+  /** Só na saída da API (não é guardado): o código da entidade de destino. */
+  referenceEntityCode?: string | null
   /** Valor guardado à parte e nunca auditado, listado nem pesquisado sem a permissão `dynamic.sensitive`. */
   sensitive: boolean
   readOnly: boolean
   /** Campo retirado: os valores antigos continuam legíveis, mas deixa de aceitar escritas. */
   archived: boolean
+  presentation: FieldPresentation
 }
 
 export const CODE_PATTERN = /^[a-z][a-z0-9_]{1,49}$/

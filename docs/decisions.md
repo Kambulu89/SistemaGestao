@@ -425,6 +425,31 @@ parâmetros de rota, por isso a política vale já à porta). **A especificaçã
 UI (Entity Designer e listagens continuam mock no frontend), pesquisa indexada (usa `LIKE` em texto não sensível; sem índice trigram),
 exportações e outbox (inexistente), grants limitados a uma unidade sem âmbito de acesso (como nos restantes módulos, a porta usa `can`).
 
+## D-036 Frontend de C10 ligado à API: tradução num só ponto, tipos do servidor e nada simulado (aceite — fatia 3.2)
+**Gateways HTTP.** `EntityDefinitionGateway` e `EntityRecordsGateway` passam a falar com `/entity-definitions` e `/dynamic/{código}/records`
+(`core/dynamic/http`, `provideDynamicBackend()`); os duplos em memória (`core/mock`) ficam só para os testes. O `CustomFieldGateway` deixou de
+ter dados simulados: `UnavailableCustomFieldGateway` devolve lista vazia e recusa escritas (501) — os campos personalizados estendem entidades
+nativas (`EntityExtension`), que dependem de módulos de negócio que não existem. **Tradução (`dynamic-mapper.ts`, o único ponto).** Entidades
+`ordem-servico` ⇄ `ordem_servico`; campos `dataCompra` ⇄ `data_compra`; um código do servidor que não volta a si próprio (`a__b`, `a_1`) não tem chave
+na interface e essa entidade fica de fora da lista (as outras carregam). Tipos: os 15 do servidor; **decimais** são texto na API e número na
+interface, com precisão fixa de 15 dígitos e recusa explícita de qualquer valor que não caiba exactamente num número (nunca se corrompe em silêncio).
+Estado, fluxos, formulários e regras entre campos não existem no servidor (C11–C13): vêm vazios. O que o servidor valida e a interface não edita
+(limites de datas, precisão decimal, mínimo/máximo de selecções) viaja em `FieldBase.serverValidation` e volta ao gravar. O que o servidor não suporta
+(tipos moeda/ficheiro/fórmula…, condições de visibilidade, regras condicionais, comparações entre campos, padrões sem distinção de maiúsculas) é
+**recusado com a lista de problemas** (422 no formato do designer), nunca descartado. Opções inactivas saem do rascunho e o servidor arquiva-as ao
+publicar. **Designer.** `DESIGNER_FIELD_TYPES` limita os tipos escolhíveis aos que o servidor guarda (`SERVER_FIELD_TYPES`); os restantes aparecem como
+«em preparação». O código da entidade e o nome no plural/ícone, a descrição, a ajuda e os indicadores pesquisável/filtrável/ordenável do campo são
+guardados no servidor (`presentation`, migration 14); `EntityDefinition.rowVersion` leva o controlo de concorrência da entidade. **Servidor.**
+A listagem passou a devolver `meta.total` e a aceitar `sort` (`createdAt|updatedAt|<campo>:asc|desc`, números e decimais pelo valor) e `filter.<campo>`
+(igualdade, até 10); campos sensíveis ou escondidos por regra de campo não ordenam, filtram nem se pesquisam (`q` fica indisponível para quem tenha um
+campo pesquisável escondido); `DELETE /entity-definitions/{id}` remove uma entidade nunca publicada; a saída indica `referenceEntityCode`; o histórico
+(`/audit-logs`) passa a incluir as tabelas de C10 (`entity.read` / `dynamic.read` + `audit.read`). **Acesso.** As páginas do Core Dinâmico
+(`/t/:slug/entities`) já não dependem de um módulo contratável: usam `configuration.forms.read|manage|publish`, traduzidas de `entity.read|design|publish`;
+os registos usam directamente `dynamic.*`. As operações sem equivalente no servidor (exportar, aprovar, transitar) apontam para permissões nunca
+concedidas. **Fora desta fatia:** modo de propriedade UNIT/OWNER no formulário (o designer cria entidades TENANT; as UNIT exigem escolher a unidade),
+transições de estado, campos personalizados de entidades nativas, histórico de versões anteriores à publicada, listas de referência paginadas, nomes
+de autor do histórico sem `member.read`, e a UI de políticas por entidade (ABAC) — continua por API.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

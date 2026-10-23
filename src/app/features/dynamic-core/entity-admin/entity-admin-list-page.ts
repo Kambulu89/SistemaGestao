@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TenantContextService } from '../../../core/tenant-context/tenant-context.service';
 import { PermissionService } from '../../../core/permissions/permission.service';
 import { EntityAccessService } from '../../../core/dynamic/entity-access.service';
 import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
@@ -73,7 +74,7 @@ interface Row {
               @case ('records') {
                 @if (row.canOpenRecords) {
                   <a
-                    [routerLink]="['../../data', row.key]"
+                    [routerLink]="dataLink(row.key)"
                     class="text-brand-700 hover:underline dark:text-brand-300"
                     >Ver registos</a
                   >
@@ -95,6 +96,12 @@ export class EntityAdminListPage {
   private readonly registry = inject(DynamicEntityRegistryService);
   private readonly access = inject(EntityAccessService);
   private readonly permissions = inject(PermissionService);
+  private readonly tenant = inject(TenantContextService).tenant;
+
+  /** Os registos de uma entidade (caminho absoluto: não depende de onde esta página está montada). */
+  protected dataLink(key: string): string[] {
+    return ['/t', this.tenant()?.slug ?? '', 'data', key];
+  }
   protected readonly canManage = computed(() => this.permissions.can('configuration.forms.manage'));
   protected readonly newButtonClasses = buttonClasses('primary', 'md');
 

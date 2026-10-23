@@ -9,6 +9,13 @@ type QueryParams = Record<string, string | number | boolean>;
 /** Envelope de sucesso da API: `{ data, meta: { correlationId } }`. */
 interface Envelope<T> {
   readonly data: T;
+  readonly meta?: Readonly<Record<string, unknown>>;
+}
+
+/** Resposta com os metadados do envelope (ex.: `total` de uma listagem). */
+export interface WithMeta<T> {
+  readonly data: T;
+  readonly meta: Readonly<Record<string, unknown>>;
 }
 
 export interface RequestOptions {
@@ -31,6 +38,13 @@ export class ApiService {
     return this.http
       .get<Envelope<T> | null>(this.url(path), this.init(options))
       .pipe(map(unwrap<T>));
+  }
+
+  /** Como `get`, mas entrega também o `meta` do envelope (totais de listagens). */
+  getWithMeta<T>(path: string, options?: RequestOptions): Observable<WithMeta<T>> {
+    return this.http
+      .get<Envelope<T>>(this.url(path), this.init(options))
+      .pipe(map((body) => ({ data: body.data, meta: body.meta ?? {} })));
   }
 
   /** Listagem paginada. O formato dos parâmetros é provisório até existir contrato do backend. */

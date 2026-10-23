@@ -8,8 +8,8 @@ import { MockEntityRecordsGateway } from './mock-entity-records.gateway';
 import { MockEntityDefinitionGateway } from './mock-entity-definition.gateway';
 
 /**
- * AINDA MOCK: entidades dinâmicas, campos personalizados e registos (Fase 2+; não há backend para
- * C10–C15). A identidade e os tenants já são HTTP (`HttpAuthGateway`, `HttpTenantGateway`).
+ * DUPLOS DE TESTE do core dinâmico (entidades, campos personalizados e registos), sem servidor. A aplicação
+ * usa `provideDynamicBackend()` (API real); isto só serve aos testes (`setupMockBackend`).
  */
 export function provideMockBackend(): Provider[] {
   return [

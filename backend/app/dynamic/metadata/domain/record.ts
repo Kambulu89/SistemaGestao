@@ -4,6 +4,7 @@ import {
   type FieldSpec,
   type Issue,
 } from '#dynamic/metadata/domain/field_types'
+import { isSearchable } from '#dynamic/metadata/domain/presentation'
 import { validateValue } from '#dynamic/metadata/domain/value'
 
 export type RecordValues = Record<string, unknown>
@@ -134,20 +135,12 @@ export function uniqueKeys(
   return keys
 }
 
-const SEARCHABLE = ['TEXT', 'TEXTAREA', 'EMAIL', 'PHONE', 'URL', 'SELECT', 'RADIO']
-
-/** Texto pesquisável: só campos de texto **não sensíveis** (a pesquisa nunca revela dados protegidos). */
+/** Texto pesquisável: só campos de texto **não sensíveis** e não excluídos (a pesquisa nunca revela dados protegidos). */
 export function searchText(fields: readonly FieldSpec[], values: RecordValues): string {
   const parts: string[] = []
   for (const spec of fields) {
     const value = values[spec.code]
-    if (
-      spec.archived ||
-      spec.sensitive ||
-      typeof value !== 'string' ||
-      !SEARCHABLE.includes(spec.type)
-    )
-      continue
+    if (!isSearchable(spec) || typeof value !== 'string') continue
     if (spec.type === 'SELECT' || spec.type === 'RADIO') {
       parts.push(spec.options.find((o) => o.code === value)?.label ?? value)
     } else parts.push(value)

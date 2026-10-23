@@ -6,6 +6,7 @@ import {
 } from '#dynamic/metadata/domain/compatibility'
 import { normalizeFields, type FieldInput } from '#dynamic/metadata/domain/field_spec'
 import type { FieldSpec, Issue } from '#dynamic/metadata/domain/field_types'
+import { normalizeEntityPresentation } from '#dynamic/metadata/domain/presentation'
 import type {
   EntityDefinition,
   EntityStore,
@@ -69,6 +70,7 @@ export class EntityDefinitionUseCases {
       name: string
       description: string | null
       ownershipMode: OwnershipMode
+      presentation?: unknown
       fields: unknown
     }
   ): Promise<EntityDetail> {
@@ -84,6 +86,7 @@ export class EntityDefinitionUseCases {
     if (!MODES.includes(input.ownershipMode)) {
       issues.push(issue('ownershipMode', 'INVALID_MODE', 'Modo de propriedade inválido.'))
     }
+    const presentation = normalizeEntityPresentation(input.presentation, issues)
     if (issues.length > 0) throw validationError(issues)
 
     return this.uow.run(async (scope) => {
@@ -92,6 +95,7 @@ export class EntityDefinitionUseCases {
         name,
         description: input.description?.trim() || null,
         ownershipMode: input.ownershipMode,
+        presentation,
       })
       if (!entity) {
         throw ApiError.conflict('ENTITY_CODE_TAKEN', 'Já existe uma entidade com este código.')
@@ -110,6 +114,7 @@ export class EntityDefinitionUseCases {
       name?: string
       description?: string | null
       ownershipMode?: OwnershipMode
+      presentation?: unknown
     }
   ): Promise<EntityDetail> {
     const issues: Issue[] = []
@@ -120,6 +125,10 @@ export class EntityDefinitionUseCases {
     if (input.ownershipMode !== undefined && !MODES.includes(input.ownershipMode)) {
       issues.push(issue('ownershipMode', 'INVALID_MODE', 'Modo de propriedade inválido.'))
     }
+    const presentation =
+      input.presentation === undefined
+        ? undefined
+        : normalizeEntityPresentation(input.presentation, issues)
     if (issues.length > 0) throw validationError(issues)
 
     return this.uow.run(async (scope) => {
@@ -139,6 +148,7 @@ export class EntityDefinitionUseCases {
         description:
           input.description === undefined ? undefined : input.description?.trim() || null,
         ownershipMode: input.ownershipMode,
+        presentation,
       })
       return this.detail(scope, updated)
     }, context)
@@ -177,6 +187,23 @@ export class EntityDefinitionUseCases {
       const draft = await this.versions.insertDraft(scope, id, fields)
       if (!draft) throw ApiError.conflict('DRAFT_EXISTS', 'Já existe um rascunho desta entidade.')
       return this.detail(scope, entity)
+    }, context)
+  }
+
+  /** Remove uma entidade que nunca foi publicada (e o seu único rascunho): não tem registos. */
+  delete(context: TenantContext, id: string): Promise<void> {
+    return this.uow.run(async (scope) => {
+      const entity = await this.mustFind(scope, id)
+      if (entity.publishedVersion !== null || entity.status !== 'DRAFT') {
+        throw ApiError.conflict(
+          'ENTITY_PUBLISHED',
+          'Só se remove uma entidade que nunca foi publicada; uma publicada arquiva-se.'
+        )
+      }
+      await this.entities.lock(scope, id)
+      const draft = await this.versions.findDraft(scope, id)
+      if (draft) await this.versions.deleteDraft(scope, draft.id)
+      await this.entities.delete(scope, id)
     }, context)
   }
 
@@ -282,7 +309,34 @@ export class EntityDefinitionUseCases {
     const draft = await this.versions.findDraft(scope, entity.id)
     const published = await this.publishedOf(scope, entity)
     const versions = await this.versions.list(scope, entity.id)
-    return { entity, draft, published, versions }
+    return {
+      entity,
+      draft: draft && (await this.withReferenceCodes(scope, entity, draft)),
+      published: published && (await this.withReferenceCodes(scope, entity, published)),
+      versions,
+    }
+  }
+
+  /** A saída indica o código da entidade de destino de cada referência (o id só serve dentro do servidor). */
+  private async withReferenceCodes(
+    scope: TenantScope,
+    entity: EntityDefinition,
+    version: SchemaVersion
+  ): Promise<SchemaVersion> {
+    const codes = new Map<string, string | null>([[entity.id, entity.code]])
+    const fields: FieldSpec[] = []
+    for (const field of version.fields) {
+      if (field.referenceEntityId && !codes.has(field.referenceEntityId)) {
+        const target = await this.entities.find(scope, field.referenceEntityId)
+        codes.set(field.referenceEntityId, target?.code ?? null)
+      }
+      fields.push(
+        field.referenceEntityId
+          ? { ...field, referenceEntityCode: codes.get(field.referenceEntityId) ?? null }
+          : field
+      )
+    }
+    return { ...version, fields }
   }
 
   /** Compara o rascunho com a versão em vigor; as entidades referenciadas têm de estar publicadas. */

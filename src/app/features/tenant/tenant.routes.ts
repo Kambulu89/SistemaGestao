@@ -4,6 +4,8 @@ import { DynamicEntityRegistryService } from '../../core/dynamic/entity-registry
 import { requireEntityOperation } from '../../core/guards/entity.guard';
 import { requirePermission } from '../../core/guards/permission.guard';
 import { TENANT_PERMISSIONS } from '../../core/permissions/permission.model';
+import { toRoute } from '../../module-routes';
+import { DYNAMIC_CORE_ROUTES } from '../dynamic-core/dynamic-core.routes';
 
 /**
  * Páginas de administração do tenant. As rotas dos módulos de negócio não estão aqui:
@@ -64,6 +66,12 @@ export const TENANT_ROUTES: Routes = [
     data: { breadcrumb: 'Configurações' },
     canActivate: [requirePermission(TENANT_PERMISSIONS.settingsRead)],
     loadComponent: () => import('./settings/settings').then((m) => m.TenantSettings),
+  },
+  // Core Dinâmico (C10): definição de entidades e campos. Cada página tem a sua permissão.
+  {
+    path: 'entities',
+    data: { breadcrumb: 'Entidades' },
+    children: DYNAMIC_CORE_ROUTES.map(toRoute),
   },
   // Registos de entidades dinâmicas: as mesmas páginas servem qualquer entidade.
   {

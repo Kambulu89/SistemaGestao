@@ -19,6 +19,7 @@ import {
   parseDecimal,
   parseInstant,
 } from '#dynamic/metadata/domain/scalars'
+import { normalizeFieldPresentation } from '#dynamic/metadata/domain/presentation'
 import { validateValue } from '#dynamic/metadata/domain/value'
 
 /** Definição de um campo tal como chega da API (a entidade de destino já vem resolvida para id). */
@@ -33,6 +34,7 @@ export interface FieldInput {
   referenceEntityId?: unknown
   sensitive?: unknown
   readOnly?: unknown
+  presentation?: unknown
 }
 
 /** Chaves de `validation` aceites por tipo: qualquer outra é recusada (nada se ignora em silêncio). */
@@ -301,6 +303,13 @@ export function normalizeField(
     }
   }
 
+  const presentation = normalizeFieldPresentation(
+    input.presentation,
+    type,
+    sensitive,
+    issues,
+    `${path}.presentation`
+  )
   if (issues.length > before) return null
   const spec: FieldSpec = {
     code: code as string,
@@ -315,6 +324,7 @@ export function normalizeField(
     sensitive,
     readOnly: input.readOnly === true,
     archived: false,
+    presentation,
   }
 
   // O valor por omissão passa pelas mesmas regras do campo (um valor inválido nunca é publicado).

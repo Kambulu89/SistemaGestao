@@ -11,6 +11,23 @@ describe('mapBackendPermissions (D-014)', () => {
     expect(mapBackendPermissions(['iam.read'])).toContain('iam.access-control.read');
   });
 
+  it('entity.* open the Core Dinâmico pages; dynamic.* stay as they are (records use them directly)', () => {
+    expect(mapBackendPermissions(['entity.read'])).toEqual([
+      'configuration.forms.read',
+      'entity.read',
+    ]);
+    const design = mapBackendPermissions(['entity.design']);
+    expect(design).toEqual(
+      expect.arrayContaining(['configuration.forms.read', 'configuration.forms.manage']),
+    );
+    expect(design).not.toContain('configuration.forms.publish');
+    expect(mapBackendPermissions(['entity.publish'])).toContain('configuration.forms.publish');
+    expect(mapBackendPermissions(['dynamic.read', 'dynamic.sensitive'])).toEqual([
+      'dynamic.read',
+      'dynamic.sensitive',
+    ]);
+  });
+
   it('manage implies read in the frontend keys, but read never implies manage', () => {
     const read = mapBackendPermissions(['organization.read']);
     expect(read).not.toContain('organization.units.manage');

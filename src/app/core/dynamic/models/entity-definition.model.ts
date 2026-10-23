@@ -92,4 +92,9 @@ export interface EntityDefinition {
   readonly extensible?: boolean;
   /** Rasto de criação/alteração (entidades personalizadas). */
   readonly meta?: DefinitionAudit;
+  /**
+   * Controlo de concorrência da entidade no servidor (muda a cada alteração, incluindo as do rascunho).
+   * Só existe nas definições que vêm da API.
+   */
+  readonly rowVersion?: number;
 }

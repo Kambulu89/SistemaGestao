@@ -10,6 +10,7 @@ export const createEntityValidator = vine.compile(
     description: vine.string().trim().maxLength(500).nullable().optional(),
     kind: vine.enum(['DYNAMIC'] as const).optional(),
     ownershipMode: vine.enum(['TENANT', 'UNIT', 'OWNER'] as const).optional(),
+    presentation: vine.any().optional(),
     fields: vine.any().optional(),
   })
 )
@@ -20,6 +21,7 @@ export const updateEntityValidator = vine.compile(
     name: vine.string().trim().maxLength(160).optional(),
     description: vine.string().trim().maxLength(500).nullable().optional(),
     ownershipMode: vine.enum(['TENANT', 'UNIT', 'OWNER'] as const).optional(),
+    presentation: vine.any().optional(),
   })
 )
 
@@ -44,6 +46,7 @@ export const listRecordsValidator = vine.compile(
   vine.object({
     q: vine.string().trim().maxLength(100).optional(),
     archived: vine.boolean().optional(),
+    sort: vine.string().trim().maxLength(80).optional(),
     limit: vine.number().withoutDecimals().min(1).max(100).optional(),
     offset: vine.number().withoutDecimals().min(0).optional(),
   })

@@ -14,6 +14,7 @@ import {
 } from '#dynamic/metadata/presentation/validators'
 
 const ENTITY_CODE = /^[a-z][a-z0-9_]{1,49}$/
+const MAX_FILTERS = 10
 
 /** Um id mal formado é "inexistente" (404), tal como um id de outro tenant. */
 function idParam(ctx: HttpContext, name = 'id'): string {
@@ -47,6 +48,7 @@ export default class MetadataController {
       name: b.name,
       description: b.description ?? null,
       ownershipMode: b.ownershipMode ?? 'TENANT',
+      presentation: b.presentation,
       fields: b.fields,
     })
     ctx.response.status(201).header('location', `/api/v1/entity-definitions/${detail.entity.id}`)
@@ -59,6 +61,11 @@ export default class MetadataController {
       ctx,
       await metadataServices().entities.update(ctx.tenantContext, idParam(ctx), b)
     )
+  }
+
+  async deleteEntity(ctx: HttpContext) {
+    await metadataServices().entities.delete(ctx.tenantContext, idParam(ctx))
+    return ctx.response.noContent()
   }
 
   async saveDraft(ctx: HttpContext) {
@@ -111,16 +118,30 @@ export default class MetadataController {
   // --- registos (dynamic.*: verificadas no caso de uso, com o código da entidade como atributo) ---
 
   async listRecords(ctx: HttpContext) {
-    const q = await ctx.request.validateUsing(listRecordsValidator, { data: ctx.request.qs() })
-    return envelope(
-      ctx,
-      await metadataServices().records.list(ctx.tenantContext, codeParam(ctx), {
-        q: q.q,
-        archived: q.archived ?? false,
-        limit: q.limit ?? 50,
-        offset: q.offset ?? 0,
-      })
-    )
+    const qs = ctx.request.qs()
+    const q = await ctx.request.validateUsing(listRecordsValidator, { data: qs })
+    // `filter.<campo>=valor`: o nome do campo é validado contra a versão em vigor pelo caso de uso.
+    const filters: Record<string, string> = {}
+    for (const [key, value] of Object.entries(qs)) {
+      if (!key.startsWith('filter.')) continue
+      if (typeof value !== 'string' || Object.keys(filters).length >= MAX_FILTERS) {
+        throw new ApiError(422, 'VALIDATION_ERROR', 'Verifique os campos indicados.', [
+          { path: key, code: 'INVALID_FILTER', message: 'Filtro inválido.' },
+        ])
+      }
+      filters[key.slice('filter.'.length)] = value
+    }
+    const limit = q.limit ?? 50
+    const offset = q.offset ?? 0
+    const page = await metadataServices().records.list(ctx.tenantContext, codeParam(ctx), {
+      q: q.q,
+      archived: q.archived ?? false,
+      sort: q.sort,
+      limit,
+      offset,
+      filters,
+    })
+    return envelope(ctx, page.items, { total: page.total, limit, offset })
   }
 
   async showRecord(ctx: HttpContext) {

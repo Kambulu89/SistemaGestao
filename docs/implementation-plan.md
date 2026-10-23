@@ -2,14 +2,14 @@
 
 Fases da especificação (§11) com estado real. Cada fase entrega **fatias verticais** (migration, domínio, API, UI,
 autorização, auditoria, testes). Uma fase só passa quando as verificações aplicáveis correram e a documentação foi
-actualizada. Estado actualizado em: Fase 3, fatia 3.1 (C10, backend).
+actualizada. Estado actualizado em: Fase 3, fatia 3.2 (C10, frontend).
 
 | Fase | Âmbito (spec) | Estado |
 | --- | --- | --- |
 | **F0** Preparação | repositório, versões, Docker, CI, estrutura modular, ADRs | **Concluída** (com 2 verificações por executar — ver abaixo) |
 | **F1** Fundação | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party | **Próxima** (detalhada na secção 2) |
 | **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos) e 2.4 (configurações/sequências) e 2.5 (administração da plataforma) concluídas no backend; o frontend da Fase 2 está ligado (2b.6) (ver secção 2b) |
-| F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | **Em curso**: fatia 3.1 (C10 no backend) concluída (ver secção 2c); existem contratos/motores mock no frontend — ver `architecture.md` §7 |
+| F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | **Em curso**: fatias 3.1 (C10 no backend) e 3.2 (C10 no frontend) concluídas (ver secção 2c); C11–C15 só têm contratos/motores no frontend — ver `architecture.md` §7 |
 | F4 Operação comercial | M01–M08, S01 | Não iniciada |
 | F5 Gestão empresarial | M09–M14, S02–S03 | Não iniciada |
 | F6 Informação | S04 | Não iniciada |
@@ -474,7 +474,7 @@ Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a
 | Fatia | Âmbito | Estado |
 | --- | --- | --- |
 | 3.1 | C10 no backend: entidades, versões imutáveis, campos tipados, registos com únicos concorrentes, sensíveis, propriedade, pesquisa e auditoria; «Viatura» como entidade definida por um tenant | **Concluída** (backend; ver 2c.1) |
-| 3.2 | Frontend de C10: Entity Designer, pré-visualização de publicação e listagem/formulário genérico de registos (fim do mock do core dinâmico) | Por fazer |
+| 3.2 | Frontend de C10: Entity Designer, publicação e listagem/formulário genérico de registos sobre a API (fim do mock do core dinâmico) | **Concluída** (ver 2c.2) |
 | 3.3 | C12 regras e fórmulas por AST (validação, simulação, orçamento de custo, ciclos) — traz os tipos FORMULA/LOOKUP | Por fazer |
 | 3.4 | C11 formulários (secções, bindings, condições) | Por fazer |
 | 3.5 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
@@ -497,6 +497,28 @@ migrations pelo próprio `npm test`).
 **Limites / por verificar:** ver «Fora desta fatia» em D-035. Em particular: o frontend continua com o core dinâmico mock (3.2); não há
 mecanismo de migração de dados, por isso alterações incompatíveis só se fazem por um campo novo; a pesquisa é `LIKE` sem índice; a divergência
 das permissões `dynamic.{código}.*` face à especificação aguarda decisão. Não foi feito teste de carga nem E2E no browser (não há UI).
+
+### 2c.2 Fatia 3.2 — C10 no frontend (concluída; ver D-036)
+**Entregue:** gateways HTTP de definições e de registos (`core/dynamic/http`) e tradução num só ponto (`dynamic-mapper.ts`); designer de entidades, listagem
+(paginação, ordenação, pesquisa e filtros no servidor), formulário, detalhe e histórico de auditoria sobre a API real; `/t/:slug/entities` no menu e nas
+rotas do tenant; tipos do designer limitados aos do servidor (`DESIGNER_FIELD_TYPES`); permissões `entity.*` traduzidas para as páginas; fim dos dados
+simulados do core dinâmico na aplicação (os duplos ficam só nos testes) e do contrato «proposto» `ENTITY_API`. Backend (migration 14 `presentation`):
+apresentação da entidade e dos campos, `meta.total`, `sort`, `filter.<campo>`, `DELETE` de entidade nunca publicada, `referenceEntityCode`, auditoria das tabelas
+de C10.
+**Evidência:** backend 360 testes (7 novos: apresentação, total/paginação/ordenação por valor, filtros, recusas e campos escondidos, `searchable=false`,
+remoção, auditoria com e sem permissão), lint, `format:check`, typecheck, build e migrations (15) numa base limpa; frontend 729 testes (37 novos: mapper,
+gateways de definições e de registos, permissões, tipos do designer), lint, `format:check`, `check:generic` e build limpos; **verificação no browser contra a API real**
+(Chromium + backend + PostgreSQL + Redis, base limpa): sem entidades no início; definir «Viatura» com sete campos (único, obrigatório, limites, decimal,
+lista, data, sensível); só os tipos do servidor escolhíveis; publicar; entrada no menu «Dados»; criar três registos (sensível visível ao administrador,
+decimal com a escala); matrícula repetida → erro de valor único no campo; limite fora do intervalo recusado; ordenar por preço pelo valor; pesquisa e ordenação no
+servidor; editar; eliminar (arquiva); nova versão com campo novo e registos antigos legíveis; apertar um limite publicado → o servidor recusa e o designer
+mostra o motivo; descartar o rascunho mantém a publicada; o tenant B não vê a entidade nem os registos; `X-Tenant-Id` e CSRF em todos os pedidos; nada em storage; zero erros
+de página. Defeitos reais encontrados pela verificação: o servidor não incluía as tabelas de C10 no histórico (auditoria visível vazia); uma listagem
+sem total/ordenação por campo.
+**Limites / por verificar:** ver «Fora desta fatia» em D-036. Em particular: sem E2E automatizado no repositório (correu-se por script local); o decimal da
+interface é um número (15 dígitos) e recusa o que não cabe; as entidades criadas pela API com códigos que a interface não representa não aparecem na lista; só o
+Core Dinâmico foi ligado — formulários (C11), regras (C12), estados (C13), workflows (C14) e automações (C15) continuam sem servidor; uma conta com uma regra de campo
+que esconde um campo pesquisável não pode usar a pesquisa (422).
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

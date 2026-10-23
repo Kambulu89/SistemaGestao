@@ -317,6 +317,7 @@ router
       .group(() => {
         router.post('/entity-definitions', [MetadataController, 'createEntity'])
         router.patch('/entity-definitions/:id', [MetadataController, 'updateEntity'])
+        router.delete('/entity-definitions/:id', [MetadataController, 'deleteEntity'])
         router.put('/entity-definitions/:id/draft', [MetadataController, 'saveDraft'])
         router.post('/entity-definitions/:id/drafts', [MetadataController, 'createDraft'])
         router.delete('/entity-definitions/:id/draft', [MetadataController, 'discardDraft'])

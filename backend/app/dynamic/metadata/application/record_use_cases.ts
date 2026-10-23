@@ -9,6 +9,8 @@ import {
   validateRecordData,
   type RecordValues,
 } from '#dynamic/metadata/domain/record'
+import { resolveListQuery } from '#dynamic/metadata/domain/list_query'
+import { isSearchable } from '#dynamic/metadata/domain/presentation'
 import { validationError } from '#dynamic/metadata/application/entity_use_cases'
 import type {
   AccessControl,
@@ -33,6 +35,8 @@ export interface RecordView {
   version: number
   createdAt: Date
   updatedAt: Date
+  createdByMembershipId: string | null
+  updatedByMembershipId: string | null
 }
 
 interface Loaded {
@@ -116,40 +120,76 @@ export class RecordUseCases {
   async list(
     context: TenantContext,
     entityCode: string,
-    filter: { q?: string; archived: boolean; limit: number; offset: number }
-  ): Promise<RecordView[]> {
+    query: {
+      q?: string
+      archived: boolean
+      limit: number
+      offset: number
+      sort?: string
+      filters: Readonly<Record<string, string>>
+    }
+  ): Promise<{ items: RecordView[]; total: number }> {
     const entity = await this.uow.run((scope) => this.mustFindEntity(scope, entityCode), context)
     const decision = await this.decide(context, 'dynamic.read', entity, {})
 
     const restrict: { ownerMembershipId?: string; unitIds?: readonly string[] } = {}
     if (entity.ownershipMode === 'OWNER' && !(await this.canSeeAll(context, entity))) {
-      restrict.ownerMembershipId = context.membershipId ?? undefined
-      if (!context.membershipId) return []
+      if (!context.membershipId) return { items: [], total: 0 }
+      restrict.ownerMembershipId = context.membershipId
     }
     if (entity.ownershipMode === 'UNIT' && context.unitScope.kind === 'UNITS') {
       restrict.unitIds = context.unitScope.unitIds
     }
-    const q = filter.q?.trim().toLowerCase()
-    const { rows, versions } = await this.uow.run(async (scope) => {
+    const q = query.q?.trim().toLowerCase()
+    const { rows, total, versions } = await this.uow.run(async (scope) => {
+      const current =
+        entity.publishedVersion === null
+          ? null
+          : await this.versions.findByRevision(scope, entity.id, entity.publishedVersion)
+      // Um campo escondido por regra de campo não pode ordenar, filtrar nem ser pesquisado (revelaria o valor).
+      const hidden = new Set(decision.hiddenFields)
+      const visibleFields = (current?.fields ?? []).filter((f) => !hidden.has(f.code))
+      const resolved = resolveListQuery(visibleFields, query.sort, query.filters)
+      const issues = [...resolved.issues]
+      if (q && (current?.fields ?? []).some((f) => hidden.has(f.code) && isSearchable(f))) {
+        issues.push({
+          path: 'q',
+          code: 'SEARCH_UNAVAILABLE',
+          message: 'A pesquisa por texto não está disponível para o seu perfil nesta entidade.',
+        })
+      }
+      if (issues.length > 0) throw validationError(issues)
+
       const page = await this.records.list(scope, entity.id, {
-        ...filter,
+        archived: query.archived,
+        limit: query.limit,
+        offset: query.offset,
         q: q || undefined,
+        sort: resolved.sort,
+        filters: resolved.filters,
         ...restrict,
       })
       const cache = new Map<string, SchemaVersion | null>()
-      for (const item of page) {
+      for (const item of page.rows) {
         if (!cache.has(item.schemaVersionId)) {
           cache.set(item.schemaVersionId, await this.versions.findById(scope, item.schemaVersionId))
         }
       }
-      return { rows: page, versions: [...cache.values()].filter((v) => v !== null) }
+      return {
+        rows: page.rows,
+        total: page.total,
+        versions: [...cache.values()].filter((v) => v !== null),
+      }
     }, context)
     const showSensitive =
       versions.some((v) => v.fields.some((f) => f.sensitive)) &&
       (await this.canSeeSensitive(context, entity))
-    return rows.map((row) =>
-      this.toView(entity, versions, row, decision.hiddenFields, showSensitive)
-    )
+    return {
+      items: rows.map((row) =>
+        this.toView(entity, versions, row, decision.hiddenFields, showSensitive)
+      ),
+      total,
+    }
   }
 
   async update(
@@ -466,6 +506,8 @@ export class RecordUseCases {
       version: row.version,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      createdByMembershipId: row.createdByMembershipId,
+      updatedByMembershipId: row.updatedByMembershipId,
     }
   }
 }

@@ -101,6 +101,12 @@ export class NavigationService {
             icon: 'settings',
             permission: TENANT_PERMISSIONS.settingsRead,
           },
+          {
+            label: 'Entidades',
+            path: `${base}/entities`,
+            icon: 'cube',
+            permission: TENANT_PERMISSIONS.entitiesRead,
+          },
         ]),
       },
     ];

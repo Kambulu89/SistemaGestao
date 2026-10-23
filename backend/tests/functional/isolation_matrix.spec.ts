@@ -133,6 +133,7 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['patch', `/sequences/${o.sequence}`, { ...stale, padding: 8 }],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
+    ['delete', `/entity-definitions/${o.entity}`],
     ['patch', `/entity-definitions/${o.entity}`, { ...stale, name: 'x' }],
     ['put', `/entity-definitions/${o.entity}/draft`, { ...stale, fields: [] }],
     ['post', `/entity-definitions/${o.entity}/drafts`],

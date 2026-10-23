@@ -21,6 +21,11 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'subscription.read': ['tenant.plan.read'],
   'module.read': ['tenant.modules.read'],
   'module.manage': ['tenant.modules.read', 'tenant.modules.manage'],
+  // Entidades dinâmicas (C10): as páginas do Core Dinâmico usam `configuration.forms.*`. Os registos usam
+  // directamente `dynamic.*` (ver `SERVER_ENTITY_OPERATIONS`).
+  'entity.read': ['configuration.forms.read'],
+  'entity.design': ['configuration.forms.read', 'configuration.forms.manage'],
+  'entity.publish': ['configuration.forms.read', 'configuration.forms.publish'],
 };
 
 /** Códigos do servidor → chaves do frontend (com os códigos originais incluídos). */
