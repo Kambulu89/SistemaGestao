@@ -207,4 +207,14 @@ describe('Detalhe do registo com máquina de estados do servidor', () => {
     ).toBe(false);
     expect(locked.el.querySelector('[data-testid=server-actions]')).toBeNull();
   });
+
+  it('sem permissão para o histórico, a página continua a funcionar e explica-o', async () => {
+    const { el } = await render({
+      audit: () => throwError(() => ({ code: 'PERMISSION_DENIED', message: 'Sem permissão.' })),
+    });
+    expect(el.querySelector('[data-testid=audit-unavailable]')?.textContent).toContain(
+      'não está disponível',
+    );
+    expect(el.querySelector('[data-testid=approvals-panel]')).not.toBeNull();
+  });
 });

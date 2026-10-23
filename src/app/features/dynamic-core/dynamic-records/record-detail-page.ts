@@ -146,6 +146,10 @@ import { Textarea } from '../../../shared/ui/textarea/textarea';
           <app-card>
             @if (audit.isLoading() && !audit.hasValue()) {
               <app-loading-state label="A carregar histórico…" />
+            } @else if (audit.error()) {
+              <p class="text-sm text-fg-muted" data-testid="audit-unavailable">
+                O histórico não está disponível para o seu perfil.
+              </p>
             } @else {
               <ol class="space-y-4" aria-label="Histórico de alterações">
                 @for (entry of audit.value() ?? []; track entry.id) {
