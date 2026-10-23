@@ -481,7 +481,7 @@ Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a
 | 3.6 | C11 formulários no servidor (secções, ligações a campos, condições de apresentação, publicação imutável, verificação contra a entidade) e usados pelos registos no frontend | **Concluída** (ver 2c.6); Form Builder visual e submissões por fazer |
 | 3.7 | Form Builder visual sobre `/forms`: secções, arrastar campos, ajuda e condições, pré-visualização, verificação e publicação | **Concluída** (ver 2c.7); teste com papéis simulados por fazer |
 | 3.8 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox): servidor, estado e acções nos registos | **Concluída** (ver 2c.8); designer visual por fazer |
-| 3.9 | Designer visual de máquinas de estados sobre `/state-machines` (estados, transições, guardas, verificação) | Por fazer |
+| 3.9 | Designer visual de máquinas de estados sobre `/state-machines` (estados, transições, guardas, mapa, verificação, publicação) | **Concluída** (ver 2c.9) |
 | 3.10 | C14 workflows, tarefas e delegações | Por fazer |
 | 3.11 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
 
@@ -592,6 +592,16 @@ atributos do registo **incluindo `resource.state`** (políticas ABAC por estado)
 transição, guarda que esconde «Concluir», motivo obrigatório, estado final sem acções nem «Editar», recusa do servidor a editar, histórico com o motivo e conflito de versão.
 **Não verificado / limites:** o E2E correu por script local (as máquinas criam-se por API); **sem worker nem consumidores do outbox** (os eventos ficam `PENDING`; sem inbox) — D-015; os registos criados **antes** da máquina ficam sem estado (409 `RECORD_WITHOUT_STATE`; a migração exige um mapeamento explícito, não feito); um só ramo de
 guarda por transição, sem `action_code`; categorias semânticas fiscais/financeiras/de stock não aplicam efeitos (por desenho: nenhum estado emite documentos); a guarda lê os dados que a pessoa pode ver (campos escondidos/sensíveis não contam); a listagem de registos não mostra o estado.
+
+### 2c.9 Fatia 3.9 — designer de máquinas de estados (concluída; ver D-043)
+**Frontend** (`features/dynamic-core/states`; servidor inalterado). Página `/t/:slug/entities/:entityKey/estados` ligada ao detalhe da entidade; `state.read|design|publish` → `configuration.state-machines.*`. Lista as revisões (conteúdo, estado, «com problemas») e permite criar, editar o rascunho,
+abrir nova revisão, publicar e retirar. O editor: nome, código e descrição; **estados** (rótulo, código que acompanha o rótulo enquanto for gerado, categoria, «aceita alterações de valores», cor, «tornar inicial» — há sempre um só inicial — e remover, que ajusta as transições e avisa);
+**transições** (rótulo, código, origens por caixas, destino, permissão adicional do catálogo, «exige um motivo» e **guarda** construída com comparações de campos ligadas por «e»/«ou», a mesma gramática das regras; guardas mais ricas ficam descritas como «avançadas» e preservadas; só campos não sensíveis);
+**mapa de estados** ao vivo (o que cada estado alcança, estados finais, «Só leitura» e «Inalcançável», pelo mesmo critério do servidor). «Verificar com o servidor» guarda o rascunho e mostra os problemas com o caminho (ou confirma que é publicável); publicar guarda, verifica e publica.
+Refactor: o tipo de valor das condições (`ruleValueKind`) passou a ficar num só sítio, partilhado com o editor de regras.
+**Verificado:** frontend lint, format, `check:generic`, `ng test` (795 testes) e build; E2E em browser real sobre a API real: criar a máquina de raiz, códigos gerados, estado final fechado por omissão, guarda sem campos sensíveis, mapa com o estado inalcançável, recusa do servidor (e qual estado), remover e aceitar,
+publicar, registo novo no estado inicial desenhado, guarda a oferecer/esconder «Concluir» consoante o valor, e nova revisão a abrir com o conteúdo anterior; zero erros de página.
+**Não verificado / limites:** o E2E correu por script local; o mapa é uma lista (sem diagrama gráfico); o código de um estado em uso por registos não se pode alterar numa revisão (o servidor recusa a publicação); a permissão adicional é texto livre validado pelo servidor (sem lista do catálogo); sem arrastar para reordenar estados.
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

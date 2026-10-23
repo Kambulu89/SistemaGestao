@@ -135,3 +135,18 @@ export function parseCondition(ast: unknown): ConditionDraft | null {
   const single = clauseOfAst(ast);
   return single ? { join: 'and', clauses: [single] } : null;
 }
+
+/** Descrição curta e legível de uma condição que o construtor representa; `null` quando é mais rica. */
+export function describeRuleCondition(
+  ast: unknown,
+  labelOf: (field: string) => string,
+): string | null {
+  const draft = parseCondition(ast);
+  if (!draft) return null;
+  const parts = draft.clauses.map((c) => {
+    const operator = CLAUSE_OPERATORS.find((o) => o.value === c.operator)?.label ?? c.operator;
+    const needsValue = c.operator !== 'filled' && c.operator !== 'empty';
+    return `${labelOf(c.field)} ${operator}${needsValue ? ` ${c.value}` : ''}`;
+  });
+  return parts.join(draft.join === 'and' ? ' e ' : ' ou ');
+}

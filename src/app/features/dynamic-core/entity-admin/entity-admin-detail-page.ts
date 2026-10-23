@@ -96,6 +96,13 @@ const yesNo = (value: boolean): string => (value ? 'Sim' : 'Não');
               >Campos personalizados</a
             >
           }
+          @if (canReadStates()) {
+            <a
+              routerLink="estados"
+              class="text-sm text-brand-700 hover:underline dark:text-brand-300"
+              >Estados</a
+            >
+          }
           @if (canReadForms()) {
             <a
               routerLink="formularios"
@@ -301,6 +308,11 @@ export class EntityAdminDetailPage {
     return ['/t', this.tenant()?.slug ?? '', 'data', key];
   }
   protected readonly canManage = computed(() => this.permissions.can('configuration.forms.manage'));
+  protected readonly canReadStates = computed(
+    () =>
+      this.entity()?.scope === 'tenant' &&
+      this.permissions.can('configuration.state-machines.read'),
+  );
   protected readonly canReadForms = computed(
     () =>
       this.entity()?.scope === 'tenant' && this.permissions.can('configuration.form-layouts.read'),

@@ -508,6 +508,11 @@ avalia a guarda (condição declarativa, nunca código) e escreve estado + hist�
 **Outbox:** nasce `outbox_events` (core) e o evento `dynamic.record.state_changed` escreve-se com a alteração; **não há worker nem inbox**: ficam `PENDING` até haver o primeiro consumidor real (D-015) — a garantia entregue é a atomicidade, não a publicação.
 **Categorias:** `INITIAL/ACTIVE/FINAL/CANCELLED` definem a edição por omissão; nomes de estado nunca produzem efeitos de negócio (faturar, movimentar stock…), que são comandos próprios. **Limites:** sem designer visual (fatia 3.9), sem `action_code`, a listagem não mostra o estado.
 
+## D-043 Designer de máquinas de estados: o modelo do servidor, o mapa como verificação (aceite — fatia 3.9)
+O designer edita directamente os estados e as transições que o servidor guarda, com operações puras e imutáveis (`state-machine-model.ts`): remover um estado ajusta as transições dependentes (e avisa), mudar um código acompanha as referências, e «tornar inicial» garante um só estado inicial. Os códigos gerados acompanham o rótulo
+enquanto forem gerados (`estado*`/`transicao*` ou iguais ao `slug` do rótulo); um código escolhido à mão nunca se mexe. **Guardas:** o construtor reutiliza a gramática e o módulo das regras (D-038), com preservação das condições avançadas; só campos não sensíveis (o servidor também recusa). **Mapa:** mostra as saídas de cada estado
+e calcula a alcançabilidade com o mesmo critério do servidor (feedback imediato), mas a autoridade é a verificação do servidor antes de publicar. O que o servidor impede continua impedido: publicar uma revisão que retire um estado em uso por registos (`STATE_IN_USE`) e qualquer alteração a uma máquina publicada (nova revisão). **Limites:** sem diagrama gráfico (o mapa é textual), sem reordenação por arrastar, permissão adicional em texto livre.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

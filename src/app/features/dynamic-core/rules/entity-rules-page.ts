@@ -8,7 +8,6 @@ import type { ApiError } from '../../../core/api/api-error.model';
 import { errorMessage } from '../../../core/api/error-message';
 import { entityCodeOf, fieldCodeOf } from '../../../core/dynamic/http/dynamic-mapper';
 import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
-import type { FieldDefinition } from '../../../core/dynamic/models/field-definition.model';
 import { PermissionService } from '../../../core/permissions/permission.service';
 import { Alert } from '../../../shared/ui/alert/alert';
 import { Badge } from '../../../shared/ui/badge/badge';
@@ -29,6 +28,7 @@ import {
   type ClauseOperator,
   type ValueKind,
 } from './rule-condition';
+import { ruleValueKind } from './value-kind';
 import {
   RulesApi,
   type EvaluationDto,
@@ -49,31 +49,6 @@ const RESULT_LABEL: Record<SimulationDto['result'], string> = {
   SKIPPED: 'A regra não se aplica (fora do período de vigência).',
   ERROR: 'A condição não pôde ser avaliada (a gravação seria bloqueada).',
 };
-
-/** Tipos de campo que o motor de regras compara; os restantes não aparecem no construtor. */
-function kindOf(field: FieldDefinition): ValueKind | null {
-  switch (field.type) {
-    case 'number':
-      return 'number';
-    case 'decimal':
-    case 'formula':
-      return 'decimal';
-    case 'boolean':
-      return 'boolean';
-    case 'text':
-    case 'textarea':
-    case 'email':
-    case 'phone':
-    case 'url':
-    case 'date':
-    case 'datetime':
-    case 'select':
-    case 'radio':
-      return 'text';
-    default:
-      return null;
-  }
-}
 
 interface EditorState {
   readonly mode: 'create' | 'edit';
@@ -412,7 +387,7 @@ export class EntityRulesPage {
     (this.entity()?.fields ?? [])
       .filter((f) => !f.archived && f.sensitivity !== 'sensitive')
       .flatMap((f) => {
-        const kind = kindOf(f);
+        const kind = ruleValueKind(f);
         return kind ? [{ code: fieldCodeOf(f.key), label: f.label, kind }] : [];
       }),
   );
