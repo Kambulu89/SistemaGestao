@@ -144,6 +144,8 @@ export interface FormDto {
   readonly name: string;
   readonly description: string | null;
   readonly revision: number;
+  /** Versão de concorrência (`expectedVersion`). */
+  readonly version: number;
   readonly status: 'DRAFT' | 'PUBLISHED' | 'RETIRED';
   readonly modes: readonly ('create' | 'edit' | 'read')[];
   readonly isDefault: boolean;

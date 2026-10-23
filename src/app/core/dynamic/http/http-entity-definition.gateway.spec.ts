@@ -123,6 +123,7 @@ describe('HttpEntityDefinitionGateway', () => {
       name: 'Ficha curta',
       description: null,
       revision: 3,
+      version: 5,
       status: 'PUBLISHED',
       modes: ['create', 'edit'],
       isDefault: true,

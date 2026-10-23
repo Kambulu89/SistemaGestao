@@ -26,6 +26,10 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'entity.read': ['configuration.forms.read'],
   'entity.design': ['configuration.forms.read', 'configuration.forms.manage'],
   'entity.publish': ['configuration.forms.read', 'configuration.forms.publish'],
+  // Formulários (C11).
+  'form.read': ['configuration.form-layouts.read'],
+  'form.design': ['configuration.form-layouts.read', 'configuration.form-layouts.manage'],
+  'form.publish': ['configuration.form-layouts.read', 'configuration.form-layouts.publish'],
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],
   'rule.manage': ['configuration.rules.read', 'configuration.rules.manage'],

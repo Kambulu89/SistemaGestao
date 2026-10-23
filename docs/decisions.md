@@ -491,6 +491,14 @@ quem lê os registos vê os publicados (`/dynamic/{entity}/forms`) com `issues` 
 (campo escondido no pedido continua sujeito a `dynamic.sensitive`, validação e regras). O renderer passou a aplicar a configuração do formulário (`applyFormConfiguration`), que existia mas não era usada. **Limites:** um formulário só de criação pode
 não incluir campos opcionais (ficam por preencher); o Form Builder visual e a vista móvel/papéis simulados são a fatia 3.7.
 
+## D-041 Form Builder: o estado do editor é o layout do servidor (aceite — fatia 3.7)
+O builder edita directamente as secções que o servidor guarda (códigos de campo, condições declarativas), com operações puras e imutáveis (`form-layout.ts`) testadas à parte: nada se converte de e para um modelo paralelo, pelo que o que se vê é o que se grava.
+**Condições:** o construtor representa comparações ligadas por «e»/«ou» (números como número, booleanos, texto); `in/nin`, `not` e aninhamento mostram-se descritos e **preservam-se** até serem refeitos. Só campos não sensíveis (como no servidor).
+**Arrastar e largar** usa a API nativa do navegador (sem `@angular/cdk`, que exigiria uma dependência nova e ADR); subir/descer por botões garante o uso por teclado. **Pré-visualização:** o mesmo renderer dos registos, alimentado pelo layout em edição
+(`formFromDto`), por modo; a «largura de telemóvel» limita o contentor mas não reproduz os pontos de quebra. **Fluxo:** guardar rascunho ≠ verificar ≠ publicar; «verificar» e «publicar» guardam primeiro (um servidor que recusa mostra os problemas
+com o caminho completo). **Permissões:** `form.read|design|publish` → `configuration.form-layouts.*` (navegação; o servidor decide). **Limites:** sem teste com papéis simulados (spec C11), sem grupos, valores por omissão por formulário nem política de
+valores escondidos; um formulário publicado nunca se edita (nova revisão).
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

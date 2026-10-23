@@ -479,7 +479,7 @@ Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a
 | 3.4 | Editor de regras (UI) sobre `/rules`: construtor de condições, simulação, publicação, revisões e avaliações | **Concluída** (ver 2c.4) |
 | 3.5 | Tipo LOOKUP (valor lido em tempo real de um registo referenciado, com a autorização do destino) | **Concluída** (ver 2c.5) |
 | 3.6 | C11 formulários no servidor (secções, ligações a campos, condições de apresentação, publicação imutável, verificação contra a entidade) e usados pelos registos no frontend | **Concluída** (ver 2c.6); Form Builder visual e submissões por fazer |
-| 3.7 | Form Builder visual sobre `/forms` (arrastar campos, condições, vista móvel, teste com papéis simulados) | Por fazer |
+| 3.7 | Form Builder visual sobre `/forms`: secções, arrastar campos, ajuda e condições, pré-visualização, verificação e publicação | **Concluída** (ver 2c.7); teste com papéis simulados por fazer |
 | 3.8 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
 | 3.9 | C14 workflows, tarefas e delegações | Por fazer |
 | 3.10 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
@@ -567,6 +567,17 @@ registos. Os registos escrevem-se sempre na entidade (autorização e validaçã
 secções e título, rótulo/ajuda do formulário, secção condicionada, campo não incluído, gravação na entidade, e regresso ao formulário gerado ao retirar.
 **Não verificado / limites:** o E2E correu por script local; sem Form Builder visual (3.7), sem `FormSubmission` (o CRUD escreve directamente), sem política de valores escondidos (preservar/limpar), sem grupos nem valores por omissão por formulário,
 `span`/`columns` até 3 (a spec fala em 1–12 para a largura) — ver D-040.
+
+### 2c.7 Fatia 3.7 — Form Builder (concluída; ver D-041)
+**Frontend** (`features/dynamic-core/forms`; servidor inalterado). Página `/t/:slug/entities/:entityKey/formularios` ligada ao detalhe da entidade; permissões `form.read|design|publish` traduzidas para `configuration.form-layouts.*`.
+Lista as revisões (modos, por omissão, estado, «com problemas») e permite criar formulários, editar o rascunho, abrir nova revisão, publicar e retirar. O editor: nome, código, descrição, modos e «por omissão»; secções (título, 1–3 colunas, condição
+de visibilidade, subir/descer/remover); campos ligados por código com **arrastar e largar** (e botões subir/descer para teclado) entre secções; por campo, rótulo, ajuda, texto de exemplo, largura, escondido/só leitura/obrigatório e as
+condições «mostrar/editável/obrigatório quando» (construtor de comparações ligadas por «e»/«ou»; condições mais ricas ficam descritas e preservadas). **Pré-visualização** ao vivo com o renderer real, por modo e com largura de telemóvel
+(só estreita o contentor). **Verificar com o servidor** guarda o rascunho e mostra os problemas com o caminho completo (ou confirma que é publicável); publicar guarda, verifica e publica. Nada duplica definições de campo.
+**Verificado:** frontend lint, format, `check:generic`, `ng test` (772 testes) e build; E2E em browser real sobre a API real: criar formulário, ligar campos, segunda secção com condição, configurar rótulo/ajuda, pré-visualização, arrastar e «Descer»,
+guardar, verificar, publicar, uso do formulário nos registos (rótulo, ajuda e secção condicionada), e recusa do servidor a um formulário sem o campo obrigatório.
+**Não verificado / limites:** o E2E correu por script local, em duas execuções (a segunda só falhou no último passo por reutilizar o código do formulário de teste, já verificado na primeira); o «modo móvel» não reproduz os pontos de quebra do
+ecrã (só limita a largura); sem teste com papéis simulados; sem grupos nem valores por omissão por formulário; arrastar só com rato (os botões cobrem o teclado); sem `@angular/cdk` (sem ADR para nova dependência).
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

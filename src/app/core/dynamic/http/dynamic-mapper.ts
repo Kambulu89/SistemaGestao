@@ -371,26 +371,30 @@ function sectionFromServer(dto: FormSectionDto): FormSection {
  * utilizável (campos retirados, por exemplo) ou que a interface não representa fica de fora: a entidade volta ao
  * formulário gerado, em vez de mostrar um formulário partido.
  */
+export function formFromDto(tenantId: string, dto: FormDto): FormDefinition {
+  return {
+    id: dto.id,
+    key: entityKeyOf(dto.code),
+    name: dto.name,
+    ...(dto.description ? { description: dto.description } : {}),
+    entityKey: entityKeyOf(dto.entityCode),
+    scope: 'tenant',
+    tenantId,
+    version: dto.revision,
+    state: 'published',
+    modes: dto.modes,
+    isDefault: dto.isDefault,
+    sections: dto.sections.map(sectionFromServer),
+    ...(dto.publishedAt ? { publishedAt: dto.publishedAt } : {}),
+  };
+}
+
 export function formsFromServer(tenantId: string, forms: readonly FormDto[]): FormDefinition[] {
   const result: FormDefinition[] = [];
   for (const dto of forms) {
     if (dto.status !== 'PUBLISHED' || dto.issues.length > 0) continue;
     try {
-      result.push({
-        id: dto.id,
-        key: entityKeyOf(dto.code),
-        name: dto.name,
-        ...(dto.description ? { description: dto.description } : {}),
-        entityKey: entityKeyOf(dto.entityCode),
-        scope: 'tenant',
-        tenantId,
-        version: dto.revision,
-        state: 'published',
-        modes: dto.modes,
-        isDefault: dto.isDefault,
-        sections: dto.sections.map(sectionFromServer),
-        ...(dto.publishedAt ? { publishedAt: dto.publishedAt } : {}),
-      });
+      result.push(formFromDto(tenantId, dto));
     } catch (error) {
       if (!(error instanceof UnrepresentableDefinitionError)) throw error;
     }
