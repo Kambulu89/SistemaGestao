@@ -19,6 +19,7 @@ export const SUPPORTED_FIELD_TYPES = [
   'MULTISELECT',
   'ENTITY_REFERENCE',
   'USER_REFERENCE',
+  'FORMULA',
 ] as const
 export type FieldType = (typeof SUPPORTED_FIELD_TYPES)[number]
 
@@ -28,7 +29,6 @@ export const PLANNED_FIELD_TYPES: Readonly<Record<string, string>> = {
   CHECKBOX: 'colecção tipada de opções',
   FILE: 'anexos (Fase 4)',
   IMAGE: 'anexos (Fase 4)',
-  FORMULA: 'motor de regras e fórmulas (C12)',
   LOOKUP: 'caminhos de referência autorizados',
   AUTONUMBER: 'integração com o motor de sequências',
 }

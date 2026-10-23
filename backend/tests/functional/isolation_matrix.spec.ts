@@ -81,6 +81,8 @@ async function snapshot(world: World) {
     preferences: await get('/api/v1/me/preferences'),
     entities: await get('/api/v1/entity-definitions'),
     entity: await get(`/api/v1/entity-definitions/${world.ids.entity}`),
+    rules: await get('/api/v1/rules'),
+    evaluations: await get(`/api/v1/rules/${world.ids.rule}/evaluations`),
     records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
@@ -131,6 +133,13 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['patch', `/tax-rates/${o.taxRate}`, { ...stale, name: 'x' }],
     ['patch', `/units/${o.unit}`, { ...stale, name: 'x' }],
     ['patch', `/sequences/${o.sequence}`, { ...stale, padding: 8 }],
+    ['get', `/rules/${o.rule}`],
+    ['get', `/rules/${o.rule}/evaluations`],
+    ['patch', `/rules/${o.rule}`, { ...stale, name: 'x' }],
+    ['post', `/rules/${o.rule}/revisions`],
+    ['post', `/rules/${o.rule}/simulate`, { values: {} }],
+    ['post', `/rules/${o.rule}/publish`, stale],
+    ['post', `/rules/${o.rule}/disable`, stale],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
     ['delete', `/entity-definitions/${o.entity}`],
@@ -246,6 +255,8 @@ test.group('matriz de isolamento', (group) => {
       'team',
       'entities',
       'records',
+      'rules',
+      'evaluations',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)
@@ -782,6 +793,20 @@ test.group('matriz de isolamento', (group) => {
         `${table}: A não vê linhas de B`
       )
 
+      if (table === 'rule_evaluations') {
+        // Registo de avaliações: só acrescenta (trigger de imutabilidade); RLS continua a filtrar a leitura.
+        for (const sql of [
+          `delete from ${table} where tenant_id = '${a.tenant.id}'`,
+          `update ${table} set tenant_id = '${b.tenant.id}' where tenant_id = '${a.tenant.id}'`,
+        ]) {
+          const denied = await capture(() =>
+            asTenant('runtime', a.tenant.id, (t) => t.rawQuery(sql))
+          )
+          assert.match(denied.message, /imut|permission denied/, `${table}: ${sql.split(' ')[0]}`)
+        }
+        continue
+      }
+
       if (table === 'audit_logs') {
         // Imutável: a conta de runtime nem sequer tem privilégios de escrita (mais forte do que a RLS).
         for (const sql of [
@@ -813,10 +838,16 @@ test.group('matriz de isolamento', (group) => {
         )
       )
       // Versões publicadas e campos são imutáveis (trigger BEFORE UPDATE, que dispara antes do WITH CHECK da RLS).
-      const immutable = ['entity_schema_versions', 'field_definitions'].includes(table)
+      const immutable = [
+        'entity_schema_versions',
+        'field_definitions',
+        'rule_definitions',
+      ].includes(table)
       assert.match(
         moved.message,
-        immutable ? /row-level security|PUBLISHED_VERSION_IMMUTABLE/ : /row-level security/,
+        immutable
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE/
+          : /row-level security/,
         `${table}: mover linhas para B`
       )
     }

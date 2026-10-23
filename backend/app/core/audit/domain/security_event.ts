@@ -76,6 +76,7 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   field_definitions: 'entity.read',
   dynamic_records: 'dynamic.read',
   dynamic_unique_values: 'dynamic.read',
+  rule_definitions: 'rule.read',
 }
 
 /** Tabelas de tenant que não são auditadas, com o motivo (o teste de conformidade exige o resto). */
@@ -83,6 +84,8 @@ export const AUDIT_EXEMPT_TABLES: Readonly<Record<string, string>> = {
   audit_logs: 'É a própria auditoria (imutável).',
   subscription_changes:
     'Histórico próprio e imutável da assinatura (C02), consultável em GET /tenant/subscription.',
+  rule_evaluations:
+    'Registo próprio e só de acrescentar das avaliações de regras (C12), consultável em GET /rules/{id}/evaluations.',
   user_preferences:
     'Preferências pessoais de apresentação; sem efeito em acessos nem dados de negócio.',
 }

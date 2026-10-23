@@ -64,15 +64,7 @@ test.group('metadados | decimais, datas e padrões', () => {
 
 test.group('metadados | definição de campos', () => {
   test('tipos ainda não disponíveis são recusados com um erro explícito', ({ assert }) => {
-    for (const type of [
-      'FORMULA',
-      'LOOKUP',
-      'FILE',
-      'IMAGE',
-      'CURRENCY',
-      'CHECKBOX',
-      'AUTONUMBER',
-    ]) {
+    for (const type of ['LOOKUP', 'FILE', 'IMAGE', 'CURRENCY', 'CHECKBOX', 'AUTONUMBER']) {
       const [first] = issuesOf({ code: 'campo', type })
       assert.equal(first.code, 'FIELD_TYPE_NOT_SUPPORTED', type)
     }

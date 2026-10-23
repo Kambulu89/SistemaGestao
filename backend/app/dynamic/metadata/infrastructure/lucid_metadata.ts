@@ -432,6 +432,7 @@ const FILTER_EXPRESSION: Record<string, string> = {
   URL: 'lower(data ->> ?) = lower(?)',
   NUMBER: '(data ->> ?)::bigint = ?',
   DECIMAL: '(data ->> ?)::numeric = ?::numeric',
+  FORMULA: '(data ->> ?)::numeric = ?::numeric',
   BOOLEAN: '(data ->> ?)::boolean = ?',
 }
 
@@ -447,6 +448,7 @@ function orderBy(sort: RecordFilter['sort']): { sql: string; params: string[] } 
     URL: 'lower(data ->> ?)',
     NUMBER: '(data ->> ?)::bigint',
     DECIMAL: '(data ->> ?)::numeric',
+    FORMULA: '(data ->> ?)::numeric',
     BOOLEAN: '(data ->> ?)::boolean',
   }
   return {

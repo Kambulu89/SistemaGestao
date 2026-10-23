@@ -134,6 +134,8 @@ export function validateValue(spec: FieldSpec, raw: unknown, previous: unknown):
       if (raw.length > max) return fail('TOO_MANY', `Escolha no máximo ${max}.`)
       return ok([...(raw as string[])].sort())
     }
+    case 'FORMULA':
+      return fail('READ_ONLY', 'O resultado de uma fórmula é calculado pelo servidor.')
     case 'ENTITY_REFERENCE':
     case 'USER_REFERENCE':
       return typeof raw === 'string' && UUID.test(raw)

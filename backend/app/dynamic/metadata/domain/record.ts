@@ -4,6 +4,7 @@ import {
   type FieldSpec,
   type Issue,
 } from '#dynamic/metadata/domain/field_types'
+import { computeFormulaValues } from '#dynamic/metadata/domain/formula'
 import { isSearchable } from '#dynamic/metadata/domain/presentation'
 import { validateValue } from '#dynamic/metadata/domain/value'
 
@@ -85,6 +86,11 @@ export function validateRecordData(
     } else if (spec.required) {
       issues.push({ path: `data.${spec.code}`, code: 'REQUIRED', message: 'Campo obrigatório.' })
     }
+  }
+  // As fórmulas calculam-se sempre no servidor, sobre os valores finais (um resultado vazio apaga o anterior).
+  for (const [code, result] of Object.entries(computeFormulaValues(fields, values))) {
+    if (result === null) delete values[code]
+    else values[code] = result
   }
   return { values, issues }
 }

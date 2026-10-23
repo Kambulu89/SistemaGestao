@@ -216,6 +216,35 @@ describe('servidor → interface', () => {
     expect(f.serverValidation).toEqual({ precision: 15 });
   });
 
+  it('fórmulas: a expressão volta a camelCase (as funções ficam) e a árvore do servidor não passa', () => {
+    const f = fieldOf(
+      field({
+        code: 'total',
+        type: 'FORMULA',
+        readOnly: true,
+        validation: {
+          expression: 'round(preco_unitario * quantidade, 2) - max(desconto, 0)',
+          scale: 2,
+          ast: { kind: 'num' },
+          dependencies: ['preco_unitario', 'quantidade', 'desconto'],
+        },
+      }),
+    );
+    expect(f).toMatchObject({
+      type: 'formula',
+      scale: 2,
+      editable: false,
+      formula: { source: 'round(precoUnitario * quantidade, 2) - max(desconto, 0)' },
+    });
+    expect(f.serverValidation).toBeUndefined();
+  });
+
+  it('uma fórmula sem expressão não se representa', () => {
+    expect(() => fieldOf(field({ type: 'FORMULA', validation: { scale: 2 } }))).toThrow(
+      UnrepresentableDefinitionError,
+    );
+  });
+
   it('opções arquivadas ficam inactivas; datas e selecções guardam o que a interface não edita', () => {
     const select = fieldOf(
       field({
@@ -312,6 +341,22 @@ describe('interface → servidor', () => {
   it('decimais levam precisão 15 por omissão e a escala do campo', () => {
     const f = build({ type: 'decimal', key: 'peso', label: 'Peso', scale: 3 });
     expect(toServer(f).dto?.validation).toEqual({ precision: 15, scale: 3 });
+  });
+
+  it('fórmulas seguem como texto em snake_case, com a escala', () => {
+    const f = build({
+      type: 'formula',
+      key: 'total',
+      label: 'Total',
+      scale: 2,
+      formula: { source: 'round(precoUnitario * quantidade, 2)' },
+    });
+    const dto = toServer(f).dto;
+    expect(dto).toMatchObject({ type: 'FORMULA', required: false, readOnly: true });
+    expect(dto?.validation).toEqual({
+      expression: 'round(preco_unitario * quantidade, 2)',
+      scale: 2,
+    });
   });
 
   it('tipos, condições e regras que o servidor ainda não tem são recusados, nunca descartados', () => {

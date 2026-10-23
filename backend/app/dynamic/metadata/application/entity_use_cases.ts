@@ -6,6 +6,7 @@ import {
 } from '#dynamic/metadata/domain/compatibility'
 import { normalizeFields, type FieldInput } from '#dynamic/metadata/domain/field_spec'
 import type { FieldSpec, Issue } from '#dynamic/metadata/domain/field_types'
+import { checkFormulaSet } from '#dynamic/metadata/domain/formula'
 import { normalizeEntityPresentation } from '#dynamic/metadata/domain/presentation'
 import type {
   EntityDefinition,
@@ -356,6 +357,11 @@ export class EntityDefinitionUseCases {
     const report = previous
       ? checkCompatibility(previous.fields, draft.fields)
       : { ...empty, added: draft.fields.map((f) => f.code), effective: draft.fields }
+
+    // Uma fórmula não pode ficar a apontar para um campo retirado nesta publicação (os campos retirados arquivam-se).
+    for (const { code, issue: problem } of checkFormulaSet(report.effective)) {
+      report.issues.push({ ...problem, path: `fields.${code}` })
+    }
 
     for (const field of draft.fields) {
       if (!field.referenceEntityId || field.referenceEntityId === entity.id) continue

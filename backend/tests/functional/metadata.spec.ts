@@ -552,7 +552,7 @@ test.group('metadados | versões, compatibilidade e imutabilidade', (group) => {
       code: 'coisa',
       name: 'Coisa',
       fields: [
-        { code: 'total', label: 'Total', type: 'FORMULA' },
+        { code: 'total', label: 'Total', type: 'LOOKUP' },
         {
           code: 'destino',
           label: 'Destino',
@@ -1333,5 +1333,213 @@ test.group('metadados | apresentação, ordenação, filtros e total', (group) =
     await must(await http.post(records, { data: { marca: 'Zeta', modelo: 'Omega' } }), 201)
     assert.lengthOf((await http.get(`${records}?q=omega`)).body().data, 1)
     assert.lengthOf((await http.get(`${records}?q=zeta`)).body().data, 0)
+  })
+})
+
+test.group('metadados | campos fórmula calculados no servidor', (group) => {
+  group.setup(async () => {
+    await iamServices().syncCatalog.execute()
+  })
+  group.each.setup(async () => {
+    await resetAuthState()
+    return async () => {
+      await deleteTestTenants()
+      await deleteTestUsers()
+    }
+  })
+
+  const orderFields = () => [
+    { code: 'ref', label: 'Referência', type: 'TEXT', required: true },
+    { code: 'qtd', label: 'Quantidade', type: 'NUMBER' },
+    { code: 'preco', label: 'Preço', type: 'DECIMAL', validation: { precision: 12, scale: 2 } },
+    {
+      code: 'desconto',
+      label: 'Desconto',
+      type: 'DECIMAL',
+      validation: { precision: 12, scale: 2 },
+    },
+    {
+      code: 'total',
+      label: 'Total',
+      type: 'FORMULA',
+      validation: { expression: 'qtd * preco - desconto', scale: 2 },
+      presentation: { sortable: true, filterable: true },
+    },
+  ]
+  const url = '/api/v1/dynamic/pedido/records'
+  const publishedOrders = async (http: Http, fields: unknown[] = orderFields()) => {
+    const draft = await must<Detail>(
+      await http.post('/api/v1/entity-definitions', { code: 'pedido', name: 'Pedido', fields }),
+      201
+    )
+    return must<Detail>(
+      await http.post(`/api/v1/entity-definitions/${draft.entity.id}/publish`, {
+        expectedVersion: draft.entity.version,
+      }),
+      200
+    )
+  }
+
+  test('o total é calculado ao criar e ao alterar; o cliente não o escreve; faltar um valor apaga-o', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    const detail = await publishedOrders(http)
+    const total = detail.published?.fields.find((f) => f.code === 'total')
+    assert.isTrue(total.readOnly)
+    assert.sameMembers(total.validation.dependencies, ['qtd', 'preco', 'desconto'])
+
+    const created = await must<any>(
+      await http.post(url, { data: { ref: 'P1', qtd: 3, preco: '19.99', desconto: '0.50' } }),
+      201
+    )
+    assert.equal(created.data.total, '59.47')
+    const changed = await must<any>(
+      await http.patch(`${url}/${created.id}`, {
+        expectedVersion: created.version,
+        data: { qtd: 10 },
+      }),
+      200
+    )
+    assert.equal(changed.data.total, '199.40')
+    const incomplete = await must<any>(
+      await http.patch(`${url}/${created.id}`, {
+        expectedVersion: changed.version,
+        data: { desconto: null },
+      }),
+      200
+    )
+    assert.notProperty(incomplete.data, 'total')
+
+    const forged = await http.post(url, { data: { ref: 'P2', total: '1.00' } })
+    forged.assertStatus(422)
+    assert.deepInclude(forged.body().error.details[0], { path: 'data.total', code: 'READ_ONLY' })
+  })
+
+  test('ordenar e filtrar pelo valor calculado (números, não texto)', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    await publishedOrders(http)
+    for (const [ref, qtd, preco] of [
+      ['A', 1, '9.00'],
+      ['B', 1, '100.00'],
+      ['C', 1, '20.00'],
+    ] as const) {
+      await must(await http.post(url, { data: { ref, qtd, preco, desconto: '0' } }), 201)
+    }
+    const refs = async (query: string) =>
+      (await http.get(`${url}?${query}`)).body().data.map((r: any) => r.data.ref)
+    assert.deepEqual(await refs('sort=total:asc'), ['A', 'C', 'B'])
+    assert.deepEqual(await refs('sort=total:desc'), ['B', 'C', 'A'])
+    assert.deepEqual(await refs('filter.total=20'), ['C'])
+  })
+
+  test('a fórmula é recusada se tiver ciclo, campo desconhecido ou fuga de dados sensíveis; divisão por zero dá vazio', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    const refuse = async (fields: unknown[]) => {
+      const response = await http.post('/api/v1/entity-definitions', {
+        code: 'cobaia',
+        name: 'Cobaia',
+        fields,
+      })
+      response.assertStatus(422)
+      return response.body().error.details.map((d: any) => d.code)
+    }
+    const formula = (code: string, expression: string, extra = {}) => ({
+      code,
+      label: code,
+      type: 'FORMULA',
+      validation: { expression },
+      ...extra,
+    })
+    assert.include(
+      await refuse([formula('aa', 'bb + 1'), formula('bb', 'aa + 1')]),
+      'CIRCULAR_FORMULA'
+    )
+    assert.include(await refuse([formula('aa', 'inexistente * 2')]), 'FORMULA_UNKNOWN_FIELD')
+    assert.include(await refuse([formula('aa', 'process(1)')]), 'INVALID_FORMULA')
+    assert.include(
+      await refuse([
+        { code: 'sal', label: 'Salário', type: 'NUMBER', sensitive: true },
+        formula('bonus', 'sal * 2'),
+      ]),
+      'FORMULA_LEAKS_SENSITIVE'
+    )
+
+    await publishedOrders(http, [
+      { code: 'qtd', label: 'Qtd', type: 'NUMBER' },
+      { code: 'peso', label: 'Peso', type: 'NUMBER' },
+      formula('media', 'peso / qtd'),
+    ])
+    const zero = await must<any>(await http.post(url, { data: { qtd: 0, peso: 10 } }), 201)
+    assert.notProperty(zero.data, 'media')
+    const ok = await must<any>(await http.post(url, { data: { qtd: 4, peso: 10 } }), 201)
+    assert.equal(ok.data.media, '2.50')
+  })
+
+  test('uma nova versão pode mudar a fórmula (valores antigos mantêm-se até o registo ser alterado); retirar um campo usado por uma fórmula é recusado', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    const v1 = await publishedOrders(http)
+    const record = await must<any>(
+      await http.post(url, { data: { ref: 'P1', qtd: 2, preco: '10', desconto: '0' } }),
+      201
+    )
+    assert.equal(record.data.total, '20.00')
+
+    let detail = await must<Detail>(
+      await http.post(`/api/v1/entity-definitions/${v1.entity.id}/drafts`, {}),
+      201
+    )
+    // Retirar «desconto» (usado pela fórmula) é recusado logo ao guardar o rascunho.
+    const draftFields = (detail.draft?.fields ?? []) as any[]
+    const removal = await http.put(`/api/v1/entity-definitions/${v1.entity.id}/draft`, {
+      expectedVersion: detail.entity.version,
+      fields: draftFields.filter((f) => f.code !== 'desconto'),
+    })
+    removal.assertStatus(422)
+    assert.include(
+      removal.body().error.details.map((d: any) => d.code),
+      'FORMULA_UNKNOWN_FIELD'
+    )
+
+    // Mudar a fórmula é permitido (a árvore e as dependências são recalculadas).
+    const changedFields = draftFields.map((f) =>
+      f.code === 'total' ? { ...f, validation: { expression: 'qtd * preco * 2', scale: 2 } } : f
+    )
+    detail = await must<Detail>(
+      await http.put(`/api/v1/entity-definitions/${v1.entity.id}/draft`, {
+        expectedVersion: detail.entity.version,
+        fields: changedFields,
+      }),
+      200
+    )
+    detail = await must<Detail>(
+      await http.post(`/api/v1/entity-definitions/${v1.entity.id}/publish`, {
+        expectedVersion: detail.entity.version,
+      }),
+      200
+    )
+    assert.equal(detail.published?.revision, 2)
+    // O registo antigo mantém o valor com que foi calculado…
+    assert.equal((await http.get(`${url}/${record.id}`)).body().data.data.total, '20.00')
+    // …e recalcula-se quando é alterado (passa à revisão 2).
+    const moved = await must<any>(
+      await http.patch(`${url}/${record.id}`, {
+        expectedVersion: record.version,
+        data: { qtd: 3 },
+      }),
+      200
+    )
+    assert.equal(moved.data.total, '60.00')
+    assert.equal(moved.schemaVersion.revision, 2)
   })
 })

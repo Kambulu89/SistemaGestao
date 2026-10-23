@@ -450,6 +450,20 @@ concedidas. **Fora desta fatia:** modo de propriedade UNIT/OWNER no formulário 
 transições de estado, campos personalizados de entidades nativas, histórico de versões anteriores à publicada, listas de referência paginadas, nomes
 de autor do histórico sem `member.read`, e a UI de políticas por entidade (ABAC) — continua por API.
 
+## D-037 Fórmulas e regras no servidor: gramática restrita, AST, gancho por registo (aceite — fatia 3.3)
+**Fórmulas.** O campo `FORMULA` guarda em `validation` a expressão, a escala, a AST e as dependências. Gramática: números, campos, `+ - * /`, parênteses e `round/min/max/abs`;
+limites de 500 caracteres, 100 nós e profundidade 20; nunca se executa SQL, JavaScript nem código do tenant. Cálculo em ponto fixo (BigInt, escala interna 12): campo nulo,
+divisão por zero ou resultado com mais de 19 dígitos dão **vazio**, não erro. O resultado é texto decimal, só de leitura, não obrigatório e sem valor por omissão; calcula-se
+no servidor em ordem topológica no fim da validação do registo, de modo que o cliente nunca é fonte do valor. Ciclos, referências a campos inexistentes, arquivados ou não numéricos
+e fórmulas sobre campos sensíveis num campo não sensível são recusados ao gravar o rascunho e ao publicar. Filtra e ordena como DECIMAL.
+**Regras.** Módulo `app/dynamic/rules` (rascunho → publicada → desactivada; um rascunho e uma publicada por (entidade, código); revisões; as publicadas são imutáveis por trigger, só
+passam a desactivadas). Gatilho único `VALIDATE`, acção única `BLOCK` com mensagem de negócio (e campo opcional). A condição reutiliza a AST do motor de permissões; variáveis: campos do
+registo, `subject.*` e `env.*`. Prioridade, vigência e simulação sem efeitos. Cada FAIL/ERROR fica em `rule_evaluations` (append-only, hash da entrada, transacção separada para
+sobreviver à escrita recusada); PASS não se regista. Falha de avaliação **nega** a escrita (fail-closed).
+**Ligação.** `metadata` não importa `rules`: expõe `registerRecordRules`, chamado pelo preload `start/dynamic.ts`; se ninguém registar, escrever registos falha em vez de saltar as regras.
+**Limites:** uma regra que referencia um campo entretanto arquivado deixa de corresponder (a publicação verifica as referências, o arquivamento posterior não); sem BEFORE/AFTER_COMMIT nem
+outras acções; LOOKUP e AUTONUMBER por fazer; ler regras e avaliações no histórico exige `rule.read` e `audit.read`; a UI de regras é a fatia 3.4.
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

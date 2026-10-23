@@ -124,6 +124,16 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Aceder aos registos de todos os responsáveis em entidades de modo OWNER.',
   },
   {
+    code: 'rule.read',
+    moduleCode: 'dynamic',
+    description: 'Ver regras de validação, as suas revisões e avaliações.',
+  },
+  {
+    code: 'rule.manage',
+    moduleCode: 'dynamic',
+    description: 'Criar, simular, publicar e desactivar regras de validação.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

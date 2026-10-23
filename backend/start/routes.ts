@@ -24,6 +24,7 @@ const SubscriptionController = () =>
   import('#platform/billing/presentation/subscription_controller')
 const ModulesController = () => import('#platform/modules/presentation/modules_controller')
 const MetadataController = () => import('#dynamic/metadata/presentation/metadata_controller')
+const RulesController = () => import('#dynamic/rules/presentation/rules_controller')
 const SettingsController = () => import('#core/settings/presentation/settings_controller')
 const PlatformController = () => import('#platform/administration/presentation/platform_controller')
 const HealthController = () => import('#core/health/presentation/health_controller')
@@ -348,6 +349,34 @@ router
     router
       .post('/dynamic/:entityCode/records/:id/archive', [MetadataController, 'archiveRecord'])
       .use(onEntity('dynamic.archive'))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Regras de negócio (C12): `rule.read` para ver e `rule.manage` para criar, simular, publicar e desactivar. As regras
+ * publicadas bloqueiam as escritas de registos dinâmicos com a mensagem de negócio de cada uma.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router.get('/rules', [RulesController, 'list'])
+        router.get('/rules/:id', [RulesController, 'show'])
+        router.get('/rules/:id/evaluations', [RulesController, 'evaluations'])
+      })
+      .use(middleware.can({ permission: 'rule.read' }))
+
+    router
+      .group(() => {
+        router.post('/rules', [RulesController, 'create'])
+        router.patch('/rules/:id', [RulesController, 'update'])
+        router.post('/rules/:id/revisions', [RulesController, 'createRevision'])
+        router.post('/rules/:id/simulate', [RulesController, 'simulate'])
+        router.post('/rules/:id/publish', [RulesController, 'publish'])
+        router.post('/rules/:id/disable', [RulesController, 'disable'])
+      })
+      .use(middleware.can({ permission: 'rule.manage' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

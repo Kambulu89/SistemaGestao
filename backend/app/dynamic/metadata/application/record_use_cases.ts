@@ -12,6 +12,7 @@ import {
 import { resolveListQuery } from '#dynamic/metadata/domain/list_query'
 import { isSearchable } from '#dynamic/metadata/domain/presentation'
 import { validationError } from '#dynamic/metadata/application/entity_use_cases'
+import { currentRecordRules } from '#dynamic/metadata/application/record_rules'
 import type {
   AccessControl,
   AccessDecision,
@@ -80,6 +81,7 @@ export class RecordUseCases {
     const provided = Object.keys((input.data ?? {}) as object)
     await this.assertFieldAccess(context, entity, first.current.fields, provided, decision)
     if (issues.length > 0) throw validationError(issues)
+    await this.applyRules(context, entity, 'CREATE', null, first.current.fields, values)
 
     const row = await this.uow.run(async (scope) => {
       const loaded = await this.loadForWrite(scope, entityCode)
@@ -215,6 +217,7 @@ export class RecordUseCases {
     const provided = Object.keys((input.data ?? {}) as object)
     await this.assertFieldAccess(context, entity, first.current.fields, provided, decision)
     if (issues.length > 0) throw validationError(issues)
+    await this.applyRules(context, entity, 'UPDATE', id, first.current.fields, values)
 
     const row = await this.uow.run(async (scope) => {
       const loaded = await this.loadForWrite(scope, entityCode)
@@ -259,6 +262,25 @@ export class RecordUseCases {
   }
 
   // --- internos ------------------------------------------------------------------------------
+
+  /** As regras publicadas bloqueiam a escrita com a mensagem de negócio de cada uma (valores já normalizados). */
+  private async applyRules(
+    context: TenantContext,
+    entity: EntityDefinition,
+    operation: 'CREATE' | 'UPDATE',
+    recordId: string | null,
+    fields: readonly FieldSpec[],
+    values: RecordValues
+  ) {
+    const issues = await currentRecordRules().check(context, {
+      entity: { id: entity.id, code: entity.code },
+      operation,
+      recordId,
+      fields,
+      values,
+    })
+    if (issues.length > 0) throw validationError(issues)
+  }
 
   private async mustFindEntity(scope: TenantScope, code: string): Promise<EntityDefinition> {
     const entity = await this.entities.findByCode(scope, code)

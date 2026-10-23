@@ -151,11 +151,13 @@ describe('Campos personalizados: página e designer', () => {
     const types = [...el.querySelectorAll('select')[0]!.querySelectorAll('option')].map((o) =>
       o.textContent?.trim(),
     );
-    expect(types).toEqual(expect.arrayContaining(['Texto', 'Decimal', 'Referência a utilizador']));
-    for (const missing of ['Fórmula', 'Moeda', 'Imagem', 'Numeração automática'])
+    expect(types).toEqual(
+      expect.arrayContaining(['Texto', 'Decimal', 'Fórmula', 'Referência a utilizador']),
+    );
+    for (const missing of ['Moeda', 'Imagem', 'Numeração automática'])
       expect(types).not.toContain(missing);
     const notice = el.querySelector('[data-testid=preview-types]');
-    expect(notice?.textContent).toContain('Fórmula');
+    expect(notice?.textContent).not.toContain('Fórmula');
     expect(notice?.textContent).toContain('Moeda');
   });
 

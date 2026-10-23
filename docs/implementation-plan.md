@@ -475,11 +475,12 @@ Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a
 | --- | --- | --- |
 | 3.1 | C10 no backend: entidades, versões imutáveis, campos tipados, registos com únicos concorrentes, sensíveis, propriedade, pesquisa e auditoria; «Viatura» como entidade definida por um tenant | **Concluída** (backend; ver 2c.1) |
 | 3.2 | Frontend de C10: Entity Designer, publicação e listagem/formulário genérico de registos sobre a API (fim do mock do core dinâmico) | **Concluída** (ver 2c.2) |
-| 3.3 | C12 regras e fórmulas por AST (validação, simulação, orçamento de custo, ciclos) — traz os tipos FORMULA/LOOKUP | Por fazer |
-| 3.4 | C11 formulários (secções, bindings, condições) | Por fazer |
-| 3.5 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
-| 3.6 | C14 workflows, tarefas e delegações | Por fazer |
-| 3.7 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
+| 3.3 | C12 no servidor: campo FORMULA (gramática restrita → AST, ordem topológica, ciclos) e regras de validação por AST (publicação imutável, simulação, avaliações registadas); FORMULA no designer | **Concluída** (ver 2c.3); LOOKUP e a UI de regras ficam por fazer |
+| 3.4 | Editor de regras (UI) sobre `/rules` + LOOKUP | Por fazer |
+| 3.5 | C11 formulários (secções, bindings, condições) | Por fazer |
+| 3.6 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox) | Por fazer |
+| 3.7 | C14 workflows, tarefas e delegações | Por fazer |
+| 3.8 | C15 automações e a fatia de «Viatura» ponta a ponta com pesquisa e auditoria na interface | Por fazer |
 
 ### 2c.1 Fatia 3.1 — C10 no backend (concluída; ver D-035)
 **Entregue:** migration `create_metadata` (5 tabelas de tenant com RLS, FKs compostas e auditoria; triggers de imutabilidade de versões
@@ -519,6 +520,16 @@ sem total/ordenação por campo.
 interface é um número (15 dígitos) e recusa o que não cabe; as entidades criadas pela API com códigos que a interface não representa não aparecem na lista; só o
 Core Dinâmico foi ligado — formulários (C11), regras (C12), estados (C13), workflows (C14) e automações (C15) continuam sem servidor; uma conta com uma regra de campo
 que esconde um campo pesquisável não pode usar a pesquisa (422).
+
+### 2c.3 Fatia 3.3 — fórmulas e regras no servidor (concluída; ver D-037)
+**Servidor.** Campo `FORMULA` (migration 15): expressão em gramática restrita (`+ - * /`, `round/min/max/abs`, até 500 caracteres/100 nós/profundidade 20) convertida em AST
+na gravação; cálculo em ponto fixo (BigInt) no servidor, em ordem topológica, no fim da validação do registo; ciclos, referências inexistentes/arquivadas/não numéricas e
+fórmulas que expõem campos sensíveis são recusadas ao gravar o rascunho e ao publicar. Módulo `app/dynamic/rules` (migration 16): regras `VALIDATE`→`BLOCK` com condição na AST de
+permissões, rascunho/publicada/desactivada, revisões, janela de vigência, prioridade, simulação sem efeitos e registo de avaliações (FAIL/ERROR, em transacção separada). Permissões
+`rule.read`/`rule.manage`. A matriz de isolamento cobre `/rules*`, `rule_definitions` e `rule_evaluations`.
+**Frontend.** `FORMULA` passou a tipo do servidor: o mapper traduz a expressão (identificadores camelCase ⇄ snake_case), a escala e o valor calculado (texto ⇄ número); o campo é só de leitura.
+**Verificado:** backend lint, typecheck, format, build e `npm test` (385 testes); frontend lint, format, `check:generic`, 732 testes unitários e build.
+**Não verificado:** E2E em browser com campo FORMULA (só testes unitários dos mappers; o servidor está coberto por testes funcionais).
 
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.

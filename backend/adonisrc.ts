@@ -16,7 +16,11 @@ export default defineConfig({
     () => import('@adonisjs/redis/redis_provider'),
   ],
 
-  preloads: [() => import('#start/routes'), () => import('#start/kernel')],
+  preloads: [
+    () => import('#start/routes'),
+    () => import('#start/kernel'),
+    () => import('#start/dynamic'),
+  ],
 
   tests: {
     suites: [

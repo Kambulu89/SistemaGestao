@@ -72,6 +72,7 @@ const TYPE_TO_SERVER: Readonly<Partial<Record<FieldType, string>>> = {
   multiselect: 'MULTISELECT',
   'entity-reference': 'ENTITY_REFERENCE',
   'user-reference': 'USER_REFERENCE',
+  formula: 'FORMULA',
 };
 const TYPE_FROM_SERVER = new Map(
   Object.entries(TYPE_TO_SERVER).map(([type, server]) => [server, type as FieldType]),
@@ -85,6 +86,19 @@ export const SERVER_FIELD_TYPES: ReadonlySet<FieldType> = new Set(
 /** Precisão fixa dos decimais: 15 dígitos cabem exactamente num número da interface. */
 export const DECIMAL_PRECISION = 15;
 const DEFAULT_SCALE = 2;
+
+// --- fórmulas ----------------------------------------------------------------------------------
+
+const FORMULA_FUNCTIONS = new Set(['round', 'min', 'max', 'abs']);
+
+/** Reescreve os identificadores de campo de uma fórmula (as funções, seguidas de `(`, ficam). */
+function mapFormulaIdentifiers(source: string, map: (name: string) => string): string {
+  return source.replace(/[A-Za-z_][A-Za-z0-9_]*/g, (name, offset: number) =>
+    FORMULA_FUNCTIONS.has(name) && /^\s*\(/.test(source.slice(offset + name.length))
+      ? name
+      : map(name),
+  );
+}
 
 // --- decimais ----------------------------------------------------------------------------------
 
@@ -147,9 +161,14 @@ function rulesFromServer(
 function fieldFromServer(dto: FieldDto): FieldDefinition {
   const type = TYPE_FROM_SERVER.get(dto.type);
   if (!type) throw new UnrepresentableDefinitionError(`Tipo de campo desconhecido: ${dto.type}.`);
-  const scale = type === 'decimal' ? ((dto.validation['scale'] as number) ?? DEFAULT_SCALE) : 0;
+  const hasScale = type === 'decimal' || type === 'formula';
+  const scale = hasScale ? ((dto.validation['scale'] as number) ?? DEFAULT_SCALE) : 0;
   const { rules, server } = rulesFromServer(type, dto.validation, scale);
-  if (type === 'decimal') delete server['scale'];
+  if (hasScale) delete server['scale'];
+  // A árvore e as dependências são derivadas pelo servidor da expressão; a interface só conhece o texto.
+  delete server['ast'];
+  delete server['dependencies'];
+  delete server['expression'];
   const key = checkedFieldKey(dto.code);
 
   const defaultValue =
@@ -198,6 +217,18 @@ function fieldFromServer(dto: FieldDto): FieldDefinition {
     case 'decimal':
       input = { ...base, type, scale } as FieldInput;
       break;
+    case 'formula': {
+      const expression = dto.validation['expression'];
+      if (typeof expression !== 'string')
+        throw new UnrepresentableDefinitionError(`O campo "${dto.code}" não tem expressão.`);
+      input = {
+        ...base,
+        type,
+        scale,
+        formula: { source: mapFormulaIdentifiers(expression, fieldKeyOf) },
+      } as FieldInput;
+      break;
+    }
     case 'entity-reference': {
       if (!dto.referenceEntityCode)
         throw new UnrepresentableDefinitionError(`O campo "${dto.code}" não indica o destino.`);
@@ -303,7 +334,8 @@ export function fieldToServer(
     return null;
   }
 
-  const scale = field.type === 'decimal' ? (field.scale ?? DEFAULT_SCALE) : 0;
+  const scale =
+    field.type === 'decimal' || field.type === 'formula' ? (field.scale ?? DEFAULT_SCALE) : 0;
   const validation: Record<string, unknown> = { ...field.serverValidation };
   for (const rule of field.validations) {
     if (rule.when) {
@@ -341,6 +373,11 @@ export function fieldToServer(
     validation['scale'] = scale;
   }
 
+  if (field.type === 'formula') {
+    validation['expression'] = mapFormulaIdentifiers(field.formula.source, fieldCodeOf);
+    validation['scale'] = scale;
+  }
+
   const presentation: FieldPresentationDto = {
     ...(field.description ? { description: field.description } : {}),
     ...(field.placeholder ? { placeholder: field.placeholder } : {}),
@@ -375,7 +412,7 @@ export function fieldToServer(
       ? { referenceEntityCode: entityCodeOf(field.entityKey) }
       : {}),
     sensitive: field.sensitivity === 'sensitive',
-    readOnly: field.editable === false,
+    readOnly: field.editable === false || field.type === 'formula',
     presentation,
   };
 }
@@ -396,7 +433,7 @@ export function recordDataFromServer(
   for (const [code, value] of Object.entries(data)) {
     const field = fields.get(code);
     result[checkedFieldKey(code)] = (
-      field?.type === 'decimal' && typeof value === 'string'
+      (field?.type === 'decimal' || field?.type === 'formula') && typeof value === 'string'
         ? decimalToNumber(value, field.scale ?? DEFAULT_SCALE)
         : value
     ) as FieldValue;

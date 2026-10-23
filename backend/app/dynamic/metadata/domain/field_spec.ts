@@ -19,6 +19,7 @@ import {
   parseDecimal,
   parseInstant,
 } from '#dynamic/metadata/domain/scalars'
+import { FORMULA_MAX_SCALE, checkFormulaSet, parseFormula } from '#dynamic/metadata/domain/formula'
 import { normalizeFieldPresentation } from '#dynamic/metadata/domain/presentation'
 import { validateValue } from '#dynamic/metadata/domain/value'
 
@@ -54,6 +55,7 @@ const VALIDATION_KEYS: Record<FieldType, readonly string[]> = {
   MULTISELECT: ['minSelected', 'maxSelected'],
   ENTITY_REFERENCE: [],
   USER_REFERENCE: [],
+  FORMULA: ['expression', 'scale', 'ast', 'dependencies'],
 }
 
 const OPTION_TYPES: readonly FieldType[] = ['SELECT', 'RADIO', 'MULTISELECT']
@@ -180,6 +182,28 @@ function checkValidation(
       bad('minSelected', 'minSelected excede maxSelected.')
     }
   }
+  if (type === 'FORMULA') {
+    if (typeof v.expression !== 'string') {
+      bad('expression', 'Indique a fórmula (texto).')
+    } else {
+      const parsed = parseFormula(v.expression)
+      if (!parsed.ok)
+        issues.push({
+          path: `${path}.expression`,
+          code: 'INVALID_FORMULA',
+          message: parsed.message,
+        })
+      else {
+        v.expression = v.expression.trim()
+        // A árvore e as dependências são guardadas com a versão (a fórmula publicada nunca se reinterpreta).
+        v.ast = parsed.ast
+        v.dependencies = [...parsed.refs].sort()
+      }
+    }
+    if (!('scale' in v)) v.scale = 2
+    if (!isInt(v.scale, 0, FORMULA_MAX_SCALE))
+      bad('scale', `scale é um inteiro de 0 a ${FORMULA_MAX_SCALE}.`)
+  }
   return v
 }
 
@@ -295,6 +319,13 @@ export function normalizeField(
   }
 
   const sensitive = input.sensitive === true
+  if (type === 'FORMULA') {
+    if (input.required === true)
+      add('required', 'FORMULA_REQUIRED', 'O resultado de uma fórmula não é obrigatório.')
+    if (input.defaultValue !== undefined && input.defaultValue !== null) {
+      add('defaultValue', 'DEFAULT_NOT_ALLOWED', 'Uma fórmula não tem valor por omissão.')
+    }
+  }
   if (validation.unique === true) {
     if (sensitive)
       add('validation.unique', 'UNIQUE_SENSITIVE', 'Um campo sensível não pode ser único.')
@@ -322,7 +353,7 @@ export function normalizeField(
     position,
     referenceEntityId,
     sensitive,
-    readOnly: input.readOnly === true,
+    readOnly: input.readOnly === true || type === 'FORMULA',
     archived: false,
     presentation,
   }
@@ -385,5 +416,11 @@ export function normalizeFields(raw: unknown, issues: Issue[]): FieldSpec[] {
     seen.add(spec.code)
     specs.push(spec)
   })
+  const indexOf = new Map(
+    specs.map((spec) => [spec.code, raw.findIndex((r) => isRecord(r) && r.code === spec.code)])
+  )
+  for (const { code, issue } of checkFormulaSet(specs)) {
+    issues.push({ ...issue, path: `fields[${indexOf.get(code)}].${issue.path}` })
+  }
   return specs
 }

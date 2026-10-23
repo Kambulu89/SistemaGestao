@@ -85,13 +85,14 @@ components:
               MULTISELECT,
               ENTITY_REFERENCE,
               USER_REFERENCE,
+              FORMULA,
             ]
         required: { type: boolean }
         defaultValue: { nullable: true }
         validation:
           type: object
           additionalProperties: true
-          description: 'minLength, maxLength, pattern, min, max, precision, scale, minSelected, maxSelected, unique (conforme o tipo).'
+          description: 'minLength, maxLength, pattern, min, max, precision, scale, minSelected, maxSelected, unique (conforme o tipo). FORMULA: expression (texto; + - * / round min max abs e códigos de campos numéricos) e scale (0 a 10); a árvore e as dependências são calculadas pelo servidor.'
         options:
           type: array
           items:
@@ -2062,7 +2063,7 @@ paths:
       summary: Cria uma entidade com o primeiro rascunho (entity.design)
       description: |
         Os campos seguem a matriz de tipos (C10). Tipos ainda não disponíveis (CURRENCY, CHECKBOX, FILE, IMAGE,
-        FORMULA, LOOKUP, AUTONUMBER) são recusados com `FIELD_TYPE_NOT_SUPPORTED`. Uma referência indica a entidade
+        LOOKUP, AUTONUMBER) são recusados com `FIELD_TYPE_NOT_SUPPORTED`. Uma referência indica a entidade
         de destino por `referenceEntityCode`.
       security: [{ sessionCookie: [] }]
       parameters:
@@ -2343,3 +2344,173 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /rules:
+    get:
+      summary: Regras de negócio, com todas as revisões (rule.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: entityCode, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: Regras (mais recente primeiro dentro de cada código). }
+    post:
+      summary: Cria uma regra em rascunho (revisão 1) (rule.manage)
+      description: |
+        `conditionAst` usa a gramática das políticas de acesso (and/or/not, eq/neq/gt/gte/lt/lte/in/exists) com
+        variáveis `resource.<campo>` (campos activos e **não sensíveis** da entidade), `subject.membershipId|userId|organizationId`
+        e `env.now`. `actionAst` é `{ type: BLOCK, message, field? }`: a escrita é bloqueada quando a condição se verifica.
+        A entidade tem de estar publicada. Nunca se executa código do tenant.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entityCode, code, name, conditionAst, actionAst]
+              properties:
+                entityCode: { type: string }
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                priority: { type: integer, minimum: 0, maximum: 1000 }
+                conditionAst: { type: object, additionalProperties: true }
+                actionAst: { type: object, additionalProperties: true }
+                effectiveFrom: { type: string, format: date-time, nullable: true }
+                effectiveTo: { type: string, format: date-time, nullable: true }
+      responses:
+        '201': { description: Regra em rascunho. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /rules/{id}:
+    get:
+      summary: Uma revisão de uma regra (rule.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Regra. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera um rascunho (rule.manage)
+      description: Uma regra publicada ou desactivada é imutável (`RULE_NOT_DRAFT`); abra uma nova revisão.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                priority: { type: integer }
+                conditionAst: { type: object, additionalProperties: true }
+                actionAst: { type: object, additionalProperties: true }
+                effectiveFrom: { type: string, format: date-time, nullable: true }
+                effectiveTo: { type: string, format: date-time, nullable: true }
+      responses:
+        '200': { description: Rascunho actualizado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /rules/{id}/revisions:
+    post:
+      summary: Abre a próxima revisão em rascunho (rule.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '201': { description: Nova revisão em rascunho (cópia da mais recente). }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /rules/{id}/simulate:
+    post:
+      summary: Avalia a regra sobre valores de exemplo, sem gravar nada (rule.manage)
+      description: Respeita o período de vigência (`SKIPPED` fora dele). Devolve `PASS`, `FAIL` (com a mensagem), `SKIPPED` ou `ERROR`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [values]
+              properties:
+                values: { type: object, additionalProperties: true }
+                now: { type: string, format: date-time }
+      responses:
+        '200': { description: Resultado da simulação. }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /rules/{id}/publish:
+    post:
+      summary: Publica o rascunho (revisão imutável) e desactiva a anterior (rule.manage)
+      description: Volta a validar a regra contra os campos em vigor; uma regra inválida nunca se publica.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Regra publicada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /rules/{id}/disable:
+    post:
+      summary: Desactiva uma regra publicada (rule.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Regra desactivada (nada se apaga). }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /rules/{id}/evaluations:
+    get:
+      summary: Últimas avaliações recusadas ou com erro (rule.read)
+      description: Cada linha guarda o resumo (SHA-256) dos dados, nunca os valores.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Avaliações (as 50 mais recentes). }
+        '404': { $ref: '#/components/responses/Error' }

@@ -84,8 +84,13 @@ function filterValue(field: FieldSpec, raw: string): string | number | boolean |
       return raw.trim().toLowerCase()
     case 'NUMBER':
       return /^-?\d{1,15}$/.test(raw) ? Number(raw) : null
+    case 'FORMULA':
     case 'DECIMAL': {
-      const parsed = parseDecimal(raw, decimalShape(field.validation))
+      const shape =
+        field.type === 'FORMULA'
+          ? { precision: 19, scale: field.validation.scale as number }
+          : decimalShape(field.validation)
+      const parsed = parseDecimal(raw, shape)
       return parsed.ok ? parsed.canonical : null
     }
     case 'BOOLEAN':

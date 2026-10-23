@@ -39,6 +39,7 @@ export interface World {
     sequence: string
     entity: string
     record: string
+    rule: string
   }
 }
 
@@ -55,6 +56,8 @@ export const SHARED = {
   inviteEmail: 'convidado.comum@exemplo.invalid',
   entityCode: 'vehicle',
   plate: 'AB-12-CD',
+  ruleCode: 'matricula_proibida',
+  forbiddenPlate: 'ZZ-99-ZZ',
 }
 
 async function must<T>(response: { status(): number; body(): any }, status: number): Promise<T> {
@@ -299,6 +302,28 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // C12: a mesma regra nos dois tenants; uma tentativa recusada deixa a avaliação registada.
+  const rule = await must<{ id: string; version: number }>(
+    await http.post('/api/v1/rules', {
+      entityCode: SHARED.entityCode,
+      code: SHARED.ruleCode,
+      name: 'Matrícula proibida',
+      conditionAst: {
+        op: 'eq',
+        left: { var: 'resource.matricula' },
+        right: { value: SHARED.forbiddenPlate },
+      },
+      actionAst: { type: 'BLOCK', message: 'Matrícula não permitida', field: 'matricula' },
+    }),
+    201
+  )
+  await must(
+    await http.post(`/api/v1/rules/${rule.id}/publish`, { expectedVersion: rule.version }),
+    200
+  )
+  await http.post(`/api/v1/dynamic/${SHARED.entityCode}/records`, {
+    data: { matricula: SHARED.forbiddenPlate },
+  })
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -332,6 +357,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       sequence: sequence.id,
       entity: entity.entity.id,
       record: record.id,
+      rule: rule.id,
     },
   }
 }

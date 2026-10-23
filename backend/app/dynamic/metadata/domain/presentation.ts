@@ -25,8 +25,8 @@ const ORDERABLE: readonly FieldType[] = [
   'SELECT',
   'RADIO',
 ]
-const SORTABLE_TYPES = ORDERABLE
-const FILTERABLE_TYPES: readonly FieldType[] = [...ORDERABLE, 'USER_REFERENCE']
+const SORTABLE_TYPES: readonly FieldType[] = [...ORDERABLE, 'FORMULA']
+const FILTERABLE_TYPES: readonly FieldType[] = [...ORDERABLE, 'FORMULA', 'USER_REFERENCE']
 const SEARCHABLE_TYPES: readonly FieldType[] = [
   'TEXT',
   'TEXTAREA',
