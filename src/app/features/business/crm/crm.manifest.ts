@@ -8,7 +8,27 @@ export const CRM_MODULES = [
     group: 'crm',
     icon: 'users',
     lifecycle: 'beta',
+    // Módulo `customers` do servidor (M01): funcionalidades `customers.accounts` e `customers.interactions`.
+    backendModule: 'customers',
+    routes: [
+      {
+        path: '',
+        title: 'Clientes',
+        permission: 'crm.customers.read',
+        loadComponent: () => import('./customers/customers-page').then((m) => m.CustomersPage),
+      },
+    ],
     features: [
+      {
+        id: 'accounts',
+        name: 'Clientes e segmentos',
+        description: 'Clientes sobre a Party, segmentos, crédito e bloqueio.',
+      },
+      {
+        id: 'interactions',
+        name: 'Interacções comerciais',
+        description: 'Chamadas, emails, reuniões e notas sobre uma Party.',
+      },
       {
         id: 'import',
         name: 'Importação de contactos',

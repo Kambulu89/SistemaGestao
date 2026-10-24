@@ -28,6 +28,7 @@ const RulesController = () => import('#dynamic/rules/presentation/rules_controll
 const FormsController = () => import('#dynamic/forms/presentation/forms_controller')
 const StatesController = () => import('#dynamic/states/presentation/states_controller')
 const CatalogController = () => import('#modules/catalog/presentation/catalog_controller')
+const CustomersController = () => import('#modules/customers/presentation/customers_controller')
 const AutomationsController = () =>
   import('#dynamic/automations/presentation/automations_controller')
 const WorkflowsController = () => import('#dynamic/workflows/presentation/workflows_controller')
@@ -624,6 +625,61 @@ router
           .use(middleware.can({ permission: 'price.manage' }))
       })
       .use(middleware.feature({ code: 'catalog.prices' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Clientes (M01): módulo `customers` do registo. Funcionalidades `customers.accounts` (clientes e segmentos) e
+ * `customers.interactions`; permissões `customer.read|create|update|block|credit.manage` (o limite de crédito só se vê e
+ * altera com `customer.credit_manage`).
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/customers', [CustomersController, 'listCustomers'])
+            router.get('/customers/:id', [CustomersController, 'showCustomer'])
+            router.get('/customer-segments', [CustomersController, 'listSegments'])
+          })
+          .use(middleware.can({ permission: 'customer.read' }))
+        router
+          .post('/customers', [CustomersController, 'createCustomer'])
+          .use(middleware.can({ permission: 'customer.create' }))
+        router
+          .group(() => {
+            router.patch('/customers/:id', [CustomersController, 'updateCustomer'])
+            router.post('/customer-segments', [CustomersController, 'createSegment'])
+            router.patch('/customer-segments/:id', [CustomersController, 'updateSegment'])
+          })
+          .use(middleware.can({ permission: 'customer.update' }))
+        router
+          .group(() => {
+            router.post('/customers/:id/block', [CustomersController, 'blockCustomer'])
+            router.post('/customers/:id/unblock', [CustomersController, 'unblockCustomer'])
+          })
+          .use(middleware.can({ permission: 'customer.block' }))
+      })
+      .use(middleware.feature({ code: 'customers.accounts' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/interactions', [CustomersController, 'listInteractions'])
+            router.get('/interactions/:id', [CustomersController, 'showInteraction'])
+          })
+          .use(middleware.can({ permission: 'customer.read' }))
+        router
+          .group(() => {
+            router.post('/interactions', [CustomersController, 'createInteraction'])
+            router.patch('/interactions/:id', [CustomersController, 'updateInteraction'])
+          })
+          .use(middleware.can({ permission: 'customer.update' }))
+      })
+      .use(middleware.feature({ code: 'customers.interactions' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

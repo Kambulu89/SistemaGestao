@@ -3912,3 +3912,307 @@ paths:
         '200': { description: Preço resolvido e origem. }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /customer-segments:
+    get:
+      summary: Segmentos de clientes (customer.read; funcionalidade customers.accounts)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Segmentos por código. }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria um segmento (customer.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+      responses:
+        '201': { description: Segmento criado. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /customer-segments/{id}:
+    patch:
+      summary: Altera o nome, a descrição ou o estado de um segmento; o código é imutável (customer.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                active: { type: boolean }
+      responses:
+        '200': { description: Segmento actualizado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /customers:
+    get:
+      summary: Clientes, com o nome, tipo e NIF da Party (customer.read; funcionalidade customers.accounts)
+      description: |
+        Pesquisa por nome da Party, código do cliente ou NIF e filtros por segmento, gestor de conta, organização, Party e
+        estado. `creditLimit` só vem preenchido a quem tem `customer.credit_manage` (caso contrário é `null`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - { name: segmentId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: accountManagerMembershipId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - { name: partyId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [ACTIVE, BLOCKED, INACTIVE] },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Clientes; `meta.total` conta os que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Regista um cliente sobre uma Party existente (customer.create)
+      description: |
+        A Party não se duplica: o cliente guarda só as condições comerciais por organização (409 `CUSTOMER_EXISTS` se a mesma
+        Party já for cliente dessa organização; 409 `CUSTOMER_CODE_TAKEN`). A moeda por omissão é a base da organização.
+        Indicar `creditLimit` ou `currency` exige `customer.credit_manage` (403 sem ela). Dinheiro como texto com até 4 casas.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [partyId, organizationId, code]
+              properties:
+                partyId: { type: string, format: uuid }
+                organizationId: { type: string, format: uuid }
+                code: { type: string }
+                segmentId: { type: string, format: uuid, nullable: true }
+                accountManagerMembershipId: { type: string, format: uuid, nullable: true }
+                paymentTermDays: { type: integer, minimum: 0, maximum: 3650 }
+                creditLimit: { type: string }
+                currency: { type: string }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        '201': { description: Cliente criado. }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /customers/{id}:
+    get:
+      summary: Um cliente com os contactos da Party (customer.read)
+      description: Os contactos só vêm a quem tem `party.read`; sem ela a lista vem vazia. Não há saldo (as contas a receber ainda não existem).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Cliente. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera as condições comerciais do cliente (customer.update)
+      description: |
+        A Party, a organização e o código são imutáveis. Limite de crédito e moeda exigem `customer.credit_manage`. `BLOCKED` só
+        se alcança e deixa pelas operações de bloqueio e desbloqueio (422 `USE_BLOCK`/`USE_UNBLOCK`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                segmentId: { type: string, format: uuid, nullable: true }
+                accountManagerMembershipId: { type: string, format: uuid, nullable: true }
+                paymentTermDays: { type: integer }
+                creditLimit: { type: string }
+                currency: { type: string }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        '200': { description: Cliente actualizado. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /customers/{id}/block:
+    post:
+      summary: Bloqueia o cliente, com motivo (customer.block)
+      description: Um cliente bloqueado não recebe novas confirmações de venda (`CUSTOMER_BLOCKED`), mas continua a poder pagar e regularizar.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, reason]
+              properties:
+                expectedVersion: { type: integer }
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: Cliente bloqueado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /customers/{id}/unblock:
+    post:
+      summary: Desbloqueia o cliente (customer.block)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: Cliente activo. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /interactions:
+    get:
+      summary: Interacções comerciais, mais recentes primeiro (customer.read; funcionalidade customers.interactions)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: partyId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: ownerMembershipId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: followUpBefore,
+            in: query,
+            required: false,
+            schema: { type: string, format: date-time },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Interacções; `meta.total` conta as que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Regista uma interacção com uma Party, existam ou não vendas (customer.update)
+      description: O responsável é quem a regista. A data não pode estar no futuro e o seguimento não pode preceder a interacção.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [partyId, channel, subject]
+              properties:
+                partyId: { type: string, format: uuid }
+                channel: { type: string, enum: [CALL, EMAIL, MEETING, NOTE] }
+                subject: { type: string, maxLength: 200 }
+                occurredAt: { type: string, format: date-time }
+                summary: { type: string, maxLength: 5000 }
+                followUpAt: { type: string, format: date-time, nullable: true }
+      responses:
+        '201': { description: Interacção registada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /interactions/{id}:
+    get:
+      summary: Uma interacção (customer.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Interacção. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera uma interacção; a Party e o responsável não mudam (customer.update)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                channel: { type: string, enum: [CALL, EMAIL, MEETING, NOTE] }
+                subject: { type: string }
+                occurredAt: { type: string, format: date-time }
+                summary: { type: string }
+                followUpAt: { type: string, format: date-time, nullable: true }
+      responses:
+        '200': { description: Interacção actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }

@@ -231,6 +231,31 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Criar e alterar tabelas de preços e os seus escalões.',
   },
   {
+    code: 'customer.read',
+    moduleCode: 'customers',
+    description: 'Ver clientes, segmentos e interacções comerciais.',
+  },
+  {
+    code: 'customer.create',
+    moduleCode: 'customers',
+    description: 'Registar um cliente sobre uma pessoa ou organização existente.',
+  },
+  {
+    code: 'customer.update',
+    moduleCode: 'customers',
+    description: 'Alterar condições comerciais, segmentos e registar interacções.',
+  },
+  {
+    code: 'customer.block',
+    moduleCode: 'customers',
+    description: 'Bloquear e desbloquear clientes (com motivo).',
+  },
+  {
+    code: 'customer.credit_manage',
+    moduleCode: 'customers',
+    description: 'Ver e alterar o limite de crédito e a sua moeda.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

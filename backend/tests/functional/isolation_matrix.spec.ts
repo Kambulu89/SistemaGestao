@@ -100,6 +100,10 @@ async function snapshot(world: World) {
     variants: await get(`/api/v1/products/${world.ids.product}/variants`),
     priceLists: await get('/api/v1/price-lists'),
     priceList: await get(`/api/v1/price-lists/${world.ids.priceList}`),
+    customers: await get('/api/v1/customers'),
+    customer: await get(`/api/v1/customers/${world.ids.customer}`),
+    segments: await get('/api/v1/customer-segments'),
+    interactions: await get('/api/v1/interactions'),
     records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
@@ -209,6 +213,13 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ],
     ['patch', `/price-list-items/${o.priceItem}`, { ...stale, unitPrice: '1.0000' }],
     ['delete', `/price-list-items/${o.priceItem}`],
+    ['get', `/customers/${o.customer}`],
+    ['patch', `/customers/${o.customer}`, { ...stale, paymentTermDays: 1 }],
+    ['post', `/customers/${o.customer}/block`, { ...stale, reason: 'x' }],
+    ['post', `/customers/${o.customer}/unblock`, stale],
+    ['patch', `/customer-segments/${o.segment}`, { ...stale, name: 'x' }],
+    ['get', `/interactions/${o.interaction}`],
+    ['patch', `/interactions/${o.interaction}`, { ...stale, subject: 'x' }],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
     ['delete', `/entity-definitions/${o.entity}`],
@@ -340,6 +351,9 @@ test.group('matriz de isolamento', (group) => {
       'products',
       'variants',
       'priceLists',
+      'customers',
+      'segments',
+      'interactions',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)

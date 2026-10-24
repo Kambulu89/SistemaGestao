@@ -39,6 +39,10 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'workflow.read': ['configuration.workflows.read'],
   'workflow.design': ['configuration.workflows.read', 'configuration.workflows.manage'],
   'workflow.publish': ['configuration.workflows.read', 'configuration.workflows.publish'],
+  // Clientes (M01): a página usa os códigos do servidor (`customer.*`); o alias só abre a rota do módulo.
+  'customer.read': ['crm.customers.read'],
+  'customer.create': ['crm.customers.read'],
+  'customer.update': ['crm.customers.read'],
   // Catálogo e preços (M03): as páginas usam o código do servidor; ler preços é independente de ler produtos.
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],

@@ -28,6 +28,18 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
       { code: 'catalog.prices', name: 'Tabelas de preços', defaultEnabled: true },
     ],
   },
+  {
+    code: 'customers',
+    name: 'Clientes',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [{ code: 'core', constraint: '*', optional: false }],
+    features: [
+      { code: 'customers.accounts', name: 'Clientes e segmentos', defaultEnabled: true },
+      { code: 'customers.interactions', name: 'Interacções comerciais', defaultEnabled: true },
+    ],
+  },
 ]
 
 /** Activadores por módulo (sementes e configuração inicial do tenant). Idempotentes; vazio até haver módulos. */

@@ -55,6 +55,9 @@ export interface World {
     variant: string
     priceList: string
     priceItem: string
+    segment: string
+    customer: string
+    interaction: string
   }
 }
 
@@ -102,9 +105,10 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
 
   // Módulos (C03): o mesmo módulo e override nos dois tenants, com plano que os licencia.
   await syncTestRegistry()
-  await license(t, ['crm', 'catalog'], ['crm.scoring'])
+  await license(t, ['crm', 'catalog', 'customers'], ['crm.scoring'])
   await must(await http.post('/api/v1/tenant/modules/crm/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/catalog/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/customers/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -546,6 +550,31 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // M01: o mesmo cliente (sobre a Party do cenário), segmento e interacção nos dois tenants.
+  const segment = await must<{ id: string }>(
+    await http.post('/api/v1/customer-segments', { code: 'VIP', name: 'Clientes VIP' }),
+    201
+  )
+  const customer = await must<{ id: string }>(
+    await http.post('/api/v1/customers', {
+      partyId: orgParty.id,
+      organizationId: organization.id,
+      code: 'CLI-001',
+      segmentId: segment.id,
+      paymentTermDays: 30,
+      creditLimit: '1000.0000',
+    }),
+    201
+  )
+  const interaction = await must<{ id: string }>(
+    await http.post('/api/v1/interactions', {
+      partyId: orgParty.id,
+      channel: 'CALL',
+      subject: 'Primeiro contacto',
+      occurredAt: '2026-10-20T09:00:00Z',
+    }),
+    201
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -594,6 +623,9 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       variant: variant.id,
       priceList: priceList.id,
       priceItem: priceItem.id,
+      segment: segment.id,
+      customer: customer.id,
+      interaction: interaction.id,
     },
   }
 }

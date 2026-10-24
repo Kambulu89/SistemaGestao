@@ -118,8 +118,9 @@ describe('HttpTenantGateway', () => {
     const promise = firstValueFrom(gateway.loadContext('t1'));
     http.expectOne(`${API}/context`).flush(
       contextDto({
-        modules: ['crm'],
-        features: ['crm.customers.import'],
+        // `crm.customers` vive no módulo `customers` do servidor (backendModule); `crm.pipeline`/`crm.campaigns` no `crm`.
+        modules: ['crm', 'customers'],
+        features: ['customers.accounts'],
       }),
     );
     const context = await promise;
@@ -131,9 +132,17 @@ describe('HttpTenantGateway', () => {
     expect(context.subscription.moduleIds).toEqual(context.modules.map((m) => m.moduleId));
     expect(context.modules.every((m) => m.active)).toBe(true);
     const customers = context.modules.find((m) => m.moduleId === 'mod_crm_customers');
-    expect(customers?.features).toEqual(['import']); // só a funcionalidade efectiva do servidor
+    expect(customers?.features).toEqual(['accounts']); // só a funcionalidade efectiva do servidor
     // Módulos de outros prefixos continuam fora.
     expect(context.modules.some((m) => !m.moduleId.startsWith('mod_crm_'))).toBe(false);
+  });
+
+  it('does not activate crm.customers when only the crm module is enabled (it belongs to the customers module)', async () => {
+    const promise = firstValueFrom(gateway.loadContext('t1'));
+    http.expectOne(`${API}/context`).flush(contextDto({ modules: ['crm'], features: [] }));
+    const context = await promise;
+    expect(context.modules.some((m) => m.moduleId === 'mod_crm_customers')).toBe(false);
+    expect(context.modules.some((m) => m.moduleId === 'mod_crm_pipeline')).toBe(true);
   });
 
   it('enriches the subscription with the plan and usage when the user can read it', async () => {
