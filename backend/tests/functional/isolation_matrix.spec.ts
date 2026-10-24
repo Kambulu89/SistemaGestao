@@ -95,6 +95,11 @@ async function snapshot(world: World) {
     delegations: await get('/api/v1/approval-delegations'),
     automations: await get('/api/v1/automations'),
     automationRuns: await get('/api/v1/automation-runs'),
+    categories: await get('/api/v1/product-categories'),
+    products: await get('/api/v1/products'),
+    variants: await get(`/api/v1/products/${world.ids.product}/variants`),
+    priceLists: await get('/api/v1/price-lists'),
+    priceList: await get(`/api/v1/price-lists/${world.ids.priceList}`),
     records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
@@ -188,6 +193,22 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['post', `/automations/${o.automation}/simulate`, {}],
     ['get', `/automation-runs/${o.run}`],
     ['post', `/automation-runs/${o.run}/retry`, stale],
+    ['patch', `/product-categories/${o.category}`, { ...stale, name: 'x' }],
+    ['get', `/products/${o.product}`],
+    ['patch', `/products/${o.product}`, { ...stale, name: 'x' }],
+    ['get', `/products/${o.product}/variants`],
+    ['post', `/products/${o.product}/variants`, { sku: 'ALHEIO-1' }],
+    ['get', `/variants/${o.variant}`],
+    ['patch', `/variants/${o.variant}`, { ...stale, barcode: null }],
+    ['get', `/price-lists/${o.priceList}`],
+    ['patch', `/price-lists/${o.priceList}`, { ...stale, name: 'x' }],
+    [
+      'post',
+      `/price-lists/${o.priceList}/items`,
+      { variantId: me.ids.variant, unitPrice: '1.0000', minQuantity: '5' },
+    ],
+    ['patch', `/price-list-items/${o.priceItem}`, { ...stale, unitPrice: '1.0000' }],
+    ['delete', `/price-list-items/${o.priceItem}`],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
     ['delete', `/entity-definitions/${o.entity}`],
@@ -315,6 +336,10 @@ test.group('matriz de isolamento', (group) => {
       'delegations',
       'automations',
       'automationRuns',
+      'categories',
+      'products',
+      'variants',
+      'priceLists',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)

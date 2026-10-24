@@ -632,6 +632,30 @@ registo concluído em nome de quem activou, histórico, pausa que bloqueia execu
 **Não verificado / limites:** o E2E correu por script local (`e2e311.mjs`, só na pasta temporária da sessão); a prova de «Viatura» é um teste de API — o registo, a pesquisa e a auditoria **na interface** já foram verificados em browser nas fatias anteriores mas não se repetiram aqui; o trabalhador é um processo à parte (não arranca com a API); sem acções de notificação ou de tarefas, sem retenção da inbox nem das execuções,
 at-least-once sem idempotência própria das acções, e um calendário só dispara com o trabalhador a correr (D-045).
 
+## 2d. Fase 4 — comércio e inventário (em curso; fatia 4.1 concluída)
+A especificação (F4) pede M01 a M08 e S01 «em fatias: catálogo/clientes, propostas/encomendas, expedições, faturas/créditos, compras/recepções e inventário», com testes dos fluxos 9.3 e 9.4 (operações parciais e reversões) e sem confundir confirmação, reserva, expedição, emissão e recebimento. A decomposição abaixo é **proposta** (a especificação não a fixa; sujeita a confirmação):
+
+| Fatia | Âmbito | Estado |
+| --- | --- | --- |
+| 4.1 | M03 catálogo: categorias, produtos, variantes (SKU), tabelas de preços e resolução de preço; primeiro módulo de negócio no registo (`catalog`) | **Concluída** (ver 2d.1 e D-046) |
+| 4.2 | M01 clientes (sobre a Party), segmentos e interacções | Por fazer |
+| 4.3 | M04 propostas e encomendas (preço em snapshot, confirmação ≠ reserva) | Por fazer |
+| 4.4 | M07 armazéns, movimentos de stock rastreáveis, lotes e reservas | Por fazer |
+| 4.5 | M04 expedições (baixa de stock) | Por fazer |
+| 4.6 | M05 contratos, faturas e notas de crédito (S01: documentos emitidos) | Por fazer |
+| 4.7 | M06 fornecedores, requisições e compras/recepções | Por fazer |
+| 4.8 | M08 transferências, inventários físicos e devoluções | Por fazer |
+| (a seguir) | M02 leads, oportunidades e campanhas | Por fazer |
+
+### 2d.1 Fatia 4.1 — catálogo (M03; concluída, ver D-046)
+**Mapa.** Backend `app/modules/catalog` (domain, application, infrastructure, presentation; migration 23): `product_categories` (árvore), `products` (GOODS/SERVICE, unidade base, rastreio NONE/LOT/SERIAL), `product_variants` (SKU único por tenant, código de barras único quando existe, atributos, uma variante por omissão),
+`price_lists` (organização, moeda, validade, IVA incluído, prioridade) e `price_list_items` (escalão `min_quantity` > 0, `unit_price` money, `max_discount` 0..1; único por tabela+variante+escalão). Permissões `catalog.read|manage` e `price.read|manage`; rotas atrás de `middleware.feature` (`catalog.products`, `catalog.prices`) e do manifesto `catalog` no registo de módulos.
+API: `/product-categories`, `/products`, `/products/{id}/variants`, `/variants`, `/price-lists`, `/price-lists/{id}/items` e `GET /prices/resolve`. Frontend: módulo «Catálogo e preços» com produtos e variantes, categorias, tabelas de preços e o simulador de preço.
+**Aceitação (spec M03).** SKU duplicado falha; um serviço não rastreia nem reserva stock; a linha conserva o preço anterior depois de actualizar a tabela (a resolução devolve o valor e a origem para o documento o guardar em snapshot); tabela escolhida por prioridade e validade, sem empate ambíguo; mudar a unidade base ou o rastreio de um produto com movimentos exige migração.
+
+**Verificação (fatia 4.1).** Backend: lint, format, typecheck, `npm test` (497 testes, incluindo 12 unitários do domínio, 11 funcionais do catálogo, a matriz de isolamento estendida a categorias, produtos, variantes, tabelas e itens — ids alheios → 404 e nada muda — e a paridade do OpenAPI) com a migration 23 subida e descida numa base limpa, e build. Frontend: lint, format, `check:generic`, `ng test` (857) e build. E2E em browser real sobre a API real (16 verificações, zero erros de página): menu, categoria, produto com variante por omissão, variante com atributos, SKU duplicado com a mensagem do catálogo, serviço sem controlo de stock, pesquisa, preço com 5 casas recusado, dois escalões e a resolução (12 unidades → escalão de 10 a 1 350,0000; 3 unidades → 1 500,0000, com a origem) e o tenant B sem ver nem aceder (404) ao produto do A. O E2E encontrou dois erros que os testes unitários não apanhavam (o frontend assumia um estado `active` nas categorias que a API não tem; e uma data indefinida enviada como texto na resolução) — ambos corrigidos e cobertos.
+**Não verificado / limites:** o E2E correu por script local (`e2e41.mjs`, só na pasta temporária da sessão) e a base de desenvolvimento recebeu apenas a migration 23 e um plano de demonstração (`demo_catalog`) para os tenants `demo_a`/`demo_b`; **o bloqueio por movimentos de stock está provado só com uma guarda de teste** (não há inventário até à 4.4); nenhum documento usa ainda o preço em snapshot (4.3); sem desactivação de categorias, sem editar variantes nem itens de preço na interface, sem promoções, preços por cliente/segmento, importação nem imagens (D-046). A decomposição da Fase 4 continua uma **proposta** à espera de confirmação.
+
 ## 3. Regras para todas as fases
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.
 - Cada fase termina com lint, typecheck, testes, build e migrations numa base limpa; resultados registados aqui.

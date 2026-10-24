@@ -50,6 +50,11 @@ export interface World {
     delegation: string
     automation: string
     run: string
+    category: string
+    product: string
+    variant: string
+    priceList: string
+    priceItem: string
   }
 }
 
@@ -97,8 +102,9 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
 
   // Módulos (C03): o mesmo módulo e override nos dois tenants, com plano que os licencia.
   await syncTestRegistry()
-  await license(t, ['crm'], ['crm.scoring'])
+  await license(t, ['crm', 'catalog'], ['crm.scoring'])
   await must(await http.post('/api/v1/tenant/modules/crm/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/catalog/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -508,6 +514,38 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await automationServices().engine.dispatchEvents(serviceTenantContext(t.id, 'matriz'))
   const [run] = await must<{ id: string }[]>(await http.get('/api/v1/automation-runs'), 200)
   if (!run) throw new Error('O cenário não produziu nenhuma execução de automação.')
+  // M03: o mesmo catálogo (categoria, produto com variante por omissão, tabela de preços e um item) nos dois tenants.
+  const category = await must<{ id: string }>(
+    await http.post('/api/v1/product-categories', { code: 'ROUPA', name: 'Roupa' }),
+    201
+  )
+  const catalogProduct = await must<{ id: string; variants: { id: string }[] }>(
+    await http.post('/api/v1/products', {
+      code: 'CAM-001',
+      name: 'Camisola',
+      type: 'GOODS',
+      baseUnitId: kg.id,
+      categoryId: category.id,
+    }),
+    201
+  )
+  const variant = catalogProduct.variants[0] as { id: string }
+  const priceList = await must<{ id: string }>(
+    await http.post('/api/v1/price-lists', {
+      organizationId: organization.id,
+      name: 'Retalho',
+      currency: 'AOA',
+      validFrom: '2026-01-01',
+    }),
+    201
+  )
+  const priceItem = await must<{ id: string }>(
+    await http.post(`/api/v1/price-lists/${priceList.id}/items`, {
+      variantId: variant.id,
+      unitPrice: '1500.0000',
+    }),
+    201
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -551,6 +589,11 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       delegation: delegation.id,
       automation: automation.id,
       run: run.id,
+      category: category.id,
+      product: catalogProduct.id,
+      variant: variant.id,
+      priceList: priceList.id,
+      priceItem: priceItem.id,
     },
   }
 }

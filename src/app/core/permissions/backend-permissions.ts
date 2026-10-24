@@ -39,6 +39,7 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'workflow.read': ['configuration.workflows.read'],
   'workflow.design': ['configuration.workflows.read', 'configuration.workflows.manage'],
   'workflow.publish': ['configuration.workflows.read', 'configuration.workflows.publish'],
+  // Catálogo e preços (M03): as páginas usam o código do servidor; ler preços é independente de ler produtos.
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],
   'rule.manage': ['configuration.rules.read', 'configuration.rules.manage'],

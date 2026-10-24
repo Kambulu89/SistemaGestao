@@ -61,7 +61,12 @@ const statusOf = (status: string): TenantStatus => STATUSES[status] ?? 'suspende
  * (`crm.customers` pertence ao módulo `crm`) e a funcionalidade `import` desse manifesto chama-se
  * `crm.customers.import` no registo.
  */
-const backendModuleOf = (manifest: ModuleManifest): string => manifest.code.split('.')[0] ?? '';
+const backendModuleOf = (manifest: ModuleManifest): string =>
+  manifest.backendModule ?? manifest.code.split('.')[0] ?? '';
+
+/** Prefixo das funcionalidades no registo: o módulo do servidor se for explícito, senão o código do manifesto. */
+const featurePrefixOf = (manifest: ModuleManifest): string =>
+  manifest.backendModule ?? manifest.code;
 
 /** Adapter HTTP dos tenants do utilizador e do contexto do tenant (C01/C03/C05/C06). */
 @Injectable()
@@ -125,7 +130,9 @@ export class HttpTenantGateway extends TenantGateway {
     const modules = contractable.map<TenantModule>((m) => ({
       moduleId: m.id,
       active: true,
-      features: m.features.filter((f) => features.has(`${m.code}.${f.id}`)).map((f) => f.id),
+      features: m.features
+        .filter((f) => features.has(`${featurePrefixOf(m)}.${f.id}`))
+        .map((f) => f.id),
       settings: Object.fromEntries(
         m.settings.map((s): [string, ModuleSettingValue] => [s.key, s.defaultValue]),
       ),

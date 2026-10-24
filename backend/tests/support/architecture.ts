@@ -28,6 +28,7 @@ const ALIASES: Record<string, string> = {
   '#core/': 'app/core/',
   '#platform/': 'app/platform/',
   '#dynamic/': 'app/dynamic/',
+  '#modules/': 'app/modules/',
   '#exceptions/': 'app/exceptions/',
   '#middleware/': 'app/middleware/',
   '#start/': 'start/',

@@ -1,4 +1,5 @@
 import { billingServices } from '#platform/billing/index'
+import { CODE_MANIFESTS } from '#platform/modules/index'
 import { LucidRegistryStore } from '#platform/modules/infrastructure/lucid_modules'
 import { SyncRegistry } from '#platform/modules/application/use_cases'
 import type { ModuleManifest } from '#platform/modules/domain/module'
@@ -30,7 +31,8 @@ const feature = (code: string, defaultEnabled: boolean) => ({
 export const TEST_MANIFESTS: ModuleManifest[] = [
   mod('core', [], [], 'FOUNDATION'),
   mod('crm', [dep('core')], [feature('crm.contacts', true), feature('crm.scoring', false)]),
-  mod('catalog', [dep('core')], [feature('catalog.items', true)]),
+  // O catálogo é o módulo real (manifesto entregue por código), não uma maquete.
+  CODE_MANIFESTS.find((m) => m.code === 'catalog') as ModuleManifest,
   mod('finance', [dep('core')], [feature('finance.ledger', true)]),
   mod(
     'sales',

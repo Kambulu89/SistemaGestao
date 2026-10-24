@@ -211,6 +211,26 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Definir, activar e pausar automações e reprocessar execuções falhadas.',
   },
   {
+    code: 'catalog.read',
+    moduleCode: 'catalog',
+    description: 'Ver categorias, produtos e variantes do catálogo.',
+  },
+  {
+    code: 'catalog.manage',
+    moduleCode: 'catalog',
+    description: 'Criar e alterar categorias, produtos e variantes (nada se apaga: desactiva-se).',
+  },
+  {
+    code: 'price.read',
+    moduleCode: 'catalog',
+    description: 'Ver tabelas de preços e resolver o preço de uma variante.',
+  },
+  {
+    code: 'price.manage',
+    moduleCode: 'catalog',
+    description: 'Criar e alterar tabelas de preços e os seus escalões.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

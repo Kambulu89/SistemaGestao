@@ -86,6 +86,11 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   approval_delegations: 'workflow.read',
   automations: 'automation.read',
   automation_runs: 'automation.read',
+  product_categories: 'catalog.read',
+  products: 'catalog.read',
+  product_variants: 'catalog.read',
+  price_lists: 'price.read',
+  price_list_items: 'price.read',
 }
 
 /** Tabelas de tenant que não são auditadas, com o motivo (o teste de conformidade exige o resto). */

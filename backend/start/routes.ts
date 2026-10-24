@@ -27,6 +27,7 @@ const MetadataController = () => import('#dynamic/metadata/presentation/metadata
 const RulesController = () => import('#dynamic/rules/presentation/rules_controller')
 const FormsController = () => import('#dynamic/forms/presentation/forms_controller')
 const StatesController = () => import('#dynamic/states/presentation/states_controller')
+const CatalogController = () => import('#modules/catalog/presentation/catalog_controller')
 const AutomationsController = () =>
   import('#dynamic/automations/presentation/automations_controller')
 const WorkflowsController = () => import('#dynamic/workflows/presentation/workflows_controller')
@@ -568,6 +569,61 @@ router
         router.post('/automation-runs/:id/retry', [AutomationsController, 'retryRun'])
       })
       .use(middleware.can({ permission: 'automation.manage' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Catálogo (M03): módulo `catalog` do registo. As rotas exigem a funcionalidade efectiva (`catalog.products`, `catalog.prices`:
+ * licença AND módulo activo AND funcionalidade ligada) e a permissão própria: `catalog.read|manage` para categorias, produtos
+ * e variantes; `price.read|manage` para tabelas de preços e para resolver preços.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/product-categories', [CatalogController, 'listCategories'])
+            router.get('/products', [CatalogController, 'listProducts'])
+            router.get('/products/:id', [CatalogController, 'showProduct'])
+            router.get('/products/:id/variants', [CatalogController, 'listVariants'])
+            router.get('/variants/:id', [CatalogController, 'showVariant'])
+          })
+          .use(middleware.can({ permission: 'catalog.read' }))
+        router
+          .group(() => {
+            router.post('/product-categories', [CatalogController, 'createCategory'])
+            router.patch('/product-categories/:id', [CatalogController, 'updateCategory'])
+            router.post('/products', [CatalogController, 'createProduct'])
+            router.patch('/products/:id', [CatalogController, 'updateProduct'])
+            router.post('/products/:id/variants', [CatalogController, 'createVariant'])
+            router.patch('/variants/:id', [CatalogController, 'updateVariant'])
+          })
+          .use(middleware.can({ permission: 'catalog.manage' }))
+      })
+      .use(middleware.feature({ code: 'catalog.products' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/price-lists', [CatalogController, 'listPriceLists'])
+            router.get('/price-lists/:id', [CatalogController, 'showPriceList'])
+            router.get('/prices/resolve', [CatalogController, 'resolvePrice'])
+          })
+          .use(middleware.can({ permission: 'price.read' }))
+        router
+          .group(() => {
+            router.post('/price-lists', [CatalogController, 'createPriceList'])
+            router.patch('/price-lists/:id', [CatalogController, 'updatePriceList'])
+            router.post('/price-lists/:id/items', [CatalogController, 'addPriceItem'])
+            router.patch('/price-list-items/:id', [CatalogController, 'updatePriceItem'])
+            router.delete('/price-list-items/:id', [CatalogController, 'deletePriceItem'])
+          })
+          .use(middleware.can({ permission: 'price.manage' }))
+      })
+      .use(middleware.feature({ code: 'catalog.prices' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

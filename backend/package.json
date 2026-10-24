@@ -26,6 +26,7 @@
     "#core/*": "./app/core/*.js",
     "#platform/*": "./app/platform/*.js",
     "#dynamic/*": "./app/dynamic/*.js",
+    "#modules/*": "./app/modules/*.js",
     "#exceptions/*": "./app/exceptions/*.js",
     "#middleware/*": "./app/middleware/*.js",
     "#start/*": "./start/*.js",

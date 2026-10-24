@@ -3519,3 +3519,396 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /product-categories:
+    get:
+      summary: Categorias de produtos em árvore plana (catalog.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Categorias por código (`parentId` forma a árvore). }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma categoria (catalog.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                parentId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201': { description: Categoria criada. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /product-categories/{id}:
+    patch:
+      summary: Altera o nome ou o pai de uma categoria; o pai não pode criar ciclos (catalog.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                parentId: { type: string, format: uuid, nullable: true }
+      responses:
+        '200': { description: Categoria actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /products:
+    get:
+      summary: Produtos com as suas variantes, pesquisa e filtros (catalog.read; funcionalidade catalog.products)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - {
+            name: type,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [GOODS, SERVICE] },
+          }
+        - { name: categoryId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: active, in: query, required: false, schema: { type: boolean } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Produtos; `meta.total` conta os que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria um produto e a sua variante por omissão (catalog.manage)
+      description: |
+        `type` GOODS ou SERVICE (um serviço nunca controla stock). `trackingMode` NONE, LOT ou SERIAL exige `trackStock`.
+        A variante por omissão leva o SKU `sku` (por omissão, o código do produto). O código do produto, os SKUs e os
+        códigos de barras são únicos no tenant (409 `PRODUCT_CODE_TAKEN`, `SKU_TAKEN`, `BARCODE_TAKEN`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name, baseUnitId]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                type: { type: string, enum: [GOODS, SERVICE] }
+                categoryId: { type: string, format: uuid }
+                baseUnitId: { type: string, format: uuid }
+                trackStock: { type: boolean }
+                trackingMode: { type: string, enum: [NONE, LOT, SERIAL] }
+                active: { type: boolean }
+                taxCategory: { type: string, nullable: true }
+                sku: { type: string }
+                barcode: { type: string, nullable: true }
+                attributes: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: Produto com a variante por omissão. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /products/{id}:
+    get:
+      summary: Um produto com as suas variantes (catalog.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Produto. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera um produto (catalog.manage)
+      description: |
+        O código é imutável (`CODE_IMMUTABLE`). Mudar a unidade de base, o controlo de stock ou o modo de rastreio de um produto
+        com movimentos de stock é recusado (409 `STOCK_MIGRATION_REQUIRED`): exige uma migração explícita.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                type: { type: string, enum: [GOODS, SERVICE] }
+                categoryId: { type: string, format: uuid, nullable: true }
+                baseUnitId: { type: string, format: uuid }
+                trackStock: { type: boolean }
+                trackingMode: { type: string, enum: [NONE, LOT, SERIAL] }
+                active: { type: boolean }
+                taxCategory: { type: string, nullable: true }
+      responses:
+        '200': { description: Produto actualizado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /products/{id}/variants:
+    get:
+      summary: Variantes de um produto (catalog.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Variantes. }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Acrescenta uma variante a um produto (catalog.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku]
+              properties:
+                sku: { type: string }
+                barcode: { type: string, nullable: true }
+                attributes: { type: object, additionalProperties: true }
+                active: { type: boolean }
+      responses:
+        '201': { description: Variante criada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /variants/{id}:
+    get:
+      summary: Uma variante (catalog.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Variante. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera uma variante; o SKU é imutável (catalog.manage)
+      description: A variante por omissão não se pode desactivar enquanto o produto estiver activo (`DEFAULT_VARIANT_ACTIVE`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                sku: { type: string }
+                barcode: { type: string, nullable: true }
+                attributes: { type: object, additionalProperties: true }
+                active: { type: boolean }
+      responses:
+        '200': { description: Variante actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /price-lists:
+    get:
+      summary: Tabelas de preços (price.read; funcionalidade catalog.prices)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        '200': { description: Tabelas de preços. }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma tabela de preços (price.manage)
+      description: |
+        Uma tabela pertence a uma organização e a uma moeda (imutáveis depois de criada), vale de `validFrom` a `validTo`
+        (datas ISO) e tem uma `priority` (-1000 a 1000; a mais alta vence, empate é ambíguo).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, name, currency, validFrom]
+              properties:
+                organizationId: { type: string, format: uuid }
+                name: { type: string }
+                currency: { type: string, description: 'ISO 4217, três letras maiúsculas.' }
+                validFrom: { type: string, format: date }
+                validTo: { type: string, format: date, nullable: true }
+                taxInclusive: { type: boolean }
+                priority: { type: integer }
+      responses:
+        '201': { description: Tabela criada. }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /price-lists/{id}:
+    get:
+      summary: Uma tabela de preços com os seus itens (price.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Tabela e itens (preços como texto decimal). }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera nome, período, prioridade ou IVA incluído de uma tabela (price.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                organizationId: { type: string, format: uuid }
+                name: { type: string }
+                currency: { type: string }
+                validFrom: { type: string, format: date }
+                validTo: { type: string, format: date, nullable: true }
+                taxInclusive: { type: boolean }
+                priority: { type: integer }
+      responses:
+        '200': { description: Tabela actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /price-lists/{id}/items:
+    post:
+      summary: Acrescenta o preço de uma variante a partir de uma quantidade mínima (price.manage)
+      description: Decimais como texto (`unitPrice` com 4 casas, `minQuantity` com 6, `maxDiscount` de 0 a 1). Escalão repetido dá 409 `PRICE_TIER_EXISTS`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, unitPrice]
+              properties:
+                variantId: { type: string, format: uuid }
+                minQuantity: { type: string }
+                unitPrice: { type: string }
+                maxDiscount: { type: string }
+      responses:
+        '201': { description: Item criado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /price-list-items/{id}:
+    patch:
+      summary: Altera o preço ou o desconto máximo de um item (price.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                unitPrice: { type: string }
+                maxDiscount: { type: string }
+      responses:
+        '200': { description: Item actualizado. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Remove um item de uma tabela de preços (price.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Item removido. }
+        '404': { $ref: '#/components/responses/Error' }
+  /prices/resolve:
+    get:
+      summary: Resolve o preço de uma variante para uma organização, moeda, quantidade e data (price.read)
+      description: |
+        Em cada tabela aplicável (organização, moeda e período) vale o escalão mais alto cuja quantidade mínima é atingida;
+        entre tabelas vence a de maior prioridade. Devolve o preço, o desconto máximo e a origem (tabela e item) para o
+        documento a congelar. 404 `PRICE_NOT_FOUND`; 409 `PRICE_AMBIGUOUS` (empate de prioridade) ou `VARIANT_INACTIVE`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: variantId, in: query, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: organizationId,
+            in: query,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+        - { name: currency, in: query, required: true, schema: { type: string } }
+        - { name: quantity, in: query, required: true, schema: { type: string } }
+        - { name: date, in: query, required: false, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Preço resolvido e origem. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
