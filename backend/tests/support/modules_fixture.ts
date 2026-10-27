@@ -34,6 +34,7 @@ export const TEST_MANIFESTS: ModuleManifest[] = [
   // O catálogo é o módulo real (manifesto entregue por código), não uma maquete.
   CODE_MANIFESTS.find((m) => m.code === 'catalog') as ModuleManifest,
   CODE_MANIFESTS.find((m) => m.code === 'customers') as ModuleManifest,
+  CODE_MANIFESTS.find((m) => m.code === 'orders') as ModuleManifest,
   mod('finance', [dep('core')], [feature('finance.ledger', true)]),
   mod(
     'sales',

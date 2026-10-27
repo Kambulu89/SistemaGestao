@@ -58,6 +58,10 @@ export interface World {
     segment: string
     customer: string
     interaction: string
+    quote: string
+    quoteLine: string
+    order: string
+    orderLine: string
   }
 }
 
@@ -105,10 +109,11 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
 
   // Módulos (C03): o mesmo módulo e override nos dois tenants, com plano que os licencia.
   await syncTestRegistry()
-  await license(t, ['crm', 'catalog', 'customers'], ['crm.scoring'])
+  await license(t, ['crm', 'catalog', 'customers', 'orders'], ['crm.scoring'])
   await must(await http.post('/api/v1/tenant/modules/crm/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/catalog/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/customers/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/orders/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -575,6 +580,38 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // M04: a mesma proposta (enviada e aceite) e a encomenda em rascunho que dela resulta, nos dois tenants.
+  for (const [documentType, prefix] of [
+    ['QUOTE', 'PRO {SERIES}/{YYYY}/'],
+    ['SALES_ORDER', 'ENC {SERIES}/{YYYY}/'],
+  ] as const) {
+    await must(
+      await http.post('/api/v1/sequences', {
+        organizationId: organization.id,
+        documentType,
+        series: 'A',
+        prefixTemplate: prefix,
+      }),
+      201
+    )
+  }
+  const quote = await must<{ id: string }>(
+    await http.post('/api/v1/quotes', {
+      organizationId: organization.id,
+      customerId: customer.id,
+      validUntil: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
+    }),
+    201
+  )
+  const quoted = await must<{ lines: { id: string }[] }>(
+    await http.post(`/api/v1/quotes/${quote.id}/lines`, { variantId: variant.id, quantity: '2' }),
+    201
+  )
+  await must(await http.post(`/api/v1/quotes/${quote.id}/send`, {}), 200)
+  const accepted = await must<{ order: { id: string; lines: { id: string }[] } }>(
+    await http.post(`/api/v1/quotes/${quote.id}/accept`, {}),
+    200
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -626,6 +663,10 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       segment: segment.id,
       customer: customer.id,
       interaction: interaction.id,
+      quote: quote.id,
+      quoteLine: (quoted.lines[0] as { id: string }).id,
+      order: accepted.order.id,
+      orderLine: (accepted.order.lines[0] as { id: string }).id,
     },
   }
 }

@@ -4216,3 +4216,405 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /quotes:
+    get:
+      summary: Propostas, com o estado efectivo (quote.read; funcionalidade orders.quotes)
+      description: '`status=EXPIRED` são as enviadas já fora da validade (o estado expirado é derivado, nunca gravado).'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - { name: status, in: query, required: false, schema: { type: string } }
+        - {
+            name: q,
+            in: query,
+            required: false,
+            schema: { type: string, description: Parte do número. },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Propostas; `meta.total` conta as que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma proposta em rascunho (quote.manage)
+      description: A moeda por omissão é a do cliente, que tem de pertencer à organização. A validade não pode estar no passado.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, customerId, validUntil]
+              properties:
+                organizationId: { type: string, format: uuid }
+                customerId: { type: string, format: uuid }
+                validUntil: { type: string, format: date }
+                currency: { type: string }
+                notes: { type: string, nullable: true }
+      responses:
+        '201': { description: Proposta criada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /quotes/{id}:
+    get:
+      summary: Uma proposta com as linhas e os totais (quote.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Proposta. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera a validade, a moeda ou as notas de uma proposta em rascunho (quote.manage)
+      description: A organização e o cliente não mudam (422 `IMMUTABLE`); a moeda não muda depois de haver linhas (409 `CURRENCY_LOCKED`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                validUntil: { type: string, format: date }
+                currency: { type: string }
+                notes: { type: string, nullable: true }
+      responses:
+        '200': { description: Proposta actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /quotes/{id}/lines:
+    post:
+      summary: Acrescenta uma linha a uma proposta em rascunho (quote.manage)
+      description: |
+        O preço, o escalão, o desconto máximo e a origem vêm da resolução do catálogo e o imposto da taxa válida na data para a
+        categoria do produto: nada disto vem do cliente. Os valores calculam-se com aritmética exacta (arredondamento da
+        configuração `tax.roundingMode`) e ficam em instantâneo na linha. Devolve a proposta com as linhas e os totais.
+        422: `PRICE_NOT_FOUND`, `DISCOUNT_EXCEEDS`, `QUANTITY_PRECISION`, `NO_TAX_RATE`, `VARIANT_INACTIVE`, `UNKNOWN_VARIANT`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, quantity]
+              properties:
+                variantId: { type: string, format: uuid }
+                quantity: { type: string, description: Decimal positivo em texto. }
+                discountRate: { type: string, description: Taxa 0..1 em texto. }
+      responses:
+        '201': { description: Proposta com a nova linha. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /quotes/{id}/lines/{lineId}:
+    patch:
+      summary: Altera a quantidade ou o desconto de uma linha (reavalia o escalão e o preço) (quote.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity: { type: string }
+                discountRate: { type: string }
+      responses:
+        '200': { description: Proposta actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Remove uma linha de uma proposta em rascunho (quote.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Proposta com os totais recalculados. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /quotes/{id}/send:
+    post:
+      summary: Envia a proposta (atribui o número da sequência QUOTE e congela as linhas) (quote.manage)
+      description: 409 `QUOTE_EMPTY` sem linhas; 409 `SEQUENCE_NOT_CONFIGURED` sem sequência (a proposta continua rascunho).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Proposta enviada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /quotes/{id}/reject:
+    post:
+      summary: Rejeita uma proposta enviada (quote.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Proposta rejeitada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /quotes/{id}/accept:
+    post:
+      summary: Aceita uma proposta enviada e converte-a numa encomenda em rascunho (quote.manage e order.manage)
+      description: |
+        As linhas passam tal como foram propostas (preços e impostos congelados, sem recalcular). Idempotente: aceitar outra vez
+        devolve a mesma encomenda com `idempotent: true`. Uma proposta expirada dá 409 `QUOTE_EXPIRED`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`quote`, `order` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /sales-orders:
+    get:
+      summary: Encomendas de venda (order.read; funcionalidade orders.orders)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, CONFIRMED, PARTIAL, FULFILLED, CANCELLED] },
+          }
+        - {
+            name: q,
+            in: query,
+            required: false,
+            schema: { type: string, description: Parte do número. },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Encomendas; `meta.total` conta as que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma encomenda em rascunho, sem proposta (order.manage)
+      description: A morada de entrega é um instantâneo (campos `line1`, `line2`, `city`, `postalCode`, `region`, `countryCode`, `recipient`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, customerId]
+              properties:
+                organizationId: { type: string, format: uuid }
+                customerId: { type: string, format: uuid }
+                orderDate: { type: string, format: date }
+                currency: { type: string }
+                deliveryAddress: { type: object, additionalProperties: { type: string } }
+      responses:
+        '201': { description: Encomenda criada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /sales-orders/{id}:
+    get:
+      summary: Uma encomenda com as linhas, os totais e o estado (order.read)
+      description: '`creditReservation` fica a zero até haver verificação de crédito. Não há quantidades reservadas, expedidas nem facturadas até às fatias respectivas.'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Encomenda. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera a data, a moeda ou a morada de entrega de uma encomenda em rascunho (order.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                orderDate: { type: string, format: date }
+                currency: { type: string }
+                deliveryAddress: { type: object, additionalProperties: { type: string } }
+      responses:
+        '200': { description: Encomenda actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /sales-orders/{id}/lines:
+    post:
+      summary: Acrescenta uma linha a uma encomenda em rascunho (order.manage)
+      description: Como nas propostas, o preço e o imposto vêm do servidor e ficam em instantâneo; o preço resolve-se para a data da encomenda.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, quantity]
+              properties:
+                variantId: { type: string, format: uuid }
+                quantity: { type: string }
+                discountRate: { type: string }
+      responses:
+        '201': { description: Encomenda com a nova linha. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /sales-orders/{id}/lines/{lineId}:
+    patch:
+      summary: Altera a quantidade ou o desconto de uma linha (order.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity: { type: string }
+                discountRate: { type: string }
+      responses:
+        '200': { description: Encomenda actualizada. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Remove uma linha de uma encomenda em rascunho (order.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Encomenda com os totais recalculados. }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /sales-orders/{id}/confirm:
+    post:
+      summary: Confirma a encomenda (sales.confirm)
+      description: |
+        Valida que há linhas e que o cliente pode receber vendas (409 `CUSTOMER_BLOCKED`/`CUSTOMER_INACTIVE`), corre as
+        verificações registadas pelos módulos (stock, crédito: 409 `ORDER_NOT_CONFIRMABLE` com os motivos) e emite o número
+        (sequência SALES_ORDER). **Não reserva stock, não expede nem factura**: escreve o evento `sales.order.confirmed`.
+        Idempotente: confirmar outra vez devolve a encomenda com `idempotent: true`, sem novo número nem novo evento.
+        `expectedVersion` é opcional.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expectedVersion: { type: integer }
+      responses:
+        '200': { description: '`order` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /sales-orders/{id}/cancel:
+    post:
+      summary: Cancela uma encomenda em rascunho ou confirmada, com motivo (sales.confirm)
+      description: |
+        Idempotente. Uma encomenda já expedida (parcial ou totalmente) não se cancela (409 `ORDER_NOT_CANCELLABLE`). Escreve
+        `sales.order.cancelled` (com `wasConfirmed`); as reservas, quando existirem, libertam-se ao consumir o evento.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: '`order` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }

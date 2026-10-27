@@ -40,6 +40,22 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
       { code: 'customers.interactions', name: 'Interacções comerciais', defaultEnabled: true },
     ],
   },
+  {
+    code: 'orders',
+    name: 'Propostas e encomendas',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [
+      { code: 'core', constraint: '*', optional: false },
+      { code: 'catalog', constraint: '*', optional: false },
+      { code: 'customers', constraint: '*', optional: false },
+    ],
+    features: [
+      { code: 'orders.quotes', name: 'Propostas comerciais', defaultEnabled: true },
+      { code: 'orders.orders', name: 'Encomendas de venda', defaultEnabled: true },
+    ],
+  },
 ]
 
 /** Activadores por módulo (sementes e configuração inicial do tenant). Idempotentes; vazio até haver módulos. */

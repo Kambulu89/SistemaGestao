@@ -256,6 +256,32 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Ver e alterar o limite de crédito e a sua moeda.',
   },
   {
+    code: 'quote.read',
+    moduleCode: 'orders',
+    description: 'Ver propostas comerciais.',
+  },
+  {
+    code: 'quote.manage',
+    moduleCode: 'orders',
+    description: 'Criar, alterar, enviar, aceitar e rejeitar propostas.',
+  },
+  {
+    code: 'order.read',
+    moduleCode: 'orders',
+    description: 'Ver encomendas de venda.',
+  },
+  {
+    code: 'order.manage',
+    moduleCode: 'orders',
+    description:
+      'Criar e alterar encomendas de venda em rascunho (aceitar uma proposta também exige esta).',
+  },
+  {
+    code: 'sales.confirm',
+    moduleCode: 'orders',
+    description: 'Confirmar e cancelar encomendas de venda.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

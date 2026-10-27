@@ -43,7 +43,30 @@ export const SALES_MODULES = [
     description: 'Orçamentos, encomendas e vendas.',
     group: 'sales',
     icon: 'card',
-    dependencies: ['sales.catalog'],
+    dependencies: ['sales.catalog', 'crm.customers'],
+    // Módulo `orders` do servidor (M04): funcionalidades `orders.quotes` e `orders.orders`.
+    backendModule: 'orders',
+    accessPermission: 'sales.orders.read',
+    features: [
+      {
+        id: 'quotes',
+        name: 'Propostas comerciais',
+        description: 'Propostas com preços e impostos congelados.',
+      },
+      {
+        id: 'orders',
+        name: 'Encomendas de venda',
+        description: 'Encomendas, confirmação e cancelamento.',
+      },
+    ],
+    routes: [
+      {
+        path: '',
+        title: 'Propostas e encomendas',
+        permission: 'sales.orders.read',
+        loadComponent: () => import('./orders/orders-page').then((m) => m.OrdersPage),
+      },
+    ],
     settings: [
       {
         key: 'quoteValidityDays',

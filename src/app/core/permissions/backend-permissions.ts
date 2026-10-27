@@ -43,6 +43,9 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'customer.read': ['crm.customers.read'],
   'customer.create': ['crm.customers.read'],
   'customer.update': ['crm.customers.read'],
+  // Propostas e encomendas (M04): as páginas usam os códigos do servidor; o alias só abre a rota do módulo.
+  'quote.read': ['sales.orders.read'],
+  'order.read': ['sales.orders.read'],
   // Catálogo e preços (M03): as páginas usam o código do servidor; ler preços é independente de ler produtos.
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],

@@ -28,6 +28,7 @@ const RulesController = () => import('#dynamic/rules/presentation/rules_controll
 const FormsController = () => import('#dynamic/forms/presentation/forms_controller')
 const StatesController = () => import('#dynamic/states/presentation/states_controller')
 const CatalogController = () => import('#modules/catalog/presentation/catalog_controller')
+const OrdersController = () => import('#modules/orders/presentation/orders_controller')
 const CustomersController = () => import('#modules/customers/presentation/customers_controller')
 const AutomationsController = () =>
   import('#dynamic/automations/presentation/automations_controller')
@@ -680,6 +681,65 @@ router
           .use(middleware.can({ permission: 'customer.update' }))
       })
       .use(middleware.feature({ code: 'customers.interactions' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Propostas e encomendas (M04): módulo `orders` do registo. Funcionalidades `orders.quotes` e `orders.orders`;
+ * permissões `quote.read|manage`, `order.read|manage` e `sales.confirm` (confirmar e cancelar). Confirmar não reserva stock
+ * nem expede nem factura.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/quotes', [OrdersController, 'listQuotes'])
+            router.get('/quotes/:id', [OrdersController, 'showQuote'])
+          })
+          .use(middleware.can({ permission: 'quote.read' }))
+        router
+          .group(() => {
+            router.post('/quotes', [OrdersController, 'createQuote'])
+            router.patch('/quotes/:id', [OrdersController, 'updateQuote'])
+            router.post('/quotes/:id/lines', [OrdersController, 'addQuoteLine'])
+            router.patch('/quotes/:id/lines/:lineId', [OrdersController, 'updateQuoteLine'])
+            router.delete('/quotes/:id/lines/:lineId', [OrdersController, 'removeQuoteLine'])
+            router.post('/quotes/:id/send', [OrdersController, 'sendQuote'])
+            router.post('/quotes/:id/reject', [OrdersController, 'rejectQuote'])
+            router.post('/quotes/:id/accept', [OrdersController, 'acceptQuote'])
+          })
+          .use(middleware.can({ permission: 'quote.manage' }))
+      })
+      .use(middleware.feature({ code: 'orders.quotes' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/sales-orders', [OrdersController, 'listOrders'])
+            router.get('/sales-orders/:id', [OrdersController, 'showOrder'])
+          })
+          .use(middleware.can({ permission: 'order.read' }))
+        router
+          .group(() => {
+            router.post('/sales-orders', [OrdersController, 'createOrder'])
+            router.patch('/sales-orders/:id', [OrdersController, 'updateOrder'])
+            router.post('/sales-orders/:id/lines', [OrdersController, 'addOrderLine'])
+            router.patch('/sales-orders/:id/lines/:lineId', [OrdersController, 'updateOrderLine'])
+            router.delete('/sales-orders/:id/lines/:lineId', [OrdersController, 'removeOrderLine'])
+          })
+          .use(middleware.can({ permission: 'order.manage' }))
+        router
+          .group(() => {
+            router.post('/sales-orders/:id/confirm', [OrdersController, 'confirmOrder'])
+            router.post('/sales-orders/:id/cancel', [OrdersController, 'cancelOrder'])
+          })
+          .use(middleware.can({ permission: 'sales.confirm' }))
+      })
+      .use(middleware.feature({ code: 'orders.orders' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

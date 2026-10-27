@@ -104,6 +104,10 @@ async function snapshot(world: World) {
     customer: await get(`/api/v1/customers/${world.ids.customer}`),
     segments: await get('/api/v1/customer-segments'),
     interactions: await get('/api/v1/interactions'),
+    quotes: await get('/api/v1/quotes'),
+    quote: await get(`/api/v1/quotes/${world.ids.quote}`),
+    salesOrders: await get('/api/v1/sales-orders'),
+    salesOrder: await get(`/api/v1/sales-orders/${world.ids.order}`),
     records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
@@ -220,6 +224,23 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['patch', `/customer-segments/${o.segment}`, { ...stale, name: 'x' }],
     ['get', `/interactions/${o.interaction}`],
     ['patch', `/interactions/${o.interaction}`, { ...stale, subject: 'x' }],
+    ['get', `/quotes/${o.quote}`],
+    ['patch', `/quotes/${o.quote}`, { ...stale, notes: 'x' }],
+    ['post', `/quotes/${o.quote}/lines`, { variantId: me.ids.variant, quantity: '1' }],
+    ['patch', `/quotes/${o.quote}/lines/${o.quoteLine}`, { quantity: '3' }],
+    ['patch', `/quotes/${me.ids.quote}/lines/${o.quoteLine}`, { quantity: '3' }],
+    ['delete', `/quotes/${o.quote}/lines/${o.quoteLine}`],
+    ['post', `/quotes/${o.quote}/send`, {}],
+    ['post', `/quotes/${o.quote}/reject`, {}],
+    ['post', `/quotes/${o.quote}/accept`, {}],
+    ['get', `/sales-orders/${o.order}`],
+    ['patch', `/sales-orders/${o.order}`, { ...stale, orderDate: '2026-01-01' }],
+    ['post', `/sales-orders/${o.order}/lines`, { variantId: me.ids.variant, quantity: '1' }],
+    ['patch', `/sales-orders/${o.order}/lines/${o.orderLine}`, { quantity: '3' }],
+    ['patch', `/sales-orders/${me.ids.order}/lines/${o.orderLine}`, { quantity: '3' }],
+    ['delete', `/sales-orders/${o.order}/lines/${o.orderLine}`],
+    ['post', `/sales-orders/${o.order}/confirm`, {}],
+    ['post', `/sales-orders/${o.order}/cancel`, { reason: 'x' }],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
     ['delete', `/entity-definitions/${o.entity}`],
@@ -354,6 +375,8 @@ test.group('matriz de isolamento', (group) => {
       'customers',
       'segments',
       'interactions',
+      'quotes',
+      'salesOrders',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)

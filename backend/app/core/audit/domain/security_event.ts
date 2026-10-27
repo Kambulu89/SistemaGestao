@@ -92,6 +92,9 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   customer_segments: 'customer.read',
   customers: 'customer.read',
   interactions: 'customer.read',
+  sales_quotes: 'quote.read',
+  sales_orders: 'order.read',
+  sales_lines: 'order.read',
   price_lists: 'price.read',
   price_list_items: 'price.read',
 }
