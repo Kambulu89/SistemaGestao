@@ -56,6 +56,25 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
       { code: 'orders.orders', name: 'Encomendas de venda', defaultEnabled: true },
     ],
   },
+  {
+    code: 'inventory',
+    name: 'Inventário',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [
+      { code: 'core', constraint: '*', optional: false },
+      { code: 'catalog', constraint: '*', optional: false },
+    ],
+    features: [
+      { code: 'inventory.warehouses', name: 'Armazéns e locais', defaultEnabled: true },
+      {
+        code: 'inventory.stock',
+        name: 'Stock, movimentos, lotes e reservas',
+        defaultEnabled: true,
+      },
+    ],
+  },
 ]
 
 /** Activadores por módulo (sementes e configuração inicial do tenant). Idempotentes; vazio até haver módulos. */

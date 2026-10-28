@@ -97,6 +97,13 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   sales_lines: 'order.read',
   price_lists: 'price.read',
   price_list_items: 'price.read',
+  warehouses: 'inventory.read',
+  stock_locations: 'inventory.read',
+  lots: 'inventory.read',
+  stock_balances: 'inventory.read',
+  stock_movements: 'inventory.read',
+  stock_costs: 'inventory.read',
+  stock_reservations: 'inventory.read',
 }
 
 /** Tabelas de tenant que não são auditadas, com o motivo (o teste de conformidade exige o resto). */

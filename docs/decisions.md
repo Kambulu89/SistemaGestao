@@ -578,6 +578,35 @@ estas execuções ficam registadas como `DEAD` e **não se reprocessam**. Um cic
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
 
+
+## D-050 Inventário (M07): livro imutável, saldos sob bloqueio, reservas na transacção da encomenda (aceite — fatia 4.4)
+- **Livro e saldo.** `stock_movements` só se acrescenta (trigger; nem a conta dona o altera sem o interruptor de retenção) e tem
+  **origem única** por tipo/documento/linha/efeito: repetir um comando devolve o movimento já lançado (idempotente) e outro
+  conteúdo com a mesma origem é 409 `SOURCE_CONFLICT`. `stock_balances` é derivado e actualiza-se na mesma transacção, sob
+  `SELECT … FOR UPDATE` da linha (a chave trata o lote nulo como dimensão); nunca é editável pela API. `on_hand`, `reserved` e
+  `available = on_hand − reserved` atravessam a API como texto decimal; a soma do livro reconcilia com o saldo (testado).
+- **Quantidades.** 6 casas, validadas contra a precisão da unidade base do produto; aritmética em `bigint` escalado (nunca
+  `number`). Sem conversão de unidades: a linha comercial já está na unidade base.
+- **Saldo negativo.** Proibido por omissão; por armazém (`allow_negative`). Uma saída normal nunca desce abaixo do reservado
+  (409 `INSUFFICIENT_STOCK`, com o disponível). Duas saídas concorrentes: só uma passa (testado).
+- **Custo médio móvel** por variante e armazém (`stock_costs`). Entradas misturam ao custo do movimento; saídas saem ao custo
+  médio; a **reversão** repõe ao custo original do movimento revertido e recalcula o que resta. Reverter é um movimento
+  `REVERSAL` oposto (uma só vez; uma reversão não se reverte); reverter uma saída **não** repõe a reserva que ela consumiu.
+- **Reservas.** `stock_reservations` por origem (documento, linha, local, lote), idempotentes; consumir (por uma saída com
+  `reservationId`) baixa o físico e o reservado uma só vez; libertar repõe; as vencidas fecham em `EXPIRED` por comando
+  (`POST /stock-reservations/expire`; **sem trabalhador** que o chame sozinho).
+- **Encomendas.** O inventário não é dependência das encomendas: regista um efeito (`registerOrderEffects`) que corre **na
+  mesma transacção** da confirmação e do cancelamento. Só actua se a organização tiver um **armazém de vendas** (um por
+  organização); reserva por validade (FEFO), ignora lotes expirados, e sem stock suficiente aborta a confirmação por inteiro
+  (409 `ORDER_NOT_CONFIRMABLE`; o número não se gasta). Com `allow_backorder` reserva o que há e regista a falta no evento
+  `inventory.order_stock.reserved`. Cancelar liberta as reservas activas. Confirmar continua a não baixar o stock nem a expedir.
+- **Catálogo.** O inventário regista o `registerMovementGuard`: um produto com movimentos já não muda de unidade base nem de
+  rastreio (409 `STOCK_MIGRATION_REQUIRED`). Passou a devolver a função que retira a verificação.
+- **Permissões.** `inventory.read|adjust|reserve` (spec) e `warehouse.manage` (acrescentada: gerir armazéns não é ajustar stock).
+- **Fica por fazer.** Números de série (`SERIAL` recusado: 409 `SERIAL_NOT_SUPPORTED`), transferências e inventários físicos
+  (4.8), expedições que consomem reservas (4.5), «em trânsito», política explícita para sair de lotes expirados, trabalhador
+  para expirar reservas, valorização em relatórios.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de
 email/SMS/WhatsApp/pagamento; calendário de férias; alçadas e segregação; política de retenção; RPO/RTO; limites de

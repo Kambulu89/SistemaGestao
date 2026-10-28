@@ -41,7 +41,7 @@ export const TEST_MANIFESTS: ModuleManifest[] = [
     [dep('core'), dep('crm', false, '^1'), dep('catalog'), dep('finance', true)],
     [feature('sales.quotes', true), feature('sales.discounts', false)]
   ),
-  mod('inventory', [dep('catalog')], [feature('inventory.moves', true)]),
+  CODE_MANIFESTS.find((m) => m.code === 'inventory') as ModuleManifest,
 ]
 
 export const syncTestRegistry = () =>

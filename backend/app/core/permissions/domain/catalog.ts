@@ -282,6 +282,26 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Confirmar e cancelar encomendas de venda.',
   },
   {
+    code: 'inventory.read',
+    moduleCode: 'inventory',
+    description: 'Ver stock, movimentos, lotes e reservas.',
+  },
+  {
+    code: 'inventory.adjust',
+    moduleCode: 'inventory',
+    description: 'Ajustar stock, reverter movimentos e criar lotes.',
+  },
+  {
+    code: 'inventory.reserve',
+    moduleCode: 'inventory',
+    description: 'Criar e libertar reservas de stock.',
+  },
+  {
+    code: 'warehouse.manage',
+    moduleCode: 'inventory',
+    description: 'Criar e alterar armazéns e locais.',
+  },
+  {
     code: 'audit.read',
     moduleCode: 'audit',
     description: 'Ver o histórico de auditoria e os eventos de segurança.',

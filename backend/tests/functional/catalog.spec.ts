@@ -265,7 +265,7 @@ test.group('catálogo | produtos e variantes', (group) => {
     assert.equal(lots.trackingMode, 'LOT')
 
     // O inventário regista como saber se há movimentos; com movimentos, a edição simples é recusada.
-    registerMovementGuard(async () => true)
+    const unregister = registerMovementGuard(async () => true)
     const blocked = await http.patch(`/api/v1/products/${created.id}`, {
       expectedVersion: lots.version,
       baseUnitId: kg.id,
@@ -295,6 +295,8 @@ test.group('catálogo | produtos e variantes', (group) => {
     ;(
       await http.patch(`/api/v1/products/${created.id}`, { expectedVersion: 1, name: 'x' })
     ).assertStatus(409)
+    // A verificação é global: retira-se para não afectar os outros testes (nem o inventário real).
+    unregister()
   })
 
   test('categorias em árvore, sem ciclos; filtros de produtos', async ({ client, assert }) => {

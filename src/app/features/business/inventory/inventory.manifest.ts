@@ -8,6 +8,35 @@ export const INVENTORY_MODULES = [
     group: 'inventory',
     icon: 'archive',
     dependencies: ['sales.catalog'],
+    // Módulo `inventory` do servidor (M07): funcionalidades `inventory.warehouses` e `inventory.stock`.
+    backendModule: 'inventory',
+    permissions: [
+      { key: 'inventory.read', name: 'Ver stock, movimentos, lotes e reservas' },
+      { key: 'inventory.adjust', name: 'Ajustar stock, reverter movimentos e criar lotes' },
+      { key: 'inventory.reserve', name: 'Criar e libertar reservas de stock' },
+      { key: 'warehouse.manage', name: 'Gerir armazéns e locais' },
+    ],
+    accessPermission: 'inventory.read',
+    features: [
+      {
+        id: 'warehouses',
+        name: 'Armazéns e locais',
+        description: 'Armazéns, locais e o armazém de vendas.',
+      },
+      {
+        id: 'stock',
+        name: 'Stock, movimentos, lotes e reservas',
+        description: 'Saldos, livro de movimentos, ajustes, lotes e reservas.',
+      },
+    ],
+    routes: [
+      {
+        path: '',
+        title: 'Armazéns e stock',
+        permission: 'inventory.read',
+        loadComponent: () => import('./stock/inventory-page').then((m) => m.InventoryPage),
+      },
+    ],
   }),
   defineModule({
     code: 'inventory.movements',

@@ -32,3 +32,41 @@ export async function runConfirmationChecks(
   for (const check of checks) issues.push(...(await check(scope, order, lines)))
   return issues
 }
+
+/** Um efeito que corre **na mesma transacção** da confirmação ou do cancelamento (reservas de stock, de crédito…). */
+export interface OrderEffects {
+  /** Depois de a encomenda ficar confirmada; lançar um erro anula a confirmação por inteiro. */
+  confirmed?(scope: TenantScope, order: Order, lines: readonly Line[]): Promise<void>
+  /** Depois de a encomenda ficar cancelada. */
+  cancelled?(scope: TenantScope, order: Order, lines: readonly Line[]): Promise<void>
+}
+
+const effects: OrderEffects[] = []
+
+/**
+ * O inventário regista aqui a reserva (ao confirmar) e a libertação (ao cancelar) de stock. As encomendas não dependem do
+ * inventário: sem nenhum efeito registado, confirmar e cancelar só mudam a encomenda. Devolve a função que o retira.
+ */
+export function registerOrderEffects(effect: OrderEffects): () => void {
+  effects.push(effect)
+  return () => {
+    const at = effects.indexOf(effect)
+    if (at >= 0) effects.splice(at, 1)
+  }
+}
+
+export async function runConfirmedEffects(
+  scope: TenantScope,
+  order: Order,
+  lines: readonly Line[]
+): Promise<void> {
+  for (const effect of effects) await effect.confirmed?.(scope, order, lines)
+}
+
+export async function runCancelledEffects(
+  scope: TenantScope,
+  order: Order,
+  lines: readonly Line[]
+): Promise<void> {
+  for (const effect of effects) await effect.cancelled?.(scope, order, lines)
+}

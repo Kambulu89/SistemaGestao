@@ -331,7 +331,7 @@ test.group('módulos | funcionalidades', (group) => {
     let f = await features(http)
     assert.isFalse(f['sales.quotes'].enabled)
     assert.strictEqual(f['sales.quotes'].reason, 'MODULE_DISABLED')
-    assert.strictEqual(f['inventory.moves'].reason, 'NOT_LICENSED')
+    assert.strictEqual(f['inventory.stock'].reason, 'NOT_LICENSED')
 
     await http.post('/api/v1/tenant/modules/sales/enable', { withDependencies: true })
     f = await features(http)

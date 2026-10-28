@@ -62,6 +62,11 @@ export interface World {
     quoteLine: string
     order: string
     orderLine: string
+    warehouse: string
+    location: string
+    lot: string
+    movement: string
+    reservation: string
   }
 }
 
@@ -109,11 +114,12 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
 
   // Módulos (C03): o mesmo módulo e override nos dois tenants, com plano que os licencia.
   await syncTestRegistry()
-  await license(t, ['crm', 'catalog', 'customers', 'orders'], ['crm.scoring'])
+  await license(t, ['crm', 'catalog', 'customers', 'orders', 'inventory'], ['crm.scoring'])
   await must(await http.post('/api/v1/tenant/modules/crm/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/catalog/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/customers/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/orders/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/inventory/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -612,6 +618,57 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     await http.post(`/api/v1/quotes/${quote.id}/accept`, {}),
     200
   )
+  // M07: o mesmo armazém (com o local PRINCIPAL), lote, ajuste e reserva nos dois tenants.
+  const warehouse = await must<{ id: string; locations: { id: string }[] }>(
+    await http.post('/api/v1/warehouses', {
+      organizationId: organization.id,
+      code: 'ARM-1',
+      name: 'Central',
+    }),
+    201
+  )
+  const location = warehouse.locations[0] as { id: string }
+  const yogurt = await must<{ id: string; variants: { id: string }[] }>(
+    await http.post('/api/v1/products', {
+      code: 'IOG-001',
+      name: 'Iogurte',
+      type: 'GOODS',
+      baseUnitId: kg.id,
+      trackingMode: 'LOT',
+    }),
+    201
+  )
+  const yogurtVariant = yogurt.variants[0] as { id: string }
+  const lot = await must<{ id: string }>(
+    await http.post('/api/v1/lots', {
+      variantId: yogurtVariant.id,
+      code: 'L1',
+      expiresOn: '2099-01-01',
+    }),
+    201
+  )
+  const movement = await must<{ id: string }>(
+    await http.post('/api/v1/stock-adjustments', {
+      variantId: yogurtVariant.id,
+      locationId: location.id,
+      lotId: lot.id,
+      quantityDelta: '10',
+      unitCost: '2.5',
+      reason: 'Contagem inicial',
+    }),
+    201
+  )
+  const reservation = await must<{ id: string }>(
+    await http.post('/api/v1/stock-reservations', {
+      variantId: yogurtVariant.id,
+      locationId: location.id,
+      lotId: lot.id,
+      quantity: '2',
+      sourceType: 'MANUAL',
+      sourceId: '00000000-0000-4000-8000-0000000000aa',
+    }),
+    201
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -667,6 +724,11 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       quoteLine: (quoted.lines[0] as { id: string }).id,
       order: accepted.order.id,
       orderLine: (accepted.order.lines[0] as { id: string }).id,
+      warehouse: warehouse.id,
+      location: location.id,
+      lot: lot.id,
+      movement: movement.id,
+      reservation: reservation.id,
     },
   }
 }

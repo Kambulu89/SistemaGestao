@@ -4571,7 +4571,9 @@ paths:
       description: |
         Valida que há linhas e que o cliente pode receber vendas (409 `CUSTOMER_BLOCKED`/`CUSTOMER_INACTIVE`), corre as
         verificações registadas pelos módulos (stock, crédito: 409 `ORDER_NOT_CONFIRMABLE` com os motivos) e emite o número
-        (sequência SALES_ORDER). **Não reserva stock, não expede nem factura**: escreve o evento `sales.order.confirmed`.
+        (sequência SALES_ORDER). **Não expede nem factura**: escreve o evento `sales.order.confirmed`. Se a organização tem
+        um armazém de vendas (inventário), **reserva o stock na mesma transacção** (409 `ORDER_NOT_CONFIRMABLE` com
+        `INSUFFICIENT_STOCK` se faltar e o armazém não aceitar encomendas em falta; nada fica gravado nem o número é gasto).
         Idempotente: confirmar outra vez devolve a encomenda com `idempotent: true`, sem novo número nem novo evento.
         `expectedVersion` é opcional.
       security: [{ sessionCookie: [] }]
@@ -4597,7 +4599,7 @@ paths:
       summary: Cancela uma encomenda em rascunho ou confirmada, com motivo (sales.confirm)
       description: |
         Idempotente. Uma encomenda já expedida (parcial ou totalmente) não se cancela (409 `ORDER_NOT_CANCELLABLE`). Escreve
-        `sales.order.cancelled` (com `wasConfirmed`); as reservas, quando existirem, libertam-se ao consumir o evento.
+        `sales.order.cancelled` (com `wasConfirmed`); as reservas de stock activas libertam-se na mesma transacção.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -4617,4 +4619,352 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /warehouses:
+    get:
+      summary: Armazéns (inventory.read; funcionalidade inventory.warehouses)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        '200': { description: Armazéns. }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria um armazém com o local PRINCIPAL (warehouse.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, code, name]
+              properties:
+                organizationId: { type: string, format: uuid }
+                code: { type: string, maxLength: 40 }
+                name: { type: string, maxLength: 160 }
+                allowNegative: { type: boolean }
+                allowBackorder: { type: boolean }
+      responses:
+        '201': { description: Armazém com os locais. }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /warehouses/{id}:
+    get:
+      summary: Um armazém com os seus locais (inventory.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Armazém. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera o nome, as políticas (saldo negativo, encomendas em falta), o armazém de vendas ou o estado (warehouse.manage)
+      description: Só um armazém de vendas por organização (409 `SALES_WAREHOUSE_TAKEN`). Um armazém de vendas não se desactiva sem o retirar primeiro.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                name: { type: string }
+                allowNegative: { type: boolean }
+                allowBackorder: { type: boolean }
+                salesDefault: { type: boolean }
+                active: { type: boolean }
+      responses:
+        '200': { description: Armazém. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /warehouses/{id}/locations:
+    post:
+      summary: Cria um local no armazém (warehouse.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string, maxLength: 40 }
+                name: { type: string, maxLength: 160 }
+      responses:
+        '201': { description: Local. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-locations/{id}:
+    patch:
+      summary: Altera o nome ou desactiva um local (warehouse.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                name: { type: string }
+                active: { type: boolean }
+      responses:
+        '200': { description: Local. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /lots:
+    get:
+      summary: Lotes, por validade (inventory.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: variantId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Lotes. }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria um lote de uma variante com rastreio por lote (inventory.adjust)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, code]
+              properties:
+                variantId: { type: string, format: uuid }
+                code: { type: string, maxLength: 60 }
+                manufacturedOn: { type: string, format: date, nullable: true }
+                expiresOn: { type: string, format: date, nullable: true }
+      responses:
+        '201': { description: Lote. }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-balances:
+    get:
+      summary: Saldos por variante, local e lote (inventory.read)
+      description: '`onHand`, `reserved` e `available` (= em mão − reservado) em texto decimal. O saldo nunca se edita: só o livro de movimentos o altera. «Em trânsito» chega com as transferências.'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: variantId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: warehouseId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: locationId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: lotId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: nonZero, in: query, required: false, schema: { type: boolean } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Saldos; `meta.total` conta os que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-movements:
+    get:
+      summary: Livro de movimentos, do mais recente para o mais antigo (inventory.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: variantId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: locationId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: sourceType, in: query, required: false, schema: { type: string } }
+        - { name: sourceId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: Movimentos. }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-movements/{id}/reverse:
+    post:
+      summary: Reverte um movimento com um movimento oposto ao custo original (inventory.adjust)
+      description: 'Idempotente (200 com `idempotent: true`); uma reversão não se reverte (409 `REVERSAL_OF_REVERSAL`).'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '201': { description: Movimento de reversão. }
+        '200': { description: Já revertido. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-adjustments:
+    post:
+      summary: Ajusta o stock com uma quantidade com sinal e um motivo (inventory.adjust)
+      description: |
+        `quantityDelta` em texto decimal (até 6 casas, ≠ 0, dentro da precisão da unidade). Saída acima do disponível: 409
+        `INSUFFICIENT_STOCK` (salvo `allowNegative`). `reference` torna o pedido repetível: a mesma referência devolve o
+        movimento já lançado (200, `idempotent: true`); com outro conteúdo, 409 `SOURCE_CONFLICT`. Produtos sem controlo de
+        stock: 409 `NOT_STOCK_TRACKED`; com rastreio por lote exigem `lotId`; por número de série ainda não é suportado.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, locationId, quantityDelta, reason]
+              properties:
+                variantId: { type: string, format: uuid }
+                locationId: { type: string, format: uuid }
+                lotId: { type: string, format: uuid, nullable: true }
+                quantityDelta: { type: string }
+                unitCost: { type: string, nullable: true }
+                reason: { type: string, maxLength: 300 }
+                reference: { type: string, format: uuid, nullable: true }
+      responses:
+        '201': { description: Movimento lançado. }
+        '200': { description: Repetição idempotente. }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-reservations:
+    get:
+      summary: Reservas de stock (inventory.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: variantId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: sourceType, in: query, required: false, schema: { type: string } }
+        - { name: sourceId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [ACTIVE, CONSUMED, RELEASED, EXPIRED] },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: Reservas. }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Reserva stock de um local/lote para uma origem (inventory.reserve)
+      description: 'Falha se o disponível não chegar (409 `INSUFFICIENT_STOCK`). Repetir a mesma origem (documento, linha, local, lote) devolve a reserva (200, `idempotent: true`).'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, locationId, quantity, sourceType, sourceId]
+              properties:
+                variantId: { type: string, format: uuid }
+                locationId: { type: string, format: uuid }
+                lotId: { type: string, format: uuid, nullable: true }
+                quantity: { type: string }
+                sourceType: { type: string }
+                sourceId: { type: string, format: uuid }
+                sourceLineId: { type: string, format: uuid, nullable: true }
+                expiresAt: { type: string, format: date-time }
+      responses:
+        '201': { description: Reserva. }
+        '200': { description: Repetição idempotente. }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-reservations/expire:
+    post:
+      summary: Liberta as reservas vencidas (inventory.reserve)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200': { description: '`expired`: quantas reservas fechou (estado EXPIRED).' }
+        '403': { $ref: '#/components/responses/Error' }
+  /stock-reservations/{id}/release:
+    post:
+      summary: Liberta o que resta (ou `quantity`) de uma reserva (inventory.reserve)
+      description: 'Idempotente: uma reserva já fechada devolve-se com `idempotent: true`.'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity: { type: string }
+      responses:
+        '200': { description: Reserva. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }

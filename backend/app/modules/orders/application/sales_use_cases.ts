@@ -28,7 +28,11 @@ import type {
   QuoteStore,
   References,
 } from '#modules/orders/application/ports'
-import { runConfirmationChecks } from '#modules/orders/application/registry'
+import {
+  runCancelledEffects,
+  runConfirmationChecks,
+  runConfirmedEffects,
+} from '#modules/orders/application/registry'
 
 const MAX_PAGE = 200
 
@@ -588,8 +592,8 @@ export class OrderUseCases {
 
   /**
    * Confirmar valida o cliente (activo, sem bloqueio), exige linhas, corre as verificações registadas (stock, crédito) e
-   * emite o número. **Não reserva stock nem expede nem factura**: `sales.order.confirmed` é o aviso de compromisso; as
-   * reservas, as expedições e as facturas são operações próprias. Idempotente: confirmar outra vez devolve a encomenda.
+   * emite o número. **Não expede nem factura**: `sales.order.confirmed` é o aviso de compromisso; a reserva de stock corre
+   * por um efeito registado pelo inventário (na mesma transacção), as expedições e as facturas são operações próprias. Idempotente: confirmar outra vez devolve a encomenda.
    */
   confirm(
     context: TenantContext,
@@ -647,6 +651,8 @@ export class OrderUseCases {
         },
         correlationId: context.correlationId,
       })
+      // Reservas de stock e afins: na mesma transacção, por isso um erro aqui anula a confirmação por inteiro.
+      await runConfirmedEffects(scope, confirmed, lines)
       return { order: { ...confirmed, lines }, idempotent: false }
     }, context)
   }
@@ -698,6 +704,7 @@ export class OrderUseCases {
         },
         correlationId: context.correlationId,
       })
+      await runCancelledEffects(scope, cancelled, lines)
       return { order: { ...cancelled, lines }, idempotent: false }
     }, context)
   }

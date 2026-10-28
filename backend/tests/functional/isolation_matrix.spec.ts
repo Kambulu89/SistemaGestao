@@ -108,6 +108,12 @@ async function snapshot(world: World) {
     quote: await get(`/api/v1/quotes/${world.ids.quote}`),
     salesOrders: await get('/api/v1/sales-orders'),
     salesOrder: await get(`/api/v1/sales-orders/${world.ids.order}`),
+    warehouses: await get('/api/v1/warehouses'),
+    warehouse: await get(`/api/v1/warehouses/${world.ids.warehouse}`),
+    balances: await get('/api/v1/stock-balances'),
+    movements: await get('/api/v1/stock-movements'),
+    lots: await get('/api/v1/lots'),
+    reservations: await get('/api/v1/stock-reservations'),
     records: await get(`/api/v1/dynamic/${SHARED.entityCode}/records`),
   }
 }
@@ -241,6 +247,12 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['delete', `/sales-orders/${o.order}/lines/${o.orderLine}`],
     ['post', `/sales-orders/${o.order}/confirm`, {}],
     ['post', `/sales-orders/${o.order}/cancel`, { reason: 'x' }],
+    ['get', `/warehouses/${o.warehouse}`],
+    ['patch', `/warehouses/${o.warehouse}`, { ...stale, name: 'x' }],
+    ['post', `/warehouses/${o.warehouse}/locations`, { code: 'X', name: 'x' }],
+    ['patch', `/stock-locations/${o.location}`, { ...stale, name: 'x' }],
+    ['post', `/stock-movements/${o.movement}/reverse`, { reason: 'x' }],
+    ['post', `/stock-reservations/${o.reservation}/release`, {}],
     ['get', `/entity-definitions/${o.entity}`],
     ['get', `/entity-definitions/${o.entity}/publish-preview`],
     ['delete', `/entity-definitions/${o.entity}`],
@@ -377,6 +389,11 @@ test.group('matriz de isolamento', (group) => {
       'interactions',
       'quotes',
       'salesOrders',
+      'warehouses',
+      'balances',
+      'movements',
+      'lots',
+      'reservations',
     ] as const) {
       assert.lengthOf(sa[key], sb[key].length, key)
       assert.isAbove(sa[key].length, 0, key)
@@ -567,6 +584,42 @@ test.group('matriz de isolamento', (group) => {
         { data: { matricula: 'ZZ-99-ZZ', condutor: b.admin.membershipId } },
         422,
       ],
+      [
+        'ajuste com o local de B',
+        'post',
+        '/stock-adjustments',
+        { variantId: a.ids.variant, locationId: bi.location, quantityDelta: '1', reason: 'x' },
+        422,
+      ],
+      [
+        'ajuste com a variante de B',
+        'post',
+        '/stock-adjustments',
+        { variantId: bi.variant, locationId: a.ids.location, quantityDelta: '1', reason: 'x' },
+        422,
+      ],
+      [
+        'reserva com o lote de B',
+        'post',
+        '/stock-reservations',
+        {
+          variantId: bi.variant,
+          locationId: a.ids.location,
+          lotId: bi.lot,
+          quantity: '1',
+          sourceType: 'MANUAL',
+          sourceId: '00000000-0000-4000-8000-0000000000bb',
+        },
+        422,
+      ],
+      [
+        'armazém numa organização de B',
+        'post',
+        '/warehouses',
+        { organizationId: bi.organization, code: 'X', name: 'x' },
+        422,
+      ],
+      ['lote para a variante de B', 'post', '/lots', { variantId: bi.variant, code: 'LX' }, 422],
       [
         'simular membro de B',
         'post',
@@ -913,7 +966,11 @@ test.group('matriz de isolamento', (group) => {
         `${table}: A não vê linhas de B`
       )
 
-      if (table === 'rule_evaluations' || table === 'state_history') {
+      if (
+        table === 'rule_evaluations' ||
+        table === 'state_history' ||
+        table === 'stock_movements'
+      ) {
         // Registo de avaliações: só acrescenta (trigger de imutabilidade); RLS continua a filtrar a leitura.
         for (const sql of [
           `delete from ${table} where tenant_id = '${a.tenant.id}'`,

@@ -29,6 +29,7 @@ const FormsController = () => import('#dynamic/forms/presentation/forms_controll
 const StatesController = () => import('#dynamic/states/presentation/states_controller')
 const CatalogController = () => import('#modules/catalog/presentation/catalog_controller')
 const OrdersController = () => import('#modules/orders/presentation/orders_controller')
+const InventoryController = () => import('#modules/inventory/presentation/inventory_controller')
 const CustomersController = () => import('#modules/customers/presentation/customers_controller')
 const AutomationsController = () =>
   import('#dynamic/automations/presentation/automations_controller')
@@ -740,6 +741,65 @@ router
           .use(middleware.can({ permission: 'sales.confirm' }))
       })
       .use(middleware.feature({ code: 'orders.orders' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Inventário (M07): módulo `inventory` do registo. Funcionalidades `inventory.warehouses` (armazéns e locais) e
+ * `inventory.stock` (saldos, movimentos, lotes, ajustes e reservas); permissões `warehouse.manage`, `inventory.read`,
+ * `inventory.adjust` e `inventory.reserve`. O saldo nunca se edita: só o livro de movimentos o altera.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/warehouses', [InventoryController, 'listWarehouses'])
+            router.get('/warehouses/:id', [InventoryController, 'showWarehouse'])
+          })
+          .use(middleware.can({ permission: 'inventory.read' }))
+        router
+          .group(() => {
+            router.post('/warehouses', [InventoryController, 'createWarehouse'])
+            router.patch('/warehouses/:id', [InventoryController, 'updateWarehouse'])
+            router.post('/warehouses/:id/locations', [InventoryController, 'createLocation'])
+            router.patch('/stock-locations/:id', [InventoryController, 'updateLocation'])
+          })
+          .use(middleware.can({ permission: 'warehouse.manage' }))
+      })
+      .use(middleware.feature({ code: 'inventory.warehouses' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/stock-balances', [InventoryController, 'listBalances'])
+            router.get('/stock-movements', [InventoryController, 'listMovements'])
+            router.get('/lots', [InventoryController, 'listLots'])
+            router.get('/stock-reservations', [InventoryController, 'listReservations'])
+          })
+          .use(middleware.can({ permission: 'inventory.read' }))
+        router
+          .group(() => {
+            router.post('/stock-adjustments', [InventoryController, 'adjust'])
+            router.post('/stock-movements/:id/reverse', [InventoryController, 'reverse'])
+            router.post('/lots', [InventoryController, 'createLot'])
+          })
+          .use(middleware.can({ permission: 'inventory.adjust' }))
+        router
+          .group(() => {
+            router.post('/stock-reservations', [InventoryController, 'createReservation'])
+            router.post('/stock-reservations/expire', [InventoryController, 'expireReservations'])
+            router.post('/stock-reservations/:id/release', [
+              InventoryController,
+              'releaseReservation',
+            ])
+          })
+          .use(middleware.can({ permission: 'inventory.reserve' }))
+      })
+      .use(middleware.feature({ code: 'inventory.stock' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])
