@@ -228,6 +228,8 @@ export interface LedgerStore {
     source: { type: string; id: string; lineId: string | null; effect: string }
   ): Promise<Movement | null>
   findMovement(scope: TenantScope, id: string): Promise<Movement | null>
+  /** Todos os movimentos de uma origem (p. ex. as baixas de uma expedição), por ordem de lançamento. */
+  movementsBySource(scope: TenantScope, type: string, id: string): Promise<Movement[]>
   insertMovement(scope: TenantScope, values: MovementValues): Promise<Movement>
   listMovements(
     scope: TenantScope,
@@ -260,6 +262,13 @@ export interface ReservationStore {
     scope: TenantScope,
     sourceType: string,
     sourceId: string
+  ): Promise<Reservation[]>
+  /** Reservas activas de uma linha de uma origem, bloqueadas, por chave de saldo (ordem determinística). */
+  lockActiveBySourceLine(
+    scope: TenantScope,
+    sourceType: string,
+    sourceId: string,
+    sourceLineId: string
   ): Promise<Reservation[]>
   update(
     scope: TenantScope,

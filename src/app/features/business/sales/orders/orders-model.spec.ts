@@ -4,7 +4,9 @@ import {
   formatDecimal,
   isPositiveQuantity,
   isRate,
+  remainingQuantity,
   trimQuantity,
+  withinQuantity,
 } from './orders-model';
 
 describe('modelo de propostas e encomendas', () => {
@@ -39,5 +41,21 @@ describe('modelo de propostas e encomendas', () => {
     ).toContain('máximo permitido');
     expect(documentError({ message: 'do servidor' }, 'f')).toBe('do servidor');
     expect(documentError(null, 'fallback')).toBe('fallback');
+  });
+
+  it('o saldo por expedir é exacto e nunca negativo', () => {
+    expect(remainingQuantity('10.000000', '4.000000')).toBe('6');
+    expect(remainingQuantity('10.000000', '4.250000')).toBe('5.75');
+    expect(remainingQuantity('0.000001', '0.000000')).toBe('0.000001');
+    expect(remainingQuantity('3.000000', '3.000000')).toBe('0');
+    expect(remainingQuantity('3.000000', '5.000000')).toBe('0');
+  });
+
+  it('a quantidade a expedir cabe no saldo', () => {
+    expect(withinQuantity('6', '6')).toBe(true);
+    expect(withinQuantity('5.999999', '6')).toBe(true);
+    expect(withinQuantity('6.000001', '6')).toBe(false);
+    expect(withinQuantity('0', '6')).toBe(false);
+    expect(withinQuantity('abc', '6')).toBe(false);
   });
 });

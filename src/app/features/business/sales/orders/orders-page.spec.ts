@@ -237,7 +237,7 @@ describe('Propostas', () => {
 });
 
 describe('Encomendas', () => {
-  it('confirmar mostra o número e avisa que ainda não há reserva, expedição nem factura', async () => {
+  it('confirmar mostra o número e avisa que a expedição baixa o stock e a factura é à parte', async () => {
     const confirmOrder = vi.fn(() =>
       of({
         order: order({
@@ -254,7 +254,7 @@ describe('Encomendas', () => {
     await click('Confirmar');
     expect(confirmOrder).toHaveBeenCalledWith('r1');
     expect(el.textContent).toContain('ENC A/2026/1');
-    expect(el.textContent).toContain('Ainda não há reserva de stock, expedição nem factura');
+    expect(el.textContent).toContain('A expedição (separador «Expedições») baixa o stock');
     expect(has('Confirmar')).toBe(false);
   });
 

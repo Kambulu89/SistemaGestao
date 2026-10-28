@@ -163,8 +163,14 @@ const STATUSES: readonly SelectOption[] = (Object.keys(ORDER_STATUS) as OrderSta
         </div>
         @if (o.status === 'CONFIRMED') {
           <p class="mt-3 text-sm text-fg-muted">
-            Confirmada: o compromisso está registado. Ainda não há reserva de stock, expedição nem
-            factura.
+            Confirmada: o compromisso está registado e o stock fica reservado se a organização tiver
+            armazém de vendas. A expedição (separador «Expedições») baixa o stock; a factura é à
+            parte.
+          </p>
+        }
+        @if (o.status === 'PARTIAL' || o.status === 'FULFILLED') {
+          <p class="mt-3 text-sm text-fg-muted">
+            Já tem expedições lançadas: para a desfazer, reverta as expedições.
           </p>
         }
         @if (o.status === 'CANCELLED') {

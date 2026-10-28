@@ -54,6 +54,7 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     features: [
       { code: 'orders.quotes', name: 'Propostas comerciais', defaultEnabled: true },
       { code: 'orders.orders', name: 'Encomendas de venda', defaultEnabled: true },
+      { code: 'orders.shipments', name: 'Expedições', defaultEnabled: true },
     ],
   },
   {

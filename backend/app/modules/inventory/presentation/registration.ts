@@ -1,5 +1,5 @@
 import { registerMovementGuard, catalogServices } from '#modules/catalog/index'
-import { registerOrderEffects } from '#modules/orders/index'
+import { registerOrderEffects, registerShipmentEffects } from '#modules/orders/index'
 import { inventoryServices } from '#modules/inventory/presentation/composition'
 
 let registered = false
@@ -32,6 +32,21 @@ export function registerInventory(): void {
         id: order.id,
         organizationId: order.organizationId,
         version: order.version,
+      }),
+  })
+
+  registerShipmentEffects({
+    posted: (scope, shipment, order, lines) =>
+      inventoryServices().shipmentStock.post(
+        scope,
+        { id: shipment.id, orderId: order.id, organizationId: order.organizationId },
+        lines
+      ),
+    reversed: (scope, shipment, order) =>
+      inventoryServices().shipmentStock.reverse(scope, {
+        id: shipment.id,
+        orderId: order.id,
+        organizationId: order.organizationId,
       }),
   })
 }

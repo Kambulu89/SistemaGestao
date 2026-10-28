@@ -1,6 +1,6 @@
 import type { TenantScope } from '#core/tenancy/index'
 import type { Issue } from '#modules/orders/domain/sales'
-import type { Line, Order } from '#modules/orders/application/ports'
+import type { Line, Order, Shipment } from '#modules/orders/application/ports'
 
 /** Uma verificação extra que a confirmação de uma encomenda corre (stock, crédito…); devolve os problemas que encontrar. */
 export type ConfirmationCheck = (
@@ -69,4 +69,62 @@ export async function runCancelledEffects(
   lines: readonly Line[]
 ): Promise<void> {
   for (const effect of effects) await effect.cancelled?.(scope, order, lines)
+}
+
+/** Uma linha de expedição com o que o inventário precisa para a baixa: a linha da encomenda e a variante. */
+export interface ShipmentLineRef {
+  id: string
+  orderLineId: string
+  variantId: string
+  quantity: string
+}
+
+/** Efeitos de lançar e de reverter uma expedição, na **mesma transacção** (a baixa e a reposição de stock). */
+export interface ShipmentEffects {
+  /** Depois de a expedição ficar lançada; lançar um erro anula o lançamento por inteiro. */
+  posted?(
+    scope: TenantScope,
+    shipment: Shipment,
+    order: Order,
+    lines: readonly ShipmentLineRef[]
+  ): Promise<void>
+  /** Depois de a expedição ficar revertida. */
+  reversed?(
+    scope: TenantScope,
+    shipment: Shipment,
+    order: Order,
+    lines: readonly ShipmentLineRef[]
+  ): Promise<void>
+}
+
+const shipmentEffects: ShipmentEffects[] = []
+
+/**
+ * O inventário regista aqui a baixa do stock (consome as reservas) ao lançar e a reposição ao reverter. As expedições não
+ * dependem do inventário: sem nenhum efeito registado, lançar só entrega a encomenda. Devolve a função que o retira.
+ */
+export function registerShipmentEffects(effect: ShipmentEffects): () => void {
+  shipmentEffects.push(effect)
+  return () => {
+    const at = shipmentEffects.indexOf(effect)
+    if (at >= 0) shipmentEffects.splice(at, 1)
+  }
+}
+
+export async function runPostedEffects(
+  scope: TenantScope,
+  shipment: Shipment,
+  order: Order,
+  lines: readonly ShipmentLineRef[]
+): Promise<void> {
+  for (const effect of shipmentEffects) await effect.posted?.(scope, shipment, order, lines)
+}
+
+export async function runReversedEffects(
+  scope: TenantScope,
+  shipment: Shipment,
+  order: Order,
+  lines: readonly ShipmentLineRef[]
+): Promise<void> {
+  for (const effect of shipmentEffects) await effect.reversed?.(scope, shipment, order, lines)
 }

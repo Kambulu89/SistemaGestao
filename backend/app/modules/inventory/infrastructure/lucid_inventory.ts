@@ -530,6 +530,15 @@ export class LucidLedgerStore implements LedgerStore {
     return row ? toMovement(row) : null
   }
 
+  async movementsBySource(scope: TenantScope, type: string, id: string) {
+    const result = await trxOf(scope).rawQuery(
+      `select ${MOVEMENT_COLUMNS} from stock_movements
+        where tenant_id = ? and source_type = ? and source_id = ? order by posted_at, id`,
+      [tenantOf(scope), type, id]
+    )
+    return (result.rows as MovementDbRow[]).map(toMovement)
+  }
+
   async insertMovement(scope: TenantScope, v: MovementValues) {
     const result = await trxOf(scope).rawQuery(
       `insert into stock_movements (tenant_id, organization_id, variant_id, location_id, lot_id, quantity_delta, unit_cost,
@@ -740,6 +749,21 @@ export class LucidReservationStore implements ReservationStore {
         where tenant_id = ? and source_type = ? and source_id = ? and status = 'ACTIVE'
         order by variant_id, location_id, coalesce(lot_id, '${ZERO_UUID}'::uuid), id for update`,
       [tenantOf(scope), sourceType, sourceId]
+    )
+    return (result.rows as ReservationRow[]).map(toReservation)
+  }
+
+  async lockActiveBySourceLine(
+    scope: TenantScope,
+    sourceType: string,
+    sourceId: string,
+    sourceLineId: string
+  ) {
+    const result = await trxOf(scope).rawQuery(
+      `select ${RESERVATION_COLUMNS} from stock_reservations
+        where tenant_id = ? and source_type = ? and source_id = ? and source_line_id = ? and status = 'ACTIVE'
+        order by variant_id, location_id, coalesce(lot_id, '${ZERO_UUID}'::uuid), id for update`,
+      [tenantOf(scope), sourceType, sourceId, sourceLineId]
     )
     return (result.rows as ReservationRow[]).map(toReservation)
   }

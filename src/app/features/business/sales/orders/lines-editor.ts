@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Button } from '../../../../shared/ui/button/button';
 import { Card } from '../../../../shared/ui/card/card';
@@ -11,6 +11,7 @@ import { formatDecimal, isPositiveQuantity, isRate, trimQuantity } from './order
 const COLUMNS: readonly TableColumn[] = [
   { key: 'description', label: 'Artigo' },
   { key: 'quantity', label: 'Qtd.', align: 'end' },
+  { key: 'shipped', label: 'Expedida', align: 'end' },
   { key: 'price', label: 'Preço', align: 'end' },
   { key: 'discount', label: 'Desc.', align: 'end' },
   { key: 'tax', label: 'IVA', align: 'end' },
@@ -37,7 +38,7 @@ export interface NewLineRequest {
       @if (lines().length === 0) {
         <app-empty-state icon="tag" title="Sem linhas" />
       } @else {
-        <app-table caption="Linhas" [columns]="columns" [rows]="lines()" data-testid="lines">
+        <app-table caption="Linhas" [columns]="columns()" [rows]="lines()" data-testid="lines">
           <ng-template let-row let-column="column">
             @switch (column.key) {
               @case ('description') {
@@ -49,6 +50,9 @@ export interface NewLineRequest {
               }
               @case ('quantity') {
                 {{ trim(row.quantity) }}
+              }
+              @case ('shipped') {
+                {{ row.shippedQty ? trim(row.shippedQty) : '—' }}
               }
               @case ('price') {
                 {{ money(row.unitPrice) }}
@@ -136,7 +140,12 @@ export class SalesLines {
   readonly added = output<NewLineRequest>();
   readonly removed = output<string>();
 
-  protected readonly columns = COLUMNS;
+  // A coluna «Expedida» só existe nas encomendas (o servidor devolve `shippedQty` apenas aí).
+  protected readonly columns = computed(() =>
+    this.lines().some((l) => l.shippedQty !== undefined)
+      ? COLUMNS
+      : COLUMNS.filter((c) => c.key !== 'shipped'),
+  );
   protected readonly sku = signal('');
   protected readonly quantity = signal('1');
   protected readonly discount = signal('');

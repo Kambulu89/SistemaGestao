@@ -359,6 +359,16 @@ export class LucidOrderStore implements OrderStore {
     )
     return (await this.find(scope, id)) as Order
   }
+
+  async setFulfilment(scope: TenantScope, id: string, status: OrderStatus) {
+    await trxOf(scope).rawQuery(
+      `update sales_orders
+          set status = ?, updated_at = now(), updated_by_membership_id = ?, version = version + 1
+        where tenant_id = ? and id = ? and status <> ?`,
+      [status, actorOf(scope), tenantOf(scope), id, status] as never[]
+    )
+    return (await this.find(scope, id)) as Order
+  }
 }
 
 // --- linhas -----------------------------------------------------------------------------------------

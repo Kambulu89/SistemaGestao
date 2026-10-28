@@ -7,6 +7,8 @@ import { customerServices } from '#modules/customers/index'
 import { LineEngine } from '#modules/orders/application/line_engine'
 import type { References } from '#modules/orders/application/ports'
 import { OrderUseCases, QuoteUseCases } from '#modules/orders/application/sales_use_cases'
+import { ShipmentUseCases } from '#modules/orders/application/shipment_use_cases'
+import { LucidShipmentStore } from '#modules/orders/infrastructure/lucid_shipments'
 import {
   LucidLineStore,
   LucidOrderStore,
@@ -95,12 +97,14 @@ function build() {
   const quotes = new LucidQuoteStore()
   const orders = new LucidOrderStore()
   const lines = new LucidLineStore()
+  const shipments = new LucidShipmentStore()
   const engine = new LineEngine(references)
   const outbox = new LucidOutboxWriter()
   const clock = { now: () => new Date() }
   return {
     quotes: new QuoteUseCases(uow, quotes, orders, lines, engine, references, outbox, clock),
-    orders: new OrderUseCases(uow, orders, lines, engine, references, outbox, clock),
+    orders: new OrderUseCases(uow, orders, lines, engine, references, outbox, clock, shipments),
+    shipments: new ShipmentUseCases(uow, shipments, orders, lines, references, outbox, clock),
   }
 }
 

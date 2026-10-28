@@ -607,6 +607,30 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   (4.8), expedições que consomem reservas (4.5), «em trânsito», política explícita para sair de lotes expirados, trabalhador
   para expirar reservas, valorização em relatórios.
 
+
+## D-051 Expedições (M04): dentro de `orders`, saldo por linha sob bloqueio, baixa de stock por efeito registado (aceite — fatia 4.5)
+- **Onde.** As expedições vivem no módulo `orders` (spec M04: `/shipments`, `shipment.post`), na funcionalidade `orders.shipments`;
+  permissões `shipment.read`, `shipment.manage` (rascunhos) e `shipment.post` (lançar e reverter). O módulo `orders` continua sem
+  conhecer o inventário: a baixa e a reposição de stock são **efeitos registados** (`registerShipmentEffects`) que correm na
+  mesma transacção.
+- **Estados.** `DRAFT` (editável e apagável, sem número) → `POSTED` (número da sequência `SHIPMENT`, imutável por trigger,
+  incluindo as linhas) → `REVERSED` (com motivo). Lançar e reverter são idempotentes.
+- **Saldo.** A quantidade entregue de uma linha é sempre a soma das expedições **lançadas e não revertidas** (nunca um campo).
+  Lançar confere o saldo de cada linha **sob bloqueio da encomenda**: duas expedições concorrentes nunca entregam mais do que foi
+  encomendado (409 `SHIPMENT_NOT_POSTABLE`). Entrega parcial é normal; a encomenda segue `CONFIRMED → PARTIAL → FULFILLED` e
+  volta atrás ao reverter. Uma encomenda com expedições lançadas não se cancela.
+- **Baixa de stock.** Ao lançar, o inventário consome primeiro as **reservas** da linha (movimentos `ISSUE` com a origem
+  `SHIPMENT`) e, para o que não estava reservado, o stock **livre** do armazém de vendas (por validade; um armazém que aceita saldo
+  negativo cobre o resto, nunca em produtos por lote). Sem stock, a expedição não se lança e nada fica gravado (409). Serviços e
+  produtos sem controlo de stock não baixam; sem armazém de vendas nem reservas, a organização não controla stock nas vendas.
+- **Reversão.** Repõe o stock com movimentos `REVERSAL` ao custo original e reabre o saldo da encomenda; a reserva consumida
+  **não** se restaura (reexpedir usa o stock livre).
+- **Desvios da spec.** Sem `warehouse_id` na expedição (o armazém é o de vendas da organização), sem `lot_id` por linha (o lote
+  vem das reservas/FEFO) e sem `serial_ids` (números de série ainda não existem).
+- **Eventos.** `sales.shipment.posted` e `sales.shipment.reversed` no outbox (distintos de `sales.order.confirmed`).
+- **Fica por fazer.** Escolha manual de lote/local, números de série, facturação das quantidades expedidas (4.6), documento de
+  transporte, devoluções (4.8).
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de
 email/SMS/WhatsApp/pagamento; calendário de férias; alçadas e segregação; política de retenção; RPO/RTO; limites de

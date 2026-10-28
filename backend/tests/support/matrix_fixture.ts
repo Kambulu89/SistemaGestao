@@ -67,6 +67,9 @@ export interface World {
     lot: string
     movement: string
     reservation: string
+    shipment: string
+    shipmentLine: string
+    shipmentOrderLine: string
   }
 }
 
@@ -669,6 +672,30 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // M04: a mesma encomenda confirmada com uma expedição em rascunho nos dois tenants.
+  const shippable = await must<{ id: string }>(
+    await http.post('/api/v1/sales-orders', {
+      organizationId: organization.id,
+      customerId: customer.id,
+    }),
+    201
+  )
+  const shippableLines = await must<{ lines: { id: string }[] }>(
+    await http.post(`/api/v1/sales-orders/${shippable.id}/lines`, {
+      variantId: variant.id,
+      quantity: '3',
+    }),
+    201
+  )
+  const shippableLine = shippableLines.lines[0] as { id: string }
+  await must(await http.post(`/api/v1/sales-orders/${shippable.id}/confirm`, {}), 200)
+  const shipment = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/shipments', {
+      orderId: shippable.id,
+      lines: [{ orderLineId: shippableLine.id, quantity: '2' }],
+    }),
+    201
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -729,6 +756,9 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       lot: lot.id,
       movement: movement.id,
       reservation: reservation.id,
+      shipment: shipment.id,
+      shipmentLine: (shipment.lines[0] as { id: string }).id,
+      shipmentOrderLine: shippableLine.id,
     },
   }
 }

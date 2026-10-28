@@ -1,5 +1,6 @@
 import type { TenantContext, TenantScope } from '#core/tenancy/index'
 import type { RoundingMode, Totals } from '#modules/orders/domain/money'
+import type { ShipmentStatus } from '#modules/orders/domain/shipments'
 import type {
   OrderHeaderValues,
   OrderStatus,
@@ -112,6 +113,8 @@ export interface OrderStore {
   setTotals(scope: TenantScope, id: string, totals: Totals): Promise<Order>
   confirm(scope: TenantScope, id: string, number: string): Promise<Order>
   cancel(scope: TenantScope, id: string, reason: string): Promise<Order>
+  /** O estado que resulta das expedições lançadas (`CONFIRMED`, `PARTIAL` ou `FULFILLED`). */
+  setFulfilment(scope: TenantScope, id: string, status: OrderStatus): Promise<Order>
 }
 
 export interface LineStore {
@@ -187,6 +190,67 @@ export interface References {
   /** Emite o número dentro da transacção do documento (sem lacunas se a transacção anular). */
   issueNumber(
     scope: TenantScope,
-    input: { organizationId: string; documentType: 'QUOTE' | 'SALES_ORDER'; date: Date }
+    input: {
+      organizationId: string
+      documentType: 'QUOTE' | 'SALES_ORDER' | 'SHIPMENT'
+      date: Date
+    }
   ): Promise<string>
+}
+
+// --- expedições -------------------------------------------------------------------------------------
+
+export interface Shipment extends Audited {
+  organizationId: string
+  orderId: string
+  number: string | null
+  status: ShipmentStatus
+  notes: string | null
+  shippedAt: Date | null
+  reversedAt: Date | null
+  reverseReason: string | null
+}
+
+export interface ShipmentLine extends Audited {
+  shipmentId: string
+  orderLineId: string
+  quantity: string
+}
+
+export interface ShipmentFilter {
+  orderId?: string
+  status?: ShipmentStatus
+  limit: number
+  offset: number
+}
+
+export interface ShipmentStore {
+  list(scope: TenantScope, filter: ShipmentFilter): Promise<{ items: Shipment[]; total: number }>
+  find(scope: TenantScope, id: string, lock?: boolean): Promise<Shipment | null>
+  insert(
+    scope: TenantScope,
+    values: { organizationId: string; orderId: string; notes: string | null }
+  ): Promise<Shipment>
+  updateNotes(
+    scope: TenantScope,
+    id: string,
+    expectedVersion: number,
+    notes: string | null
+  ): Promise<Shipment>
+  /** Só um rascunho se apaga (as linhas vão primeiro). */
+  remove(scope: TenantScope, id: string): Promise<void>
+  post(scope: TenantScope, id: string, number: string): Promise<Shipment>
+  reverse(scope: TenantScope, id: string, reason: string): Promise<Shipment>
+  listLines(scope: TenantScope, shipmentId: string): Promise<ShipmentLine[]>
+  findLine(scope: TenantScope, shipmentId: string, lineId: string): Promise<ShipmentLine | null>
+  /** `null` se a linha da encomenda já está na expedição. */
+  insertLine(
+    scope: TenantScope,
+    shipmentId: string,
+    values: { orderLineId: string; quantity: string }
+  ): Promise<ShipmentLine | null>
+  updateLine(scope: TenantScope, id: string, quantity: string): Promise<ShipmentLine>
+  removeLine(scope: TenantScope, id: string): Promise<void>
+  /** Quantidade já expedida por linha da encomenda: só expedições lançadas (não revertidas). */
+  shippedByLine(scope: TenantScope, orderId: string): Promise<Map<string, string>>
 }

@@ -209,20 +209,29 @@ export class StockUseCases {
     return this.uow.run(async (scope) => {
       const original = await this.ledger.findMovement(scope, movementId)
       if (!original) throw ApiError.notFound()
-      if (original.kind === 'REVERSAL') {
-        throw ApiError.conflict('REVERSAL_OF_REVERSAL', 'Uma reversão não se reverte.')
-      }
-      return this.postInScope(scope, {
-        kind: 'REVERSAL',
-        variantId: original.variantId,
-        locationId: original.locationId,
-        lotId: original.lotId,
-        quantityDelta: qtyText(-fromDb(original.quantityDelta, 6)),
-        source: { type: 'REVERSAL', id: original.id, lineId: null, effect: 'MAIN' },
-        reason: text,
-        reversal: { movementId: original.id, unitCost: original.unitCost },
-      })
+      return this.reverseInScope(scope, original, text)
     }, context)
+  }
+
+  /** Reverte um movimento já lido, na transacção do chamador (a reversão de uma expedição reverte as suas baixas). */
+  async reverseInScope(
+    scope: TenantScope,
+    original: Movement,
+    reason: string
+  ): Promise<PostResult> {
+    if (original.kind === 'REVERSAL') {
+      throw ApiError.conflict('REVERSAL_OF_REVERSAL', 'Uma reversão não se reverte.')
+    }
+    return this.postInScope(scope, {
+      kind: 'REVERSAL',
+      variantId: original.variantId,
+      locationId: original.locationId,
+      lotId: original.lotId,
+      quantityDelta: qtyText(-fromDb(original.quantityDelta, 6)),
+      source: { type: 'REVERSAL', id: original.id, lineId: null, effect: 'MAIN' },
+      reason,
+      reversal: { movementId: original.id, unitCost: original.unitCost },
+    })
   }
 
   /**

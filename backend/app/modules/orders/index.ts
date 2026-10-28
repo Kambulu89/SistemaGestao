@@ -3,7 +3,11 @@ export { orderServices } from '#modules/orders/presentation/composition'
 export {
   registerConfirmationCheck,
   registerOrderEffects,
+  registerShipmentEffects,
   type OrderEffects,
+  type ShipmentEffects,
+  type ShipmentLineRef,
 } from '#modules/orders/application/registry'
-export type { Line, Order, Quote } from '#modules/orders/application/ports'
+export type { Line, Order, Quote, Shipment, ShipmentLine } from '#modules/orders/application/ports'
 export type { OrderDetail, QuoteDetail } from '#modules/orders/application/sales_use_cases'
+export type { ShipmentDetail } from '#modules/orders/application/shipment_use_cases'

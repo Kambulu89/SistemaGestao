@@ -282,6 +282,21 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Confirmar e cancelar encomendas de venda.',
   },
   {
+    code: 'shipment.read',
+    moduleCode: 'orders',
+    description: 'Ver expedições.',
+  },
+  {
+    code: 'shipment.manage',
+    moduleCode: 'orders',
+    description: 'Criar e alterar expedições em rascunho.',
+  },
+  {
+    code: 'shipment.post',
+    moduleCode: 'orders',
+    description: 'Lançar (baixa de stock) e reverter expedições.',
+  },
+  {
     code: 'inventory.read',
     moduleCode: 'inventory',
     description: 'Ver stock, movimentos, lotes e reservas.',

@@ -33,6 +33,8 @@ export interface LineDto {
   readonly netAmount: string;
   readonly taxAmount: string;
   readonly total: string;
+  /** Quantidade já expedida (só na leitura da encomenda): soma das expedições lançadas e não revertidas. */
+  readonly shippedQty?: string;
   readonly priceOrigin: PriceOrigin;
 }
 
@@ -67,6 +69,30 @@ export interface OrderDto {
   readonly cancelReason: string | null;
   readonly version: number;
   readonly lines?: readonly LineDto[];
+}
+
+export type ShipmentStatus = 'DRAFT' | 'POSTED' | 'REVERSED';
+
+export interface ShipmentLineDto {
+  readonly id: string;
+  readonly shipmentId: string;
+  readonly orderLineId: string;
+  /** Decimal como texto. */
+  readonly quantity: string;
+  readonly version: number;
+}
+
+export interface ShipmentDto {
+  readonly id: string;
+  readonly orderId: string;
+  readonly number: string | null;
+  readonly status: ShipmentStatus;
+  readonly notes: string | null;
+  readonly shippedAt: string | null;
+  readonly reversedAt: string | null;
+  readonly reverseReason: string | null;
+  readonly version: number;
+  readonly lines?: readonly ShipmentLineDto[];
 }
 
 export interface DocumentFilter {
@@ -190,6 +216,48 @@ export class OrdersApi {
 
   cancelOrder(id: string, reason: string): Observable<{ order: OrderDto; idempotent: boolean }> {
     return this.api.post(`sales-orders/${id}/cancel`, { reason });
+  }
+
+  shipments(filter: {
+    orderId?: string;
+    status?: ShipmentStatus;
+    limit?: number;
+  }): Observable<Page<ShipmentDto>> {
+    return this.page('shipments', filter as DocumentFilter);
+  }
+
+  shipment(id: string): Observable<ShipmentDto> {
+    return this.api.get(`shipments/${id}`);
+  }
+
+  createShipment(body: {
+    orderId: string;
+    lines: readonly { orderLineId: string; quantity: string }[];
+  }): Observable<ShipmentDto> {
+    return this.api.post('shipments', body);
+  }
+
+  updateShipmentLine(id: string, lineId: string, quantity: string): Observable<ShipmentDto> {
+    return this.api.patch(`shipments/${id}/lines/${lineId}`, { quantity });
+  }
+
+  removeShipmentLine(id: string, lineId: string): Observable<ShipmentDto> {
+    return this.api.delete(`shipments/${id}/lines/${lineId}`);
+  }
+
+  deleteShipment(id: string): Observable<void> {
+    return this.api.delete(`shipments/${id}`);
+  }
+
+  postShipment(id: string): Observable<{ shipment: ShipmentDto; idempotent: boolean }> {
+    return this.api.post(`shipments/${id}/post`, {});
+  }
+
+  reverseShipment(
+    id: string,
+    reason: string,
+  ): Observable<{ shipment: ShipmentDto; idempotent: boolean }> {
+    return this.api.post(`shipments/${id}/reverse`, { reason });
   }
 
   /** Clientes para escolher no documento (exige `customer.read`; sem ele a lista vem vazia e o formulário avisa). */

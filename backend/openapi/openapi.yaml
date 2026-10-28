@@ -4571,7 +4571,7 @@ paths:
       description: |
         Valida que há linhas e que o cliente pode receber vendas (409 `CUSTOMER_BLOCKED`/`CUSTOMER_INACTIVE`), corre as
         verificações registadas pelos módulos (stock, crédito: 409 `ORDER_NOT_CONFIRMABLE` com os motivos) e emite o número
-        (sequência SALES_ORDER). **Não expede nem factura**: escreve o evento `sales.order.confirmed`. Se a organização tem
+        (sequência SALES_ORDER). **Não expede nem factura** (as expedições são `/shipments`): escreve o evento `sales.order.confirmed`. Se a organização tem
         um armazém de vendas (inventário), **reserva o stock na mesma transacção** (409 `ORDER_NOT_CONFIRMABLE` com
         `INSUFFICIENT_STOCK` se faltar e o armazém não aceitar encomendas em falta; nada fica gravado nem o número é gasto).
         Idempotente: confirmar outra vez devolve a encomenda com `idempotent: true`, sem novo número nem novo evento.
@@ -4967,4 +4967,208 @@ paths:
         '200': { description: Reserva. }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /shipments:
+    get:
+      summary: Expedições (shipment.read; funcionalidade orders.shipments)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: orderId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, POSTED, REVERSED] },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Expedições; `meta.total` conta as que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma expedição em rascunho de uma encomenda confirmada (shipment.manage)
+      description: 'Cada linha aponta para uma linha da encomenda e leva uma quantidade positiva (texto, até 6 casas, dentro da precisão da unidade) que cabe no saldo por expedir (422 `EXCEEDS_BALANCE`). Uma encomenda não confirmada ou toda expedida: 409 `ORDER_NOT_SHIPPABLE`.'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId]
+              properties:
+                orderId: { type: string, format: uuid }
+                notes: { type: string, maxLength: 1000, nullable: true }
+                lines:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [orderLineId, quantity]
+                    properties:
+                      orderLineId: { type: string, format: uuid }
+                      quantity: { type: string }
+      responses:
+        '201': { description: Expedição com as linhas. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /shipments/{id}:
+    get:
+      summary: Uma expedição com as linhas (shipment.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Expedição. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera as notas de uma expedição em rascunho (shipment.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                notes: { type: string, maxLength: 1000, nullable: true }
+      responses:
+        '200': { description: Expedição. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma expedição em rascunho (shipment.manage)
+      description: Só um rascunho (sem número) se apaga; uma expedição lançada reverte-se, nunca se apaga (409 `SHIPMENT_NOT_DRAFT`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Apagada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /shipments/{id}/lines:
+    post:
+      summary: Acrescenta uma linha a uma expedição em rascunho (shipment.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderLineId, quantity]
+              properties:
+                orderLineId: { type: string, format: uuid }
+                quantity: { type: string }
+      responses:
+        '201': { description: Expedição com as linhas. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /shipments/{id}/lines/{lineId}:
+    patch:
+      summary: Altera a quantidade de uma linha de uma expedição em rascunho (shipment.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: { type: string }
+      responses:
+        '200': { description: Expedição com as linhas. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Remove uma linha de uma expedição em rascunho (shipment.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Expedição com as linhas. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /shipments/{id}/post:
+    post:
+      summary: Lança a expedição (shipment.post)
+      description: |
+        Confere o saldo de cada linha sob bloqueio da encomenda (409 `SHIPMENT_NOT_POSTABLE`), emite o número (sequência
+        SHIPMENT), **baixa o stock na mesma transacção** (consome primeiro as reservas da linha e depois o stock livre do
+        armazém de vendas; sem stock, 409 `SHIPMENT_NOT_POSTABLE` com `INSUFFICIENT_STOCK` e nada fica gravado) e passa a
+        encomenda a `PARTIAL` ou `FULFILLED`. Idempotente: lançar outra vez devolve-a com `idempotent: true`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`shipment` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /shipments/{id}/reverse:
+    post:
+      summary: Reverte uma expedição lançada, com motivo (shipment.post)
+      description: Repõe o stock com movimentos opostos ao custo original e reabre o saldo da encomenda (a reserva consumida não se restaura). Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: '`shipment` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }

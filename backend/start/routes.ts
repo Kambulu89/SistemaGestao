@@ -741,6 +741,33 @@ router
           .use(middleware.can({ permission: 'sales.confirm' }))
       })
       .use(middleware.feature({ code: 'orders.orders' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/shipments', [OrdersController, 'listShipments'])
+            router.get('/shipments/:id', [OrdersController, 'showShipment'])
+          })
+          .use(middleware.can({ permission: 'shipment.read' }))
+        router
+          .group(() => {
+            router.post('/shipments', [OrdersController, 'createShipment'])
+            router.patch('/shipments/:id', [OrdersController, 'updateShipment'])
+            router.delete('/shipments/:id', [OrdersController, 'removeShipment'])
+            router.post('/shipments/:id/lines', [OrdersController, 'addShipmentLine'])
+            router.patch('/shipments/:id/lines/:lineId', [OrdersController, 'updateShipmentLine'])
+            router.delete('/shipments/:id/lines/:lineId', [OrdersController, 'removeShipmentLine'])
+          })
+          .use(middleware.can({ permission: 'shipment.manage' }))
+        router
+          .group(() => {
+            router.post('/shipments/:id/post', [OrdersController, 'postShipment'])
+            router.post('/shipments/:id/reverse', [OrdersController, 'reverseShipment'])
+          })
+          .use(middleware.can({ permission: 'shipment.post' }))
+      })
+      .use(middleware.feature({ code: 'orders.shipments' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

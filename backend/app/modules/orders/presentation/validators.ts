@@ -85,3 +85,42 @@ export const cancelOrderValidator = vine.compile(
     expectedVersion: version().optional(),
   })
 )
+
+export const listShipmentsValidator = vine.compile(
+  vine.object({
+    orderId: uuid().optional(),
+    status: vine.enum(['DRAFT', 'POSTED', 'REVERSED']).optional(),
+    limit: vine.number().withoutDecimals().min(1).max(200).optional(),
+    offset: vine.number().withoutDecimals().min(0).optional(),
+  })
+)
+
+const shipmentLine = vine.object({
+  orderLineId: uuid(),
+  quantity: vine.string().trim().maxLength(30),
+})
+
+export const createShipmentValidator = vine.compile(
+  vine.object({
+    orderId: uuid(),
+    notes: vine.string().maxLength(1000).nullable().optional(),
+    lines: vine.array(shipmentLine).maxLength(100).optional(),
+  })
+)
+
+export const updateShipmentValidator = vine.compile(
+  vine.object({
+    expectedVersion: version(),
+    notes: vine.string().maxLength(1000).nullable().optional(),
+  })
+)
+
+export const createShipmentLineValidator = vine.compile(shipmentLine)
+
+export const updateShipmentLineValidator = vine.compile(
+  vine.object({ quantity: vine.string().trim().maxLength(30) })
+)
+
+export const reverseShipmentValidator = vine.compile(
+  vine.object({ reason: vine.string().trim().maxLength(300) })
+)

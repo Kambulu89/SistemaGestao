@@ -3,23 +3,25 @@ import { PermissionService } from '../../../../core/permissions/permission.servi
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { OrdersTab } from './orders-tab';
 import { QuotesTab } from './quotes-tab';
+import { ShipmentsTab } from './shipments-tab';
 
-type TabId = 'quotes' | 'orders';
+type TabId = 'quotes' | 'orders' | 'shipments';
 
 const TABS: readonly { id: TabId; label: string; permission: string }[] = [
   { id: 'quotes', label: 'Propostas', permission: 'quote.read' },
   { id: 'orders', label: 'Encomendas', permission: 'order.read' },
+  { id: 'shipments', label: 'Expedições', permission: 'shipment.read' },
 ];
 
-/** Propostas e encomendas de venda (M04): preços e impostos em instantâneo; confirmar não reserva nem expede. */
+/** Propostas e encomendas de venda (M04): preços e impostos em instantâneo; confirmar reserva o stock (se houver armazém de vendas) e expedir baixa-o. */
 @Component({
   selector: 'app-orders-page',
-  imports: [PageHeader, QuotesTab, OrdersTab],
+  imports: [PageHeader, QuotesTab, OrdersTab, ShipmentsTab],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header
       title="Propostas e encomendas"
-      description="Propostas comerciais, conversão em encomendas e confirmação. Os preços e impostos ficam congelados no documento."
+      description="Propostas comerciais, encomendas, confirmação e expedições. Os preços e impostos ficam congelados no documento."
     />
     <div class="mb-5 flex gap-1 border-b border-line" role="tablist" aria-label="Vendas">
       @for (tab of tabs(); track tab.id) {
@@ -45,6 +47,9 @@ const TABS: readonly { id: TabId; label: string; permission: string }[] = [
       }
       @case ('orders') {
         <app-sales-orders />
+      }
+      @case ('shipments') {
+        <app-sales-shipments />
       }
     }
   `,

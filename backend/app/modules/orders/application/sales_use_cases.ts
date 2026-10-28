@@ -27,6 +27,7 @@ import type {
   Quote,
   QuoteStore,
   References,
+  ShipmentStore,
 } from '#modules/orders/application/ports'
 import {
   runCancelledEffects,
@@ -43,7 +44,8 @@ interface Clock {
 const today = (clock: Clock) => clock.now().toISOString().slice(0, 10)
 
 export type QuoteDetail = Omit<Quote, 'status'> & { status: QuoteStatus; lines: Line[] }
-export type OrderDetail = Order & { lines: Line[] }
+/** `shippedQty` (só na leitura de uma encomenda) é a soma das expedições lançadas e não revertidas da linha. */
+export type OrderDetail = Order & { lines: (Line & { shippedQty?: string })[] }
 
 type ListFilter = Omit<DocumentFilter, 'today' | 'limit' | 'offset'> & {
   limit?: number
@@ -418,7 +420,8 @@ export class OrderUseCases {
     private readonly engine: LineEngine,
     private readonly references: References,
     private readonly outbox: OutboxWriter,
-    private readonly clock: Clock
+    private readonly clock: Clock,
+    private readonly shipments?: ShipmentStore
   ) {}
 
   list(context: TenantContext, filter: ListFilter) {
@@ -438,7 +441,12 @@ export class OrderUseCases {
     return this.uow.run(async (scope) => {
       const order = await this.orders.find(scope, id)
       if (!order) throw ApiError.notFound()
-      return { ...order, lines: await this.lines.list(scope, { orderId: id }) }
+      const lines = await this.lines.list(scope, { orderId: id })
+      const shipped = this.shipments ? await this.shipments.shippedByLine(scope, id) : new Map()
+      return {
+        ...order,
+        lines: lines.map((l) => ({ ...l, shippedQty: shipped.get(l.id) ?? '0.000000' })),
+      }
     }, context)
   }
 

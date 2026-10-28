@@ -7,6 +7,12 @@ import { orderServices } from '#modules/orders/presentation/composition'
 import {
   cancelOrderValidator,
   confirmOrderValidator,
+  createShipmentLineValidator,
+  createShipmentValidator,
+  listShipmentsValidator,
+  reverseShipmentValidator,
+  updateShipmentLineValidator,
+  updateShipmentValidator,
   createLineValidator,
   createOrderValidator,
   createQuoteValidator,
@@ -176,6 +182,91 @@ export default class OrdersController {
     return envelope(
       ctx,
       await orderServices().orders.cancel(ctx.tenantContext, uuidParam(ctx, 'id'), b.reason)
+    )
+  }
+
+  // --- expedições ----------------------------------------------------------------------------
+
+  async listShipments(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(listShipmentsValidator, { data: ctx.request.qs() })
+    const { items, total } = await orderServices().shipments.list(ctx.tenantContext, q)
+    return envelope(ctx, items, { total })
+  }
+
+  async showShipment(ctx: HttpContext) {
+    return envelope(
+      ctx,
+      await orderServices().shipments.get(ctx.tenantContext, uuidParam(ctx, 'id'))
+    )
+  }
+
+  async createShipment(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(createShipmentValidator)
+    const created = await orderServices().shipments.create(ctx.tenantContext, b)
+    ctx.response.status(201).header('location', `/api/v1/shipments/${created.id}`)
+    return envelope(ctx, created)
+  }
+
+  async updateShipment(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(updateShipmentValidator)
+    return envelope(
+      ctx,
+      await orderServices().shipments.update(ctx.tenantContext, uuidParam(ctx, 'id'), b)
+    )
+  }
+
+  async removeShipment(ctx: HttpContext) {
+    await orderServices().shipments.remove(ctx.tenantContext, uuidParam(ctx, 'id'))
+    return ctx.response.noContent()
+  }
+
+  async addShipmentLine(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(createShipmentLineValidator)
+    const detail = await orderServices().shipments.addLine(
+      ctx.tenantContext,
+      uuidParam(ctx, 'id'),
+      b
+    )
+    ctx.response.status(201)
+    return envelope(ctx, detail)
+  }
+
+  async updateShipmentLine(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(updateShipmentLineValidator)
+    return envelope(
+      ctx,
+      await orderServices().shipments.updateLine(
+        ctx.tenantContext,
+        uuidParam(ctx, 'id'),
+        uuidParam(ctx, 'lineId'),
+        b
+      )
+    )
+  }
+
+  async removeShipmentLine(ctx: HttpContext) {
+    return envelope(
+      ctx,
+      await orderServices().shipments.removeLine(
+        ctx.tenantContext,
+        uuidParam(ctx, 'id'),
+        uuidParam(ctx, 'lineId')
+      )
+    )
+  }
+
+  async postShipment(ctx: HttpContext) {
+    return envelope(
+      ctx,
+      await orderServices().shipments.post(ctx.tenantContext, uuidParam(ctx, 'id'))
+    )
+  }
+
+  async reverseShipment(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(reverseShipmentValidator)
+    return envelope(
+      ctx,
+      await orderServices().shipments.reverse(ctx.tenantContext, uuidParam(ctx, 'id'), b.reason)
     )
   }
 }
