@@ -13,6 +13,9 @@ function isTenantFree(path: string): boolean {
     path.startsWith('/auth/') ||
     path.startsWith('/platform/') ||
     path === '/me/tenants' ||
+    path === '/me/password' ||
+    path === '/me/security-events' ||
+    path.startsWith('/me/sessions') ||
     path === '/invitations/accept'
   );
 }

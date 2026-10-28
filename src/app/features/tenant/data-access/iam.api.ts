@@ -36,6 +36,87 @@ export interface RoleDto {
   readonly permissionCodes: readonly string[];
 }
 
+export interface PermissionDto {
+  readonly id: string;
+  readonly code: string;
+  readonly moduleCode: string;
+  readonly description: string;
+}
+
+export interface RoleBody {
+  readonly name: string;
+  readonly description: string | null;
+  readonly permissionCodes: readonly string[];
+}
+
+export interface AssignmentDto {
+  readonly id: string;
+  readonly membershipId: string;
+  readonly roleId: string;
+  readonly organizationUnitId: string | null;
+  readonly validFrom: string | null;
+  readonly validUntil: string | null;
+}
+
+export interface AssignmentBody {
+  readonly membershipId: string;
+  readonly roleId: string;
+  readonly organizationUnitId?: string | null;
+  readonly validFrom?: string | null;
+  readonly validUntil?: string | null;
+}
+
+export type PolicyEffect = 'ALLOW' | 'DENY';
+export type PolicyStatus = 'DRAFT' | 'ACTIVE' | 'DISABLED';
+
+export interface FieldRuleDto {
+  readonly field: string;
+  readonly mode: 'HIDDEN' | 'READ_ONLY';
+  readonly when?: unknown;
+}
+
+export interface PolicyDto {
+  readonly id: string;
+  readonly name: string;
+  readonly resource: string;
+  readonly action: string;
+  readonly effect: PolicyEffect;
+  /** AST declarativa das políticas de acesso (`subject.*`, `resource.*`, `env.*`); `null` = sempre. */
+  readonly condition: unknown;
+  readonly priority: number;
+  readonly status: PolicyStatus;
+  readonly fieldRules: readonly FieldRuleDto[];
+  readonly version: number;
+}
+
+export interface PolicyBody {
+  readonly name: string;
+  readonly resource: string;
+  readonly action: string;
+  readonly effect: PolicyEffect;
+  readonly condition?: unknown;
+  readonly priority: number;
+  readonly status: PolicyStatus;
+  readonly fieldRules: readonly FieldRuleDto[];
+}
+
+export interface DecisionDto {
+  readonly allowed: boolean;
+  readonly reason: string;
+  readonly grantedBy: readonly { roleId: string; roleCode: string }[];
+  readonly policies: readonly { id: string; name: string; effect: PolicyEffect }[];
+  readonly hiddenFields: readonly string[];
+  readonly readOnlyFields: readonly string[];
+}
+
+export interface ScopeDto {
+  readonly id: string;
+  readonly membershipId: string;
+  readonly organizationId: string;
+  readonly organizationUnitId: string | null;
+  readonly includeDescendants: boolean;
+}
+
 /** Membros, convites e papéis do tenant activo (C05/C06). Autorização e isolamento são do servidor. */
 @Injectable({ providedIn: 'root' })
 export class IamApi {
@@ -66,5 +147,78 @@ export class IamApi {
 
   listRoles(): Observable<readonly RoleDto[]> {
     return this.api.get('roles');
+  }
+
+  permissions(): Observable<readonly PermissionDto[]> {
+    return this.api.get('permissions');
+  }
+
+  createRole(code: string, body: RoleBody): Observable<RoleDto> {
+    return this.api.post('roles', { code, ...body });
+  }
+
+  updateRole(id: string, expectedVersion: number, body: Partial<RoleBody>): Observable<RoleDto> {
+    return this.api.patch(`roles/${id}`, { expectedVersion, ...body });
+  }
+
+  deleteRole(id: string): Observable<void> {
+    return this.api.delete(`roles/${id}`);
+  }
+
+  assignments(membershipId?: string): Observable<readonly AssignmentDto[]> {
+    return this.api.get('role-assignments', {
+      params: membershipId ? { membershipId } : undefined,
+    });
+  }
+
+  assign(body: AssignmentBody): Observable<AssignmentDto> {
+    return this.api.post('role-assignments', body);
+  }
+
+  revokeAssignment(id: string): Observable<void> {
+    return this.api.delete(`role-assignments/${id}`);
+  }
+
+  policies(): Observable<readonly PolicyDto[]> {
+    return this.api.get('access-policies');
+  }
+
+  createPolicy(body: PolicyBody): Observable<PolicyDto> {
+    return this.api.post('access-policies', body);
+  }
+
+  updatePolicy(
+    id: string,
+    expectedVersion: number,
+    body: Partial<PolicyBody>,
+  ): Observable<PolicyDto> {
+    return this.api.patch(`access-policies/${id}`, { expectedVersion, ...body });
+  }
+
+  simulate(body: {
+    membershipId: string;
+    permission: string;
+    resource?: Record<string, unknown>;
+  }): Observable<DecisionDto> {
+    return this.api.post('authorization/simulate', body);
+  }
+
+  scopes(membershipId?: string): Observable<readonly ScopeDto[]> {
+    return this.api.get('membership-scopes', {
+      params: membershipId ? { membershipId } : undefined,
+    });
+  }
+
+  addScope(body: {
+    membershipId: string;
+    organizationId: string;
+    organizationUnitId?: string | null;
+    includeDescendants?: boolean;
+  }): Observable<ScopeDto> {
+    return this.api.post('membership-scopes', body);
+  }
+
+  removeScope(id: string): Observable<void> {
+    return this.api.delete(`membership-scopes/${id}`);
   }
 }

@@ -83,7 +83,15 @@ describe('HTTP interceptors', () => {
     });
 
     it('does not send a tenant selector on tenant-free endpoints', () => {
-      for (const path of ['/auth/login', '/auth/logout', '/me/tenants', '/invitations/accept']) {
+      for (const path of [
+        '/auth/login',
+        '/auth/logout',
+        '/me/tenants',
+        '/me/sessions',
+        '/me/password',
+        '/me/security-events',
+        '/invitations/accept',
+      ]) {
         http.post(`${API}${path}`, {}).subscribe();
         const req = controller.expectOne(`${API}${path}`);
         expect(req.request.headers.has('X-Tenant-Id'), path).toBe(false);

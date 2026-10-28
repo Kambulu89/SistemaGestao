@@ -40,6 +40,9 @@ const ITEM =
       </div>
       <hr class="my-1 border-line" />
 
+      @if (area() === 'tenant' && currentSlug(); as slug) {
+        <a [routerLink]="['/t', slug, 'profile']" [class]="item">A minha conta</a>
+      }
       @if (area() === 'tenant' && canAccessPlatform()) {
         <a routerLink="/platform" [class]="item">Administração da plataforma</a>
       }
@@ -71,6 +74,7 @@ export class UserMenu implements OnInit {
   protected readonly canAccessPlatform = computed(() =>
     this.permissions.can(PLATFORM_PERMISSIONS.access),
   );
+  protected readonly currentSlug = computed(() => this.tenantContext.tenant()?.slug ?? null);
   protected readonly firstTenantSlug = computed(
     () => this.tenantContext.memberships()[0]?.tenant.slug ?? null,
   );

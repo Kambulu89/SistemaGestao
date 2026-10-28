@@ -42,6 +42,22 @@ export const TENANT_ROUTES: Routes = [
     canActivate: [requirePermission(TENANT_PERMISSIONS.organizationRead)],
     loadComponent: () => import('./organization/organization').then((m) => m.TenantOrganization),
   },
+  // A minha conta: global ao utilizador, sem permissão de tenant (o servidor só devolve dados da própria conta).
+  {
+    path: 'profile',
+    pathMatch: 'full',
+    title: 'A minha conta',
+    data: { breadcrumb: 'A minha conta' },
+    loadComponent: () => import('./profile/profile-page').then((m) => m.ProfilePage),
+  },
+  {
+    path: 'parties',
+    pathMatch: 'full',
+    title: 'Pessoas e entidades',
+    data: { breadcrumb: 'Pessoas e entidades' },
+    canActivate: [requirePermission(TENANT_PERMISSIONS.partiesRead)],
+    loadComponent: () => import('./party/parties-page').then((m) => m.PartiesPage),
+  },
   {
     path: 'users',
     pathMatch: 'full',

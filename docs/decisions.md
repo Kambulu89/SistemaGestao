@@ -558,6 +558,22 @@ estas execuções ficam registadas como `DEAD` e **não se reprocessam**. Um cic
 **Autorização.** `quote.read|manage`, `order.read|manage` e `sales.confirm` (a spec só nomeia esta última). Tabelas de tenant, auditadas e na matriz de isolamento.
 **Limites.** Sem verificação de crédito nem de stock (ganchos prontos, sem implementações até 4.4/4.6); sem filiais (`branch_id`), sem preço ou desconto manuais (só os do catálogo, sem alçada), sem revisão de propostas enviadas, sem cópia de proposta, sem impressão/PDF/envio por email, sem linhas livres (sem variante), sem quantidades pedidas/reservadas/entregues/facturadas no detalhe (só existe o pedido), sem mudança de moeda depois de haver linhas, sem edição de linhas na interface (remover e voltar a acrescentar; a API suporta `PATCH`), a interface só escolhe o cliente (e por isso a organização) a quem pode listar clientes.
 
+
+## D-049 Interfaces em falta da Fase 1: só apresentação sobre APIs existentes (aceite — fatia 1.10)
+- **Âmbito.** Frontend apenas; nenhuma rota, tabela ou permissão nova no servidor. Páginas: perfis (CRUD e permissões por módulo),
+  políticas ABAC (construtor de condições + regras de campo), simulador de acessos, perfis e âmbitos por membro,
+  centros de custo e equipas, «Pessoas e entidades» (Party) e «A minha conta» (sessões, palavra-passe, eventos de segurança).
+- **Condições sem código do tenant.** O construtor só gera AST do servidor (`subject.|resource.|env.` + operadores fechados).
+  Uma AST que o construtor não representa é mostrada como «avançada», só de leitura, e preservada ao guardar (nunca reescrita).
+  Políticas novas gravam-se como **rascunho**; activar/desactivar é um passo explícito.
+- **Campos sensíveis.** Um campo ausente na resposta significa «escondido» (≠ `null`, «sem valor»): não se mostra nem se envia.
+- **Sem segurança no cliente.** Os botões seguem `iam.read|manage`, `organization.manage`, `party.*`, mas o servidor decide sempre;
+  o frontend usa os códigos do servidor tal e qual (`party.read` abre a rota; alias só onde já existia convenção).
+- **Conta.** `/me/sessions`, `/me/password` e `/me/security-events` não enviam o selector de tenant (são da conta, não do tenant).
+- **Fica por fazer.** Organização por omissão (`PUT /me/default-organization`) sem UI; fusão de duplicados de Party; edição de
+  contactos/moradas além de «tornar principal» e remover; preview de impacto de uma política; UIs reais de plataforma e do core
+  dinâmico continuam a ter partes em mock (ver plano 2.9).
+
 ## D-015 Filas e workers (adiada)
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.

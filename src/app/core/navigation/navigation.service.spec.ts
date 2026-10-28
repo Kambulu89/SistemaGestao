@@ -40,6 +40,7 @@ describe('NavigationService', () => {
       'Módulos',
       'Plano',
       'Organização',
+      'Pessoas e entidades',
       'Utilizadores',
       'Permissões',
       'Configurações',

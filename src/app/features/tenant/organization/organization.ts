@@ -18,7 +18,9 @@ import { PageHeader } from '../../../shared/ui/page-header/page-header';
 import { Select } from '../../../shared/ui/select/select';
 import { Table, type TableColumn } from '../../../shared/ui/table/table';
 import { OrganizationApi, type UnitDto, type UnitType } from '../data-access/organization.api';
+import { CostCentersPanel } from './cost-centers-panel';
 import { buildUnitRows } from './organization-tree';
+import { TeamPanel } from './team-panel';
 
 const UNIT_TYPES: readonly { value: UnitType; label: string }[] = [
   { value: 'BRANCH', label: 'Filial' },
@@ -37,6 +39,7 @@ const UNIT_TYPES: readonly { value: UnitType; label: string }[] = [
     Badge,
     Button,
     Card,
+    CostCentersPanel,
     Dialog,
     EmptyState,
     Input,
@@ -44,6 +47,7 @@ const UNIT_TYPES: readonly { value: UnitType; label: string }[] = [
     PageHeader,
     Select,
     Table,
+    TeamPanel,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
@@ -145,6 +149,11 @@ const UNIT_TYPES: readonly { value: UnitType; label: string }[] = [
             </app-table>
           }
         </app-card>
+
+        @if (selectedOrg(); as org) {
+          <app-team-panel [units]="unitList()" />
+          <app-cost-centers-panel [organizationId]="org.id" />
+        }
       }
     }
 
@@ -221,6 +230,7 @@ export class TenantOrganization {
   protected readonly rows = computed(() =>
     buildUnitRows(this.units.hasValue() ? this.units.value() : []),
   );
+  protected readonly unitList = computed(() => (this.units.hasValue() ? this.units.value() : []));
   protected readonly parentOptions = computed(() =>
     this.rows().map(({ unit, depth }) => ({
       value: unit.id,

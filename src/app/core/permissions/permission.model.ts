@@ -37,6 +37,8 @@ export const TENANT_PERMISSIONS = {
   approvalsDecide: 'approval.decide',
   /** Automações (C15): o código do servidor, tal e qual. */
   automationsRead: 'automation.read',
+  /** Pessoas e entidades (C08): o código do servidor, tal e qual. */
+  partiesRead: 'party.read',
 } as const;
 
 export const PLATFORM_NAMESPACE = 'platform.';

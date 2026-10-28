@@ -34,6 +34,41 @@ export interface NewUnit {
   readonly type: UnitType;
 }
 
+export interface CostCenterDto {
+  readonly id: string;
+  readonly organizationId: string;
+  readonly parentId: string | null;
+  readonly code: string;
+  readonly name: string;
+  readonly responsibleMembershipId: string | null;
+  readonly active: boolean;
+  readonly version: number;
+}
+
+export interface NewCostCenter {
+  readonly organizationId: string;
+  readonly parentId?: string | null;
+  readonly code: string;
+  readonly name: string;
+  readonly responsibleMembershipId?: string | null;
+}
+
+export interface TeamMemberDto {
+  readonly id: string;
+  readonly unitId: string;
+  readonly membershipId: string;
+  readonly startsOn: string;
+  readonly endsOn: string | null;
+  readonly roleLabel: string | null;
+}
+
+export interface NewTeamMember {
+  readonly membershipId: string;
+  readonly startsOn: string;
+  readonly endsOn?: string | null;
+  readonly roleLabel?: string | null;
+}
+
 /** Organizações e unidades do tenant activo (C07). */
 @Injectable({ providedIn: 'root' })
 export class OrganizationApi {
@@ -56,5 +91,40 @@ export class OrganizationApi {
       expectedVersion: unit.version,
       active,
     });
+  }
+
+  listCostCenters(organizationId: string): Observable<readonly CostCenterDto[]> {
+    return this.api.get('cost-centers', { params: { organizationId } });
+  }
+
+  createCostCenter(body: NewCostCenter): Observable<CostCenterDto> {
+    return this.api.post('cost-centers', body);
+  }
+
+  updateCostCenter(
+    center: Pick<CostCenterDto, 'id' | 'version'>,
+    changes: {
+      name?: string;
+      parentId?: string | null;
+      responsibleMembershipId?: string | null;
+      active?: boolean;
+    },
+  ): Observable<CostCenterDto> {
+    return this.api.patch(`cost-centers/${center.id}`, {
+      expectedVersion: center.version,
+      ...changes,
+    });
+  }
+
+  listTeam(unitId: string): Observable<readonly TeamMemberDto[]> {
+    return this.api.get(`organization-units/${unitId}/members`);
+  }
+
+  addTeamMember(unitId: string, body: NewTeamMember): Observable<TeamMemberDto> {
+    return this.api.post(`organization-units/${unitId}/members`, body);
+  }
+
+  removeTeamMember(id: string): Observable<void> {
+    return this.api.delete(`team-members/${id}`);
   }
 }

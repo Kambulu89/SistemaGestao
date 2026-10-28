@@ -117,7 +117,9 @@ describe('TenantUsers', () => {
     const f = await render();
     const rows = [...(f.nativeElement as HTMLElement).querySelectorAll('tbody tr')];
     const labels = (i: number) =>
-      Array.from(rows[i]?.querySelectorAll('button') ?? []).map((b) => b.textContent?.trim());
+      Array.from(rows[i]?.querySelectorAll('button') ?? [])
+        .map((b) => b.textContent?.trim())
+        .filter((label) => label !== 'Perfis e âmbitos');
     expect(labels(0)).toEqual(['Suspender', 'Terminar']);
     expect(labels(1)).toEqual(['Reactivar', 'Terminar']);
   });

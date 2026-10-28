@@ -18,6 +18,7 @@ import { LoadingState } from '../../../shared/ui/loading-state/loading-state';
 import { PageHeader } from '../../../shared/ui/page-header/page-header';
 import { Select } from '../../../shared/ui/select/select';
 import { Table, type TableColumn } from '../../../shared/ui/table/table';
+import { MemberAccessPanel } from './member-access-panel';
 import {
   IamApi,
   type InvitationDto,
@@ -69,6 +70,7 @@ interface PendingChange {
     EmptyState,
     Input,
     LoadingState,
+    MemberAccessPanel,
     PageHeader,
     Select,
     Table,
@@ -129,9 +131,14 @@ interface PendingChange {
                   {{ row.joinedAt ? (row.joinedAt | date: 'dd/MM/yyyy') : '—' }}
                 }
                 @case ('actions') {
-                  @if (canManage()) {
+                  @if (canManage() || canReadAccess()) {
                     <span class="flex justify-end gap-1">
-                      @for (status of actionsFor(row); track status) {
+                      @if (canReadAccess()) {
+                        <app-button size="sm" variant="secondary" (click)="access.set(row)">
+                          Perfis e âmbitos
+                        </app-button>
+                      }
+                      @for (status of canManage() ? actionsFor(row) : []; track status) {
                         <app-button
                           size="sm"
                           [variant]="status === 'LEFT' ? 'danger' : 'secondary'"
@@ -196,6 +203,12 @@ interface PendingChange {
       </app-card>
     }
 
+    <app-member-access-panel
+      [member]="access()"
+      (changed)="members.reload()"
+      (closed)="access.set(null)"
+    />
+
     <app-dialog
       [open]="pending() !== null"
       [title]="pending() ? actionLabel(pending()!.status) + ' membro' : ''"
@@ -245,6 +258,7 @@ export class TenantUsers {
   private readonly tenantId = inject(TenantContextService).tenant;
 
   protected readonly canManage = computed(() => this.permissions.can('member.manage'));
+  protected readonly canReadAccess = computed(() => this.permissions.can('iam.read'));
   protected readonly canInvite = computed(() => this.permissions.can('member.invite'));
   protected readonly canListInvitations = computed(() => this.permissions.can('member.read'));
 
@@ -280,6 +294,7 @@ export class TenantUsers {
     (this.roles.hasValue() ? this.roles.value() : []).map((r) => ({ value: r.id, label: r.name })),
   );
 
+  protected readonly access = signal<MemberDto | null>(null);
   protected readonly pending = signal<PendingChange | null>(null);
   protected readonly inviting = signal(false);
   protected readonly busy = signal(false);

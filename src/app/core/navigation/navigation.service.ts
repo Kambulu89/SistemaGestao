@@ -84,6 +84,12 @@ export class NavigationService {
             permission: TENANT_PERMISSIONS.organizationRead,
           },
           {
+            label: 'Pessoas e entidades',
+            path: `${base}/parties`,
+            icon: 'users',
+            permission: TENANT_PERMISSIONS.partiesRead,
+          },
+          {
             label: 'Utilizadores',
             path: `${base}/users`,
             icon: 'users',
