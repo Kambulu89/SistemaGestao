@@ -11,3 +11,14 @@ export {
 export type { Line, Order, Quote, Shipment, ShipmentLine } from '#modules/orders/application/ports'
 export type { OrderDetail, QuoteDetail } from '#modules/orders/application/sales_use_cases'
 export type { ShipmentDetail } from '#modules/orders/application/shipment_use_cases'
+/** Aritmética exacta das linhas comerciais (a facturação reutiliza-a para que os montantes coincidam com os da encomenda). */
+export {
+  decimalPlaces,
+  fromScaled,
+  lineAmounts,
+  roundDiv,
+  sumTotals,
+  toScaled,
+  type RoundingMode,
+  type Totals,
+} from '#modules/orders/domain/money'

@@ -79,9 +79,43 @@ export const SALES_MODULES = [
   defineModule({
     code: 'sales.billing',
     name: 'Contratos e faturação',
-    description: 'Contratos recorrentes e emissão de faturas.',
+    description: 'Contratos, facturas e notas de crédito.',
     group: 'sales',
     icon: 'document',
     dependencies: ['sales.orders'],
+    // Módulo `invoicing` do servidor (M05): funcionalidades `invoicing.contracts` e `invoicing.invoices`.
+    backendModule: 'invoicing',
+    permissions: [
+      { key: 'sales.billing.read', name: 'Abrir a página de facturação e contratos' },
+      { key: 'invoice.read', name: 'Ver facturas e notas de crédito' },
+      { key: 'invoice.manage', name: 'Criar e alterar facturas em rascunho' },
+      { key: 'invoice.issue', name: 'Emitir facturas' },
+      { key: 'credit_note.manage', name: 'Criar e alterar notas de crédito em rascunho' },
+      { key: 'credit_note.issue', name: 'Emitir notas de crédito' },
+      { key: 'contract.read', name: 'Ver contratos' },
+      { key: 'contract.manage', name: 'Criar, alterar, activar e terminar contratos' },
+    ],
+    accessPermission: 'sales.billing.read',
+    features: [
+      {
+        id: 'contracts',
+        name: 'Contratos',
+        description: 'Contratos de venda, compra e serviço, com vigência e aviso de renovação.',
+      },
+      {
+        id: 'invoices',
+        name: 'Facturas e notas de crédito',
+        description:
+          'Facturação a partir de encomendas ou linhas livres; correcção por notas de crédito.',
+      },
+    ],
+    routes: [
+      {
+        path: '',
+        title: 'Facturação e contratos',
+        permission: 'sales.billing.read',
+        loadComponent: () => import('./billing/billing-page').then((m) => m.BillingPage),
+      },
+    ],
   }),
 ] as const;

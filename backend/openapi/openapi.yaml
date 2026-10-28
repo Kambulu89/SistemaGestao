@@ -5172,3 +5172,494 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /contracts:
+    get:
+      summary: Contratos (contract.read; funcionalidade invoicing.contracts)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: partyId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: type,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [SALES, PURCHASE, SERVICE] },
+          }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, ACTIVE, EXPIRED, TERMINATED] },
+          }
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200':
+          {
+            description: 'Contratos com `effectiveStatus` e `noticeDeadline`; `meta.total` conta os que correspondem aos filtros.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria um contrato em rascunho (contract.manage)
+      description: |
+        O valor é decimal em texto. Um contrato renovável precisa de data de fim (422 `END_REQUIRED`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, partyId, title, startDate]
+              properties:
+                organizationId: { type: string, format: uuid }
+                partyId: { type: string, format: uuid }
+                type: { type: string, enum: [SALES, PURCHASE, SERVICE] }
+                title: { type: string, maxLength: 160 }
+                startDate: { type: string, format: date }
+                endDate: { type: string, format: date, nullable: true }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                amount: { type: string, nullable: true }
+                renewalMode: { type: string, enum: [NONE, MANUAL, AUTO] }
+                noticeDays: { type: integer, minimum: 0, maximum: 3650 }
+                notes: { type: string, nullable: true }
+      responses:
+        '201': { description: Contrato. }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /contracts/{id}:
+    get:
+      summary: Um contrato (contract.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Contrato. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera um contrato (contract.manage)
+      description: |
+        Depois de activo, a contraparte, o tipo, o início e a moeda não mudam (409 `CONTRACT_FIELD_LOCKED`); um terminado não se altera (409 `CONTRACT_TERMINATED`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                title: { type: string }
+                endDate: { type: string, format: date, nullable: true }
+                amount: { type: string, nullable: true }
+                renewalMode: { type: string, enum: [NONE, MANUAL, AUTO] }
+                noticeDays: { type: integer }
+                notes: { type: string, nullable: true }
+      responses:
+        '200': { description: Contrato. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /contracts/{id}/activate:
+    post:
+      summary: Activa o contrato e atribui o número (contract.manage)
+      description: |
+        Sequência CONTRACT. Idempotente: activar um activo devolve-o com `idempotent: true`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`contract` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /contracts/{id}/terminate:
+    post:
+      summary: Termina um contrato activo, com motivo (contract.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: '`contract` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /invoices:
+    get:
+      summary: Facturas (invoice.read; funcionalidade invoicing.invoices)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: orderId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: contractId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, ISSUED, CREDITED] },
+          }
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Facturas; `meta.total` conta as que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma factura em rascunho (invoice.manage)
+      description: |
+        Com `orderId` factura-se uma encomenda confirmada: sem `lines` entram todas as linhas com quantidade por facturar; cada linha leva `orderLineId` e, opcionalmente, `quantity` (por omissão, o que falta). O facturável é o **expedido** nos bens com controlo de stock e o **encomendado** nos serviços, menos o já facturado (422 `EXCEEDS_BILLABLE`; 409 `ORDER_NOT_BILLABLE`, `NOTHING_TO_INVOICE`).
+        Sem encomenda, indique `customerId` e `organizationId` e linhas livres (descrição, quantidade, preço sem imposto, taxa; uma taxa zero exige `exemptionReason`). O vencimento por omissão é a data + o prazo do cliente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orderId: { type: string, format: uuid }
+                organizationId: { type: string, format: uuid }
+                customerId: { type: string, format: uuid }
+                contractId: { type: string, format: uuid, nullable: true }
+                dueOn: { type: string, format: date }
+                notes: { type: string, maxLength: 1000, nullable: true }
+                lines:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    properties:
+                      orderLineId: { type: string, format: uuid }
+                      description: { type: string, maxLength: 500 }
+                      quantity: { type: string }
+                      unitPrice: { type: string }
+                      discountAmount: { type: string }
+                      taxCode: { type: string }
+                      taxRate: { type: string }
+                      exemptionReason: { type: string }
+      responses:
+        '201': { description: Factura com as linhas e totais. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /invoices/{id}:
+    get:
+      summary: Uma factura com as linhas (invoice.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Factura; depois de emitida traz `customerSnapshot` e o número.' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera o cabeçalho de uma factura em rascunho (invoice.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                dueOn: { type: string, format: date }
+                notes: { type: string, maxLength: 1000, nullable: true }
+                contractId: { type: string, format: uuid, nullable: true }
+      responses:
+        '200': { description: Factura. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma factura em rascunho (invoice.manage)
+      description: |
+        Só um rascunho (sem número) se apaga; uma emitida corrige-se com uma nota de crédito (409 `INVOICE_NOT_DRAFT`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Apagada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /invoices/{id}/lines:
+    post:
+      summary: Acrescenta uma linha a uma factura em rascunho (invoice.manage)
+      description: |
+        Numa factura de encomenda só entram linhas da encomenda (409 `INVOICE_LINE_DUPLICATE` se já está).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orderLineId: { type: string, format: uuid }
+                description: { type: string }
+                quantity: { type: string }
+                unitPrice: { type: string }
+                discountAmount: { type: string }
+                taxCode: { type: string }
+                taxRate: { type: string }
+                exemptionReason: { type: string }
+      responses:
+        '201': { description: Factura. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /invoices/{id}/lines/{lineId}:
+    delete:
+      summary: Remove uma linha de uma factura em rascunho (invoice.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Factura. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /invoices/{id}/issue:
+    post:
+      summary: Emite a factura (invoice.issue)
+      description: |
+        Confere a elegibilidade sob bloqueio da encomenda (409 `INVOICE_NOT_ISSUABLE`), fixa o cliente e a morada (`customerSnapshot`) e o arredondamento, atribui o número (sequência INVOICE) e escreve o evento `invoicing.invoice.issued`, tudo numa transacção. Confirmar, expedir, facturar e receber são operações distintas: emitir não toca no stock nem na encomenda. Uma factura sem linhas (409 `INVOICE_EMPTY`) ou com vencimento anterior à emissão (409 `DUE_BEFORE_ISSUE`) não se emite. Idempotente: emitir outra vez devolve-a com `idempotent: true`, sem novo número.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`invoice` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /sales-orders/{orderId}/billable:
+    get:
+      summary: O que falta facturar de uma encomenda, linha a linha (invoice.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Por linha: encomendado, expedido, facturado e facturável.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /credit-notes:
+    get:
+      summary: Notas de crédito (invoice.read; funcionalidade invoicing.invoices)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: invoiceId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, ISSUED] },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200':
+          { description: 'Notas de crédito; `meta.total` conta as que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma nota de crédito em rascunho sobre uma factura emitida (credit_note.manage)
+      description: |
+        Cada linha credita uma quantidade (e, opcionalmente, um valor líquido) de uma linha da factura, proporcional por omissão. Nunca excede o que falta creditar, somando as notas já emitidas (422 `EXCEEDS_CREDITABLE`). A factura tem de estar emitida (409 `INVOICE_NOT_ISSUED`, `INVOICE_FULLY_CREDITED`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoiceId, reason]
+              properties:
+                invoiceId: { type: string, format: uuid }
+                reason: { type: string, maxLength: 300 }
+                lines:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [invoiceLineId, quantity]
+                    properties:
+                      invoiceLineId: { type: string, format: uuid }
+                      quantity: { type: string }
+                      amount: { type: string }
+      responses:
+        '201': { description: Nota com as linhas e totais. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /credit-notes/{id}:
+    get:
+      summary: Uma nota de crédito com as linhas (invoice.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Nota de crédito. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera o motivo de uma nota em rascunho (credit_note.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: Nota de crédito. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma nota de crédito em rascunho (credit_note.manage)
+      description: |
+        Uma nota emitida não se apaga (409 `CREDIT_NOTE_NOT_DRAFT`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Apagada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /credit-notes/{id}/lines:
+    post:
+      summary: Acrescenta uma linha a uma nota em rascunho (credit_note.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoiceLineId, quantity]
+              properties:
+                invoiceLineId: { type: string, format: uuid }
+                quantity: { type: string }
+                amount: { type: string }
+      responses:
+        '201': { description: Nota de crédito. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /credit-notes/{id}/lines/{lineId}:
+    delete:
+      summary: Remove uma linha de uma nota em rascunho (credit_note.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Nota de crédito. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /credit-notes/{id}/issue:
+    post:
+      summary: Emite a nota de crédito (credit_note.issue)
+      description: |
+        Reconfere cada linha contra o já creditado sob bloqueio da factura (409 `CREDIT_NOTE_NOT_ISSUABLE`), atribui o número (sequência CREDIT_NOTE), passa a factura a `CREDITED` se ficar toda creditada e escreve `invoicing.credit_note.issued`. Não devolve stock. Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`creditNote` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }

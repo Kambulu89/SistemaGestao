@@ -297,6 +297,41 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Lançar (baixa de stock) e reverter expedições.',
   },
   {
+    code: 'invoice.read',
+    moduleCode: 'invoicing',
+    description: 'Ver facturas.',
+  },
+  {
+    code: 'invoice.manage',
+    moduleCode: 'invoicing',
+    description: 'Criar e alterar facturas em rascunho.',
+  },
+  {
+    code: 'invoice.issue',
+    moduleCode: 'invoicing',
+    description: 'Emitir facturas (número, instantâneo do cliente).',
+  },
+  {
+    code: 'credit_note.manage',
+    moduleCode: 'invoicing',
+    description: 'Criar e alterar notas de crédito em rascunho.',
+  },
+  {
+    code: 'credit_note.issue',
+    moduleCode: 'invoicing',
+    description: 'Emitir notas de crédito.',
+  },
+  {
+    code: 'contract.read',
+    moduleCode: 'invoicing',
+    description: 'Ver contratos.',
+  },
+  {
+    code: 'contract.manage',
+    moduleCode: 'invoicing',
+    description: 'Criar, alterar, activar e terminar contratos.',
+  },
+  {
     code: 'inventory.read',
     moduleCode: 'inventory',
     description: 'Ver stock, movimentos, lotes e reservas.',

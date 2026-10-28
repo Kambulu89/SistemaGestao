@@ -58,6 +58,22 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     ],
   },
   {
+    code: 'invoicing',
+    name: 'Facturação e contratos',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [
+      { code: 'core', constraint: '*', optional: false },
+      { code: 'customers', constraint: '*', optional: false },
+      { code: 'orders', constraint: '*', optional: true },
+    ],
+    features: [
+      { code: 'invoicing.contracts', name: 'Contratos', defaultEnabled: true },
+      { code: 'invoicing.invoices', name: 'Facturas e notas de crédito', defaultEnabled: true },
+    ],
+  },
+  {
     code: 'inventory',
     name: 'Inventário',
     kind: 'MODULE',

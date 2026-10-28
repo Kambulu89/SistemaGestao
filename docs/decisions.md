@@ -631,6 +631,38 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
 - **Fica por fazer.** Escolha manual de lote/local, números de série, facturação das quantidades expedidas (4.6), documento de
   transporte, devoluções (4.8).
 
+## D-052 Contratos, facturas e notas de crédito (M05): emitir é distinto, o emitido não se altera (aceite — fatia 4.6)
+- **Onde.** Módulo `invoicing` (dependências: `core`, `customers`; `orders` opcional), funcionalidades `invoicing.contracts` e
+  `invoicing.invoices`. Permissões `invoice.read|manage|issue`, `credit_note.manage|issue` e `contract.read|manage` (dois segmentos:
+  o código do servidor não admite hífen, por isso `credit_note` e não `credit-note`). A facturação lê encomendas, clientes, Party,
+  catálogo e configurações só pelas suas APIs públicas (`index.ts`); o seu domínio tem a própria aritmética decimal (`domain/decimal.ts`).
+- **Factura.** `DRAFT` (editável e apagável, sem número) → `ISSUED` (número da sequência `INVOICE`, imutável por trigger, incluindo as
+  linhas) → `CREDITED` (quando as notas emitidas cobrem todas as linhas). **Não há estado `VOID`**: uma emitida corrige-se com nota de
+  crédito. Emitir, numa só transacção: reconfere a elegibilidade sob bloqueio da encomenda, fixa o **instantâneo do cliente** (nome,
+  NIF, país fiscal, morada de facturação principal) e a política de arredondamento, atribui o número e escreve o evento
+  `invoicing.invoice.issued`. Emitir outra vez devolve a factura (`idempotent: true`), sem novo número nem evento. Um erro em
+  qualquer passo desfaz tudo (sem número gasto). `fiscal_status` fica `NOT_REQUIRED`: **não há certificação fiscal** (§11.2).
+- **Elegibilidade.** O facturável de uma linha de encomenda é o **expedido** nos bens com controlo de stock e o **encomendado** nos
+  serviços/sem stock, menos o já facturado em facturas emitidas, mais o creditado. Duas facturas emitidas ao mesmo tempo sobre a
+  mesma encomenda nunca facturam duas vezes a mesma quantidade (`pg_advisory_xact_lock` por encomenda; a perdedora recebe 409
+  `INVOICE_NOT_ISSUABLE`). Um rascunho **não** reserva a quantidade. Facturar a quantidade toda dá exactamente os valores da encomenda
+  (mesma aritmética e arredondamento). Um cliente bloqueado ainda se factura (o bloqueio trava novas vendas, não a cobrança).
+- **Linhas.** Da encomenda (preço, desconto e taxa do instantâneo) ou livres (descrição, quantidade, preço sem imposto, taxa;
+  taxa zero exige motivo de isenção). Uma factura de encomenda só tem linhas da encomenda. Totais = soma das linhas já arredondadas.
+- **Nota de crédito.** Sobre uma factura emitida: quantidade (proporcional por omissão) e, opcionalmente, valor líquido; nunca
+  excede o que falta creditar somando as notas emitidas, conferido sob bloqueio da factura (422 ao criar, 409
+  `CREDIT_NOTE_NOT_ISSUABLE` ao emitir). Creditar tudo o que resta dá exactamente o resto (sem sobras de arredondamento). Uma nota
+  **não devolve stock** nem altera a encomenda (a devolução física é a 4.8); repõe sim o facturável da encomenda.
+- **Contrato.** `DRAFT → ACTIVE` (número `CONTRACT`) `→ TERMINATED` (com motivo); **expirado é derivado** (activo cujo fim passou).
+  Depois de activo, contraparte, tipo, início, número e moeda não mudam (trigger); aviso de não renovação = fim − dias de pré-aviso.
+  Uma factura pode referenciar um contrato activo, de venda/serviço, da mesma Party do cliente.
+- **Eventos.** `invoicing.invoice.issued` e `invoicing.credit_note.issued` no outbox. Não existe ainda recebível (Finanças): o
+  estado de pagamento aparece como indisponível, não como «por pagar».
+- **Desvios da spec.** `credit_note.*` em vez de `credit-note.*`; sem `VOID`; sem certificação fiscal nem exportação; sem
+  recorrência automática de facturação de contratos; sem verificação de crédito na confirmação da encomenda (exige recebíveis).
+- **Fica por fazer.** Recebimentos e reconciliação (Finanças), facturação recorrente por contrato, PDF/SAF-T, notas de débito,
+  exposição de crédito do cliente, séries por tipo de documento.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de
 email/SMS/WhatsApp/pagamento; calendário de férias; alçadas e segregação; política de retenção; RPO/RTO; limites de

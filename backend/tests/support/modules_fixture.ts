@@ -42,6 +42,7 @@ export const TEST_MANIFESTS: ModuleManifest[] = [
     [feature('sales.quotes', true), feature('sales.discounts', false)]
   ),
   CODE_MANIFESTS.find((m) => m.code === 'inventory') as ModuleManifest,
+  CODE_MANIFESTS.find((m) => m.code === 'invoicing') as ModuleManifest,
 ]
 
 export const syncTestRegistry = () =>

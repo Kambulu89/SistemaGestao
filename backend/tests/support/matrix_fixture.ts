@@ -70,6 +70,12 @@ export interface World {
     shipment: string
     shipmentLine: string
     shipmentOrderLine: string
+    contract: string
+    invoice: string
+    issuedInvoice: string
+    invoiceLine: string
+    creditNote: string
+    creditNoteLine: string
   }
 }
 
@@ -117,12 +123,17 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
 
   // Módulos (C03): o mesmo módulo e override nos dois tenants, com plano que os licencia.
   await syncTestRegistry()
-  await license(t, ['crm', 'catalog', 'customers', 'orders', 'inventory'], ['crm.scoring'])
+  await license(
+    t,
+    ['crm', 'catalog', 'customers', 'orders', 'inventory', 'invoicing'],
+    ['crm.scoring']
+  )
   await must(await http.post('/api/v1/tenant/modules/crm/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/catalog/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/customers/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/orders/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/inventory/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/invoicing/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -593,6 +604,8 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   for (const [documentType, prefix] of [
     ['QUOTE', 'PRO {SERIES}/{YYYY}/'],
     ['SALES_ORDER', 'ENC {SERIES}/{YYYY}/'],
+    ['CREDIT_NOTE', 'NC {SERIES}/{YYYY}/'],
+    ['CONTRACT', 'CT {SERIES}/{YYYY}/'],
   ] as const) {
     await must(
       await http.post('/api/v1/sequences', {
@@ -696,6 +709,54 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // M05: um contrato, uma factura em rascunho, uma emitida e uma nota de crédito em rascunho sobre esta, nos dois tenants.
+  const contract = await must<{ id: string }>(
+    await http.post('/api/v1/contracts', {
+      organizationId: organization.id,
+      partyId: orgParty.id,
+      title: 'Manutenção anual',
+      startDate: '2026-01-01',
+      endDate: '2026-12-31',
+      amount: '1200',
+    }),
+    201
+  )
+  const manualLine = {
+    description: 'Serviço de consultoria',
+    quantity: '2',
+    unitPrice: '50',
+    taxRate: '14',
+  }
+  const invoiceDraft = await must<{ id: string }>(
+    await http.post('/api/v1/invoices', {
+      organizationId: organization.id,
+      customerId: customer.id,
+      lines: [manualLine],
+    }),
+    201
+  )
+  const invoiceIssued = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/invoices', {
+      organizationId: organization.id,
+      customerId: customer.id,
+      lines: [manualLine],
+    }),
+    201
+  )
+  await must(await http.post(`/api/v1/invoices/${invoiceIssued.id}/issue`, {}), 200)
+  const creditNote = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/credit-notes', {
+      invoiceId: invoiceIssued.id,
+      reason: 'Desconto comercial',
+      lines: [
+        {
+          invoiceLineId: (invoiceIssued.lines[0] as { id: string }).id,
+          quantity: '1',
+        },
+      ],
+    }),
+    201
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -759,6 +820,12 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       shipment: shipment.id,
       shipmentLine: (shipment.lines[0] as { id: string }).id,
       shipmentOrderLine: shippableLine.id,
+      contract: contract.id,
+      invoice: invoiceDraft.id,
+      issuedInvoice: invoiceIssued.id,
+      invoiceLine: (invoiceIssued.lines[0] as { id: string }).id,
+      creditNote: creditNote.id,
+      creditNoteLine: (creditNote.lines[0] as { id: string }).id,
     },
   }
 }

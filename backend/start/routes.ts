@@ -29,6 +29,7 @@ const FormsController = () => import('#dynamic/forms/presentation/forms_controll
 const StatesController = () => import('#dynamic/states/presentation/states_controller')
 const CatalogController = () => import('#modules/catalog/presentation/catalog_controller')
 const OrdersController = () => import('#modules/orders/presentation/orders_controller')
+const InvoicingController = () => import('#modules/invoicing/presentation/invoicing_controller')
 const InventoryController = () => import('#modules/inventory/presentation/inventory_controller')
 const CustomersController = () => import('#modules/customers/presentation/customers_controller')
 const AutomationsController = () =>
@@ -768,6 +769,66 @@ router
           .use(middleware.can({ permission: 'shipment.post' }))
       })
       .use(middleware.feature({ code: 'orders.shipments' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/contracts', [InvoicingController, 'listContracts'])
+            router.get('/contracts/:id', [InvoicingController, 'showContract'])
+          })
+          .use(middleware.can({ permission: 'contract.read' }))
+        router
+          .group(() => {
+            router.post('/contracts', [InvoicingController, 'createContract'])
+            router.patch('/contracts/:id', [InvoicingController, 'updateContract'])
+            router.post('/contracts/:id/activate', [InvoicingController, 'activateContract'])
+            router.post('/contracts/:id/terminate', [InvoicingController, 'terminateContract'])
+          })
+          .use(middleware.can({ permission: 'contract.manage' }))
+      })
+      .use(middleware.feature({ code: 'invoicing.contracts' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/invoices', [InvoicingController, 'listInvoices'])
+            router.get('/invoices/:id', [InvoicingController, 'showInvoice'])
+            router.get('/credit-notes', [InvoicingController, 'listCreditNotes'])
+            router.get('/credit-notes/:id', [InvoicingController, 'showCreditNote'])
+            router.get('/sales-orders/:orderId/billable', [InvoicingController, 'billable'])
+          })
+          .use(middleware.can({ permission: 'invoice.read' }))
+        router
+          .group(() => {
+            router.post('/invoices', [InvoicingController, 'createInvoice'])
+            router.patch('/invoices/:id', [InvoicingController, 'updateInvoice'])
+            router.delete('/invoices/:id', [InvoicingController, 'removeInvoice'])
+            router.post('/invoices/:id/lines', [InvoicingController, 'addInvoiceLine'])
+            router.delete('/invoices/:id/lines/:lineId', [InvoicingController, 'removeInvoiceLine'])
+          })
+          .use(middleware.can({ permission: 'invoice.manage' }))
+        router
+          .post('/invoices/:id/issue', [InvoicingController, 'issueInvoice'])
+          .use(middleware.can({ permission: 'invoice.issue' }))
+        router
+          .group(() => {
+            router.post('/credit-notes', [InvoicingController, 'createCreditNote'])
+            router.patch('/credit-notes/:id', [InvoicingController, 'updateCreditNote'])
+            router.delete('/credit-notes/:id', [InvoicingController, 'removeCreditNote'])
+            router.post('/credit-notes/:id/lines', [InvoicingController, 'addCreditNoteLine'])
+            router.delete('/credit-notes/:id/lines/:lineId', [
+              InvoicingController,
+              'removeCreditNoteLine',
+            ])
+          })
+          .use(middleware.can({ permission: 'credit_note.manage' }))
+        router
+          .post('/credit-notes/:id/issue', [InvoicingController, 'issueCreditNote'])
+          .use(middleware.can({ permission: 'credit_note.issue' }))
+      })
+      .use(middleware.feature({ code: 'invoicing.invoices' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])
