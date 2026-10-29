@@ -40,7 +40,7 @@ Estados: Não iniciado · Parcialmente implementado · Implementado sem validaç
 | 2026-10-29 | Auditoria: leitura da especificação, manifestos, rotas, migrations e testes; varredura da UI | Matriz de 40 linhas, 12 lacunas, 129 critérios classificados | `87ef271` |
 | 2026-10-29 | W1: capacidades → páginas reais (A-01); cancelar o restante (A-02); 7 critérios passam a verificados (A-03) | 60/129 critérios; backend 647, frontend 1024; lint/format/typecheck/build limpos | `4f1a2b0` |
 | 2026-10-29 | M09 fatia 5.1: núcleo `core/decimal`, hook `registerInvoiceEffects`, módulo `finance` (migration 30, 10 tabelas), API de 28 rotas, página «Tesouraria»; corrige 500 em contratos e fornecedores com organização inexistente | 65/129 critérios; backend 680, frontend 1042; lint/format/typecheck/build limpos; E2E 24/24 | (este commit) |
-| 2026-10-29 | M08 fatia 4.8: migration 31 (8 tabelas), armazéns técnicos, transferências com trânsito, contagens com congelamento, devoluções derivadas do livro, 30 rotas, separadores no inventário; E2E apanhou um erro de página ao apagar o rascunho aberto (corrigido e coberto) | 68/129 critérios; backend 702, frontend 1057; lint/format/typecheck/build limpos; migrations 32 subidas e descidas | `445576a` |
+| 2026-10-29 | M08 fatia 4.8: migration 31 (8 tabelas), armazéns técnicos, transferências com trânsito, contagens com congelamento, devoluções derivadas do livro, 30 rotas, separadores no inventário; E2E apanhou um erro de página ao apagar o rascunho aberto (corrigido e coberto) | 68/129 critérios; backend 702, frontend 1057; lint/format/typecheck/build limpos; migrations 32 subidas e descidas | `669b1dd` |
 
 ## Como retomar
 
