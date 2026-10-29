@@ -9,3 +9,4 @@ tmp
 coverage
 *.log
 dump.rdb
+storage

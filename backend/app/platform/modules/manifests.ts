@@ -41,6 +41,26 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     ],
   },
   {
+    code: 'documents',
+    name: 'Documentos, anexos e modelos',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [{ code: 'core', constraint: '*', optional: false }],
+    features: [
+      {
+        code: 'documents.library',
+        name: 'Biblioteca de documentos, versões e anexos',
+        defaultEnabled: true,
+      },
+      {
+        code: 'documents.templates',
+        name: 'Modelos de documento e geração de PDF',
+        defaultEnabled: true,
+      },
+    ],
+  },
+  {
     code: 'notifications',
     name: 'Notificações e comunicação',
     kind: 'MODULE',

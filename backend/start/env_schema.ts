@@ -59,6 +59,17 @@ export const envSchema = {
   NOTIFICATIONS_WHATSAPP_TOKEN: Env.schema.string.optional(),
   NOTIFICATIONS_WHATSAPP_DEDUPE: Env.schema.boolean.optional(),
 
+  /**
+   * Documentos e anexos (S01). Os ficheiros ficam em disco local (`DOCUMENTS_STORAGE_DIR`, fora do repositório); o
+   * armazenamento é uma porta, por isso um serviço de objectos pode substituí-lo. Limites por omissão: 25 MiB por ficheiro
+   * e 1 GiB por tenant (a quota por plano é uma decisão de produto em aberto).
+   */
+  DOCUMENTS_STORAGE_DIR: Env.schema.string.optional(),
+  DOCUMENTS_MAX_FILE_BYTES: Env.schema.number.optional(),
+  DOCUMENTS_TENANT_QUOTA_BYTES: Env.schema.number.optional(),
+  DOCUMENTS_UPLOAD_TTL_SECONDS: Env.schema.number.optional(),
+  DOCUMENTS_DOWNLOAD_TTL_SECONDS: Env.schema.number.optional(),
+
   /** Só para o seeder de demonstração (nunca em produção). Sem valor por omissão. */
   DEMO_USER_PASSWORD: Env.schema.string.optional(),
 

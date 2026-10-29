@@ -948,6 +948,55 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
 - **Fora desta fatia.** Sem push, sem Web Push nem WebSocket (o centro é por pedido), sem modelos/PDF (S01), sem entrega das
   notificações de aprovações e automações (registam-se regras quando esses módulos as pedirem), sem digest nem agregação.
 
+## D-059 Documentos, anexos e modelos (S01): upload verificado antes de existir, URL assinada com revalidação e PDF emitido com instantâneo (aceite — fatia 6.3)
+
+- **Contexto.** A especificação (S01) pede biblioteca com versões e permissões, upload com progresso e verificação, ficheiros que só se
+  descarregam depois de `AVAILABLE`, URL assinada curta emitida após autorizar, versões imutáveis e modelos com variáveis permitidas
+  cuja geração conserva a versão do modelo e o instantâneo. O PDF era a dependência em falta de facturas, contratos e propostas.
+- **Módulo `documents`** (funcionalidades `documents.library` e `documents.templates`; permissões `document.read|manage` e
+  `template.read|manage|publish`). Migration 36 (6 tabelas de tenant, RLS, auditadas): `attachments`, `documents`,
+  `document_versions`, `templates`, `template_versions`, `resource_attachments`. A auditoria não guarda em claro o nome do ficheiro,
+  a chave de armazenamento, o corpo dos modelos nem os valores gerados.
+- **Upload em três passos.** `POST /attachments/prepare` (autoriza o tenant e a **quota** sob um bloqueio consultivo por tenant,
+  gera a chave `tenant/ano/uuid` no servidor, devolve o anexo `PENDING`); `PUT /attachments/:id/content` (corpo em bruto
+  `application/octet-stream`, lido em fluxo; só quem preparou; grava num parcial e só depois ocupa a chave; mais bytes do que o
+  declarado rejeita e apaga); `POST /attachments/:id/complete` (confere o **tamanho** e o **SHA-256** recebidos contra os declarados,
+  reconhece o **tipo real** pelos primeiros bytes — um executável declarado como PDF dá `MIME_MISMATCH` —, analisa o conteúdo e só
+  então `AVAILABLE`). Repetir concluir devolve o estado actual. Tamanho, SHA-256 ou tipo errados dão `REJECTED` e o ficheiro é
+  apagado; um ficheiro suspeito fica `QUARANTINED` (bytes retidos, indisponível, evento de segurança `ATTACHMENT_QUARANTINED`).
+  Um anexo `PENDING` expira (15 min por omissão) e deixa de ocupar quota.
+- **Quota e limites.** `DOCUMENTS_MAX_FILE_BYTES` (25 MiB) e `DOCUMENTS_TENANT_QUOTA_BYTES` (1 GiB) por ambiente; a quota por plano é
+  uma decisão de produto em aberto. Pedidos concorrentes nunca ultrapassam a quota (testado).
+- **Análise de conteúdo.** A porta `ContentScanner` é servida por um analisador por assinaturas que **só reconhece a assinatura de
+  teste EICAR**: serve para exercer o fluxo de quarentena, **não é um antivírus**. Um motor real (por exemplo, ClamAV) é uma decisão
+  de infraestrutura em aberto (§11.2); sem ele o critério «ficheiro infectado fica indisponível» está verificado só para a
+  assinatura EICAR.
+- **Descarga.** `POST /attachments/:id/download-url` devolve uma URL de 60 s (`DOCUMENTS_DOWNLOAD_TTL_SECONDS`) com um token
+  HMAC-SHA-256 (chave derivada do segredo da aplicação) que fixa tenant, anexo, membro e utilizador. `GET /files/:token` exige a
+  **mesma sessão**, resolve a membership activa no tenant do token e **volta a decidir o acesso** (permissão `document.read`,
+  visibilidade do documento, acesso ao recurso): um token alterado, expirado, de outra pessoa ou de outro tenant dá 404, tal como
+  um acesso revogado depois de emitido. `GET /attachments/:id/download` faz o mesmo com o selector de tenant. A resposta é sempre
+  `Content-Disposition: attachment`, `nosniff`, `no-store` e CSP restritiva; a chave de armazenamento nunca sai do servidor.
+- **Documentos e visibilidade.** `PRIVATE` (só o dono), `TENANT` (quem tem `document.read`) e `RESOURCE` (quem vê o recurso).
+  `UNIT` **não está implementado** (exige a unidade do dono). O **ResourceRegistry** (`registerDocumentResource`) é preenchido por
+  cada módulo (factura, encomenda e cliente): valida tipo, existência e tenant do vínculo; um recurso **protegido** (factura) só admite
+  `RESOURCE`, nunca uma visibilidade mais larga, nem ao criar nem ao alterar. Perder o acesso ao recurso esconde o documento e o
+  anexo, mesmo ao dono. Cada versão é imutável (trigger) e um anexo serve uma só versão. Retenção e retenção legal impedem apagar
+  (API e SQL); apagar é lógico e remove os ficheiros do armazenamento depois de confirmado.
+- **Modelos.** O corpo só admite `{{nome}}` de variáveis declaradas (texto, número, decimal, data); funções, filtros, blocos, includes,
+  URLs e chaves soltas são `TEMPLATE_SYNTAX`/`TEMPLATE_UNKNOWN_VARIABLE`. A substituição é de **uma só passagem** (um valor com `{{x}}`
+  fica literal), escapa HTML na saída HTML e limpa caracteres de controlo. Rascunhos editam-se; **publicar** torna a versão imutável
+  (trigger) e retira a publicada da mesma língua; só `template.publish` publica.
+- **Geração e PDF.** `POST /templates/:id/generate` usa a versão **publicada**, valida os valores, gera o PDF e guarda-o como anexo
+  `GENERATED` num documento cuja versão regista o `template_version_id` e os valores usados: mudar ou republicar o modelo nunca altera o
+  PDF emitido (testado por bytes e SHA-256). O gerador de PDF é próprio, sem dependências: A4, Helvetica, WinAnsi, quebra de linha e
+  paginação, determinístico; **não faz tabelas, imagens nem estilos** (limite assumido, validado com `pdftotext`).
+- **Armazenamento.** Disco local (`DOCUMENTS_STORAGE_DIR`, fora do repositório) atrás da porta `ObjectStorage`; um serviço de objectos
+  pode substituí-lo. Sem cópias de segurança nem cifra em repouso (decisão de infraestrutura em aberto).
+- **Fora desta fatia.** Pré-visualização/extracção de texto e pesquisa de conteúdo (S04), partilha com utilizadores concretos,
+  visibilidade por unidade, ligação automática das facturas ao PDF (as facturas continuam sem PDF fiscal), limpeza em lote dos
+  pendentes expirados, limites por plano.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

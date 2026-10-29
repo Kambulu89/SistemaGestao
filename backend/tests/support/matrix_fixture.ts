@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { iamServices } from '#core/permissions/index'
 import { serviceTenantContext } from '#core/tenancy/index'
 import { automationServices } from '#dynamic/automations/index'
@@ -112,6 +113,11 @@ export interface World {
     exclusion: string
     notification: string
     delivery: string
+    document: string
+    attachment: string
+    resourceAttachment: string
+    template: string
+    templateVersion: string
     statementBatch: string
     statementLine: string
     matchedLine: string
@@ -172,6 +178,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       'customers',
       'prospecting',
       'notifications',
+      'documents',
       'orders',
       'inventory',
       'invoicing',
@@ -190,6 +197,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await must(await http.post('/api/v1/tenant/modules/finance/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/prospecting/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/notifications/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/documents/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -999,6 +1007,67 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     await http.get('/api/v1/notification-deliveries'),
     200
   )
+  // S01: um ficheiro disponível ligado a um documento e ao cliente, e um modelo com uma versão publicada.
+  const fileBytes = Buffer.from('Ficheiro comum aos dois tenants\n')
+  const prepared = await must<{ id: string; uploadPath: string }>(
+    await http.post('/api/v1/attachments/prepare', {
+      fileName: 'comum.txt',
+      mimeType: 'text/plain',
+      sizeBytes: fileBytes.length,
+      checksum: createHash('sha256').update(fileBytes).digest('hex'),
+    }),
+    201
+  )
+  const sent = await http.putRaw(prepared.uploadPath, fileBytes)
+  if (sent.status !== 200) throw new Error(`upload: ${sent.status} ${sent.buffer.toString()}`)
+  await must(await http.post(`/api/v1/attachments/${prepared.id}/complete`, {}), 200)
+  const document = await must<{ id: string }>(
+    await http.post('/api/v1/documents', {
+      title: 'Documento comum',
+      attachmentId: prepared.id,
+      visibility: 'TENANT',
+    }),
+    201
+  )
+  const loose = await must<{ id: string }>(
+    await http.post('/api/v1/attachments/prepare', {
+      fileName: 'solto.txt',
+      mimeType: 'text/plain',
+      sizeBytes: fileBytes.length,
+      checksum: createHash('sha256').update(fileBytes).digest('hex'),
+    }),
+    201
+  )
+  await http.putRaw(`/api/v1/attachments/${loose.id}/content`, fileBytes)
+  await must(await http.post(`/api/v1/attachments/${loose.id}/complete`, {}), 200)
+  const resourceAttachment = await must<{ id: string }>(
+    await http.post('/api/v1/resource-attachments', {
+      resourceType: 'customer',
+      resourceId: customer.id,
+      attachmentId: loose.id,
+      category: 'contrato',
+    }),
+    201
+  )
+  const template = await must<{ id: string }>(
+    await http.post('/api/v1/templates', {
+      code: 'modelo_comum',
+      name: 'Modelo comum',
+      channel: 'DOCUMENT',
+    }),
+    201
+  )
+  const templateVersion = await must<{ id: string }>(
+    await http.post(`/api/v1/templates/${template.id}/versions`, {
+      body: 'Olá {{cliente}}',
+      variableSchema: { variables: [{ name: 'cliente', label: 'Cliente', type: 'string' }] },
+    }),
+    201
+  )
+  await must(
+    await http.post(`/api/v1/templates/${template.id}/versions/${templateVersion.id}/publish`, {}),
+    200
+  )
   // Conciliação: uma conta bancária com um recebimento confirmado (1), um extracto de duas linhas (+1 e -3) e a primeira
   // linha já conciliada com o movimento; a segunda fica por conciliar.
   const bankAccount = await must<{ id: string }>(
@@ -1244,6 +1313,11 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       campaign: campaign.id,
       campaignMember: (campaignMembers[0] as { id: string }).id,
       exclusion: exclusion.id,
+      document: document.id,
+      attachment: prepared.id,
+      resourceAttachment: resourceAttachment.id,
+      template: template.id,
+      templateVersion: templateVersion.id,
       notification: (notifications[0] as { id: string }).id,
       delivery: (deliveries[0] as { id: string }).id,
       statementBatch: imported.batch.id,

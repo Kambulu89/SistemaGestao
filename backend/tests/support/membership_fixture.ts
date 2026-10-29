@@ -58,7 +58,15 @@ export async function deleteTestTenants() {
       await trx.from('stock_locations').where('tenant_id', id).update({ frozen_by_count_id: null })
       // A lead convertida aponta para a oportunidade criada: desfaz-se a ligação antes de apagar uma e outra.
       await trx.from('leads').where('tenant_id', id).update({ opportunity_id: null })
+      // O documento aponta para a sua versão corrente: desfaz-se a ligação antes de apagar uma e outra.
+      await trx.from('documents').where('tenant_id', id).update({ current_version_id: null })
       for (const table of [
+        'resource_attachments',
+        'document_versions',
+        'documents',
+        'attachments',
+        'template_versions',
+        'templates',
         'notifications',
         'notification_deliveries',
         'notification_requests',

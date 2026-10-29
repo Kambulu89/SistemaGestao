@@ -6,12 +6,12 @@ Estado vivo do desenvolvimento. Actualizado no fim de cada módulo/fatia validad
 
 | Indicador                                 |                                    Valor | Como se mede                                            |
 | ----------------------------------------- | ---------------------------------------: | ------------------------------------------------------- |
-| Critérios de aceitação verificados        |                                 74 / 129 | `MODULE_COMPLETION.md`                                  |
+| Critérios de aceitação verificados        |                                 78 / 129 | `MODULE_COMPLETION.md`                                  |
 | Critérios parciais                        |                                        4 | idem                                                    |
 | Módulos «Concluído e validado»            |                                        0 | todos têm requisitos por cumprir                        |
-| Testes backend (última corrida completa)  |                                      776 | `npm test`                                              |
-| Testes frontend (última corrida completa) |                                     1099 | `npx ng test --watch=false`                             |
-| Rotas / tabelas de tenant / migrations    |                           415 / 109 / 36 | `routes.ts`, `createTenantTable`, `database/migrations` |
+| Testes backend (última corrida completa)  |                                      818 | `npm test`                                              |
+| Testes frontend (última corrida completa) |                                     1123 | `npx ng test --watch=false`                             |
+| Rotas / tabelas de tenant / migrations    |                           440 / 115 / 37 | `routes.ts`, `createTenantTable`, `database/migrations` |
 | Lacunas abertas (registo A-xx)            | 5 (1 bloqueada); 2 parciais; 5 resolvidas | `MODULE_AUDIT.md` §4                                    |
 
 ## Fila de execução
@@ -25,7 +25,7 @@ Estado vivo do desenvolvimento. Actualizado no fim de cada módulo/fatia validad
 |   3 | M08 Transferências, inventários físicos e devoluções — **fatia 4.8**                                                 | **Concluída e validada** (módulo: Parcialmente implementado) | 2          | `stock_logistics.spec` (16), `logistics_domain.spec`, `logistics-tabs.spec` (15), E2E `e2e50` (33 verificações); D-055                             |
 |   4 | M02 CRM comercial — **fatia 6.1**                                                                                    | **Concluída e validada** (módulo: Parcialmente implementado) | —          | `prospecting.spec` (17), `prospecting_domain.spec` (8), `shared_transaction.spec` (3), FE `prospecting.spec`, E2E `e2e52` (40 verificações); D-057 |
 |   5 | S02 Notificações — **fatia 6.2** (centro, preferências, entregas por canal, ligação às campanhas)                    | **Concluída e validada** (módulo: Parcialmente implementado) | 4          | `notifications.spec` (14), `campaign_delivery.spec` (3), `notifications_domain.spec` (8), FE `notifications.spec` (6), E2E `e2e53` (15 verificações); D-058|
-|   6 | S01 Documentos e templates (PDF)                                                                                     | Não iniciado                                                 | 5          | —                                                                                                                                                  |
+|   6 | S01 Documentos, anexos e modelos — **fatia 6.3** (upload verificado, URL assinada, versões, PDF emitido)             | **Concluída e validada** (módulo: Parcialmente implementado) | 5          | `documents.spec` (25), `documents_domain.spec` (17), FE `documents.spec` (24), E2E `e2e54` (23 verificações); D-059                                |
 |   7 | S04 Relatórios, dashboards, exportação, pesquisa                                                                     | Não iniciado                                                 | 2          | —                                                                                                                                                  |
 |   8 | S03 Calendário e reservas · S05 Integrações · S06 UI/recuperação                                                     | Não iniciado                                                 | —          | —                                                                                                                                                  |
 |   9 | M10 · M11 · M12 · M13 · M14                                                                                          | Não iniciado                                                 | 2, 5       | —                                                                                                                                                  |
@@ -44,10 +44,11 @@ Estados: Não iniciado · Parcialmente implementado · Implementado sem validaç
 | 2026-10-29 | M09 fatia 5.2: migration 32 (3 tabelas), extractos importados de forma idempotente, estado derivado das correspondências, sugestões, confirmar/desfazer com bloqueios, 10 rotas, separador «Conciliação»; corrige 500 em `isIsoDate` com meses fora de limites; E2E mostrou colunas de data vazias (corrigido) | 68/129 critérios (sem critério novo: o M09.2 continua parcial); backend 723, frontend 1073; lint/format/typecheck/build limpos; migrations 33 subidas e descidas | `09ddce5`               |
 | 2026-10-29 | M02 fatia 6.1: `run` aninhado junta-se à transacção em curso (núcleo), módulo `prospecting` (migration 33, 8 tabelas), conversão de leads atómica e idempotente, pipeline com histórico datado e métricas, campanhas com consentimento e exclusão, 34 rotas, página «Leads e oportunidades»                    | 71/129 critérios; backend 751, frontend 1093; lint/format/typecheck/build limpos; migrations 34 subidas e descidas                                               | `581d7ab` |
 | 2026-10-29 | S02 fatia 6.2: migrations 34 e 35 (4 tabelas), módulo `notifications` (pedidos idempotentes, entregas com destino cifrado, concessão e retry com dedupe, preferências, ligação revalidada), trabalhador `notifications:work`, campanhas do M02 com mensagem, 10 rotas, página «Notificações»; E2E mostrou que uma preferência desligada suprime o aviso (comportamento correcto) | 74/129 critérios; backend 776, frontend 1099 testes; E2E `e2e53` 15/15; nenhum fornecedor real exercitado; commit 5dfb4fc |
+| 2026-10-29 | S01 fatia 6.3: migration 36 (6 tabelas), upload em três passos com quota, SHA-256 e tipo real, quarentena, URL assinada que revalida o acesso, documentos com versões imutáveis e visibilidade herdada do recurso, modelos com variáveis declaradas e publicação imutável, PDF emitido com instantâneo, 25 rotas, página «Documentos»; E2E mostrou que o teste de descarga tem de seguir o URL com a sessão (a janela de descarga nativa não é observável) | 78/129 critérios; backend 818, frontend 1123 testes; E2E `e2e54` 23/23; sem antivírus real (só EICAR) |
 
 ## Como retomar
 
 1. Ambiente: `pg_ctlcluster 16 main start`, `redis-server --daemonize yes`, Node 24 no `PATH`.
 2. Backend: `cd backend && npm run migrate && npm test`. Frontend: `npm ci && npx ng test --watch=false`.
 3. Seguir a «Fila de execução» pela ordem; cada item termina com lint, format, typecheck, testes, build, migrations up/down, E2E em browser quando há UI, actualização destes três documentos e um commit.
-4. Decisões de desenho ficam em `docs/decisions.md` (próxima: D-059).
+4. Decisões de desenho ficam em `docs/decisions.md` (próxima: D-060).

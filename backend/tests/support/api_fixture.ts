@@ -36,7 +36,28 @@ export function api(client: any, tenant: Tenant, actor: Actor) {
     request.header('cookie', actor.cookie).header('x-tenant-id', tenant.id)
     return write ? request.header('x-csrf-token', actor.csrf) : request
   }
+  /** Pedidos com corpo em bruto ou resposta binária (o cliente da Japa só fala JSON). */
+  const raw = async (method: string, url: string, body?: Buffer, contentType?: string) => {
+    const headers: Record<string, string> = { 'cookie': actor.cookie, 'x-tenant-id': tenant.id }
+    if (method !== 'GET') headers['x-csrf-token'] = actor.csrf
+    if (contentType) headers['content-type'] = contentType
+    const response = await fetch(`http://127.0.0.1:${process.env['PORT'] ?? 3333}${url}`, {
+      method,
+      headers,
+      ...(body ? { body: new Uint8Array(body) } : {}),
+    })
+    const buffer = Buffer.from(await response.arrayBuffer())
+    return {
+      status: response.status,
+      headers: response.headers,
+      buffer,
+      json: () => JSON.parse(buffer.toString('utf8')) as any,
+    }
+  }
   return {
+    putRaw: (url: string, data: Buffer, contentType = 'application/octet-stream') =>
+      raw('PUT', url, data, contentType),
+    getRaw: (url: string) => raw('GET', url),
     get: (url: string) => base(client.get(url), false) as Promise<ApiResponse>,
     post: (url: string, body: unknown) =>
       base(client.post(url), true).json(body) as Promise<ApiResponse>,
@@ -64,3 +85,12 @@ export async function newActor(client: any, tenant: Tenant, admin = false): Prom
 export const authzVersion = async (client: any, tenant: Tenant, actor: Actor) =>
   (await api(client, tenant, actor).get('/api/v1/context')).body().data
     .authorizationVersion as number
+
+/** GET só com a sessão (sem selector de tenant): é como o browser segue uma URL assinada. */
+export async function getWithSession(actor: Actor, url: string) {
+  const response = await fetch(`http://127.0.0.1:${process.env['PORT'] ?? 3333}${url}`, {
+    headers: { cookie: actor.cookie },
+  })
+  const buffer = Buffer.from(await response.arrayBuffer())
+  return { status: response.status, headers: response.headers, buffer }
+}

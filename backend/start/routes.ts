@@ -34,6 +34,7 @@ const ProcurementController = () =>
 const FinanceController = () => import('#modules/finance/presentation/finance_controller')
 const NotificationsController = () =>
   import('#modules/notifications/presentation/notifications_controller')
+const DocumentsController = () => import('#modules/documents/presentation/documents_controller')
 const ProspectingController = () =>
   import('#modules/prospecting/presentation/prospecting_controller')
 const InvoicingController = () => import('#modules/invoicing/presentation/invoicing_controller')
@@ -1009,6 +1010,91 @@ router
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Documentos, anexos e modelos (S01): módulo `documents` do registo. Funcionalidades `documents.library` (documentos,
+ * versões, anexos e anexos de recursos; `document.read|manage`) e `documents.templates` (modelos, rascunhos,
+ * pré-visualização, publicação e geração de PDF; `template.read|manage|publish`). O ficheiro só se descarrega quando
+ * `AVAILABLE`; a URL assinada é curta e o acesso decide-se de novo ao descarregar.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/documents', [DocumentsController, 'list'])
+            router.get('/documents/:id', [DocumentsController, 'show'])
+            router.get('/attachments/:id', [DocumentsController, 'showAttachment'])
+            router.post('/attachments/:id/download-url', [DocumentsController, 'downloadUrl'])
+            router.get('/attachments/:id/download', [DocumentsController, 'download'])
+            router.get('/resource-attachments', [DocumentsController, 'listResourceAttachments'])
+          })
+          .use(middleware.can({ permission: 'document.read' }))
+        router
+          .group(() => {
+            router.post('/documents', [DocumentsController, 'create'])
+            router.patch('/documents/:id', [DocumentsController, 'update'])
+            router.delete('/documents/:id', [DocumentsController, 'remove'])
+            router.post('/documents/:id/versions', [DocumentsController, 'addVersion'])
+            router.post('/attachments/prepare', [DocumentsController, 'prepare'])
+            router.put('/attachments/:id/content', [DocumentsController, 'content'])
+            router.post('/attachments/:id/complete', [DocumentsController, 'complete'])
+            router.post('/resource-attachments', [DocumentsController, 'linkResource'])
+            router.delete('/resource-attachments/:id', [DocumentsController, 'unlinkResource'])
+          })
+          .use(middleware.can({ permission: 'document.manage' }))
+      })
+      .use(middleware.feature({ code: 'documents.library' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/templates', [DocumentsController, 'listTemplates'])
+            router.get('/templates/:id', [DocumentsController, 'showTemplate'])
+          })
+          .use(middleware.can({ permission: 'template.read' }))
+        router
+          .group(() => {
+            router.post('/templates', [DocumentsController, 'createTemplate'])
+            router.post('/templates/:id/versions', [DocumentsController, 'addTemplateVersion'])
+            router.put('/templates/:id/versions/:versionId', [
+              DocumentsController,
+              'updateTemplateVersion',
+            ])
+            router.delete('/templates/:id/versions/:versionId', [
+              DocumentsController,
+              'deleteTemplateVersion',
+            ])
+            router.post('/templates/:id/versions/:versionId/preview', [
+              DocumentsController,
+              'previewTemplateVersion',
+            ])
+            router.post('/templates/:id/generate', [DocumentsController, 'generate'])
+          })
+          .use(middleware.can({ permission: 'template.manage' }))
+        router
+          .group(() => {
+            router.post('/templates/:id/versions/:versionId/publish', [
+              DocumentsController,
+              'publishTemplateVersion',
+            ])
+          })
+          .use(middleware.can({ permission: 'template.publish' }))
+      })
+      .use(middleware.feature({ code: 'documents.templates' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/** Descarga por URL assinada: só sessão (o tenant vem do token e o acesso volta a decidir-se ao descarregar). */
+router
+  .group(() => {
+    router.get('/files/:token', [DocumentsController, 'file'])
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth()])
 
 /**
  * Prospecção e CRM (M02): módulo `prospecting` do registo. Funcionalidades `prospecting.leads`,

@@ -136,6 +136,14 @@ async function snapshot(world: World) {
     campaign: await get(`/api/v1/campaigns/${world.ids.campaign}`),
     campaignMembers: await get(`/api/v1/campaigns/${world.ids.campaign}/members`),
     exclusions: await get('/api/v1/marketing-exclusions'),
+    documents: await get('/api/v1/documents'),
+    document: await get(`/api/v1/documents/${world.ids.document}`),
+    attachment: await get(`/api/v1/attachments/${world.ids.attachment}`),
+    resourceAttachments: await get(
+      `/api/v1/resource-attachments?resourceType=customer&resourceId=${world.ids.customer}`
+    ),
+    templates: await get('/api/v1/templates'),
+    template: await get(`/api/v1/templates/${world.ids.template}`),
     notifications: await get('/api/v1/notifications'),
     notificationDeliveries: await get('/api/v1/notification-deliveries'),
     notificationPreferences: await get('/api/v1/notification-preferences'),
@@ -370,6 +378,26 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
       '/reconciliations/imports',
       { accountId: o.bankAccount, lines: [{ occurredOn: '2026-01-01', amount: '1' }] },
     ],
+    ['get', `/documents/${o.document}`],
+    ['patch', `/documents/${o.document}`, { ...stale, version: 1, title: 'x' }],
+    ['delete', `/documents/${o.document}`],
+    ['post', `/documents/${o.document}/versions`, { attachmentId: me.ids.attachment }],
+    ['get', `/attachments/${o.attachment}`],
+    ['post', `/attachments/${o.attachment}/complete`, {}],
+    ['post', `/attachments/${o.attachment}/download-url`, {}],
+    ['get', `/attachments/${o.attachment}/download`],
+    ['delete', `/resource-attachments/${o.resourceAttachment}`],
+    ['get', `/templates/${o.template}`],
+    ['post', `/templates/${o.template}/versions`, { body: 'x', variableSchema: { variables: [] } }],
+    [
+      'put',
+      `/templates/${o.template}/versions/${o.templateVersion}`,
+      { version: 1, body: 'x', variableSchema: { variables: [] } },
+    ],
+    ['delete', `/templates/${o.template}/versions/${o.templateVersion}`],
+    ['post', `/templates/${o.template}/versions/${o.templateVersion}/preview`, { variables: {} }],
+    ['post', `/templates/${o.template}/versions/${o.templateVersion}/publish`, {}],
+    ['post', `/templates/${o.template}/generate`, { title: 'x', variables: {} }],
     ['post', `/notifications/${o.notification}/read`, {}],
     ['post', `/notifications/${o.notification}/open`, {}],
     ['post', `/notification-deliveries/${o.delivery}/retry`, {}],
@@ -646,6 +674,8 @@ test.group('matriz de isolamento', (group) => {
       'exclusions',
       'notifications',
       'notificationDeliveries',
+      'documents',
+      'templates',
       'reconLines',
       'reconEntries',
       'reconBatches',
@@ -964,6 +994,47 @@ test.group('matriz de isolamento', (group) => {
         404,
       ],
       [
+        'documento a partir de um anexo de B',
+        'post',
+        '/documents',
+        { title: 'x', attachmentId: bi.attachment },
+        422,
+      ],
+      [
+        'versão com um anexo de B',
+        'post',
+        `/documents/${a.ids.document}/versions`,
+        { attachmentId: bi.attachment },
+        422,
+      ],
+      [
+        'ligar um anexo de B a um recurso de A',
+        'post',
+        '/resource-attachments',
+        { resourceType: 'customer', resourceId: a.ids.customer, attachmentId: bi.attachment },
+        422,
+      ],
+      [
+        'ligar um anexo de A a um cliente de B',
+        'post',
+        '/resource-attachments',
+        { resourceType: 'customer', resourceId: bi.customer, attachmentId: a.ids.attachment },
+        422,
+      ],
+      [
+        'documento ligado a um cliente de B',
+        'post',
+        '/documents',
+        {
+          title: 'x',
+          attachmentId: a.ids.attachment,
+          visibility: 'RESOURCE',
+          resourceType: 'customer',
+          resourceId: bi.customer,
+        },
+        422,
+      ],
+      [
         'aviso manual a um membro de B',
         'post',
         '/notification-requests',
@@ -1203,6 +1274,8 @@ test.group('matriz de isolamento', (group) => {
     // Operações que NÃO são de tenant (públicas, sessão ou conta). Qualquer outra tem de declarar o
     // selector de tenant, senão escapava ao varrimento: acrescentar uma rota de tenant sem selector falha aqui.
     const NON_TENANT = new Set([
+      // Descarga por URL assinada: o tenant vem do token e o acesso volta a decidir-se (ver documents.spec).
+      'get /files/{token}',
       'get /health',
       'get /ready',
       'post /auth/login',
@@ -1550,11 +1623,13 @@ test.group('matriz de isolamento', (group) => {
         'invoice_lines',
         'credit_notes',
         'credit_note_lines',
+        'document_versions',
+        'template_versions',
       ].includes(table)
       assert.match(
         moved.message,
         immutable
-          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY|STATEMENT_LINE_IMMUTABLE|MATCH_IMMUTABLE|CRM_APPEND_ONLY/
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY|STATEMENT_LINE_IMMUTABLE|MATCH_IMMUTABLE|CRM_APPEND_ONLY|DOCUMENT_VERSION_IMMUTABLE|TEMPLATE_VERSION_IMMUTABLE/
           : /row-level security/,
         `${table}: mover linhas para B`
       )

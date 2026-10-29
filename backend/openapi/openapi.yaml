@@ -29,7 +29,7 @@ components:
       name: X-Csrf-Token
       in: header
       required: true
-      description: Token anti-CSRF obtido no login ou em `GET /me`.
+      description: 'Token anti-CSRF obtido no login ou em `GET /me`.'
       schema: { type: string }
   schemas:
     Error:
@@ -338,7 +338,7 @@ paths:
   /context/features:
     get:
       summary: Funcionalidades efectivas do tenant
-      description: Só conveniência para a interface; cada comando volta a ser verificado no servidor (`403 FEATURE_NOT_AVAILABLE`).
+      description: 'Só conveniência para a interface; cada comando volta a ser verificado no servidor (`403 FEATURE_NOT_AVAILABLE`).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -646,7 +646,7 @@ paths:
   /sequences/{id}:
     patch:
       summary: Altera modelo, preenchimento ou sobe o próximo número (sequence.manage)
-      description: O próximo número nunca diminui (`422 NEXT_VALUE_DECREASE`).
+      description: 'O próximo número nunca diminui (`422 NEXT_VALUE_DECREASE`).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -697,7 +697,7 @@ paths:
   /platform/me:
     get:
       summary: Permissões de plataforma da própria conta
-      description: Só para a interface; vazio se a conta não tem nenhuma concessão `platform.*` em vigor. Não exige concessão.
+      description: 'Só para a interface; vazio se a conta não tem nenhuma concessão `platform.*` em vigor. Não exige concessão.'
       security: [{ sessionCookie: [] }]
       responses:
         '200': { description: 'permissions: lista de códigos platform.* em vigor.' }
@@ -2398,7 +2398,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     patch:
       summary: Altera um rascunho (rule.manage)
-      description: Uma regra publicada ou desactivada é imutável (`RULE_NOT_DRAFT`); abra uma nova revisão.
+      description: 'Uma regra publicada ou desactivada é imutável (`RULE_NOT_DRAFT`); abra uma nova revisão.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -2440,7 +2440,7 @@ paths:
   /rules/{id}/simulate:
     post:
       summary: Avalia a regra sobre valores de exemplo, sem gravar nada (rule.manage)
-      description: Respeita o período de vigência (`SKIPPED` fora dele). Devolve `PASS`, `FAIL` (com a mensagem), `SKIPPED` ou `ERROR`.
+      description: 'Respeita o período de vigência (`SKIPPED` fora dele). Devolve `PASS`, `FAIL` (com a mensagem), `SKIPPED` ou `ERROR`.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -2576,7 +2576,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     patch:
       summary: Altera um rascunho (form.design)
-      description: Um formulário publicado ou retirado é imutável (`FORM_NOT_DRAFT`); abra uma nova revisão.
+      description: 'Um formulário publicado ou retirado é imutável (`FORM_NOT_DRAFT`); abra uma nova revisão.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -2677,7 +2677,7 @@ paths:
   /dynamic/{entityCode}/forms:
     get:
       summary: Formulários publicados de uma entidade, para quem lê os seus registos (dynamic.read)
-      description: Cada formulário traz `issues` (vazio = utilizável).
+      description: 'Cada formulário traz `issues` (vazio = utilizável).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -2745,7 +2745,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     patch:
       summary: Altera um rascunho (state.design)
-      description: Uma máquina publicada ou retirada é imutável (`STATE_MACHINE_NOT_DRAFT`); abra uma nova revisão.
+      description: 'Uma máquina publicada ou retirada é imutável (`STATE_MACHINE_NOT_DRAFT`); abra uma nova revisão.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -2795,7 +2795,7 @@ paths:
   /state-machines/{id}/publish:
     post:
       summary: Publica o rascunho (revisão imutável) e retira a anterior (state.publish)
-      description: Recusa (`STATE_IN_USE`, 409) retirar um estado em uso por registos.
+      description: 'Recusa (`STATE_IN_USE`, 409) retirar um estado em uso por registos.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -2896,7 +2896,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     patch:
       summary: Altera um rascunho (workflow.design)
-      description: Um workflow publicado ou retirado é imutável (`WORKFLOW_NOT_DRAFT`); abra uma nova revisão.
+      description: 'Um workflow publicado ou retirado é imutável (`WORKFLOW_NOT_DRAFT`); abra uma nova revisão.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -3033,7 +3033,7 @@ paths:
   /workflow-instances/{id}:
     get:
       summary: Um processo e as suas tarefas
-      description: Visível a quem submeteu, a quem tem (ou teve) uma tarefa e a quem tem `workflow.read`; para os outros é 404.
+      description: 'Visível a quem submeteu, a quem tem (ou teve) uma tarefa e a quem tem `workflow.read`; para os outros é 404.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -3044,7 +3044,7 @@ paths:
   /workflow-instances/{id}/cancel:
     post:
       summary: Cancela o processo (só quem o submeteu) (workflow.submit)
-      description: As tarefas por decidir ficam canceladas e sai o evento `workflow.instance.cancelled`.
+      description: 'As tarefas por decidir ficam canceladas e sai o evento `workflow.instance.cancelled`.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -3118,7 +3118,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     patch:
       summary: Altera um rascunho ou uma automação pausada (automation.manage)
-      description: Cada alteração é uma nova versão (as execuções ficam ligadas à versão que as originou). Uma automação activa não se altera (`AUTOMATION_ACTIVE`).
+      description: 'Cada alteração é uma nova versão (as execuções ficam ligadas à versão que as originou). Uma automação activa não se altera (`AUTOMATION_ACTIVE`).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -3174,7 +3174,7 @@ paths:
   /automations/{id}/pause:
     post:
       summary: Pausa a automação (automation.manage)
-      description: Bloqueia novas execuções; as pendentes fecham com `AUTOMATION_NOT_ACTIVE`. O histórico mantém-se.
+      description: 'Bloqueia novas execuções; as pendentes fecham com `AUTOMATION_NOT_ACTIVE`. O histórico mantém-se.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -3320,7 +3320,7 @@ paths:
   /approval-tasks/{id}/claim:
     post:
       summary: Reclama atomicamente uma tarefa de grupo (approval.decide)
-      description: Só um dos candidatos a obtém (409 `TASK_NOT_OPEN` aos outros). Repetir a reclamação é inofensivo.
+      description: 'Só um dos candidatos a obtém (409 `TASK_NOT_OPEN` aos outros). Repetir a reclamação é inofensivo.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -3383,7 +3383,7 @@ paths:
   /approval-tasks/{id}/return:
     post:
       summary: Devolve o pedido a quem o submeteu (approval.decide)
-      description: O motivo é obrigatório. O processo termina (`RETURNED`) e as outras tarefas ficam canceladas.
+      description: 'O motivo é obrigatório. O processo termina (`RETURNED`) e as outras tarefas ficam canceladas.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -3406,7 +3406,7 @@ paths:
   /approval-delegations:
     get:
       summary: Delegações que dei e recebi (approval.delegate)
-      description: Cada item traz `direction`, `GIVEN` (dada por mim) ou `RECEIVED`.
+      description: 'Cada item traz `direction`, `GIVEN` (dada por mim) ou `RECEIVED`.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -3723,7 +3723,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     patch:
       summary: Altera uma variante; o SKU é imutável (catalog.manage)
-      description: A variante por omissão não se pode desactivar enquanto o produto estiver activo (`DEFAULT_VARIANT_ACTIVE`).
+      description: 'A variante por omissão não se pode desactivar enquanto o produto estiver activo (`DEFAULT_VARIANT_ACTIVE`).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -3831,7 +3831,7 @@ paths:
   /price-lists/{id}/items:
     post:
       summary: Acrescenta o preço de uma variante a partir de uma quantidade mínima (price.manage)
-      description: Decimais como texto (`unitPrice` com 4 casas, `minQuantity` com 6, `maxDiscount` de 0 a 1). Escalão repetido dá 409 `PRICE_TIER_EXISTS`.
+      description: 'Decimais como texto (`unitPrice` com 4 casas, `minQuantity` com 6, `maxDiscount` de 0 a 1). Escalão repetido dá 409 `PRICE_TIER_EXISTS`.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -4042,7 +4042,7 @@ paths:
   /customers/{id}:
     get:
       summary: Um cliente com os contactos da Party (customer.read)
-      description: Os contactos só vêm a quem tem `party.read`; sem ela a lista vem vazia. Não há saldo (as contas a receber ainda não existem).
+      description: 'Os contactos só vêm a quem tem `party.read`; sem ela a lista vem vazia. Não há saldo (as contas a receber ainda não existem).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -4084,7 +4084,7 @@ paths:
   /customers/{id}/block:
     post:
       summary: Bloqueia o cliente, com motivo (customer.block)
-      description: Um cliente bloqueado não recebe novas confirmações de venda (`CUSTOMER_BLOCKED`), mas continua a poder pagar e regularizar.
+      description: 'Um cliente bloqueado não recebe novas confirmações de venda (`CUSTOMER_BLOCKED`), mas continua a poder pagar e regularizar.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -4283,7 +4283,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     patch:
       summary: Altera a validade, a moeda ou as notas de uma proposta em rascunho (quote.manage)
-      description: A organização e o cliente não mudam (422 `IMMUTABLE`); a moeda não muda depois de haver linhas (409 `CURRENCY_LOCKED`).
+      description: 'A organização e o cliente não mudam (422 `IMMUTABLE`); a moeda não muda depois de haver linhas (409 `CURRENCY_LOCKED`).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -4373,7 +4373,7 @@ paths:
   /quotes/{id}/send:
     post:
       summary: Envia a proposta (atribui o número da sequência QUOTE e congela as linhas) (quote.manage)
-      description: 409 `QUOTE_EMPTY` sem linhas; 409 `SEQUENCE_NOT_CONFIGURED` sem sequência (a proposta continua rascunho).
+      description: '409 `QUOTE_EMPTY` sem linhas; 409 `SEQUENCE_NOT_CONFIGURED` sem sequência (a proposta continua rascunho).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -4448,7 +4448,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
     post:
       summary: Cria uma encomenda em rascunho, sem proposta (order.manage)
-      description: A morada de entrega é um instantâneo (campos `line1`, `line2`, `city`, `postalCode`, `region`, `countryCode`, `recipient`).
+      description: 'A morada de entrega é um instantâneo (campos `line1`, `line2`, `city`, `postalCode`, `region`, `countryCode`, `recipient`).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -4671,7 +4671,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     patch:
       summary: Altera o nome, as políticas (saldo negativo, encomendas em falta), o armazém de vendas ou o estado (warehouse.manage)
-      description: Só um armazém de vendas por organização (409 `SALES_WAREHOUSE_TAKEN`). Um armazém de vendas não se desactiva sem o retirar primeiro.
+      description: 'Só um armazém de vendas por organização (409 `SALES_WAREHOUSE_TAKEN`). Um armazém de vendas não se desactiva sem o retirar primeiro.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -4948,7 +4948,7 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
   /stock-reservations/{id}/release:
     post:
-      summary: Liberta o que resta (ou `quantity`) de uma reserva (inventory.reserve)
+      summary: 'Liberta o que resta (ou `quantity`) de uma reserva (inventory.reserve)'
       description: 'Idempotente: uma reserva já fechada devolve-se com `idempotent: true`.'
       security: [{ sessionCookie: [] }]
       parameters:
@@ -5058,7 +5058,7 @@ paths:
         '409': { $ref: '#/components/responses/Error' }
     delete:
       summary: Apaga uma expedição em rascunho (shipment.manage)
-      description: Só um rascunho (sem número) se apaga; uma expedição lançada reverte-se, nunca se apaga (409 `SHIPMENT_NOT_DRAFT`).
+      description: 'Só um rascunho (sem número) se apaga; uma expedição lançada reverte-se, nunca se apaga (409 `SHIPMENT_NOT_DRAFT`).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -6566,6 +6566,477 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /documents:
+    get:
+      summary: Lista a biblioteca de documentos visíveis para quem pede (document.read; funcionalidade documents.library)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: search, in: query, required: false, schema: { type: string } }
+        - { name: categoryCode, in: query, required: false, schema: { type: string } }
+        - { name: resourceType, in: query, required: false, schema: { type: string } }
+        - { name: resourceId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 100 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria um documento a partir de um anexo disponível (document.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [title, attachmentId],
+                additionalProperties: true,
+                properties:
+                  {
+                    title: { type: string },
+                    categoryCode: { type: string },
+                    visibility: { type: string, enum: [PRIVATE, TENANT, RESOURCE] },
+                    resourceType: { type: string },
+                    resourceId: { type: string, format: uuid },
+                    attachmentId: { type: string, format: uuid },
+                    retentionUntil: { type: string, format: date },
+                    changeNote: { type: string },
+                  },
+              }
+      responses:
+        '201': { description: 'Documento criado com a revisão 1.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /documents/{id}:
+    get:
+      summary: Documento e as suas versões (document.read; 404 se não for visível)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera título, categoria, visibilidade, retenção e retenção legal (document.manage; version obrigatória)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [version],
+                additionalProperties: true,
+                properties:
+                  {
+                    version: { type: integer },
+                    title: { type: string },
+                    categoryCode: { type: string },
+                    visibility: { type: string },
+                    retentionUntil: { type: string, format: date, nullable: true },
+                    legalHold: { type: boolean },
+                  },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga o documento (lógico); bloqueado por retenção ou retenção legal (document.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /documents/{id}/versions:
+    post:
+      summary: Acrescenta uma versão imutável a partir de um anexo disponível (document.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [attachmentId],
+                additionalProperties: true,
+                properties:
+                  { attachmentId: { type: string, format: uuid }, changeNote: { type: string } },
+              }
+      responses:
+        '201': { description: 'Nova revisão.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /attachments/prepare:
+    post:
+      summary: 'Prepara um upload: autoriza a quota e reserva a chave (document.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [fileName, mimeType, sizeBytes, checksum],
+                properties:
+                  {
+                    fileName: { type: string },
+                    mimeType: { type: string },
+                    sizeBytes: { type: integer, minimum: 1 },
+                    checksum: { type: string, description: SHA-256 em hexadecimal },
+                  },
+              }
+      responses:
+        '201': { description: 'Anexo PENDING e `uploadPath`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /attachments/{id}/content:
+    put:
+      summary: Envia o ficheiro em bruto (application/octet-stream), lido em fluxo (document.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '200': { description: 'Conteúdo recebido; falta concluir.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '415': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /attachments/{id}/complete:
+    post:
+      summary: 'Conclui o upload: confere tamanho, SHA-256 e tipo real, analisa e torna disponível ou em quarentena (document.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+  /attachments/{id}:
+    get:
+      summary: Estado de um anexo (document.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /attachments/{id}/download-url:
+    post:
+      summary: Emite uma URL de descarga curta depois de autorizar (document.read); só anexos AVAILABLE
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /attachments/{id}/download:
+    get:
+      summary: Descarrega o ficheiro (document.read); sempre como anexo, nunca inline
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /files/{token}:
+    get:
+      summary: Descarga por URL assinada; exige sessão do mesmo utilizador e volta a decidir o acesso
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'O ficheiro.' }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /resource-attachments:
+    get:
+      summary: Anexos ligados a um recurso (document.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: resourceType, in: query, required: true, schema: { type: string } }
+        - { name: resourceId, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Liga um anexo disponível a um recurso registado (document.manage); repetir devolve o mesmo vínculo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [resourceType, resourceId, attachmentId],
+                properties:
+                  {
+                    resourceType: { type: string },
+                    resourceId: { type: string, format: uuid },
+                    attachmentId: { type: string, format: uuid },
+                    category: { type: string },
+                  },
+              }
+      responses:
+        '201': { description: 'Vínculo criado (200 se já existia).' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /resource-attachments/{id}:
+    delete:
+      summary: Desliga o anexo do recurso (document.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Desligado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /templates:
+    get:
+      summary: Lista modelos (template.read; funcionalidade documents.templates)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria um modelo (template.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [code, name, channel],
+                properties:
+                  {
+                    code: { type: string },
+                    name: { type: string },
+                    channel: { type: string, enum: [DOCUMENT, EMAIL, SMS, WHATSAPP, PUSH] },
+                    resourceType: { type: string },
+                  },
+              }
+      responses:
+        '201': { description: 'Modelo criado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /templates/{id}:
+    get:
+      summary: Modelo e as suas versões (template.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /templates/{id}/versions:
+    post:
+      summary: 'Cria uma versão em rascunho; só `{{variavel}}` declaradas (template.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [body],
+                properties:
+                  {
+                    body: { type: string },
+                    variableSchema: { type: object },
+                    locale: { type: string },
+                  },
+              }
+      responses:
+        '201': { description: 'Rascunho criado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /templates/{id}/versions/{versionId}:
+    put:
+      summary: Altera um rascunho (template.manage; version obrigatória)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: versionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [version, body], additionalProperties: true }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga um rascunho (template.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: versionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /templates/{id}/versions/{versionId}/preview:
+    post:
+      summary: Pré-visualiza com dados de teste, escapado; não grava nada (template.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: versionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { variables: { type: object } } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /templates/{id}/versions/{versionId}/publish:
+    post:
+      summary: 'Publica o rascunho: passa a imutável e retira a publicada da mesma língua (template.publish)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: versionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /templates/{id}/generate:
+    post:
+      summary: Gera um PDF a partir da versão publicada e guarda-o como documento com o instantâneo (template.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [title],
+                additionalProperties: true,
+                properties:
+                  {
+                    title: { type: string },
+                    locale: { type: string },
+                    variables: { type: object },
+                    categoryCode: { type: string },
+                    visibility: { type: string },
+                    resourceType: { type: string },
+                    resourceId: { type: string, format: uuid },
+                    documentId: { type: string, format: uuid },
+                  },
+              }
+      responses:
+        '201': { description: 'Documento gerado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /notification-requests:
     post:
       summary: Pede um aviso manual aos membros (communication.manage)
@@ -7492,7 +7963,7 @@ paths:
   /reconciliations/batches/{id}:
     delete:
       summary: Descarta um lote sem correspondências (reconciliation.manage)
-      description: Só se nenhuma das suas linhas teve correspondência (409 `BATCH_HAS_MATCHES`).
+      description: 'Só se nenhuma das suas linhas teve correspondência (409 `BATCH_HAS_MATCHES`).'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -7506,7 +7977,7 @@ paths:
   /reconciliations/lines:
     get:
       summary: Linhas do extracto com o estado derivado (reconciliation.read)
-      description: O estado (`UNMATCHED`, `PARTIAL`, `MATCHED`) deriva da soma das correspondências activas; nunca é um campo.
+      description: 'O estado (`UNMATCHED`, `PARTIAL`, `MATCHED`) deriva da soma das correspondências activas; nunca é um campo.'
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'

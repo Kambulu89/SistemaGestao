@@ -439,6 +439,28 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
       'Consultar as entregas e as falhas de comunicação (dados minimizados), repeti-las e enviar avisos aos membros.',
   },
   {
+    code: 'document.read',
+    moduleCode: 'documents',
+    description: 'Ver a biblioteca de documentos a que tem acesso e descarregar os ficheiros.',
+  },
+  {
+    code: 'document.manage',
+    moduleCode: 'documents',
+    description:
+      'Carregar ficheiros, criar documentos e versões, ligá-los a recursos, apagar e fixar retenção.',
+  },
+  { code: 'template.read', moduleCode: 'documents', description: 'Ver modelos e as suas versões.' },
+  {
+    code: 'template.manage',
+    moduleCode: 'documents',
+    description: 'Criar modelos e rascunhos, pré-visualizar e gerar documentos a partir deles.',
+  },
+  {
+    code: 'template.publish',
+    moduleCode: 'documents',
+    description: 'Publicar uma versão de um modelo (passa a imutável).',
+  },
+  {
     code: 'receivable.read',
     moduleCode: 'finance',
     description: 'Ver contas a receber e a exposição de crédito dos clientes.',
