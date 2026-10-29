@@ -995,6 +995,33 @@ router
       .group(() => {
         router
           .group(() => {
+            router.get('/reconciliations/summary', [FinanceController, 'reconSummary'])
+            router.get('/reconciliations/batches', [FinanceController, 'listBatches'])
+            router.get('/reconciliations/lines', [FinanceController, 'listStatementLines'])
+            router.get('/reconciliations/lines/:id', [FinanceController, 'showStatementLine'])
+            router.get('/reconciliations/lines/:id/suggestions', [FinanceController, 'suggestions'])
+            router.get('/reconciliations/entries', [FinanceController, 'listReconEntries'])
+          })
+          .use(middleware.can({ permission: 'reconciliation.read' }))
+        router
+          .group(() => {
+            router.post('/reconciliations/imports', [FinanceController, 'importStatement'])
+            router.delete('/reconciliations/batches/:id', [FinanceController, 'discardBatch'])
+          })
+          .use(middleware.can({ permission: 'reconciliation.manage' }))
+        router
+          .group(() => {
+            router.post('/reconciliations/matches', [FinanceController, 'confirmMatch'])
+            router.post('/reconciliations/matches/:id/undo', [FinanceController, 'undoMatch'])
+          })
+          .use(middleware.can({ permission: 'reconciliation.confirm' }))
+      })
+      .use(middleware.feature({ code: 'finance.reconciliation' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
             router.get('/receivables', [FinanceController, 'listReceivables'])
             router.get('/receivables/:id', [FinanceController, 'showReceivable'])
             router.get('/customers/:id/credit', [FinanceController, 'customerCredit'])

@@ -4,9 +4,10 @@ import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { AccountsTab } from './accounts-tab';
 import { ObligationsTab } from './obligations-tab';
 import { PaymentsTab } from './payments-tab';
+import { ReconciliationTab } from './reconciliation-tab';
 import { SupplierInvoicesTab } from './supplier-invoices-tab';
 
-type TabId = 'accounts' | 'receivables' | 'payables' | 'payments' | 'invoices';
+type TabId = 'accounts' | 'receivables' | 'payables' | 'payments' | 'invoices' | 'reconciliation';
 
 const TABS: readonly { id: TabId; label: string; permission: string }[] = [
   { id: 'accounts', label: 'Contas', permission: 'treasury.read' },
@@ -14,17 +15,25 @@ const TABS: readonly { id: TabId; label: string; permission: string }[] = [
   { id: 'payables', label: 'A pagar', permission: 'payable.read' },
   { id: 'payments', label: 'Pagamentos', permission: 'payment.read' },
   { id: 'invoices', label: 'Facturas de fornecedor', permission: 'supplier_invoice.read' },
+  { id: 'reconciliation', label: 'Conciliação', permission: 'reconciliation.read' },
 ];
 
 /** Tesouraria (M09): confirmar um pagamento é a única operação que move dinheiro; reverte-se, nunca se apaga. */
 @Component({
   selector: 'app-treasury-page',
-  imports: [PageHeader, AccountsTab, ObligationsTab, PaymentsTab, SupplierInvoicesTab],
+  imports: [
+    PageHeader,
+    AccountsTab,
+    ObligationsTab,
+    PaymentsTab,
+    SupplierInvoicesTab,
+    ReconciliationTab,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header
       title="Tesouraria"
-      description="Contas de caixa e banco, contas a receber e a pagar, pagamentos e facturas de fornecedor."
+      description="Contas de caixa e banco, contas a receber e a pagar, pagamentos, facturas de fornecedor e conciliação bancária."
     />
     <div
       class="mb-5 flex flex-wrap gap-1 border-b border-line"
@@ -63,6 +72,9 @@ const TABS: readonly { id: TabId; label: string; permission: string }[] = [
       }
       @case ('invoices') {
         <app-finance-supplier-invoices />
+      }
+      @case ('reconciliation') {
+        <app-finance-reconciliation />
       }
     }
   `,

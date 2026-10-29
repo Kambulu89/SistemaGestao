@@ -397,6 +397,21 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Criar e alterar contas de tesouraria (incluindo o identificador da conta).',
   },
   {
+    code: 'reconciliation.read',
+    moduleCode: 'finance',
+    description: 'Ver extractos importados, correspondências e o estado da conciliação.',
+  },
+  {
+    code: 'reconciliation.manage',
+    moduleCode: 'finance',
+    description: 'Importar extractos bancários e descartar lotes sem correspondências.',
+  },
+  {
+    code: 'reconciliation.confirm',
+    moduleCode: 'finance',
+    description: 'Confirmar e desfazer correspondências entre o extracto e os movimentos.',
+  },
+  {
     code: 'receivable.read',
     moduleCode: 'finance',
     description: 'Ver contas a receber e a exposição de crédito dos clientes.',

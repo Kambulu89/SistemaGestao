@@ -38,10 +38,12 @@ const QUANTITY = /^\d{1,13}(\.\d{1,6})?$/
 const RATE = /^\d{1,3}(\.\d{1,4})?$/
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
-export const isIsoDate = (value: unknown): value is string =>
-  typeof value === 'string' &&
-  ISO_DATE.test(value) &&
-  new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value
+export const isIsoDate = (value: unknown): value is string => {
+  if (typeof value !== 'string' || !ISO_DATE.test(value)) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  // Mês ou dia fora de limites (2026-13-01) dão data inválida; 2026-02-30 «rola» para Março e também não coincide.
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
 
 export const isPositiveMoney = (value: unknown): value is string =>
   typeof value === 'string' && MONEY.test(value) && /[1-9]/.test(value)

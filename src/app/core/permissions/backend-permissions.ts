@@ -62,6 +62,7 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'payable.read': ['finance.read', 'finance.receivables-payables.read'],
   'payment.read': ['finance.read', 'finance.payments-budget.read'],
   'supplier_invoice.read': ['finance.read'],
+  'reconciliation.read': ['finance.read'],
   // Catálogo e preços (M03): as páginas usam o código do servidor; ler preços é independente de ler produtos.
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],

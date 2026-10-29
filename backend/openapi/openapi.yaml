@@ -6505,6 +6505,233 @@ paths:
         '200': { description: 'Movimentos imutáveis, do mais recente; `meta.total`.' }
         '404': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /reconciliations/imports:
+    post:
+      summary: Importa linhas de um extracto bancário (reconciliation.manage; funcionalidade finance.reconciliation)
+      description: |
+        Só contas bancárias. Idempotente: a identidade de uma linha é o `externalId` do banco ou, sem ele, a data, o valor e a
+        descrição mais a ordem entre linhas iguais do ficheiro; as já importadas contam como `skipped`. Sem linhas novas não
+        fica lote (200). O extracto nunca altera o livro de tesouraria.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountId, lines]
+              properties:
+                accountId: { type: string, format: uuid }
+                fileName: { type: string, maxLength: 200, nullable: true }
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 1000
+                  items:
+                    type: object
+                    required: [occurredOn, amount]
+                    properties:
+                      externalId: { type: string, maxLength: 120, nullable: true }
+                      occurredOn: { type: string, format: date }
+                      amount:
+                        {
+                          type: string,
+                          description: 'Decimal assinado, até 4 casas; negativo é saída.',
+                        }
+                      description: { type: string, maxLength: 500, nullable: true }
+                      reference: { type: string, maxLength: 120, nullable: true }
+      responses:
+        '201': { description: 'Lote criado com `imported` e `skipped`.' }
+        '200': { description: 'Nada de novo para importar (`batch` nulo).' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reconciliations/batches:
+    get:
+      summary: Lotes importados de uma conta (reconciliation.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: accountId, in: query, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Lotes, do mais recente; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reconciliations/batches/{id}:
+    delete:
+      summary: Descarta um lote sem correspondências (reconciliation.manage)
+      description: Só se nenhuma das suas linhas teve correspondência (409 `BATCH_HAS_MATCHES`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Lote descartado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /reconciliations/lines:
+    get:
+      summary: Linhas do extracto com o estado derivado (reconciliation.read)
+      description: O estado (`UNMATCHED`, `PARTIAL`, `MATCHED`) deriva da soma das correspondências activas; nunca é um campo.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: accountId, in: query, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: state,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [UNMATCHED, PARTIAL, MATCHED] },
+          }
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+        - { name: batchId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Linhas, da mais recente; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reconciliations/lines/{id}:
+    get:
+      summary: Linha do extracto com as suas correspondências (reconciliation.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          {
+            description: 'Linha, valor conciliado, o que falta e as correspondências (também as desfeitas).',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /reconciliations/lines/{id}/suggestions:
+    get:
+      summary: Movimentos candidatos para uma linha, por pontuação (reconciliation.read)
+      description: |
+        Mesma conta e mesmo sentido, num intervalo de 30 dias. Pontua valor igual, proximidade da data e referência do
+        pagamento citada no extracto. Só ordena: quem decide é uma pessoa (`POST /reconciliations/matches`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          {
+            description: 'Até 10 sugestões com `score`, `reasons`, `matchableAmount` e o movimento.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /reconciliations/entries:
+    get:
+      summary: Movimentos de tesouraria da conta com o estado de conciliação (reconciliation.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: accountId, in: query, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: state,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [UNMATCHED, PARTIAL, MATCHED] },
+          }
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Movimentos, do mais recente; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reconciliations/summary:
+    get:
+      summary: Saldo do livro, total do extracto e o que falta conciliar de cada lado (reconciliation.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: accountId, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Resumo da conciliação da conta.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reconciliations/matches:
+    post:
+      summary: Confirma uma correspondência entre uma linha do extracto e um movimento (reconciliation.confirm)
+      description: |
+        Mesma conta e sentido; sem `amount` concilia o máximo possível. Bloqueia a linha e depois o movimento: confirmações
+        concorrentes nunca conciliam mais do que cada um vale (409 `LINE_FULLY_MATCHED`, `ENTRY_FULLY_MATCHED`,
+        `EXCEEDS_REMAINING`; 409 `PAIR_ALREADY_MATCHED` se o par já está ligado).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statementLineId, treasuryEntryId]
+              properties:
+                statementLineId: { type: string, format: uuid }
+                treasuryEntryId: { type: string, format: uuid }
+                amount: { type: string, description: 'Valor positivo a conciliar.' }
+      responses:
+        '201': { description: 'Correspondência confirmada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reconciliations/matches/{id}/undo:
+    post:
+      summary: Desfaz uma correspondência, com motivo (reconciliation.confirm)
+      description: A correspondência não se apaga; fica registada como desfeita. Repetir não faz nada.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: 'Correspondência desfeita.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
   /receivables:
     get:
       summary: Contas a receber (receivable.read; funcionalidade finance.obligations)

@@ -121,6 +121,11 @@ async function snapshot(world: World) {
     treasuryAccounts: await get('/api/v1/treasury-accounts'),
     treasuryAccount: await get(`/api/v1/treasury-accounts/${world.ids.treasuryAccount}`),
     entries: await get(`/api/v1/treasury-accounts/${world.ids.treasuryAccount}/entries`),
+    reconLines: await get(`/api/v1/reconciliations/lines?accountId=${world.ids.bankAccount}`),
+    reconLine: await get(`/api/v1/reconciliations/lines/${world.ids.statementLine}`),
+    reconEntries: await get(`/api/v1/reconciliations/entries?accountId=${world.ids.bankAccount}`),
+    reconBatches: await get(`/api/v1/reconciliations/batches?accountId=${world.ids.bankAccount}`),
+    reconSummary: await get(`/api/v1/reconciliations/summary?accountId=${world.ids.bankAccount}`),
     receivables: await get('/api/v1/receivables'),
     receivable: await get(`/api/v1/receivables/${world.ids.receivable}`),
     payables: await get('/api/v1/payables'),
@@ -339,6 +344,19 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['get', `/treasury-accounts/${o.treasuryAccount}`],
     ['patch', `/treasury-accounts/${o.treasuryAccount}`, { ...stale, name: 'x' }],
     ['get', `/treasury-accounts/${o.treasuryAccount}/entries`],
+    ['get', `/reconciliations/lines/${o.statementLine}`],
+    ['get', `/reconciliations/lines/${o.statementLine}/suggestions`],
+    ['delete', `/reconciliations/batches/${o.statementBatch}`],
+    ['post', `/reconciliations/matches/${o.reconMatch}/undo`, { reason: 'x' }],
+    ['get', `/reconciliations/lines?accountId=${o.bankAccount}`],
+    ['get', `/reconciliations/entries?accountId=${o.bankAccount}`],
+    ['get', `/reconciliations/batches?accountId=${o.bankAccount}`],
+    ['get', `/reconciliations/summary?accountId=${o.bankAccount}`],
+    [
+      'post',
+      '/reconciliations/imports',
+      { accountId: o.bankAccount, lines: [{ occurredOn: '2026-01-01', amount: '1' }] },
+    ],
     ['get', `/receivables/${o.receivable}`],
     ['get', `/payables/${o.payable}`],
     ['get', `/customers/${o.customer}/credit`],
@@ -578,6 +596,9 @@ test.group('matriz de isolamento', (group) => {
       'counts',
       'returns',
       'treasuryAccounts',
+      'reconLines',
+      'reconEntries',
+      'reconBatches',
       'receivables',
       'payables',
       'payments',
@@ -870,6 +891,27 @@ test.group('matriz de isolamento', (group) => {
           allocations: [{ receivableId: bi.receivable, amount: '1' }],
         },
         422,
+      ],
+      [
+        'correspondência com a linha do extracto de B',
+        'post',
+        '/reconciliations/matches',
+        { statementLineId: bi.statementLine, treasuryEntryId: a.ids.reconEntry },
+        404,
+      ],
+      [
+        'correspondência com o movimento de B',
+        'post',
+        '/reconciliations/matches',
+        { statementLineId: a.ids.statementLine, treasuryEntryId: bi.reconEntry },
+        404,
+      ],
+      [
+        'extracto numa conta de B',
+        'post',
+        '/reconciliations/imports',
+        { accountId: bi.bankAccount, lines: [{ occurredOn: '2026-01-01', amount: '1' }] },
+        404,
       ],
       [
         'factura de fornecedor com o fornecedor de B',
@@ -1403,6 +1445,8 @@ test.group('matriz de isolamento', (group) => {
         'supplier_invoices',
         'treasury_entries',
         'credit_applications',
+        'bank_statement_lines',
+        'reconciliation_matches',
         'contracts',
         'invoices',
         'invoice_lines',
@@ -1412,7 +1456,7 @@ test.group('matriz de isolamento', (group) => {
       assert.match(
         moved.message,
         immutable
-          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY/
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY|STATEMENT_LINE_IMMUTABLE|MATCH_IMMUTABLE/
           : /row-level security/,
         `${table}: mover linhas para B`
       )

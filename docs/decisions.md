@@ -822,6 +822,43 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   (M05/M09 fazem-no por si); sem transferências entre organizações; sem escolha manual de lote/local no ecrã de transferência
   (o servidor escolhe); contagens por amostragem/cíclicas e séries por fazer.
 
+## D-056 Conciliação bancária (M09): o extracto é informação externa; uma pessoa confirma cada correspondência (aceite — fatia 5.2)
+
+- **Contexto.** A especificação (M09) pede que a conciliação «compare extracto e movimentos com sugestões confirmáveis», com
+  `BankStatementLine` e `ReconciliationMatch` e a permissão `reconciliation.confirm`. O livro de tesouraria (D-054) já é só de
+  acrescentar; esta fatia liga-lhe o que o banco diz sem nunca o alterar (módulo `finance`, funcionalidade `finance.reconciliation`).
+- **Migration 32** (3 tabelas de tenant, RLS, auditadas): `bank_statement_batches`, `bank_statement_lines`,
+  `reconciliation_matches`. Permissões `reconciliation.read`, `reconciliation.manage` (importar e descartar lotes) e
+  `reconciliation.confirm` (confirmar e desfazer) — distintas, como pagar e confirmar.
+- **Extracto.** Só contas `BANK`. `POST /reconciliations/imports` recebe linhas já em JSON (o ficheiro CSV lê-se no browser):
+  data, valor assinado (negativo é saída, até 4 casas, texto), descrição, referência e `externalId` opcional. A **identidade** da
+  linha é o `externalId` do banco ou, sem ele, data + valor + descrição + a ordem entre linhas iguais do ficheiro; importar o
+  mesmo extracto duas vezes dá as mesmas identidades e as repetidas contam como `skipped` (sob `pg_advisory_xact_lock` por conta,
+  por isso importações concorrentes também não duplicam). Sem linhas novas não fica lote (200). Linhas importadas são imutáveis
+  (trigger, também por SQL). Um lote só se descarta se nenhuma das suas linhas teve correspondências, nem desfeitas
+  (409 `BATCH_HAS_MATCHES`).
+- **Estado derivado, nunca um campo.** Uma linha do extracto e um movimento de tesouraria estão `UNMATCHED`, `PARTIAL` ou
+  `MATCHED` conforme a soma absoluta das correspondências **activas** contra o seu valor absoluto. `GET /reconciliations/summary`
+  dá o saldo do livro, o total do extracto e o que falta conciliar de cada lado.
+- **Correspondência.** `POST /reconciliations/matches` liga linha e movimento: mesma conta, mesmo sentido (uma entrada não se
+  concilia com uma saída), valor positivo até ao que falta dos dois lados; sem valor concilia o máximo (pode ser parcial, e uma linha
+  pode ter várias correspondências e um movimento também). Bloqueia a linha e depois o movimento (`FOR UPDATE`, sempre por esta
+  ordem) e recalcula o que falta com os bloqueios tomados: confirmações concorrentes nunca conciliam mais do que cada lado vale
+  (409 `LINE_FULLY_MATCHED`, `ENTRY_FULLY_MATCHED`, `EXCEEDS_REMAINING`; 409 `PAIR_ALREADY_MATCHED`). Um par linha/movimento só
+  tem uma correspondência activa (índice parcial único). **Desfazer** exige motivo, marca a correspondência (`undone_at`,
+  `undo_reason`, quem desfez) e nunca a apaga (trigger: só se pode desfazer, uma vez, sem mexer em mais nada); repetir é idempotente.
+- **Sugestões** (`GET /reconciliations/lines/:id/suggestions`): candidatos da mesma conta e sentido a menos de 30 dias, com
+  pontuação — valor igual ao que falta (60) ou parcial (15), proximidade da data (até 30) e referência do pagamento citada no
+  extracto (10) — e as razões em texto. É só uma ordenação: nada se concilia sem `POST /reconciliations/matches`, e não há
+  conciliação automática.
+- **Auditoria e RLS.** As três tabelas são de tenant e auditadas (leitura da auditoria exige `reconciliation.read`); a matriz de
+  isolamento cobre as novas rotas (ids alheios → 404) e a imutabilidade por SQL.
+- **Corrige** `isIsoDate` do domínio das finanças, que rebentava (500) com meses ou dias fora de limites como `2026-13-01`.
+- **Desvios da spec / fica por fazer.** Sem correspondências 1-para-N automáticas nem regras de conciliação configuráveis; sem
+  importação de formatos bancários normalizados (OFX/MT940/CAMT) — só CSV lido no browser; sem saldo de abertura/fecho no
+  extracto nem verificação de continuidade; sem multi-moeda; sem criação de movimentos a partir de linhas sem correspondência
+  (comissões, juros: seriam um lançamento de tesouraria à parte, por decidir); sem eventos no outbox (não há consumidores).
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

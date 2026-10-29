@@ -9,7 +9,7 @@ export const FINANCE_MODULES = [
     group: 'finance',
     icon: 'card',
     settings: [{ key: 'baseCurrency', label: 'Moeda base', type: 'text', defaultValue: 'EUR' }],
-    // Módulo `finance` do servidor (M09): funcionalidades `finance.treasury|obligations|payments|supplier_invoices`.
+    // Módulo `finance` do servidor (M09): funcionalidades `finance.treasury|obligations|payments|reconciliation|supplier_invoices`.
     backendModule: 'finance',
     permissions: [
       { key: 'finance.read', name: 'Abrir a página de Tesouraria' },
@@ -20,6 +20,9 @@ export const FINANCE_MODULES = [
       { key: 'payment.read', name: 'Ver pagamentos e recebimentos' },
       { key: 'payment.manage', name: 'Registar, submeter e apagar pagamentos em rascunho' },
       { key: 'payment.confirm', name: 'Confirmar, falhar e reverter pagamentos (move dinheiro)' },
+      { key: 'reconciliation.read', name: 'Ver extractos importados e a conciliação' },
+      { key: 'reconciliation.manage', name: 'Importar extractos bancários e descartar lotes' },
+      { key: 'reconciliation.confirm', name: 'Confirmar e desfazer correspondências' },
       { key: 'supplier_invoice.read', name: 'Ver facturas de fornecedor' },
       {
         key: 'supplier_invoice.manage',
@@ -43,6 +46,11 @@ export const FINANCE_MODULES = [
         id: 'payments',
         name: 'Pagamentos e recebimentos',
         description: 'Confirmação atómica, reversão e idempotência.',
+      },
+      {
+        id: 'reconciliation',
+        name: 'Conciliação bancária',
+        description: 'Extractos importados, sugestões e correspondências confirmadas.',
       },
       {
         id: 'supplier_invoices',

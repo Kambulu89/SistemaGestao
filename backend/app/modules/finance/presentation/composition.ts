@@ -8,6 +8,7 @@ import type { RoundingMode } from '#core/decimal/index'
 import { AccountUseCases } from '#modules/finance/application/account_use_cases'
 import { CreditUseCases } from '#modules/finance/application/credit_use_cases'
 import { ObligationUseCases } from '#modules/finance/application/obligation_use_cases'
+import { ReconciliationUseCases } from '#modules/finance/application/reconciliation_use_cases'
 import { PaymentUseCases } from '#modules/finance/application/payment_use_cases'
 import { SupplierInvoiceUseCases } from '#modules/finance/application/supplier_invoice_use_cases'
 import type { References } from '#modules/finance/application/ports'
@@ -18,6 +19,7 @@ import {
   LucidPaymentStore,
   LucidSupplierInvoiceStore,
 } from '#modules/finance/infrastructure/lucid_finance'
+import { LucidReconciliationStore } from '#modules/finance/infrastructure/lucid_reconciliation'
 
 /** Organizações, Party, compras e configurações vêm dos seus módulos, pelas APIs públicas. */
 const references: References = {
@@ -85,6 +87,7 @@ function build() {
   const payments = new LucidPaymentStore()
   const invoices = new LucidSupplierInvoiceStore()
   const credit = new LucidCreditStore()
+  const reconciliation = new LucidReconciliationStore()
   const outbox = new LucidOutboxWriter()
   const clock = { now: () => new Date() }
   return {
@@ -100,6 +103,7 @@ function build() {
       clock
     ),
     credit: new CreditUseCases(uow, credit, obligations, clock),
+    reconciliation: new ReconciliationUseCases(uow, reconciliation, accounts),
   }
 }
 

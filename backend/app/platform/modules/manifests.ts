@@ -112,6 +112,7 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
         defaultEnabled: true,
       },
       { code: 'finance.payments', name: 'Pagamentos e recebimentos', defaultEnabled: true },
+      { code: 'finance.reconciliation', name: 'Conciliação bancária', defaultEnabled: true },
       {
         code: 'finance.supplier_invoices',
         name: 'Facturas de fornecedor',

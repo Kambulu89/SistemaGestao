@@ -101,6 +101,12 @@ export interface World {
     goodsReturn: string
     returnLine: string
     returnSourceLine: string
+    bankAccount: string
+    statementBatch: string
+    statementLine: string
+    matchedLine: string
+    reconEntry: string
+    reconMatch: string
   }
 }
 
@@ -894,6 +900,58 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     200
   )
   const payable = payables.find((r) => r.sourceId === validatedInvoice.id) as { id: string }
+  // Conciliação: uma conta bancária com um recebimento confirmado (1), um extracto de duas linhas (+1 e -3) e a primeira
+  // linha já conciliada com o movimento; a segunda fica por conciliar.
+  const bankAccount = await must<{ id: string }>(
+    await http.post('/api/v1/treasury-accounts', {
+      organizationId: organization.id,
+      code: 'BANCO',
+      name: 'Banco principal',
+      type: 'BANK',
+    }),
+    201
+  )
+  const bankPayment = await must<{ id: string }>(
+    await http.post('/api/v1/payments', {
+      organizationId: organization.id,
+      direction: 'INBOUND',
+      partyId: orgParty.id,
+      treasuryAccountId: bankAccount.id,
+      amount: '1',
+      allocations: [{ receivableId: receivable.id, amount: '1' }],
+    }),
+    201
+  )
+  await must(await http.post(`/api/v1/payments/${bankPayment.id}/confirm`, {}), 200)
+  const today = new Date().toISOString().slice(0, 10)
+  const imported = await must<{ batch: { id: string } }>(
+    await http.post('/api/v1/reconciliations/imports', {
+      accountId: bankAccount.id,
+      fileName: 'extracto.csv',
+      lines: [
+        { occurredOn: today, amount: '1', description: 'Recebimento' },
+        { occurredOn: today, amount: '-3', description: 'Comissão' },
+      ],
+    }),
+    201
+  )
+  const statementLines = await must<{ id: string; amountSigned: string }[]>(
+    await http.get(`/api/v1/reconciliations/lines?accountId=${bankAccount.id}`),
+    200
+  )
+  const matchedLine = statementLines.find((l) => l.amountSigned === '1.0000') as { id: string }
+  const openLine = statementLines.find((l) => l.amountSigned === '-3.0000') as { id: string }
+  const reconEntries = await must<{ id: string }[]>(
+    await http.get(`/api/v1/reconciliations/entries?accountId=${bankAccount.id}`),
+    200
+  )
+  const reconMatch = await must<{ id: string }>(
+    await http.post('/api/v1/reconciliations/matches', {
+      statementLineId: matchedLine.id,
+      treasuryEntryId: reconEntries[0].id,
+    }),
+    201
+  )
   // M08: um segundo armazém, uma transferência expedida e parcialmente recebida, outra em rascunho, uma contagem aberta
   // (no segundo armazém, para não congelar o das outras fluxos) e uma devolução a fornecedor em rascunho.
   for (const [documentType, prefix] of [
@@ -1078,6 +1136,12 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       goodsReturn: goodsReturn.id,
       returnLine: (goodsReturn.lines[0] as { id: string }).id,
       returnSourceLine: (sourceLines[0] as { sourceLineId: string }).sourceLineId,
+      bankAccount: bankAccount.id,
+      statementBatch: imported.batch.id,
+      statementLine: openLine.id,
+      matchedLine: matchedLine.id,
+      reconEntry: reconEntries[0].id,
+      reconMatch: reconMatch.id,
     },
   }
 }

@@ -142,3 +142,61 @@ export const updateSupplierInvoiceValidator = vine.compile(
 export const validateSupplierInvoiceValidator = vine.compile(
   vine.object({ overrideReason: vine.string().trim().maxLength(300).optional() })
 )
+
+// --- conciliação bancária ----------------------------------------------------------------------------
+
+const matchState = () => vine.enum(['UNMATCHED', 'PARTIAL', 'MATCHED'])
+const isoDate = () => vine.string().trim().maxLength(10)
+
+export const importStatementValidator = vine.compile(
+  vine.object({
+    accountId: uuid(),
+    fileName: vine.string().maxLength(200).nullable().optional(),
+    // Cada linha é validada pelo domínio (data, valor, descrição); aqui só a forma.
+    lines: vine
+      .array(
+        vine.object({
+          externalId: vine.string().maxLength(120).nullable().optional(),
+          occurredOn: vine.string().maxLength(10),
+          amount: vine.string().maxLength(30),
+          description: vine.string().maxLength(500).nullable().optional(),
+          reference: vine.string().maxLength(120).nullable().optional(),
+        })
+      )
+      .minLength(1)
+      .maxLength(1000),
+  })
+)
+
+export const listBatchesValidator = vine.compile(vine.object({ accountId: uuid(), ...page }))
+
+export const listStatementLinesValidator = vine.compile(
+  vine.object({
+    accountId: uuid(),
+    state: matchState().optional(),
+    from: isoDate().optional(),
+    to: isoDate().optional(),
+    batchId: uuid().optional(),
+    ...page,
+  })
+)
+
+export const listReconEntriesValidator = vine.compile(
+  vine.object({
+    accountId: uuid(),
+    state: matchState().optional(),
+    from: isoDate().optional(),
+    to: isoDate().optional(),
+    ...page,
+  })
+)
+
+export const reconSummaryValidator = vine.compile(vine.object({ accountId: uuid() }))
+
+export const confirmMatchValidator = vine.compile(
+  vine.object({
+    statementLineId: uuid(),
+    treasuryEntryId: uuid(),
+    amount: vine.string().trim().maxLength(30).optional(),
+  })
+)

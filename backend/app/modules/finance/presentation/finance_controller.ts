@@ -6,15 +6,21 @@ import { isUuid } from '#core/tenancy/index'
 import { financeServices } from '#modules/finance/presentation/composition'
 import type { ObligationKind } from '#modules/finance/domain/finance'
 import {
+  confirmMatchValidator,
   createAccountValidator,
   createPaymentValidator,
   createSupplierInvoiceValidator,
+  importStatementValidator,
   listAccountsValidator,
+  listBatchesValidator,
   listObligationsValidator,
   listPaymentsValidator,
+  listReconEntriesValidator,
+  listStatementLinesValidator,
   listSupplierInvoicesValidator,
   pageValidator,
   reasonValidator,
+  reconSummaryValidator,
   supplierInvoiceLineValidator,
   updateAccountValidator,
   updateSupplierInvoiceValidator,
@@ -276,6 +282,86 @@ export default class FinanceController {
     return envelope(
       ctx,
       await financeServices().supplierInvoices.voidInvoice(ctx.tenantContext, uuidParam(ctx, 'id'))
+    )
+  }
+
+  // --- conciliação bancária ------------------------------------------------------------------
+
+  async importStatement(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(importStatementValidator)
+    const result = await financeServices().reconciliation.importStatement(ctx.tenantContext, b)
+    ctx.response.status(result.batch ? 201 : 200)
+    return envelope(ctx, result)
+  }
+
+  async listBatches(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(listBatchesValidator, { data: ctx.request.qs() })
+    const { items, total } = await financeServices().reconciliation.listBatches(
+      ctx.tenantContext,
+      q.accountId,
+      q
+    )
+    return envelope(ctx, items, { total })
+  }
+
+  async discardBatch(ctx: HttpContext) {
+    await financeServices().reconciliation.discardBatch(ctx.tenantContext, uuidParam(ctx, 'id'))
+    return ctx.response.noContent()
+  }
+
+  async listStatementLines(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(listStatementLinesValidator, {
+      data: ctx.request.qs(),
+    })
+    const { items, total } = await financeServices().reconciliation.listLines(ctx.tenantContext, q)
+    return envelope(ctx, items, { total })
+  }
+
+  async showStatementLine(ctx: HttpContext) {
+    return envelope(
+      ctx,
+      await financeServices().reconciliation.getLine(ctx.tenantContext, uuidParam(ctx, 'id'))
+    )
+  }
+
+  async suggestions(ctx: HttpContext) {
+    return envelope(
+      ctx,
+      await financeServices().reconciliation.suggestions(ctx.tenantContext, uuidParam(ctx, 'id'))
+    )
+  }
+
+  async listReconEntries(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(listReconEntriesValidator, {
+      data: ctx.request.qs(),
+    })
+    const { items, total } = await financeServices().reconciliation.listEntries(
+      ctx.tenantContext,
+      q
+    )
+    return envelope(ctx, items, { total })
+  }
+
+  async reconSummary(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(reconSummaryValidator, { data: ctx.request.qs() })
+    return envelope(
+      ctx,
+      await financeServices().reconciliation.summary(ctx.tenantContext, q.accountId)
+    )
+  }
+
+  async confirmMatch(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(confirmMatchValidator)
+    const created = await financeServices().reconciliation.confirm(ctx.tenantContext, b)
+    ctx.response.status(201)
+    return envelope(ctx, created)
+  }
+
+  async undoMatch(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(reasonValidator)
+    return envelope(
+      ctx,
+      await financeServices().reconciliation.undo(ctx.tenantContext, uuidParam(ctx, 'id'), b.reason)
     )
   }
 }
