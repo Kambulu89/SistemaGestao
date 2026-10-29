@@ -786,13 +786,15 @@ interface CampaignRow {
   budget: string
   currency: string
   status: CampaignStatus
+  subject: string | null
+  message: string | null
   version: number
   created_at: Date
   updated_at: Date
 }
 
-const CAMPAIGN_COLUMNS = `id, name, channel, starts_at, ends_at, budget, currency, status, version, created_at,
-  updated_at`
+const CAMPAIGN_COLUMNS = `id, name, channel, starts_at, ends_at, budget, currency, status, subject, message, version,
+  created_at, updated_at`
 
 const toCampaign = (r: CampaignRow): Campaign => ({
   id: r.id,
@@ -803,6 +805,8 @@ const toCampaign = (r: CampaignRow): Campaign => ({
   budget: r.budget,
   currency: r.currency,
   status: r.status,
+  subject: r.subject,
+  message: r.message,
   version: r.version,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -875,8 +879,8 @@ export class LucidCampaignStore implements CampaignStore {
     }
     const clause = where.join(' and ')
     const rows = await trxOf(scope).rawQuery(
-      `select c.id, c.name, c.channel, c.starts_at, c.ends_at, c.budget, c.currency, c.status, c.version,
-              c.created_at, c.updated_at,
+      `select c.id, c.name, c.channel, c.starts_at, c.ends_at, c.budget, c.currency, c.status, c.subject, c.message,
+              c.version, c.created_at, c.updated_at,
               (select count(*)::int from campaign_members m where m.tenant_id = c.tenant_id and m.campaign_id = c.id) as total,
               (select count(*)::int from campaign_members m where m.tenant_id = c.tenant_id and m.campaign_id = c.id and m.status = 'TARGETED') as targeted,
               (select count(*)::int from campaign_members m where m.tenant_id = c.tenant_id and m.campaign_id = c.id and m.status = 'CONTACTED') as contacted,
@@ -909,9 +913,9 @@ export class LucidCampaignStore implements CampaignStore {
 
   async insert(scope: TenantScope, v: CampaignValues) {
     const result = await trxOf(scope).rawQuery(
-      `insert into campaigns (tenant_id, name, channel, starts_at, ends_at, budget, currency,
+      `insert into campaigns (tenant_id, name, channel, starts_at, ends_at, budget, currency, subject, message,
          created_by_membership_id, updated_by_membership_id)
-       values (?, ?, ?, ?, ?, ?, ?, ?, ?) returning ${CAMPAIGN_COLUMNS}`,
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning ${CAMPAIGN_COLUMNS}`,
       [
         tenantOf(scope),
         v.name,
@@ -920,6 +924,8 @@ export class LucidCampaignStore implements CampaignStore {
         v.endsAt,
         v.budget,
         v.currency,
+        v.subject,
+        v.message,
         actorOf(scope),
         actorOf(scope),
       ] as never[]
@@ -1042,6 +1048,15 @@ export class LucidCampaignStore implements CampaignStore {
     const result = await trxOf(scope).rawQuery(
       `${MEMBER_SELECT} where m.tenant_id = ? and m.campaign_id = ? and m.id = ?`,
       [tenantOf(scope), campaignId, memberId] as never[]
+    )
+    const [row] = result.rows as MemberRow[]
+    return row ? toMember(row) : null
+  }
+
+  async findMemberById(scope: TenantScope, memberId: string) {
+    const result = await trxOf(scope).rawQuery(
+      `${MEMBER_SELECT} where m.tenant_id = ? and m.id = ?`,
+      [tenantOf(scope), memberId] as never[]
     )
     const [row] = result.rows as MemberRow[]
     return row ? toMember(row) : null

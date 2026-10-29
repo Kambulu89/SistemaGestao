@@ -265,6 +265,16 @@ const CHANNEL_OPTIONS: readonly SelectOption[] = (Object.keys(CHANNEL) as Campai
           [ngModel]="budget()"
           (ngModelChange)="budget.set($event ?? '')"
         />
+        <app-input
+          label="Assunto da mensagem"
+          [ngModel]="subject()"
+          (ngModelChange)="subject.set($event ?? '')"
+        />
+        <app-input
+          label="Mensagem a enviar"
+          [ngModel]="message()"
+          (ngModelChange)="message.set($event ?? '')"
+        />
       </div>
       <ng-container dialogActions>
         <app-button variant="secondary" (click)="creating.set(false)">Cancelar</app-button>
@@ -339,6 +349,8 @@ export class CampaignsTab {
   protected readonly channel = signal<string>('EMAIL');
   protected readonly startsOn = signal('');
   protected readonly budget = signal('');
+  protected readonly subject = signal('');
+  protected readonly message = signal('');
 
   protected money = formatDecimal;
   protected describe = (e: unknown) => prospectingError(e, 'Pedido falhado.');
@@ -358,6 +370,8 @@ export class CampaignsTab {
     this.channel.set('EMAIL');
     this.startsOn.set(new Date().toISOString().slice(0, 10));
     this.budget.set('');
+    this.subject.set('');
+    this.message.set('');
     this.creating.set(true);
   }
 
@@ -378,6 +392,8 @@ export class CampaignsTab {
         channel: this.channel() as CampaignChannel,
         startsAt: `${this.startsOn().trim()}T00:00:00Z`,
         ...(this.budget().trim() ? { budget: this.budget().trim() } : {}),
+        ...(this.subject().trim() ? { subject: this.subject().trim() } : {}),
+        ...(this.message().trim() ? { message: this.message().trim() } : {}),
       })
       .subscribe({
         next: () => {

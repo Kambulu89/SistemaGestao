@@ -454,6 +454,9 @@ export interface CampaignValues {
   endsAt: string | null
   budget: string
   currency: string
+  /** O texto que o serviço de notificações entrega (assunto só no email). Sem mensagem, a campanha não se envia. */
+  subject: string | null
+  message: string | null
 }
 
 export interface CampaignInput {
@@ -463,6 +466,8 @@ export interface CampaignInput {
   endsAt?: unknown
   budget?: unknown
   currency?: unknown
+  subject?: unknown
+  message?: unknown
 }
 
 export function normalizeCampaign(
@@ -495,6 +500,13 @@ export function normalizeCampaign(
   if (typeof currency !== 'string' || !CURRENCY.test(currency)) {
     issues.push(issue('currency', 'INVALID_CURRENCY', 'Moeda ISO de três letras maiúsculas.'))
   }
+  const pickText = (key: 'subject' | 'message', max: number) => {
+    const value = optional(input[key], max)
+    if (value === false) issues.push(issue(key, 'INVALID', 'Texto inválido ou demasiado longo.'))
+    return value === undefined ? (base?.[key] ?? null) : value || null
+  }
+  const subject = pickText('subject', 200)
+  const message = pickText('message', 4000)
   if (issues.length > before) return null
   return {
     name: name as string,
@@ -503,6 +515,8 @@ export function normalizeCampaign(
     endsAt: endsAt as string | null,
     budget: showMoney(budget as string),
     currency: currency as string,
+    subject,
+    message,
   } satisfies CampaignValues
 }
 

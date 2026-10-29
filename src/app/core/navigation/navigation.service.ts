@@ -120,6 +120,12 @@ export class NavigationService {
             permission: TENANT_PERMISSIONS.automationsRead,
           },
           {
+            label: 'Notificações',
+            path: `${base}/notifications`,
+            icon: 'bell',
+            permission: TENANT_PERMISSIONS.notificationsRead,
+          },
+          {
             label: 'Entidades',
             path: `${base}/entities`,
             icon: 'cube',

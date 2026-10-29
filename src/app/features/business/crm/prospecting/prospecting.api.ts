@@ -115,6 +115,8 @@ export interface CampaignDto {
   readonly endsAt: string | null;
   readonly budget: string;
   readonly currency: string;
+  readonly subject: string | null;
+  readonly message: string | null;
   readonly status: CampaignStatus;
   readonly version: number;
   readonly summary: CampaignSummaryDto;
@@ -257,6 +259,8 @@ export class ProspectingApi {
     startsAt: string;
     endsAt?: string | null;
     budget?: string;
+    subject?: string | null;
+    message?: string | null;
   }): Observable<CampaignDto> {
     return this.api.post('campaigns', body);
   }

@@ -32,6 +32,8 @@ const OrdersController = () => import('#modules/orders/presentation/orders_contr
 const ProcurementController = () =>
   import('#modules/procurement/presentation/procurement_controller')
 const FinanceController = () => import('#modules/finance/presentation/finance_controller')
+const NotificationsController = () =>
+  import('#modules/notifications/presentation/notifications_controller')
 const ProspectingController = () =>
   import('#modules/prospecting/presentation/prospecting_controller')
 const InvoicingController = () => import('#modules/invoicing/presentation/invoicing_controller')
@@ -963,6 +965,47 @@ router
           .use(middleware.can({ permission: 'receipt.post' }))
       })
       .use(middleware.feature({ code: 'procurement.receipts' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Notificações e comunicação (S02): módulo `notifications` do registo. Funcionalidades `notifications.center` (o centro
+ * de cada pessoa e as suas preferências; `notification.read`) e `notifications.delivery` (entregas por canal e pedidos
+ * manuais; `communication.manage`). Marcar como lida afecta só o próprio destinatário e abrir o recurso revalida o acesso.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/notifications', [NotificationsController, 'list'])
+            router.post('/notifications/read-all', [NotificationsController, 'markAllRead'])
+            router.post('/notifications/:id/read', [NotificationsController, 'markRead'])
+            router.post('/notifications/:id/open', [NotificationsController, 'open'])
+            router.get('/notification-types', [NotificationsController, 'types'])
+            router.get('/notification-preferences', [NotificationsController, 'preferences'])
+            router.put('/notification-preferences', [NotificationsController, 'updatePreferences'])
+          })
+          .use(middleware.can({ permission: 'notification.read' }))
+      })
+      .use(middleware.feature({ code: 'notifications.center' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/notification-deliveries', [NotificationsController, 'listDeliveries'])
+            router.post('/notification-deliveries/:id/retry', [
+              NotificationsController,
+              'retryDelivery',
+            ])
+            router.post('/notification-requests', [NotificationsController, 'createRequest'])
+          })
+          .use(middleware.can({ permission: 'communication.manage' }))
+      })
+      .use(middleware.feature({ code: 'notifications.delivery' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

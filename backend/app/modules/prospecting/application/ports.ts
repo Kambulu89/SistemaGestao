@@ -262,6 +262,7 @@ export interface CampaignStore {
     memberId: string
   ): Promise<CampaignMember | null>
   removeMember(scope: TenantScope, campaignId: string, memberId: string): Promise<boolean>
+  findMemberById(scope: TenantScope, memberId: string): Promise<CampaignMember | null>
   setMemberStatus(
     scope: TenantScope,
     memberId: string,

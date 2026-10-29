@@ -401,6 +401,7 @@ export class LeadUseCases {
           partyId,
           customerId: customer.id,
           opportunityId: opportunity.id,
+          ownerMembershipId: lead.ownerMembershipId,
           partyCreated,
           customerCreated,
         },
@@ -749,6 +750,8 @@ export class CampaignUseCases {
       endsAt?: unknown
       budget?: unknown
       currency?: unknown
+      subject?: unknown
+      message?: unknown
       organizationId?: unknown
     }
   ): Promise<Campaign> {
@@ -775,6 +778,8 @@ export class CampaignUseCases {
       endsAt?: unknown
       budget?: unknown
       currency?: unknown
+      subject?: unknown
+      message?: unknown
       expectedVersion: number
     }
   ): Promise<Campaign> {
@@ -904,6 +909,77 @@ export class CampaignUseCases {
   }
 
   /**
+   * O que o serviço de notificações precisa para entregar o contacto de um destinatário: canal, texto e destino. `null` se
+   * a campanha não tem canal directo, não tem mensagem ou o destinatário não tem destino.
+   */
+  contactOf(
+    context: TenantContext,
+    memberId: string
+  ): Promise<{
+    campaignId: string
+    channel: Campaign['channel']
+    subject: string
+    message: string
+    destination: string
+  } | null> {
+    return this.uow.run(async (scope) => {
+      const member = await this.campaigns.findMemberById(scope, memberId)
+      if (!member) return null
+      const campaign = await this.campaigns.find(scope, member.campaignId)
+      const kind = campaign ? destinationKind(campaign.channel) : null
+      if (!campaign || kind === null || !campaign.message) return null
+      const destination = await this.destinationOf(context, scope, member, kind)
+      if (!destination) return null
+      return {
+        campaignId: campaign.id,
+        channel: campaign.channel,
+        subject: campaign.subject ?? campaign.name,
+        message: campaign.message,
+        destination,
+      }
+    }, context)
+  }
+
+  /**
+   * Confirma, no momento da entrega, que o destinatário ainda pode receber comunicação promocional: a lead não recusou
+   * entretanto e o destino não entrou na lista de exclusão.
+   */
+  isContactAllowed(
+    context: TenantContext,
+    memberId: string,
+    channel: Campaign['channel'],
+    destination: string
+  ): Promise<boolean> {
+    return this.uow.run(async (scope) => {
+      const member = await this.campaigns.findMemberById(scope, memberId)
+      if (!member || member.status === 'OPTED_OUT') return false
+      if (member.leadId) {
+        const lead = await this.leads.find(scope, member.leadId)
+        if (!lead || lead.consentStatus !== 'OPT_IN') return false
+      }
+      const kind = destinationKind(channel)
+      if (kind === null) return false
+      const normalized = exclusionValue(kind, destination)
+      if (!normalized) return false
+      const excluded = await this.exclusions.excluded(scope, kind, [normalized])
+      return !excluded.has(normalized)
+    }, context)
+  }
+
+  private async destinationOf(
+    context: TenantContext,
+    scope: TenantScope,
+    member: CampaignMember,
+    kind: ExclusionKind
+  ): Promise<string | null> {
+    if (member.leadId) {
+      const lead = await this.leads.find(scope, member.leadId)
+      return (kind === 'EMAIL' ? lead?.email : lead?.phone) ?? null
+    }
+    return member.partyId ? this.references.partyDestination(context, member.partyId, kind) : null
+  }
+
+  /**
    * O destinatário recusa comunicações: fica `OPTED_OUT` nesta campanha, a lead passa a `OPT_OUT` e o seu email e
    * telefone entram na lista de exclusão, para nunca mais receber comunicação promocional de qualquer campanha.
    */
@@ -979,6 +1055,12 @@ export class CampaignUseCases {
         )
       }
       const kind = destinationKind(campaign.channel)
+      if (kind !== null && !campaign.message) {
+        throw ApiError.conflict(
+          'CAMPAIGN_NO_MESSAGE',
+          'Escreva a mensagem da campanha antes de a enviar.'
+        )
+      }
       const targets = await this.campaigns.membersToSend(scope, id)
       const destinations = new Map<string, string | null>()
       for (const t of targets) {

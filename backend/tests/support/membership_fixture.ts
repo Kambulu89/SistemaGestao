@@ -59,6 +59,10 @@ export async function deleteTestTenants() {
       // A lead convertida aponta para a oportunidade criada: desfaz-se a ligação antes de apagar uma e outra.
       await trx.from('leads').where('tenant_id', id).update({ opportunity_id: null })
       for (const table of [
+        'notifications',
+        'notification_deliveries',
+        'notification_requests',
+        'notification_preferences',
         'campaign_members',
         'marketing_exclusions',
         'campaigns',

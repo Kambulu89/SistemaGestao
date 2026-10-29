@@ -69,6 +69,7 @@ const PROSPECTING_ERRORS: Readonly<Record<string, string>> = {
   PARTY_NAME_INCOMPLETE:
     'Indique nome e apelido na lead, ou escolha uma pessoa ou organização existente.',
   LEAD_DISQUALIFIED: 'Uma lead desqualificada tem de ser requalificada antes de converter.',
+  CAMPAIGN_NO_MESSAGE: 'Indique o assunto e a mensagem da campanha antes de a enviar.',
   LEAD_CONVERTED: 'Uma lead convertida já não muda de estado.',
   OPPORTUNITY_CLOSED: 'Uma oportunidade ganha ou perdida já não se move nem se altera.',
   LOSS_REASON_REQUIRED: 'Indique o motivo da perda.',

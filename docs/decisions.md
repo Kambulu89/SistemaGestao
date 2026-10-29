@@ -911,6 +911,43 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
   de leads nem fusão de duplicados, sem importação de leads, sem agendamento de envios nem custo real por campanha (só o
   orçamento); o quadro move por selecção e não por arrastar; o consentimento de uma Party vive só na lista de exclusão.
 
+## D-058 Notificações e comunicação (S02): pedidos idempotentes, entregas por canal com concessão e cifra, consentimento revalidado à entrega (aceite — fatia 6.2)
+
+- **Contexto.** A especificação (S02) pede centro de notificações por pessoa, preferências por tipo e canal, entrega por canal com
+  retry e deduplicação, e ligações que revalidam o acesso ao recurso. Até aqui o `campaign.contact_requested` (M02), as tarefas
+  de aprovação e as automações não tinham como chegar às pessoas.
+- **Módulo `notifications`** (funcionalidades `notifications.center` e `notifications.delivery`; permissões `notification.read`
+  para o próprio centro e `communication.manage` para entregas, repetição e envio de avisos). Migrations 34 e 35 (4 tabelas de
+  tenant, RLS, auditadas): `notification_requests`, `notification_deliveries`, `notifications`, `notification_preferences`; a 35 junta
+  `subject` e `message` às campanhas.
+- **Pedidos idempotentes.** Cada pedido tem uma `dedupe_key` única por tenant: repetir (ou reprocessar um evento do outbox) não
+  duplica. Os consumidores do outbox são idempotentes pela inbox. Um registo central de **regras** (evento → tipo, destinatários,
+  canais), **guardas de consentimento**, **ligações a recursos** e **fornecedores por canal** é preenchido pelos módulos
+  (`registerNotificationRule|ConsentGuard|ResourceLink|ChannelProvider`); o núcleo de notificações não conhece os módulos de negócio.
+- **Classificação.** `MANDATORY` (ignora preferências e horas de silêncio, nunca se desactiva), `OPERATIONAL` e `PROMOTIONAL`.
+  As preferências são por tipo e canal (por omissão tudo activo); as horas de silêncio **adiam** só as entregas por canais
+  externos. O centro (`IN_APP`) é sempre imediato.
+- **Entregas.** Estados `QUEUED → SENT → DELIVERED | FAILED`: `SENT` quer dizer apenas «aceite pelo fornecedor»; só a confirmação
+  do fornecedor dá `DELIVERED`. O destino vai **cifrado** (AES-256-GCM) com uma dica mascarada; a administração vê só a dica, o
+  tipo, o estado e o erro, nunca o texto. O trabalhador (`node ace notifications:work`) reclama com `FOR UPDATE SKIP LOCKED` e
+  uma **concessão** (`locked_until`), e chama o fornecedor **fora de qualquer transacção**, com o id da entrega como chave de
+  deduplicação.
+- **Retry sem duplicar.** Uma recusa definitiva do fornecedor (`ProviderError`) repete-se com recuo. Um resultado **ambíguo**
+  (timeout, erro de rede, concessão expirada por processo caído) só se repete sozinho se o fornecedor **deduplica**; caso contrário
+  fica `FAILED` com `AMBIGUOUS_NO_DEDUPE` e só se repete por decisão de quem administra (repetir pode duplicar). Dois trabalhadores
+  em simultâneo enviam cada entrega uma só vez.
+- **Promoções.** Uma entrega promocional **revalida o consentimento no momento de entregar** através da guarda registada (falha
+  fechada: sem guarda ou erro, não envia). Quem recusa entre o pedido e a entrega nunca recebe a mensagem. As campanhas (M02)
+  passam a ter assunto e mensagem (409 `CAMPAIGN_NO_MESSAGE` ao enviar sem mensagem) e o pedido de contacto gera a entrega; a
+  conversão de uma lead avisa o responsável.
+- **Abrir a ligação.** `POST /notifications/:id/open` revalida a permissão e a existência do recurso **no momento de abrir**
+  (403 `RESOURCE_ACCESS_REVOKED`); a notificação em si não dá acesso.
+- **Fornecedores.** O fornecedor de email/SMS/WhatsApp continua uma decisão de produto em aberto (§11.2). A implementação traz um
+  conector HTTP genérico, activo só quando `NOTIFICATIONS_<CANAL>_URL` está definido (opcionalmente `_TOKEN` e `_DEDUPE`). Sem URL,
+  a entrega externa falha com `PROVIDER_NOT_CONFIGURED` e repete-se depois de configurada: **nunca finge que enviou**.
+- **Fora desta fatia.** Sem push, sem Web Push nem WebSocket (o centro é por pedido), sem modelos/PDF (S01), sem entrega das
+  notificações de aprovações e automações (registam-se regras quando esses módulos as pedirem), sem digest nem agregação.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

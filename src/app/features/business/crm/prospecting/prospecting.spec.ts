@@ -94,6 +94,8 @@ const campaign = (over: Partial<CampaignDto> = {}): CampaignDto => ({
   endsAt: null,
   budget: '500.0000',
   currency: 'AOA',
+  subject: null,
+  message: null,
   status: 'ACTIVE',
   version: 1,
   summary: { total: 2, targeted: 1, contacted: 1, responded: 0, optedOut: 0 },

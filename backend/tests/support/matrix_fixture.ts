@@ -110,6 +110,8 @@ export interface World {
     campaign: string
     campaignMember: string
     exclusion: string
+    notification: string
+    delivery: string
     statementBatch: string
     statementLine: string
     matchedLine: string
@@ -169,6 +171,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       'catalog',
       'customers',
       'prospecting',
+      'notifications',
       'orders',
       'inventory',
       'invoicing',
@@ -186,6 +189,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await must(await http.post('/api/v1/tenant/modules/procurement/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/finance/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/prospecting/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/notifications/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -974,6 +978,27 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // S02: um aviso manual ao administrador (pedido, entrega interna e notificação no centro) e uma preferência.
+  await must(
+    await http.post('/api/v1/notification-requests', {
+      typeCode: 'system.message',
+      recipientMembershipIds: [admin.membershipId],
+      title: 'Aviso comum',
+      body: 'Texto comum aos dois tenants',
+    }),
+    201
+  )
+  await must(
+    await http.put('/api/v1/notification-preferences', {
+      preferences: [{ typeCode: 'crm.lead.converted', channel: 'IN_APP', enabled: false }],
+    }),
+    200
+  )
+  const notifications = await must<{ id: string }[]>(await http.get('/api/v1/notifications'), 200)
+  const deliveries = await must<{ id: string }[]>(
+    await http.get('/api/v1/notification-deliveries'),
+    200
+  )
   // Conciliação: uma conta bancária com um recebimento confirmado (1), um extracto de duas linhas (+1 e -3) e a primeira
   // linha já conciliada com o movimento; a segunda fica por conciliar.
   const bankAccount = await must<{ id: string }>(
@@ -1219,6 +1244,8 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       campaign: campaign.id,
       campaignMember: (campaignMembers[0] as { id: string }).id,
       exclusion: exclusion.id,
+      notification: (notifications[0] as { id: string }).id,
+      delivery: (deliveries[0] as { id: string }).id,
       statementBatch: imported.batch.id,
       statementLine: openLine.id,
       matchedLine: matchedLine.id,

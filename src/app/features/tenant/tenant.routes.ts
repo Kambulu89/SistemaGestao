@@ -103,6 +103,16 @@ export const TENANT_ROUTES: Routes = [
     loadComponent: () =>
       import('../dynamic-core/automations/automations-page').then((m) => m.AutomationsPage),
   },
+  // Centro de notificações (S02): caixa pessoal, preferências e, para quem gere, entregas.
+  {
+    path: 'notifications',
+    pathMatch: 'full',
+    title: 'Notificações',
+    data: { breadcrumb: 'Notificações' },
+    canActivate: [requirePermission(TENANT_PERMISSIONS.notificationsRead)],
+    loadComponent: () =>
+      import('./notifications/notifications-page').then((m) => m.NotificationsPage),
+  },
   // Core Dinâmico (C10): definição de entidades e campos. Cada página tem a sua permissão.
   {
     path: 'entities',

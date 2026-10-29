@@ -44,6 +44,21 @@ export const envSchema = {
    */
   MAIL_DRIVER: Env.schema.enum(['none', 'dev-redis'] as const),
 
+  /**
+   * Conectores HTTP de comunicação (S02), opcionais: um canal externo só entrega quando o seu URL está configurado. O
+   * conector recebe um POST JSON `{ to, subject, body, dedupeKey }` com `Authorization: Bearer <token>` e
+   * `Idempotency-Key`, e responde `{ id }`. `*_DEDUPE=true` declara que o fornecedor deduplica por essa chave.
+   */
+  NOTIFICATIONS_EMAIL_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  NOTIFICATIONS_EMAIL_TOKEN: Env.schema.string.optional(),
+  NOTIFICATIONS_EMAIL_DEDUPE: Env.schema.boolean.optional(),
+  NOTIFICATIONS_SMS_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  NOTIFICATIONS_SMS_TOKEN: Env.schema.string.optional(),
+  NOTIFICATIONS_SMS_DEDUPE: Env.schema.boolean.optional(),
+  NOTIFICATIONS_WHATSAPP_URL: Env.schema.string.optional({ format: 'url', tld: false }),
+  NOTIFICATIONS_WHATSAPP_TOKEN: Env.schema.string.optional(),
+  NOTIFICATIONS_WHATSAPP_DEDUPE: Env.schema.boolean.optional(),
+
   /** Só para o seeder de demonstração (nunca em produção). Sem valor por omissão. */
   DEMO_USER_PASSWORD: Env.schema.string.optional(),
 

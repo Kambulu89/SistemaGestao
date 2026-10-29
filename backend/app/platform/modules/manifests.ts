@@ -41,6 +41,26 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     ],
   },
   {
+    code: 'notifications',
+    name: 'Notificações e comunicação',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [{ code: 'core', constraint: '*', optional: false }],
+    features: [
+      {
+        code: 'notifications.center',
+        name: 'Centro de notificações e preferências',
+        defaultEnabled: true,
+      },
+      {
+        code: 'notifications.delivery',
+        name: 'Entregas por canal e administração',
+        defaultEnabled: true,
+      },
+    ],
+  },
+  {
     code: 'prospecting',
     name: 'Prospecção e CRM',
     kind: 'MODULE',

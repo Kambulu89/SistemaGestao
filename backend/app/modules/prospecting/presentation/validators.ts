@@ -162,6 +162,8 @@ export const listCampaignsValidator = vine.compile(
   })
 )
 const campaignBody = {
+  subject: vine.string().maxLength(200).nullable().optional(),
+  message: vine.string().maxLength(4000).nullable().optional(),
   startsAt: vine.string().trim().maxLength(40).optional(),
   endsAt: vine.string().trim().maxLength(40).nullable().optional(),
   budget: vine.string().trim().maxLength(30).optional(),

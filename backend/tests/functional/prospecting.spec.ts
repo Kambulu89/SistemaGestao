@@ -741,6 +741,8 @@ test.group('prospecção | campanhas', (group) => {
         channel: 'EMAIL',
         startsAt: START,
         budget: '500',
+        subject: 'Novidades',
+        message: 'Conheça a nossa nova gama.',
         ...extra,
       }),
       201

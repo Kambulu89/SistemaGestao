@@ -428,6 +428,17 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Enviar uma campanha (pedir o contacto aos destinatários que o permitem).',
   },
   {
+    code: 'notification.read',
+    moduleCode: 'notifications',
+    description: 'Ver o próprio centro de notificações e gerir as suas preferências.',
+  },
+  {
+    code: 'communication.manage',
+    moduleCode: 'notifications',
+    description:
+      'Consultar as entregas e as falhas de comunicação (dados minimizados), repeti-las e enviar avisos aos membros.',
+  },
+  {
     code: 'receivable.read',
     moduleCode: 'finance',
     description: 'Ver contas a receber e a exposição de crédito dos clientes.',
