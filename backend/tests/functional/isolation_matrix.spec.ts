@@ -130,6 +130,12 @@ async function snapshot(world: World) {
     payment: await get(`/api/v1/payments/${world.ids.payment}`),
     supplierInvoices: await get('/api/v1/supplier-invoices'),
     supplierInvoice: await get(`/api/v1/supplier-invoices/${world.ids.supplierInvoice}`),
+    transfers: await get('/api/v1/stock-transfers'),
+    transfer: await get(`/api/v1/stock-transfers/${world.ids.transfer}`),
+    counts: await get('/api/v1/stock-counts'),
+    count: await get(`/api/v1/stock-counts/${world.ids.count}`),
+    returns: await get('/api/v1/goods-returns'),
+    goodsReturn: await get(`/api/v1/goods-returns/${world.ids.goodsReturn}`),
     contracts: await get('/api/v1/contracts'),
     contract: await get(`/api/v1/contracts/${world.ids.contract}`),
     invoices: await get('/api/v1/invoices'),
@@ -353,6 +359,49 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['delete', `/supplier-invoices/${o.supplierInvoice}/lines/${o.supplierInvoiceLine}`],
     ['post', `/supplier-invoices/${o.supplierInvoice}/validate`, {}],
     ['post', `/supplier-invoices/${o.supplierInvoice}/void`, {}],
+    ['get', `/stock-transfers/${o.transfer}`],
+    ['patch', `/stock-transfers/${o.draftTransfer}`, { expectedVersion: 1, notes: 'x' }],
+    ['delete', `/stock-transfers/${o.draftTransfer}`],
+    [
+      'post',
+      `/stock-transfers/${o.draftTransfer}/lines`,
+      { variantId: me.ids.variant, quantity: '1' },
+    ],
+    ['delete', `/stock-transfers/${o.draftTransfer}/lines/${o.draftTransferLine}`],
+    ['post', `/stock-transfers/${o.draftTransfer}/dispatch`, {}],
+    [
+      'post',
+      `/stock-transfers/${o.transfer}/receive`,
+      { lines: [{ lineId: me.ids.transferLine, quantity: '1' }] },
+    ],
+    ['post', `/stock-transfers/${o.draftTransfer}/cancel`, { reason: 'x' }],
+    ['get', `/stock-counts/${o.count}`],
+    ['delete', `/stock-counts/${o.count}`],
+    ['post', `/stock-counts/${o.count}/open`, {}],
+    [
+      'put',
+      `/stock-counts/${o.count}/counts`,
+      { lines: [{ lineId: me.ids.countLine, countedQty: '1' }] },
+    ],
+    [
+      'post',
+      `/stock-counts/${o.count}/lines`,
+      { variantId: me.ids.variant, locationId: me.ids.location },
+    ],
+    ['post', `/stock-counts/${o.count}/review`, {}],
+    ['post', `/stock-counts/${o.count}/reopen`, {}],
+    ['post', `/stock-counts/${o.count}/post`, {}],
+    ['post', `/stock-counts/${o.count}/cancel`, { reason: 'x' }],
+    ['get', `/goods-returns/${o.goodsReturn}`],
+    ['delete', `/goods-returns/${o.goodsReturn}`],
+    [
+      'post',
+      `/goods-returns/${o.goodsReturn}/lines`,
+      { sourceLineId: me.ids.returnSourceLine, quantity: '1' },
+    ],
+    ['delete', `/goods-returns/${o.goodsReturn}/lines/${o.returnLine}`],
+    ['post', `/goods-returns/${o.goodsReturn}/approve`, {}],
+    ['post', `/goods-returns/${o.goodsReturn}/post`, {}],
     ['get', `/contracts/${o.contract}`],
     ['patch', `/contracts/${o.contract}`, { ...stale, title: 'x' }],
     ['post', `/contracts/${o.contract}/activate`, {}],
@@ -525,6 +574,9 @@ test.group('matriz de isolamento', (group) => {
       'requisitions',
       'purchases',
       'receipts',
+      'transfers',
+      'counts',
+      'returns',
       'treasuryAccounts',
       'receivables',
       'payables',
@@ -749,6 +801,39 @@ test.group('matriz de isolamento', (group) => {
         'post',
         `/purchase-requisitions/${a.ids.requisition}/lines`,
         { variantId: bi.variant, quantity: '1' },
+        422,
+      ],
+      [
+        'transferência com o armazém de B',
+        'post',
+        '/stock-transfers',
+        { sourceWarehouseId: a.ids.warehouse, destinationWarehouseId: bi.secondWarehouse },
+        422,
+      ],
+      [
+        'linha de transferência com a variante de B',
+        'post',
+        `/stock-transfers/${a.ids.draftTransfer}/lines`,
+        { variantId: bi.variant, quantity: '1' },
+        422,
+      ],
+      [
+        'contagem com o armazém de B',
+        'post',
+        '/stock-counts',
+        { warehouseId: bi.secondWarehouse },
+        422,
+      ],
+      [
+        'devolução de um documento de B',
+        'post',
+        '/goods-returns',
+        {
+          direction: 'SUPPLIER',
+          sourceDocumentId: bi.goodsReceipt,
+          warehouseId: a.ids.warehouse,
+          reason: 'x',
+        },
         422,
       ],
       [
@@ -1246,7 +1331,9 @@ test.group('matriz de isolamento', (group) => {
       if (
         table === 'rule_evaluations' ||
         table === 'state_history' ||
-        table === 'stock_movements'
+        table === 'stock_movements' ||
+        table === 'transfer_receipts' ||
+        table === 'transfer_receipt_lines'
       ) {
         // Registo de avaliações: só acrescenta (trigger de imutabilidade); RLS continua a filtrar a leitura.
         for (const sql of [
@@ -1303,6 +1390,12 @@ test.group('matriz de isolamento', (group) => {
         'purchase_requisitions',
         'purchase_orders',
         'goods_receipts',
+        'stock_transfers',
+        'transfer_lines',
+        'stock_counts',
+        'count_lines',
+        'goods_returns',
+        'return_lines',
         'treasury_accounts',
         'receivables',
         'payables',
@@ -1319,7 +1412,7 @@ test.group('matriz de isolamento', (group) => {
       assert.match(
         moved.message,
         immutable
-          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY/
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY/
           : /row-level security/,
         `${table}: mover linhas para B`
       )

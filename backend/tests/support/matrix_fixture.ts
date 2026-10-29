@@ -91,6 +91,16 @@ export interface World {
     payment: string
     supplierInvoice: string
     supplierInvoiceLine: string
+    secondWarehouse: string
+    transfer: string
+    transferLine: string
+    draftTransfer: string
+    draftTransferLine: string
+    count: string
+    countLine: string
+    goodsReturn: string
+    returnLine: string
+    returnSourceLine: string
   }
 }
 
@@ -884,6 +894,96 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     200
   )
   const payable = payables.find((r) => r.sourceId === validatedInvoice.id) as { id: string }
+  // M08: um segundo armazém, uma transferência expedida e parcialmente recebida, outra em rascunho, uma contagem aberta
+  // (no segundo armazém, para não congelar o das outras fluxos) e uma devolução a fornecedor em rascunho.
+  for (const [documentType, prefix] of [
+    ['STOCK_TRANSFER', 'TRF {SERIES}/{YYYY}/'],
+    ['STOCK_COUNT', 'INV {SERIES}/{YYYY}/'],
+    ['GOODS_RETURN', 'DEV {SERIES}/{YYYY}/'],
+  ] as const) {
+    await must(
+      await http.post('/api/v1/sequences', {
+        organizationId: organization.id,
+        documentType,
+        series: 'A',
+        prefixTemplate: prefix,
+      }),
+      201
+    )
+  }
+  const secondWarehouse = await must<{ id: string; locations: { id: string }[] }>(
+    await http.post('/api/v1/warehouses', {
+      organizationId: organization.id,
+      code: 'ARM-2',
+      name: 'Secundário',
+    }),
+    201
+  )
+  await must(
+    await http.post('/api/v1/stock-adjustments', {
+      variantId: variant.id,
+      locationId: location.id,
+      quantityDelta: '20',
+      unitCost: '3',
+      reason: 'Stock para transferir',
+    }),
+    201
+  )
+  const transferBody = {
+    sourceWarehouseId: warehouse.id,
+    destinationWarehouseId: secondWarehouse.id,
+    lines: [{ variantId: variant.id, quantity: '5' }],
+  }
+  const transferDraft = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/stock-transfers', transferBody),
+    201
+  )
+  const dispatched = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/stock-transfers', transferBody),
+    201
+  )
+  await must(await http.post(`/api/v1/stock-transfers/${dispatched.id}/dispatch`, {}), 200)
+  await must(
+    await http.post(`/api/v1/stock-transfers/${dispatched.id}/receive`, {
+      lines: [{ lineId: (dispatched.lines[0] as { id: string }).id, quantity: '2' }],
+    }),
+    200
+  )
+  const counting = await must<{ id: string }>(
+    await http.post('/api/v1/stock-counts', { warehouseId: secondWarehouse.id }),
+    201
+  )
+  const openCount = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post(`/api/v1/stock-counts/${counting.id}/open`, {}),
+    200
+  )
+  const receiptToReturn = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/goods-receipts', {
+      purchaseOrderId: ordered.id,
+      warehouseId: warehouse.id,
+      lines: [{ purchaseLineId: (ordered.lines[0] as { id: string }).id, quantity: '2' }],
+    }),
+    201
+  )
+  await must(await http.post(`/api/v1/goods-receipts/${receiptToReturn.id}/post`, {}), 200)
+  const sourceLines = await must<{ sourceLineId: string }[]>(
+    await http.get(
+      `/api/v1/goods-returns/source-lines?direction=SUPPLIER&sourceDocumentId=${receiptToReturn.id}`
+    ),
+    200
+  )
+  const goodsReturn = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/goods-returns', {
+      direction: 'SUPPLIER',
+      sourceDocumentId: receiptToReturn.id,
+      warehouseId: warehouse.id,
+      reason: 'Mercadoria com defeito',
+      lines: [
+        { sourceLineId: (sourceLines[0] as { sourceLineId: string }).sourceLineId, quantity: '1' },
+      ],
+    }),
+    201
+  )
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -968,6 +1068,16 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       payment: payment.id,
       supplierInvoice: supplierInvoice.id,
       supplierInvoiceLine: (supplierInvoice.lines[0] as { id: string }).id,
+      secondWarehouse: secondWarehouse.id,
+      transfer: dispatched.id,
+      transferLine: (dispatched.lines[0] as { id: string }).id,
+      draftTransfer: transferDraft.id,
+      draftTransferLine: (transferDraft.lines[0] as { id: string }).id,
+      count: openCount.id,
+      countLine: (openCount.lines[0] as { id: string }).id,
+      goodsReturn: goodsReturn.id,
+      returnLine: (goodsReturn.lines[0] as { id: string }).id,
+      returnSourceLine: (sourceLines[0] as { sourceLineId: string }).sourceLineId,
     },
   }
 }

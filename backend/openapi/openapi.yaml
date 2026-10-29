@@ -7000,3 +7000,645 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /stock-transfers:
+    get:
+      summary: Transferências entre armazéns (transfer.read; funcionalidade inventory.transfers)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema:
+              { type: string, enum: [DRAFT, DISPATCHED, PARTIAL_RECEIVED, RECEIVED, CANCELLED] },
+          }
+        - { name: warehouseId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Transferências; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma transferência em rascunho (transfer.manage)
+      description: |
+        Só entre armazéns da mesma organização, activos e não técnicos (422 `DIFFERENT_ORGANIZATION`). Os locais omissos são o primeiro local activo de cada armazém.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceWarehouseId, destinationWarehouseId]
+              properties:
+                sourceWarehouseId: { type: string, format: uuid }
+                destinationWarehouseId: { type: string, format: uuid }
+                notes: { type: string, nullable: true }
+                lines:
+                  {
+                    type: array,
+                    maxItems: 200,
+                    items:
+                      {
+                        type: object,
+                        required: [variantId, quantity],
+                        properties:
+                          {
+                            variantId: { type: string, format: uuid },
+                            quantity: { type: string },
+                            lotId: { type: string, format: uuid, nullable: true },
+                            sourceLocationId: { type: string, format: uuid, nullable: true },
+                            destinationLocationId: { type: string, format: uuid, nullable: true },
+                          },
+                      },
+                  }
+      responses:
+        '201': { description: 'Transferência com linhas.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-transfers/{id}:
+    get:
+      summary: Uma transferência com linhas, o que falta em trânsito e as recepções (transfer.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Transferência.' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera as notas de uma transferência em rascunho (transfer.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, notes]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                notes: { type: string, nullable: true }
+      responses:
+        '200': { description: 'Transferência.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma transferência em rascunho (transfer.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /stock-transfers/{id}/lines:
+    post:
+      summary: Acrescenta uma linha (transfer.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, quantity]
+              properties:
+                variantId: { type: string, format: uuid }
+                quantity: { type: string }
+                lotId: { type: string, format: uuid, nullable: true }
+                sourceLocationId: { type: string, format: uuid, nullable: true }
+                destinationLocationId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201': { description: 'Transferência.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-transfers/{id}/lines/{lineId}:
+    delete:
+      summary: Remove uma linha (transfer.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Transferência.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /stock-transfers/{id}/dispatch:
+    post:
+      summary: Expede — tira da origem e põe em trânsito (transfer.dispatch)
+      description: |
+        Atribui o número (sequência STOCK_TRANSFER) e, na mesma transacção, lança por linha a saída da origem e a entrada na localização técnica «em trânsito», ao custo médio da origem. Idempotente. 409 `INSUFFICIENT_STOCK` se não houver disponível; 409 `LOCATION_FROZEN` se o local está em contagem.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Transferência expedida.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /stock-transfers/{id}/receive:
+    post:
+      summary: Recebe (parte de) o que está em trânsito (transfer.receive)
+      description: |
+        Tira de trânsito e dá entrada no destino, por linha. Nunca se recebe mais do que o que está em trânsito (422 `EXCEEDS_IN_TRANSIT`); o que falta continua em trânsito. Com `Idempotency-Key`, repetir o pedido não recebe outra vez.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: Idempotency-Key,
+            in: header,
+            required: false,
+            schema: { type: string, maxLength: 100 },
+          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lines]
+              properties:
+                lines:
+                  {
+                    type: array,
+                    minItems: 1,
+                    maxItems: 200,
+                    items:
+                      {
+                        type: object,
+                        required: [lineId, quantity],
+                        properties:
+                          { lineId: { type: string, format: uuid }, quantity: { type: string } },
+                      },
+                  }
+      responses:
+        '200': { description: 'Transferência `PARTIAL_RECEIVED` ou `RECEIVED`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-transfers/{id}/cancel:
+    post:
+      summary: Cancela uma transferência em rascunho, com motivo (transfer.manage)
+      description: |
+        Depois de expedida já não se cancela (409 `TRANSFER_NOT_CANCELLABLE`). Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: 'Transferência cancelada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-counts:
+    get:
+      summary: Contagens físicas (count.read; funcionalidade inventory.counts)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, OPEN, REVIEW, POSTED, CANCELLED] },
+          }
+        - { name: warehouseId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Contagens; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma contagem em rascunho (count.manage)
+      description: |
+        Sem `locationIds`, inclui todos os locais activos do armazém. `blind` esconde o esperado enquanto se conta.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [warehouseId]
+              properties:
+                warehouseId: { type: string, format: uuid }
+                locationIds: { type: array, items: { type: string, format: uuid } }
+                blind: { type: boolean }
+                notes: { type: string, nullable: true }
+      responses:
+        '201': { description: 'Contagem.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-counts/{id}:
+    get:
+      summary: Uma contagem com as linhas (count.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          { description: 'Contagem; na contagem cega aberta o esperado e a variação vêm a `null`.' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma contagem em rascunho (count.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /stock-counts/{id}/open:
+    post:
+      summary: Abre — congela os locais e fotografa o esperado (count.manage)
+      description: |
+        Atribui o número (sequência STOCK_COUNT). Enquanto aberta, nenhum movimento toca os locais (409 `LOCATION_FROZEN`), excepto os ajustes da própria contagem. Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Contagem aberta.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /stock-counts/{id}/counts:
+    put:
+      summary: Regista as quantidades contadas (count.manage)
+      description: |
+        Também serve a reconferência (contagem aberta ou em revisão).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lines]
+              properties:
+                lines:
+                  {
+                    type: array,
+                    minItems: 1,
+                    maxItems: 1000,
+                    items:
+                      {
+                        type: object,
+                        required: [lineId, countedQty],
+                        properties:
+                          {
+                            lineId: { type: string, format: uuid },
+                            countedQty: { type: string },
+                            reason: { type: string, nullable: true },
+                          },
+                      },
+                  }
+      responses:
+        '200': { description: 'Contagem.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-counts/{id}/lines:
+    post:
+      summary: Acrescenta um artigo encontrado onde o sistema não o esperava (count.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, locationId]
+              properties:
+                variantId: { type: string, format: uuid }
+                locationId: { type: string, format: uuid }
+                lotId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201': { description: 'Contagem.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-counts/{id}/review:
+    post:
+      summary: Passa à revisão — mostra o esperado e as diferenças (count.manage)
+      description: |
+        Exige todas as linhas contadas (422 `UNCOUNTED_LINE`). Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Contagem em revisão.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /stock-counts/{id}/reopen:
+    post:
+      summary: Volta da revisão à contagem, para reconferir (count.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Contagem aberta.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /stock-counts/{id}/post:
+    post:
+      summary: Lança os ajustes (um por diferença) e descongela (count.post)
+      description: |
+        Cada ajuste tem origem única (contagem, linha): lançar duas vezes nunca repete o ajuste. Idempotente. 409 `INSUFFICIENT_STOCK` se o contado ficar abaixo do reservado.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Contagem lançada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /stock-counts/{id}/cancel:
+    post:
+      summary: Cancela a contagem, com motivo, e descongela (count.manage)
+      description: |
+        Uma lançada não se cancela (409 `COUNT_POSTED`). Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: 'Contagem cancelada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /goods-returns:
+    get:
+      summary: Devoluções (return.read; funcionalidade inventory.returns)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: direction,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [CUSTOMER, SUPPLIER] },
+          }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, APPROVED, POSTED] },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Devoluções; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma devolução em rascunho (return.manage)
+      description: |
+        Parte sempre do documento de origem: a expedição (cliente) ou a recepção (fornecedor), segundo o livro de movimentos. Cada linha nunca excede o devolvível (422 `EXCEEDS_RETURNABLE`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [direction, sourceDocumentId, warehouseId, reason]
+              properties:
+                direction: { type: string, enum: [CUSTOMER, SUPPLIER] }
+                sourceDocumentId: { type: string, format: uuid }
+                warehouseId: { type: string, format: uuid }
+                reason: { type: string, maxLength: 300 }
+                lines:
+                  {
+                    type: array,
+                    maxItems: 200,
+                    items:
+                      {
+                        type: object,
+                        required: [sourceLineId, quantity],
+                        properties:
+                          {
+                            sourceLineId: { type: string, format: uuid },
+                            quantity: { type: string },
+                            condition: { type: string, enum: [SELLABLE, DAMAGED, QUARANTINE] },
+                            lotId: { type: string, format: uuid, nullable: true },
+                            locationId: { type: string, format: uuid, nullable: true },
+                          },
+                      },
+                  }
+      responses:
+        '201': { description: 'Devolução.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /goods-returns/source-lines:
+    get:
+      summary: Linhas do documento de origem com o já devolvido e o devolvível (return.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: direction,
+            in: query,
+            required: true,
+            schema: { type: string, enum: [CUSTOMER, SUPPLIER] },
+          }
+        - {
+            name: sourceDocumentId,
+            in: query,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        '200': { description: 'Linhas com quantidade, devolvido, devolvível e custo.' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /goods-returns/{id}:
+    get:
+      summary: Uma devolução com as linhas (return.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Devolução.' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma devolução em rascunho (return.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /goods-returns/{id}/lines:
+    post:
+      summary: Acrescenta uma linha (return.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceLineId, quantity]
+              properties:
+                sourceLineId: { type: string, format: uuid }
+                quantity: { type: string }
+                condition: { type: string, enum: [SELLABLE, DAMAGED, QUARANTINE] }
+                lotId: { type: string, format: uuid, nullable: true }
+                locationId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201': { description: 'Devolução.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /goods-returns/{id}/lines/{lineId}:
+    delete:
+      summary: Remove uma linha (return.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Devolução.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /goods-returns/{id}/approve:
+    post:
+      summary: Aprova a devolução (return.post)
+      description: |
+        Volta a conferir, sob bloqueio do documento de origem, que nada excede o devolvível (409 `RETURN_NOT_APPROVABLE`). Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Devolução aprovada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /goods-returns/{id}/post:
+    post:
+      summary: Lança a devolução — move o stock (return.post)
+      description: |
+        Cliente: entrada ao custo da saída original (vendável no armazém; danificado e quarentena em armazéns técnicos). Fornecedor: saída do armazém. Atribui o número (sequência GOODS_RETURN). Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Devolução lançada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }

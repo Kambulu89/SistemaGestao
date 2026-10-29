@@ -46,12 +46,13 @@ interface WarehouseRow {
   allow_negative: boolean
   allow_backorder: boolean
   sales_default: boolean
+  technical: boolean
   active: boolean
   version: number
   created_at: Date
   updated_at: Date
 }
-const WAREHOUSE_COLUMNS = `id, organization_id, code, name, allow_negative, allow_backorder, sales_default, active,
+const WAREHOUSE_COLUMNS = `id, organization_id, code, name, allow_negative, allow_backorder, sales_default, technical, active,
   version, created_at, updated_at`
 const toWarehouse = (r: WarehouseRow): Warehouse => ({
   id: r.id,
@@ -61,6 +62,7 @@ const toWarehouse = (r: WarehouseRow): Warehouse => ({
   allowNegative: r.allow_negative,
   allowBackorder: r.allow_backorder,
   salesDefault: r.sales_default,
+  technical: r.technical,
   active: r.active,
   version: r.version,
   createdAt: r.created_at,
@@ -73,17 +75,20 @@ interface LocationRow {
   code: string
   name: string
   active: boolean
+  frozen_by_count_id: string | null
   version: number
   created_at: Date
   updated_at: Date
 }
-const LOCATION_COLUMNS = 'id, warehouse_id, code, name, active, version, created_at, updated_at'
+const LOCATION_COLUMNS =
+  'id, warehouse_id, code, name, active, frozen_by_count_id, version, created_at, updated_at'
 const toLocation = (r: LocationRow): Location => ({
   id: r.id,
   warehouseId: r.warehouse_id,
   code: r.code,
   name: r.name,
   active: r.active,
+  frozenByCountId: r.frozen_by_count_id,
   version: r.version,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -200,10 +205,12 @@ export class LucidWarehouseStore implements WarehouseStore {
 
   async findLocation(scope: TenantScope, id: string): Promise<LocationRef | null> {
     const result = await trxOf(scope).rawQuery(
-      `select l.id, l.warehouse_id, w.organization_id, l.active, w.active as warehouse_active, w.allow_negative
+      `select l.id, l.warehouse_id, w.organization_id, l.active, w.active as warehouse_active, w.allow_negative,
+              l.frozen_by_count_id
          from stock_locations l
          join warehouses w on w.tenant_id = l.tenant_id and w.id = l.warehouse_id
-        where l.tenant_id = ? and l.id = ?`,
+        where l.tenant_id = ? and l.id = ?
+          for share of l`,
       [tenantOf(scope), id]
     )
     const [row] = result.rows as {
@@ -213,6 +220,7 @@ export class LucidWarehouseStore implements WarehouseStore {
       active: boolean
       warehouse_active: boolean
       allow_negative: boolean
+      frozen_by_count_id: string | null
     }[]
     return row
       ? {
@@ -222,8 +230,46 @@ export class LucidWarehouseStore implements WarehouseStore {
           active: row.active,
           warehouseActive: row.warehouse_active,
           allowNegative: row.allow_negative,
+          frozenByCountId: row.frozen_by_count_id,
         }
       : null
+  }
+
+  async ensureTechnical(
+    scope: TenantScope,
+    organizationId: string,
+    warehouse: { code: string; name: string },
+    location: { code: string; name: string }
+  ) {
+    await trxOf(scope).rawQuery(
+      `insert into warehouses (tenant_id, organization_id, code, name, technical, created_by_membership_id,
+         updated_by_membership_id)
+       values (?, ?, ?, ?, true, ?, ?) on conflict do nothing`,
+      [
+        tenantOf(scope),
+        organizationId,
+        warehouse.code,
+        warehouse.name,
+        actorOf(scope),
+        actorOf(scope),
+      ]
+    )
+    const found = await trxOf(scope).rawQuery(
+      `select id from warehouses where tenant_id = ? and organization_id = ? and code = ?`,
+      [tenantOf(scope), organizationId, warehouse.code]
+    )
+    const warehouseId = (found.rows[0] as { id: string }).id
+    await trxOf(scope).rawQuery(
+      `insert into stock_locations (tenant_id, warehouse_id, code, name, created_by_membership_id,
+         updated_by_membership_id)
+       values (?, ?, ?, ?, ?, ?) on conflict do nothing`,
+      [tenantOf(scope), warehouseId, location.code, location.name, actorOf(scope), actorOf(scope)]
+    )
+    const place = await trxOf(scope).rawQuery(
+      `select id from stock_locations where tenant_id = ? and warehouse_id = ? and code = ?`,
+      [tenantOf(scope), warehouseId, location.code]
+    )
+    return { warehouseId, locationId: (place.rows[0] as { id: string }).id }
   }
 
   async findLocationRow(scope: TenantScope, id: string) {

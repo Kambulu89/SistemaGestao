@@ -785,6 +785,43 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   diferenças cambiais, sem prestações (`installment_no` fica a 1), sem devolução de excedente a clientes, sem notas de
   débito/crédito de fornecedor, sem orçamento (M10).
 
+## D-055 Logística de stock (M08): transferências com trânsito, contagens com congelamento, devoluções derivadas do livro (aceite — fatia 4.8)
+
+- **Contexto.** A especificação (M08) pede transferências com stock em trânsito e recepção parcial, inventários físicos que lançam
+  ajustes uma só vez e devoluções limitadas ao vendido/recebido. O livro de movimentos (D-050) já é a fonte do saldo; esta fatia
+  acrescenta três documentos que só o movem através dele (`app/modules/inventory`, funcionalidades `inventory.transfers|counts|returns`).
+- **Migration 31** (8 tabelas de tenant, RLS, auditadas): `stock_transfers` + `transfer_lines`, `transfer_receipts` +
+  `transfer_receipt_lines`, `stock_counts` + `count_lines`, `goods_returns` + `return_lines`; `warehouses.technical` e
+  `locations.frozen_by_count_id`. Permissões `transfer.read|manage|dispatch|receive`, `count.read|manage|post`,
+  `return.read|manage|post` (expedir, receber, gerir e lançar são distintos). Sequências `STOCK_TRANSFER`, `STOCK_COUNT`, `GOODS_RETURN`.
+- **Armazéns técnicos.** `TRANSITO`, `DANIFICADO` e `QUARENTENA` criam-se sozinhos por organização (`ensureTechnical`, idempotente),
+  não se escolhem à mão, não podem ser armazém de vendas (409 `WAREHOUSE_TECHNICAL`) e por isso o que lá está nunca se vende.
+- **Transferência.** `DRAFT → DISPATCHED → PARTIAL_RECEIVED → RECEIVED` (ou `CANCELLED` só em rascunho). **Expedir** (`transfer.dispatch`)
+  lança `TRANSFER_OUT` na origem e `TRANSFER_IN` no armazém de trânsito, ao custo médio da origem, numa só transacção; sem stock
+  disponível nada se move (409 `INSUFFICIENT_STOCK`). **Receber** (`transfer.receive`) tira do trânsito e põe no destino ao mesmo
+  custo; recepções parciais deixam o resto em trânsito (`inTransit = expedido − recebido`), nunca se recebe mais do que isso
+  (409 `EXCEEDS_IN_TRANSIT`) e uma chave de recepção repetida não recebe outra vez. Depois de expedida a transferência é imutável
+  (trigger, também por SQL) e já não se cancela.
+- **Contagem.** `DRAFT → OPEN → REVIEW → POSTED` (cancelável antes de lançada). **Abrir** fotografa o saldo esperado de cada
+  local/lote e **congela** os locais (`frozen_by_count_id`): qualquer movimento nesses locais falha com 409 `LOCATION_FROZEN`
+  (a leitura do local usa `for share`, por isso nenhum movimento em curso escapa ao congelamento). Na contagem **cega** o esperado
+  só é devolvido a partir da revisão. Rever exige tudo contado (`UNCOUNTED_LINE`) e calcula a diferença; **lançar** (`count.post`, permissão
+  distinta de contar) gera um movimento `ADJUSTMENT` (origem `STOCK_COUNT`) por linha com diferença, descongela e
+  é idempotente (duas chamadas, mesmo em simultâneo, geram um só ajuste: a origem do movimento é única).
+- **Devolução.** Derivada do livro e dos documentos de origem: de **cliente** sobre uma expedição lançada e não revertida, a
+  **fornecedor** sobre uma recepção lançada e não revertida. O devolvível por linha é `quantidade da origem − já devolvido por
+  devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprovar recusa o excesso sob bloqueio do documento, por isso
+  duas devoluções concorrentes nunca excedem a origem. Lançar (`return.post`) repõe ao **custo original** (cliente) ou tira o
+  stock (fornecedor); o estado da mercadoria (`SELLABLE`, `DAMAGED`, `QUARANTINE`) encaminha-a para o armazém escolhido ou para o
+  técnico, de onde não se vende.
+- **Auditoria e RLS.** Todas as tabelas novas são de tenant e auditadas; leitura da auditoria exige as permissões `*.read` novas.
+  A matriz de isolamento cobre as novas rotas e tabelas (ids alheios → 404, nada muda).
+- **Desvios da spec / fica por fazer.** Depois de expedida a transferência não se cancela nem se dá baixa a diferenças em
+  trânsito (perdas) — só se recebe; contagem congelada não impede *reservas* (só movimentos); contar menos do que o reservado falha
+  com `INSUFFICIENT_STOCK`; limite de devolução por linha e não por lote; a devolução não gera nota de crédito nem reembolso
+  (M05/M09 fazem-no por si); sem transferências entre organizações; sem escolha manual de lote/local no ecrã de transferência
+  (o servidor escolhe); contagens por amostragem/cíclicas e séries por fazer.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

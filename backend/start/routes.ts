@@ -33,6 +33,7 @@ const ProcurementController = () =>
   import('#modules/procurement/presentation/procurement_controller')
 const FinanceController = () => import('#modules/finance/presentation/finance_controller')
 const InvoicingController = () => import('#modules/invoicing/presentation/invoicing_controller')
+const LogisticsController = () => import('#modules/inventory/presentation/logistics_controller')
 const InventoryController = () => import('#modules/inventory/presentation/inventory_controller')
 const CustomersController = () => import('#modules/customers/presentation/customers_controller')
 const AutomationsController = () =>
@@ -1126,6 +1127,100 @@ router
           .use(middleware.can({ permission: 'inventory.reserve' }))
       })
       .use(middleware.feature({ code: 'inventory.stock' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Logística de stock (M08), no módulo `inventory`: funcionalidades `inventory.transfers`, `inventory.counts` e
+ * `inventory.returns`. Nenhuma altera saldos directamente: todos os efeitos são movimentos do livro.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/stock-transfers', [LogisticsController, 'listTransfers'])
+            router.get('/stock-transfers/:id', [LogisticsController, 'showTransfer'])
+          })
+          .use(middleware.can({ permission: 'transfer.read' }))
+        router
+          .group(() => {
+            router.post('/stock-transfers', [LogisticsController, 'createTransfer'])
+            router.patch('/stock-transfers/:id', [LogisticsController, 'updateTransfer'])
+            router.delete('/stock-transfers/:id', [LogisticsController, 'removeTransfer'])
+            router.post('/stock-transfers/:id/lines', [LogisticsController, 'addTransferLine'])
+            router.delete('/stock-transfers/:id/lines/:lineId', [
+              LogisticsController,
+              'removeTransferLine',
+            ])
+            router.post('/stock-transfers/:id/cancel', [LogisticsController, 'cancelTransfer'])
+          })
+          .use(middleware.can({ permission: 'transfer.manage' }))
+        router
+          .post('/stock-transfers/:id/dispatch', [LogisticsController, 'dispatchTransfer'])
+          .use(middleware.can({ permission: 'transfer.dispatch' }))
+        router
+          .post('/stock-transfers/:id/receive', [LogisticsController, 'receiveTransfer'])
+          .use(middleware.can({ permission: 'transfer.receive' }))
+      })
+      .use(middleware.feature({ code: 'inventory.transfers' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/stock-counts', [LogisticsController, 'listCounts'])
+            router.get('/stock-counts/:id', [LogisticsController, 'showCount'])
+          })
+          .use(middleware.can({ permission: 'count.read' }))
+        router
+          .group(() => {
+            router.post('/stock-counts', [LogisticsController, 'createCount'])
+            router.delete('/stock-counts/:id', [LogisticsController, 'removeCount'])
+            router.post('/stock-counts/:id/open', [LogisticsController, 'openCount'])
+            router.put('/stock-counts/:id/counts', [LogisticsController, 'countLines'])
+            router.post('/stock-counts/:id/lines', [LogisticsController, 'addCountLine'])
+            router.post('/stock-counts/:id/review', [LogisticsController, 'reviewCount'])
+            router.post('/stock-counts/:id/reopen', [LogisticsController, 'reopenCount'])
+            router.post('/stock-counts/:id/cancel', [LogisticsController, 'cancelCount'])
+          })
+          .use(middleware.can({ permission: 'count.manage' }))
+        router
+          .post('/stock-counts/:id/post', [LogisticsController, 'postCount'])
+          .use(middleware.can({ permission: 'count.post' }))
+      })
+      .use(middleware.feature({ code: 'inventory.counts' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/goods-returns', [LogisticsController, 'listReturns'])
+            router.get('/goods-returns/source-lines', [LogisticsController, 'returnSourceLines'])
+            router.get('/goods-returns/:id', [LogisticsController, 'showReturn'])
+          })
+          .use(middleware.can({ permission: 'return.read' }))
+        router
+          .group(() => {
+            router.post('/goods-returns', [LogisticsController, 'createReturn'])
+            router.delete('/goods-returns/:id', [LogisticsController, 'removeReturn'])
+            router.post('/goods-returns/:id/lines', [LogisticsController, 'addReturnLine'])
+            router.delete('/goods-returns/:id/lines/:lineId', [
+              LogisticsController,
+              'removeReturnLine',
+            ])
+          })
+          .use(middleware.can({ permission: 'return.manage' }))
+        router
+          .group(() => {
+            router.post('/goods-returns/:id/approve', [LogisticsController, 'approveReturn'])
+            router.post('/goods-returns/:id/post', [LogisticsController, 'postReturn'])
+          })
+          .use(middleware.can({ permission: 'return.post' }))
+      })
+      .use(middleware.feature({ code: 'inventory.returns' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

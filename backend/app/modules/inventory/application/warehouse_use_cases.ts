@@ -100,6 +100,12 @@ export class WarehouseUseCases {
     return this.uow.run(async (scope) => {
       const current = await this.warehouses.find(scope, id)
       if (!current) throw ApiError.notFound()
+      if (input.salesDefault === true && current.technical) {
+        throw ApiError.conflict(
+          'WAREHOUSE_TECHNICAL',
+          'Um armazém técnico (trânsito, danificado, quarentena) não pode ser o de vendas.'
+        )
+      }
       if (input.salesDefault === true && !(input.active ?? current.active)) {
         throw ApiError.conflict(
           'WAREHOUSE_INACTIVE',

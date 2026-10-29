@@ -6,13 +6,13 @@ Estado vivo do desenvolvimento. Actualizado no fim de cada módulo/fatia validad
 
 | Indicador | Valor | Como se mede |
 | --- | ---: | --- |
-| Critérios de aceitação verificados | 65 / 129 | `MODULE_COMPLETION.md` |
+| Critérios de aceitação verificados | 68 / 129 | `MODULE_COMPLETION.md` |
 | Critérios parciais | 4 | idem |
 | Módulos «Concluído e validado» | 0 | todos têm requisitos por cumprir |
-| Testes backend (última corrida completa) | 680 | `npm test` |
-| Testes frontend (última corrida completa) | 1042 | `npx ng test --watch=false` |
-| Rotas / tabelas de tenant / migrations | 331 / 86 / 31 | `routes.ts`, `createTenantTable`, `database/migrations` |
-| Lacunas abertas (registo A-xx) | 7 (1 bloqueada); 1 parcial; 4 resolvidas | `MODULE_AUDIT.md` §4 |
+| Testes backend (última corrida completa) | 702 | `npm test` |
+| Testes frontend (última corrida completa) | 1057 | `npx ng test --watch=false` |
+| Rotas / tabelas de tenant / migrations | 361 / 94 / 32 | `routes.ts`, `createTenantTable`, `database/migrations` |
+| Lacunas abertas (registo A-xx) | 6 (1 bloqueada); 1 parcial; 5 resolvidas | `MODULE_AUDIT.md` §4 |
 
 ## Fila de execução
 
@@ -22,7 +22,7 @@ Estado vivo do desenvolvimento. Actualizado no fim de cada módulo/fatia validad
 | 1 | A-01 capacidades → páginas reais · A-02 cancelar o restante · A-03 testes em falta | **Concluído e validado** | — | backend 647 testes, frontend 1024; `capability-redirect.spec`, `procurement.spec`, `invoicing.spec`, `rules.spec` |
 | 2 | M09 Tesouraria, contas a receber e a pagar — **fatia 5.1** (obrigações, pagamentos, facturas de fornecedor, crédito) | **Concluída e validada** (módulo: Parcialmente implementado) | 1 | `finance.spec` (15), `finance_domain.spec` (14), `treasury-page.spec`, E2E `e2e49.mjs` (24 verificações); D-054 |
 | 2b | M09 fatia 5.2 — conciliação bancária (extractos, correspondências) | Não iniciado | 2 | — |
-| 3 | M08 Transferências, inventários físicos e devoluções | Não iniciado | 2 (devolução com nota de crédito) | — |
+| 3 | M08 Transferências, inventários físicos e devoluções — **fatia 4.8** | **Concluída e validada** (módulo: Parcialmente implementado) | 2 | `stock_logistics.spec` (16), `logistics_domain.spec`, `logistics-tabs.spec` (15), E2E `e2e50` (33 verificações); D-055 |
 | 4 | M02 CRM comercial | Não iniciado | — | — |
 | 5 | S02 Notificações | Não iniciado | — | — |
 | 6 | S01 Documentos e templates (PDF) | Não iniciado | 5 | — |
@@ -40,10 +40,11 @@ Estados: Não iniciado · Parcialmente implementado · Implementado sem validaç
 | 2026-10-29 | Auditoria: leitura da especificação, manifestos, rotas, migrations e testes; varredura da UI | Matriz de 40 linhas, 12 lacunas, 129 critérios classificados | `87ef271` |
 | 2026-10-29 | W1: capacidades → páginas reais (A-01); cancelar o restante (A-02); 7 critérios passam a verificados (A-03) | 60/129 critérios; backend 647, frontend 1024; lint/format/typecheck/build limpos | `4f1a2b0` |
 | 2026-10-29 | M09 fatia 5.1: núcleo `core/decimal`, hook `registerInvoiceEffects`, módulo `finance` (migration 30, 10 tabelas), API de 28 rotas, página «Tesouraria»; corrige 500 em contratos e fornecedores com organização inexistente | 65/129 critérios; backend 680, frontend 1042; lint/format/typecheck/build limpos; E2E 24/24 | (este commit) |
+| 2026-10-29 | M08 fatia 4.8: migration 31 (8 tabelas), armazéns técnicos, transferências com trânsito, contagens com congelamento, devoluções derivadas do livro, 30 rotas, separadores no inventário; E2E apanhou um erro de página ao apagar o rascunho aberto (corrigido e coberto) | 68/129 critérios; backend 702, frontend 1057; lint/format/typecheck/build limpos; migrations 32 subidas e descidas | `445576a` |
 
 ## Como retomar
 
 1. Ambiente: `pg_ctlcluster 16 main start`, `redis-server --daemonize yes`, Node 24 no `PATH`.
 2. Backend: `cd backend && npm run migrate && npm test`. Frontend: `npm ci && npx ng test --watch=false`.
 3. Seguir a «Fila de execução» pela ordem; cada item termina com lint, format, typecheck, testes, build, migrations up/down, E2E em browser quando há UI, actualização destes três documentos e um commit.
-4. Decisões de desenho ficam em `docs/decisions.md` (próxima: D-054).
+4. Decisões de desenho ficam em `docs/decisions.md` (próxima: D-056).

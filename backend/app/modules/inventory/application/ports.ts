@@ -15,6 +15,8 @@ export interface Warehouse extends Audited {
   allowNegative: boolean
   allowBackorder: boolean
   salesDefault: boolean
+  /** Armazém técnico (trânsito, danificado, quarentena): nunca é o armazém de vendas. */
+  technical: boolean
   active: boolean
 }
 
@@ -23,6 +25,8 @@ export interface Location extends Audited {
   code: string
   name: string
   active: boolean
+  /** A contagem que congela o local, se houver. */
+  frozenByCountId: string | null
 }
 
 /** O local com o que o armazém dele impõe (organização, saldo negativo, estado). */
@@ -33,6 +37,7 @@ export interface LocationRef {
   active: boolean
   warehouseActive: boolean
   allowNegative: boolean
+  frozenByCountId: string | null
 }
 
 export interface Lot extends Audited {
@@ -188,6 +193,13 @@ export interface WarehouseStore {
   listLocations(scope: TenantScope, warehouseId: string): Promise<Location[]>
   findLocation(scope: TenantScope, id: string): Promise<LocationRef | null>
   findLocationRow(scope: TenantScope, id: string): Promise<Location | null>
+  /** Garante o armazém técnico da organização e o seu local (criados à primeira necessidade, sem duplicar). */
+  ensureTechnical(
+    scope: TenantScope,
+    organizationId: string,
+    warehouse: { code: string; name: string },
+    location: { code: string; name: string }
+  ): Promise<{ warehouseId: string; locationId: string }>
   /** `null` se o código já existir no armazém. */
   insertLocation(
     scope: TenantScope,
@@ -300,4 +312,13 @@ export interface References {
   variant(context: TenantContext, variantId: string): Promise<VariantRef | null>
   /** Casas decimais que a unidade admite (`null` se não existir). */
   unitPrecision(context: TenantContext, unitId: string): Promise<number | null>
+  /** Emite o número do documento dentro da transacção (sem lacunas se a transacção anular). */
+  issueNumber(
+    scope: TenantScope,
+    input: {
+      organizationId: string
+      documentType: 'STOCK_TRANSFER' | 'STOCK_COUNT' | 'GOODS_RETURN'
+      date: Date
+    }
+  ): Promise<string>
 }

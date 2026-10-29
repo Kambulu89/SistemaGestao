@@ -15,6 +15,8 @@ export interface WarehouseDto {
   readonly allowNegative: boolean;
   readonly allowBackorder: boolean;
   readonly salesDefault: boolean;
+  /** Armazém técnico (trânsito, danificado, quarentena): não se escolhe à mão. */
+  readonly technical?: boolean;
   readonly active: boolean;
   readonly version: number;
   readonly locations?: readonly LocationDto[];

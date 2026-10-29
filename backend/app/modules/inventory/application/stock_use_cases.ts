@@ -53,7 +53,10 @@ export interface Source {
 
 /** Comando de movimento: usado pela API (ajustes, reversões) e pelos outros módulos (recepções, expedições). */
 export interface PostCommand {
-  kind: Extract<MovementKind, 'RECEIPT' | 'ISSUE' | 'ADJUSTMENT' | 'REVERSAL'>
+  kind: Extract<
+    MovementKind,
+    'RECEIPT' | 'ISSUE' | 'ADJUSTMENT' | 'REVERSAL' | 'TRANSFER_IN' | 'TRANSFER_OUT'
+  >
   variantId: string
   locationId: string
   lotId: string | null
@@ -261,8 +264,8 @@ export class StockUseCases {
     if (delta !== null && delta !== 0n) {
       const positive = delta > 0n
       if (
-        (cmd.kind === 'RECEIPT' && !positive) ||
-        (cmd.kind === 'ISSUE' && positive) ||
+        ((cmd.kind === 'RECEIPT' || cmd.kind === 'TRANSFER_IN') && !positive) ||
+        ((cmd.kind === 'ISSUE' || cmd.kind === 'TRANSFER_OUT') && positive) ||
         (cmd.kind === 'REVERSAL' && !cmd.reversal)
       ) {
         issues.push({
@@ -294,9 +297,21 @@ export class StockUseCases {
     if (cmd.kind !== 'REVERSAL' && (!location.active || !location.warehouseActive)) {
       throw ApiError.conflict('LOCATION_INACTIVE', 'O local ou o armazém está desactivado.')
     }
+    // Durante uma contagem os movimentos do local ficam congelados: só os ajustes da própria contagem passam.
+    if (location.frozenByCountId && location.frozenByCountId !== cmd.source.id) {
+      throw ApiError.conflict(
+        'LOCATION_FROZEN',
+        'O local está congelado por uma contagem em curso: espere pelo seu fim.'
+      )
+    }
     const variant = await this.requireStocked(context, cmd.variantId)
     await this.requirePrecision(context, variant, amount < 0n ? -amount : amount)
-    await this.requireLot(scope, variant, cmd.lotId, cmd.kind === 'ISSUE')
+    await this.requireLot(
+      scope,
+      variant,
+      cmd.lotId,
+      cmd.kind === 'ISSUE' || cmd.kind === 'TRANSFER_OUT'
+    )
 
     const balance = await this.ledger.lockBalance(scope, {
       variantId: cmd.variantId,

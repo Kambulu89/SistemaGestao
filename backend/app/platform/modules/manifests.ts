@@ -136,6 +136,9 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
         name: 'Stock, movimentos, lotes e reservas',
         defaultEnabled: true,
       },
+      { code: 'inventory.transfers', name: 'Transferências entre armazéns', defaultEnabled: true },
+      { code: 'inventory.counts', name: 'Contagens físicas', defaultEnabled: true },
+      { code: 'inventory.returns', name: 'Devoluções', defaultEnabled: true },
     ],
   },
 ]

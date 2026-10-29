@@ -4,7 +4,7 @@ Medida objectiva de conclusão: cada módulo da especificação v2.0 tem critér
 
 Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Implementado sem validação* · *Em testes* · *Concluído e validado* · *Bloqueado*. Nenhum módulo está «Concluído e validado»: todos os implementados têm requisitos aprovados por cumprir (ver `MODULE_AUDIT.md`).
 
-**Totais:** 65 verificados · 4 parciais · 60 não verificados ou de módulos não implementados (de 129).
+**Totais:** 68 verificados · 4 parciais · 57 não verificados ou de módulos não implementados (de 129).
 
 ## Resumo por módulo
 
@@ -32,7 +32,7 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | M05 Contratos faturas e notas de crédito | Parcialmente implementado | 3 | 0 | 0 |
 | M06 Fornecedores requisições e compras | Parcialmente implementado | 3 | 0 | 0 |
 | M07 Armazéns stock lotes e reservas | Parcialmente implementado | 3 | 0 | 0 |
-| M08 Transferências inventários físicos e devoluções | Não iniciado | 0 | 0 | 3 |
+| M08 Transferências inventários físicos e devoluções | Parcialmente implementado | 3 | 0 | 0 |
 | M09 Tesouraria contas a receber e a pagar | Parcialmente implementado | 3 | 1 | 0 |
 | M10 Orçamentos despesas e controlo de custos | Não iniciado | 0 | 0 | 3 |
 | M11 Colaboradores contratos assiduidade e férias | Não iniciado | 0 | 0 | 4 |
@@ -124,9 +124,9 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | M07 | 1 | Duas saídas concorrentes não tornam saldo negativo quando proibido | Verificado | inventory.spec |
 | M07 | 2 | replay de evento não duplica entrada | Verificado | inventory.spec: origem única idempotente |
 | M07 | 3 | soma do livro reconcilia com saldo | Verificado | inventory.spec: reconcilia com o livro |
-| M08 | 1 | Recepção parcial deixa saldo em trânsito | Não verificado / não implementado | módulo não implementado |
-| M08 | 2 | contagem lançada duas vezes não repete ajuste | Não verificado / não implementado | módulo não implementado |
-| M08 | 3 | devolução superior ao vendido/recebido falha | Não verificado / não implementado | módulo não implementado |
+| M08 | 1 | Recepção parcial deixa saldo em trânsito | Verificado | stock_logistics.spec: «expedir move o stock para trânsito sem o duplicar; receber parcialmente deixa o resto em trânsito»; E2E e2e50 (recebido 2, em trânsito 4) |
+| M08 | 2 | contagem lançada duas vezes não repete ajuste | Verificado | stock_logistics.spec: «lançar duas vezes não repete o ajuste» e «lançar duas vezes em simultâneo gera um só ajuste»; E2E e2e50 |
+| M08 | 3 | devolução superior ao vendido/recebido falha | Verificado | stock_logistics.spec: «uma devolução superior ao expedido falha» e «duas devoluções aprovadas nunca excedem o expedido, mesmo em simultâneo»; E2E e2e50 |
 | M09 | 1 | Pagamento parcial mantém saldo | Verificado | finance.spec: recebimento parcial mantém o saldo (74) e a vista «parcial»; E2E em browser |
 | M09 | 2 | webhook repetido não liquida duas vezes | Parcial | `Idempotency-Key` na criação e confirmação idempotente (finance.spec); **sem webhook** (fornecedor de pagamento por decidir) |
 | M09 | 3 | duas alocações concorrentes não ultrapassam dívida | Verificado | finance.spec: duas confirmações concorrentes de 80 sobre 114 — uma confirma, a outra é recusada |

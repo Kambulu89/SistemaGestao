@@ -54,7 +54,17 @@ export async function deleteTestTenants() {
         .where('tenant_id', id)
         .whereNotNull('base_unit_id')
         .delete()
+      // Os locais congelados por uma contagem têm de ser libertados antes de a apagar.
+      await trx.from('stock_locations').where('tenant_id', id).update({ frozen_by_count_id: null })
       for (const table of [
+        'return_lines',
+        'goods_returns',
+        'count_lines',
+        'stock_counts',
+        'transfer_receipt_lines',
+        'transfer_receipts',
+        'transfer_lines',
+        'stock_transfers',
         'credit_reservations',
         'treasury_entries',
         'payment_allocations',

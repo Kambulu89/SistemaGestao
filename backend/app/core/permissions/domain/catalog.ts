@@ -442,6 +442,56 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Validar uma factura com divergências na conferência, com justificação.',
   },
   {
+    code: 'transfer.read',
+    moduleCode: 'inventory',
+    description: 'Ver transferências de stock entre armazéns.',
+  },
+  {
+    code: 'transfer.manage',
+    moduleCode: 'inventory',
+    description: 'Criar e alterar transferências em rascunho e cancelá-las.',
+  },
+  {
+    code: 'transfer.dispatch',
+    moduleCode: 'inventory',
+    description: 'Expedir transferências (tira da origem e põe em trânsito).',
+  },
+  {
+    code: 'transfer.receive',
+    moduleCode: 'inventory',
+    description: 'Receber o stock em trânsito no armazém de destino.',
+  },
+  {
+    code: 'count.read',
+    moduleCode: 'inventory',
+    description: 'Ver contagens físicas de inventário.',
+  },
+  {
+    code: 'count.manage',
+    moduleCode: 'inventory',
+    description: 'Criar, abrir, contar e rever contagens físicas e cancelá-las.',
+  },
+  {
+    code: 'count.post',
+    moduleCode: 'inventory',
+    description: 'Lançar os ajustes de uma contagem (as diferenças aprovadas).',
+  },
+  {
+    code: 'return.read',
+    moduleCode: 'inventory',
+    description: 'Ver devoluções de clientes e a fornecedores.',
+  },
+  {
+    code: 'return.manage',
+    moduleCode: 'inventory',
+    description: 'Criar e alterar devoluções em rascunho.',
+  },
+  {
+    code: 'return.post',
+    moduleCode: 'inventory',
+    description: 'Aprovar e lançar devoluções (movem stock).',
+  },
+  {
     code: 'inventory.read',
     moduleCode: 'inventory',
     description: 'Ver stock, movimentos, lotes e reservas.',

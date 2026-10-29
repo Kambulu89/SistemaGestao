@@ -3,12 +3,20 @@ import { organizationServices } from '#core/organization/index'
 import { settingsServices } from '#core/settings/index'
 import { LucidTenantDatabase } from '#core/tenancy/index'
 import { catalogServices } from '#modules/catalog/index'
+import { CountUseCases } from '#modules/inventory/application/count_use_cases'
 import { OrderStock } from '#modules/inventory/application/order_stock'
 import { ReceiptStock } from '#modules/inventory/application/receipt_stock'
+import { ReturnUseCases } from '#modules/inventory/application/return_use_cases'
 import { ShipmentStock } from '#modules/inventory/application/shipment_stock'
 import type { References } from '#modules/inventory/application/ports'
 import { StockUseCases } from '#modules/inventory/application/stock_use_cases'
+import { TransferUseCases } from '#modules/inventory/application/transfer_use_cases'
 import { WarehouseUseCases } from '#modules/inventory/application/warehouse_use_cases'
+import {
+  LucidCountStore,
+  LucidReturnStore,
+  LucidTransferStore,
+} from '#modules/inventory/infrastructure/lucid_logistics'
 import {
   LucidLedgerStore,
   LucidLotStore,
@@ -47,6 +55,15 @@ const references: References = {
     const units = await settingsServices().units.list(context)
     return units.find((u) => u.id === unitId)?.precision ?? null
   },
+  async issueNumber(scope, input) {
+    const issued = await settingsServices().sequenceIssuer.issue(scope, {
+      organizationId: input.organizationId,
+      documentType: input.documentType,
+      series: 'A',
+      date: input.date,
+    })
+    return issued.number
+  },
 }
 
 function build() {
@@ -74,6 +91,33 @@ function build() {
     shipmentStock: new ShipmentStock(warehouses, ledger, reservations, stock, references, clock),
     receiptStock: new ReceiptStock(warehouses, lots, ledger, stock, references),
     ledger,
+    transfers: new TransferUseCases(
+      uow,
+      new LucidTransferStore(),
+      warehouses,
+      stock,
+      references,
+      outbox,
+      clock
+    ),
+    counts: new CountUseCases(
+      uow,
+      new LucidCountStore(),
+      warehouses,
+      stock,
+      references,
+      outbox,
+      clock
+    ),
+    returns: new ReturnUseCases(
+      uow,
+      new LucidReturnStore(),
+      warehouses,
+      stock,
+      references,
+      outbox,
+      clock
+    ),
   }
 }
 
