@@ -99,6 +99,16 @@ test.group('fórmulas | gramática e aritmética exacta', () => {
     assert.isFalse(parseFormula('1' + ' + 1'.repeat(300)).ok)
     assert.isFalse(parseFormula(`${'-'.repeat(60)}1`).ok)
   })
+
+  test('o orçamento de elementos é exacto: no limite passa, acima falha com a mensagem do custo', ({
+    assert,
+  }) => {
+    const atLimit = Array.from({ length: 33 }, () => 'a').join(' + ')
+    assert.isTrue(parseFormula(atLimit).ok)
+    const beyond = parseFormula(Array.from({ length: 120 }, () => 'a').join(' + '))
+    assert.isFalse(beyond.ok)
+    if (!beyond.ok) assert.include(beyond.message, 'demasiado complexa')
+  })
 })
 
 test.group('fórmulas | campos, dependências e ciclos', () => {

@@ -6177,7 +6177,7 @@ paths:
     post:
       summary: Cancela uma encomenda confirmada, com motivo (purchase.confirm)
       description: |
-        Só enquanto nenhuma recepção lançada a tocou (409 `PURCHASE_ORDER_HAS_RECEIPTS`). Idempotente.
+        Numa encomenda parcialmente recebida cancela-se o **restante**: as recepções lançadas e o stock mantêm-se (o evento leva `remainderOnly`). Uma toda recebida não tem restante (409 `PURCHASE_ORDER_RECEIVED`). Idempotente.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'

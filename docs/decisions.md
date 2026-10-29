@@ -4,34 +4,40 @@ Formato: contexto → decisão → consequências. Estado: **aceite**, **propost
 Uma decisão aceite só se altera com um novo registo que a substitua.
 
 ## D-001 Monólito modular (aceite)
+
 **Contexto.** Spec §1: implementação inicial API First, monólito modular. **Decisão.** Um único processo da API com
 módulos `domain/application/infrastructure/presentation`; workers como processos do mesmo código quando houver jobs.
 **Consequências.** Sem microserviços até haver métricas que o justifiquem (spec F9). Fronteiras impostas por regras
 de importação (ver `docs/architecture.md` §2), não por rede.
 
 ## D-002 Backend em `backend/`, ao lado do frontend (aceite)
+
 **Contexto.** O repositório já tinha o Angular na raiz, com Git, lockfile e CI inexistente. **Decisão.** Acrescentar
 `backend/` com `package.json` e lockfile próprios; o frontend **não** é movido. **Alternativas rejeitadas.** Mover o
 frontend para `apps/web` com workspaces: alteração larga e arriscada sem benefício imediato. **Consequências.** Dois
 `npm ci` independentes; o CI tem dois jobs. Reavaliar workspaces quando existir código partilhado (contratos).
 
 ## D-003 AdonisJS 6.x fixado; v7 não adoptado (aceite)
+
 **Contexto.** Spec pede AdonisJS v6. O npm já publica a v7.6 como `latest` (`@adonisjs/core`). **Decisão.** Fixar
 `@adonisjs/core ^6.21`, `lucid ^21.8`, `redis ^9.2`, `assembler ^7.8`. **Consequências.** Migrar para a v7 exige ADR
 próprio (alteração de versão principal). Ver D-012 sobre as vulnerabilidades da cadeia v6.
 
 ## D-004 Angular 22 mantido (aceite)
+
 **Contexto.** A spec indica Angular 19 como "referência da fonte" e manda fixar versões compatíveis antes de iniciar.
 O projecto já está em Angular 22.2 (standalone, signals, Vitest) com mais de 500 testes. **Decisão.** Manter 22; não
 fazer downgrade. **Consequências.** Nenhuma funcionalidade da spec depende da versão 19.
 
 ## D-005 Node e gestor de pacotes (aceite)
+
 **Decisão.** Gestor **npm** (lockfiles `package-lock.json`, `packageManager` do frontend `npm@10.9.4`). Frontend:
 `engines` `^22.22.3 || ^24.15.0` (exigido pelo Angular CLI 22). Backend: `>=22.22.0`. Imagens Docker e CI usam
 Node 22 (≥ 22.22.3). **Nota.** O ambiente de análise tinha Node 22.22.0: o Angular CLI recusa-se a correr aí; foi usado
 um Node ≥ 22.22.3 só para o frontend (não altera os `engines`).
 
 ## D-006 Duas contas de base de dados e RLS desde a fundação (aceite)
+
 **Contexto.** Spec §10.1: RLS com `ENABLE` + `FORCE`; conta de runtime sem superuser, sem owner privilegiado e sem
 `BYPASSRLS`. **Decisão.** `sg_owner` (migrations/seeds) e `sg_runtime` (aplicação) criadas por
 `docker/postgres/init/01-roles.sh`; Lucid com ligações `owner` e `runtime` (por omissão). Função
@@ -40,21 +46,25 @@ um Node ≥ 22.22.3 só para o frontend (não altera os `engines`).
 testes obrigam a conta de runtime. Migrations nunca correm com a conta de runtime.
 
 ## D-007 Variáveis de ambiente validadas no arranque (aceite)
+
 **Decisão.** Esquema único (`start/env_schema.ts`); falta ou valor inválido impede o arranque, listando só os nomes.
 Segredos: `APP_KEY` em `Secret`; palavras-passe nunca registadas (logger com redacção). `.env.example` sem valores.
 **Consequências.** Não existe valor por omissão para segredos; CI e Docker passam-nos explicitamente.
 
 ## D-008 Envelope de API, erros e correlation id (aceite)
+
 **Decisão.** Conforme spec §10.2: `{ data, meta:{correlationId} }` e `{ error:{ code, message, details, correlationId } }`.
 O correlation id é decidido pelo servidor (aceita um externo só se válido). Erros desconhecidos → 500 genérico
 (`INTERNAL_ERROR`), detalhe apenas em logs. **Consequências.** Todo o novo controller usa `envelope()` e lança
 `ApiError`/erros VineJS; ver testes `errors.spec.ts`.
 
 ## D-009 Saúde e prontidão separadas (aceite)
+
 **Decisão.** `GET /api/v1/health` (liveness, sem dependências) e `GET /api/v1/ready` (base de dados + Redis, limite
 2 s por sonda, 503 `NOT_READY` sem mensagens internas). Não expõem dados de negócio nem de tenants.
 
 ## D-010 Convenções de migrations e seeds (aceite)
+
 **Decisão.** Migrations versionadas pelo Lucid (`naturalSort`), executadas com a conta `owner`
 (`npm run migrate`); **sem** `IF NOT EXISTS` indiscriminado (um conflito deve falhar); estratégia expand/contract;
 seeds idempotentes só para permissões, módulos e referências; dados de demonstração só fora de produção e em dois
@@ -62,11 +72,13 @@ tenants. Os testes aplicam as migrations no arranque e desfazem-nas no fim (base
 **Estado.** Não existem seeds ainda (não há dados de referência a semear).
 
 ## D-011 Qualidade automática (aceite)
+
 **Decisão.** Backend: `eslint` (`@adonisjs/eslint-config`), `prettier`, `tsc --noEmit`, Japa (unit + functional),
 `node ace build`. Frontend: `ng lint`, `prettier --check`, `check:generic`, `ng test`, `ng build`. CI executa-os e ainda
 as migrations numa base limpa. **Não** há cobertura mínima imposta ainda.
 
 ## D-012 Vulnerabilidades da cadeia AdonisJS v6 (aceite temporariamente)
+
 `npm audit --omit=dev` em `backend/` reporta 16 (4 moderate, 12 high), todas **transitivas** de
 `@adonisjs/assembler`/`core`/`lucid` (ts-morph, fast-glob/micromatch/braces/globby/cpy, `@faker-js/faker`); a correcção
 sugerida pelo npm é saltar para versões principais diferentes (v7) ou recuar. O frontend reporta 0.
@@ -75,17 +87,20 @@ não processam pedidos HTTP. **Acção.** Reavaliar em cada fase e quando se dec
 aqui o resultado. **Risco aceite por:** equipa de desenvolvimento, até à primeira produção.
 
 ## D-013 Sessão e selector de tenant (aceite — fatias 1.2 e 1.3)
+
 Sessão opaca em cookie `HttpOnly`/`Secure`/`SameSite` com protecção CSRF; sem credenciais em `localStorage`/
 `sessionStorage`. O tenant viaja como **selector explícito** (domínio verificado ou cabeçalho) e é sempre validado
 contra a sessão e a membership activa; o frontend pode manter `/t/:slug` na URL. Substitui o `sessionStorage` do mock.
 A parte da sessão está em D-018 o selector de tenant em D-023 e a ligação do frontend em D-028.
 
 ## D-014 Nomenclatura de permissões (aceite — fatia 1.4)
+
 Backend: `<recurso>.<acção>` em minúsculas (`iam.manage`, `member.invite`, `invoice.approve`), com `code = resource || '.' ||
 action` garantido por CHECK. O frontend usa `<módulo>.read|manage` e `entities.<chave>.<op>`: o mapeamento faz-se num único
 ponto (adaptador do contexto, fatia 1.8); as chaves do mock mantêm-se só até serem substituídas.
 
 ## D-016 Transporte do contexto de tenant e acesso a dados (aceite — fatia 1.1)
+
 **Decisão.** `TenantContext` imutável (campos da spec §10.1; validação de UUIDs e coerência actor/identidades) transportado
 por `AsyncLocalStorage` (`TenantContextStore`) e entregue aos casos de uso como `TenantScope` por
 `TenantUnitOfWork.run()`. A implementação Lucid abre uma transacção na conta de runtime e faz
@@ -95,22 +110,25 @@ pool); passar o `tenantId` solto por parâmetro. **Consequências.** Todo o aces
 jobs e consumidores têm de construir o seu contexto (actor `SERVICE`) e usar o mesmo mecanismo.
 
 ## D-017 Fronteiras de módulo verificadas por teste (aceite — fatia 1.1)
+
 **Decisão.** `tests/support/architecture.ts` analisa os imports de `app/**` (R1–R6, ver `architecture.md` §2) dentro de
 `npm test`. Cada módulo expõe uma API pública (`index.ts`); o kernel HTTP (`core/http`) é partilhado.
 **Limite.** Só analisa imports; escritas SQL cruzadas entre módulos não são detectáveis estaticamente.
 
 ## D-018 Sessão opaca, cookie e CSRF (aceite — fatia 1.2)
+
 **Decisão.** O token de sessão tem 256 bits aleatórios; a base guarda só o SHA-256 (`auth_sessions.token_hash`). Cookie
 `sg_session` (`__Host-sg_session` em produção), `HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` em produção. Validade
 absoluta de 12 h; `last_seen_at` actualiza-se no máximo de 60 em 60 s. Revogação por sessão ou em lote (alteração e
 recuperação de palavra-passe). CSRF: nas escritas autenticadas exige-se `X-Csrf-Token` = HMAC(`APP_KEY`, id da sessão)
 (obtido no login e em `GET /me`) e o `Origin` de browser, quando presente, tem de estar em `CORS_ORIGINS` (também nas
-rotas públicas, contra *login CSRF*). **Nota.** O Adonis serializa o valor de `plainCookie` num envelope base64; não é
+rotas públicas, contra _login CSRF_). **Nota.** O Adonis serializa o valor de `plainCookie` num envelope base64; não é
 cifra, o segredo continua a ser o token. **Alternativas rejeitadas.** JWT (revogação difícil); token em `localStorage`.
-**Parâmetros de demonstração** (validar com o produto): 12 h de validade absoluta, sem *remember me*, sem limite de
+**Parâmetros de demonstração** (validar com o produto): 12 h de validade absoluta, sem _remember me_, sem limite de
 sessões em simultâneo.
 
 ## D-019 Palavras-passe e tokens de uso único (aceite — fatia 1.2)
+
 **Decisão.** Hash `scrypt` do Adonis (custo 16384, r=8, p=1), com `needsReHash` no login. Política: 12–128 caracteres,
 diferente do email e fora de uma lista mínima de valores triviais (sem regras de composição). Falha de login
 indistinguível entre utilizador inexistente, palavra-passe errada e conta pendente/bloqueada (verifica-se contra um hash
@@ -120,6 +138,7 @@ altera a palavra-passe e revoga as sessões. Um pedido novo invalida os anterior
 com o mesmo corpo. **MFA e SSO ficam fora da Fase 1** (`auth_sessions.mfa_verified_at` já existe, não é usado).
 
 ## D-020 Limitação de taxa em Redis (aceite — fatia 1.2)
+
 **Decisão.** Contador de janela fixa em Redis (`INCR` + `EXPIRE`, auto-reparável; sem Lua para respeitar R5). Login: 20
 por IP e 5 por conta+IP em 15 min (as chaves usam HMAC do email, nunca o email). Recuperação: 10/h por IP (429) e 3/h
 por conta (ignorado em silêncio). Alteração de palavra-passe: 5/15 min por utilizador. Resposta `429 RATE_LIMITED` com
@@ -127,12 +146,14 @@ por conta (ignorado em silêncio). Alteração de palavra-passe: 5/15 min por ut
 (por fazer, depende da infraestrutura de produção).
 
 ## D-021 Entrega de email (porta + driver de desenvolvimento; fornecedor em aberto)
+
 **Decisão.** `TokenMailer` é uma porta. `MAIL_DRIVER=dev-redis` guarda a mensagem (incluindo o token) numa lista Redis
 para desenvolvimento e testes e é **proibido em produção** (`assertEnvConsistency`); `none` regista um aviso sem token.
 Escolher o fornecedor real (SMTP/API) é decisão de produto pendente; sem ela, recuperação e verificação de email não
 chegam a utilizadores reais.
 
 ## D-022 Identidade e plano de controlo são tabelas globais (aceite — fatia 1.2)
+
 **Decisão.** `tenants`, `tenant_domains`, `users`, `auth_sessions` e `one_time_tokens` são globais e constam de
 `PLATFORM_TABLES` (nada se infere por ausência de filtro). Não têm RLS: a conta de runtime lê-as sem contexto de tenant,
 por isso o acesso é feito só pelos repositórios do módulo e o dono de cada acesso é a camada de aplicação.
@@ -141,6 +162,7 @@ SUSPENDED↔ACTIVE→CLOSING→CLOSED (domínio, com versão optimista). `Provis
 (administrador SaaS) ficam para depois; por agora a gestão faz-se por comandos `node ace` (`tenant:*`, `user:create`).
 
 ## D-023 Resolução do tenant, membership e leitura por utilizador (aceite — fatia 1.3)
+
 **Decisão.** Não há "tenant actual" guardado na sessão: cada pedido de tenant traz um **selector** (`X-Tenant-Id`,
 `X-Tenant-Code` ou domínio verificado no `Host`; vários têm de coincidir, senão 400). O middleware `tenant` (depois de
 `auth`) segue a spec §10.1: tenant candidato → membership **ACTIVE** do utilizador → tenant **ACTIVE** → constrói o
@@ -148,7 +170,7 @@ SUSPENDED↔ACTIVE→CLOSING→CLOSED (domínio, com versão optimista). `Provis
 `TenantContextStore`. Tenant inexistente e tenant sem membership dão o mesmo `403 TENANT_ACCESS_DENIED`; só depois de
 confirmada a membership se distingue `403 TENANT_NOT_ACTIVE`. Trocar de tenant é mudar o selector e recarregar
 `GET /context`; como o contexto é reconstruído por pedido, nada do tenant anterior é reutilizado.
-`tenant_memberships` é tabela de tenant (RLS forçada). Para ler *as próprias* memberships antes de haver contexto
+`tenant_memberships` é tabela de tenant (RLS forçada). Para ler _as próprias_ memberships antes de haver contexto
 existe a política `tenant_memberships_self_read` (`FOR SELECT USING (user_id = app_current_user_id())`), com
 `app.user_id` definido pelo servidor numa transacção a partir da sessão autenticada; escritas continuam a exigir o
 contexto de tenant. **Alternativas rejeitadas.** Função `SECURITY DEFINER` (a RLS é forçada também para o dono, exigiria
@@ -159,6 +181,7 @@ módulos, funcionalidades, permissões e configurações entram com C03/C06/C09.
 por `node ace membership:add|status` até aos convites (1.6).
 
 ## D-024 Modelo de autorização RBAC + ABAC (aceite — fatia 1.4)
+
 **Decisão.** Catálogo `permissions` **global**, declarado no código (`PERMISSION_CATALOG`) e semeado por `iam:sync`
 (idempotente; também faz crescer o papel `tenant_admin`). Papéis, `role_permissions`, `role_assignments` (com janela de
 validade e unidade opcional) e `access_policies` são de tenant (RLS + FKs compostas). A decisão é uma função pura
@@ -177,6 +200,7 @@ decisões por agora (cada pedido consulta a base), portanto a revogação é ime
 traduzir as condições para filtros SQL quando existirem), protecção do último administrador (1.6), auditoria (Fase 2).
 
 ## D-025 Organização, unidades e âmbitos de acesso (aceite — fatia 1.5)
+
 **Decisão.** `organizations`, `organization_units`, `cost_centers`, `team_members` e `membership_scopes` são de tenant (RLS +
 FKs compostas). "Pai da mesma organização" é imposto **pela base**: a FK do pai é
 `(tenant_id, organization_id, parent_id) → (tenant_id, organization_id, id)`; "não ser pai de si" é um CHECK. Os **ciclos**
@@ -197,6 +221,7 @@ quando existirem lançamentos (módulos financeiros); por agora a alteração é
 reorganização nem "unidade com documentos".
 
 ## D-026 Convites, quota de membros e último administrador (aceite — fatia 1.6)
+
 **Convites.** `invitations` guarda só o SHA-256 do token; o token é `<tenantId>.<segredo de 256 bits>` (o id do tenant serve
 apenas para localizar a linha sob RLS; a prova é o segredo). Vai **só por email** (a resposta da API nunca o contém). Validade
 7 dias por omissão (1–30; parâmetro de demonstração). Um convite pendente por email e tenant (índice parcial); um expirado é
@@ -218,6 +243,7 @@ de um papel. Só actua se havia administrador antes. **Não cobre** políticas D
 `organization` e `auth` só pelos `index.ts`; a aceitação é exposta pela plataforma, que injecta o estado e a quota do tenant.
 
 ## D-027 Party, subtipos coerentes, duplicados e campos sensíveis (aceite — fatia 1.7)
+
 **Modelo.** `parties` (PERSON | ORGANIZATION), `people`, `organization_parties`, `contacts`, `addresses`, `party_relationships`
 (todas de tenant). "Exactamente um subtipo coerente com o `kind`" é imposto pela base: cada subtipo tem uma coluna `kind` fixa
 (CHECK) e uma FK composta `(tenant_id, party_id, kind) → parties (tenant_id, id, kind)`, mais `unique(tenant, party_id)`. A
@@ -238,6 +264,7 @@ para identificação. Alterar o NIF/nome não reescreve documentos emitidos: os 
 organização interna) continua sem FK para `addresses`.
 
 ## D-028 Frontend ligado ao backend: sessão em cookie, selector de tenant e permissões (aceite — fatia 1.8)
+
 **Sessão.** O token é o cookie `HttpOnly` do servidor; o JavaScript nunca o vê. O frontend guarda **só em memória** o utilizador, o
 token anti-CSRF e a expiração; nada em `sessionStorage`/`localStorage` (excepto o último tenant, conveniência sem segredo). Ao
 arrancar, `provideAppInitializer` chama `GET /me` para restaurar a sessão do cookie antes da primeira navegação. O
@@ -259,7 +286,8 @@ catálogo contratados e activos; só as permissões do servidor limitam o acesso
 (plataforma) não existe no backend: nenhuma conta tem `platform.*`.
 
 ## D-029 Auditoria mínima: triggers na base, `audit_logs` imutável e `security_events` (aceite — fatia 2.1)
-**Onde se audita.** A alteração é registada por *triggers* `AFTER INSERT/UPDATE/DELETE` (`audit_row_change`, `SECURITY DEFINER`)
+
+**Onde se audita.** A alteração é registada por _triggers_ `AFTER INSERT/UPDATE/DELETE` (`audit_row_change`, `SECURITY DEFINER`)
 na **mesma transacção** da mudança: não há caminho de escrita que a esqueça, e uma falha ao auditar desfaz a operação. O actor
 vem de GUCs definidos por `LucidTenantDatabase.run()` junto com o tenant (`app.actor_type/user_id/membership_id`,
 `app.correlation_id`, `app.client_ip`; `app.audit_reason` opcional). A entrada guarda `before_data`/`after_data` (linha completa)
@@ -282,6 +310,7 @@ expurgo é manual pela conta dona), sem auditoria de leituras nem de MFA/SSO (n�
 de `request.ip()` sem proxy de confiança configurado.
 
 ## D-030 Planos, assinaturas e limites no plano de controlo (aceite — fatia 2.2)
+
 **Modelo.** `plan_versions` (revisões de um `plan_code`; `limits` e `entitlements` em `jsonb` validados pela aplicação; preço
 `numeric(19,4)`, string na API), `subscriptions` (no máximo uma não cancelada por tenant: índice parcial único) e
 `subscription_changes` (histórico append-only: atribuição, upgrade, downgrade, estado). São tabelas **globais** (`PLATFORM_TABLES`):
@@ -303,6 +332,7 @@ de pagamento (sem fornecedor, decisão de produto pendente), pedido de mudança 
 códigos de módulos/funcionalidades contra o registo (C03), renovação automática do período, e a ligação do frontend.
 
 ## D-031 Registo de módulos: catálogo entregue por código, activação por tenant e acesso efectivo (aceite — fatia 2.3)
+
 **Catálogo.** `modules`, `module_dependencies` e `features` são tabelas globais alimentadas por **manifestos em código**
 (`platform/modules/manifests.ts`, `node ace modules:sync`); o tenant nunca fornece manifestos, SQL ou código. A sincronização valida o
 conjunto inteiro antes de gravar (códigos, versões, funcionalidades prefixadas pelo módulo, dependências existentes e satisfeitas
@@ -325,8 +355,9 @@ validar), configuração por módulo (`configuration` existe mas não tem API), 
 existem processos), estado `DISABLING` (a desactivação é imediata), API de plataforma para o catálogo, e a ligação do frontend.
 
 ## D-032 Configurações com precedência declarada, impostos por período e sequências sob lock (aceite — fatia 2.4)
-**Configurações.** As *definições* (chave, tipo, valor por omissão, **âmbitos permitidos**) são entregues por código
-(`core/settings/domain/setting.ts`); o tenant só guarda *valores* (`setting_values`, um por âmbito: unicidade na base, combinação
+
+**Configurações.** As _definições_ (chave, tipo, valor por omissão, **âmbitos permitidos**) são entregues por código
+(`core/settings/domain/setting.ts`); o tenant só guarda _valores_ (`setting_values`, um por âmbito: unicidade na base, combinação
 filial+módulo = `BRANCH` com `module_code`). Valor efectivo, do menos ao mais específico: omissão < tenant < organização < filial <
 módulo < filial+módulo < membership, restringido aos âmbitos que a chave admite — por isso as regras fiscais (`tax.*`) só admitem
 tenant e organização e **nunca override pessoal** (`422 SCOPE_NOT_ALLOWED`); um valor guardado fora dos âmbitos permitidos é ignorado.
@@ -351,6 +382,7 @@ período sem sequência falha), preços com imposto incluído/arredondamento apl
 e valores por omissão de plataforma geríveis (são o `defaultValue` do código).
 
 ## D-033 Administração da plataforma: concessões explícitas, rotas sem tenant e provisionamento idempotente (aceite — fatia 2.5)
+
 **Identidade de plataforma.** Não existe um "super-utilizador": uma conta ganha `platform.tenant.manage` ou `platform.billing.manage` por
 **concessão explícita** (`platform_grants`, tabela global: motivo obrigatório, prazo opcional, nunca se apaga — revogar preenche
 `revoked_at`; um trigger só admite essa transição). As concessões criam-se e revogam-se por comando de operação
@@ -373,6 +405,7 @@ implementado, por isso o suporte **não** tem acesso), fecho de tenant com expor
 próprias entidades), domínio personalizado no provisionamento, e a UI de plataforma.
 
 ## D-034 Frontend da Fase 2 ligado à API: sem direitos provisórios, plataforma real e convenção de nomes (aceite)
+
 **Fim dos direitos provisórios.** `provisional-entitlements.ts` foi removido. O contexto do tenant vem do servidor: `GET /context` devolve os
 módulos do registo **activos e licenciados** e as funcionalidades efectivas (licença AND módulo activo AND funcionalidade ligada); quem tem
 `subscription.read` vê também o plano e o consumo (`GET /tenant/subscription`). Sem módulos de negócio no registo, nenhum módulo de negócio
@@ -393,6 +426,7 @@ frontend como **strings**. Um diálogo cujo estado de carga fecha o `<dialog>` n
 auditoria, e activação de módulos de negócio reais (não existem).
 
 ## D-035 Metadados e entidades dinâmicas: versões imutáveis, JSONB validado e permissões `dynamic.*` com ABAC por entidade (aceite — fatia 3.1)
+
 **Modelo.** Módulo `dynamic/metadata` (primeiro do grupo `dynamic`, alias `#dynamic/*`). Tabelas de tenant: `entity_definitions`,
 `entity_schema_versions`, `field_definitions`, `dynamic_records` e `dynamic_unique_values`; nunca se criam tabelas ou colunas por cliente. Os
 valores ficam em JSONB (`data`), validados no servidor contra a **versão exacta** do esquema com que o registo foi gravado; os valores de campos
@@ -426,6 +460,7 @@ UI (Entity Designer e listagens continuam mock no frontend), pesquisa indexada (
 exportações e outbox (inexistente), grants limitados a uma unidade sem âmbito de acesso (como nos restantes módulos, a porta usa `can`).
 
 ## D-036 Frontend de C10 ligado à API: tradução num só ponto, tipos do servidor e nada simulado (aceite — fatia 3.2)
+
 **Gateways HTTP.** `EntityDefinitionGateway` e `EntityRecordsGateway` passam a falar com `/entity-definitions` e `/dynamic/{código}/records`
 (`core/dynamic/http`, `provideDynamicBackend()`); os duplos em memória (`core/mock`) ficam só para os testes. O `CustomFieldGateway` deixou de
 ter dados simulados: `UnavailableCustomFieldGateway` devolve lista vazia e recusa escritas (501) — os campos personalizados estendem entidades
@@ -451,6 +486,7 @@ transições de estado, campos personalizados de entidades nativas, histórico d
 de autor do histórico sem `member.read`, e a UI de políticas por entidade (ABAC) — continua por API.
 
 ## D-037 Fórmulas e regras no servidor: gramática restrita, AST, gancho por registo (aceite — fatia 3.3)
+
 **Fórmulas.** O campo `FORMULA` guarda em `validation` a expressão, a escala, a AST e as dependências. Gramática: números, campos, `+ - * /`, parênteses e `round/min/max/abs`;
 limites de 500 caracteres, 100 nós e profundidade 20; nunca se executa SQL, JavaScript nem código do tenant. Cálculo em ponto fixo (BigInt, escala interna 12): campo nulo,
 divisão por zero ou resultado com mais de 19 dígitos dão **vazio**, não erro. O resultado é texto decimal, só de leitura, não obrigatório e sem valor por omissão; calcula-se
@@ -465,6 +501,7 @@ sobreviver à escrita recusada); PASS não se regista. Falha de avaliação **ne
 outras acções; LOOKUP e AUTONUMBER por fazer; ler regras e avaliações no histórico exige `rule.read` e `audit.read`; a UI de regras é a fatia 3.4.
 
 ## D-038 Editor de regras: construtor limitado, o resto preservado (aceite — fatia 3.4)
+
 A página de regras de uma entidade (`/regras`) usa só a API de D-037; não há regras locais nem simuladas. O **construtor** representa o caso comum — comparações (`=, ≠, >, ≥, <, ≤`, preenchido, vazio)
 sobre campos do registo, ligadas por «e» ou «ou», sem aninhamento — e converte-o para a AST do servidor (`rule-condition.ts`, num só ponto, com testes de ida e volta). Valores: decimais e fórmulas
 como **texto**, números como número, booleanos `true/false`; campos sensíveis, arquivados e multi-selecção não se oferecem (o servidor também os recusa). Uma condição fora desse subconjunto (aninhada,
@@ -474,6 +511,7 @@ Permissões: `rule.read` → `configuration.rules.read`; `rule.manage` → tamb�
 utilizador/tempo, eliminar rascunhos, comparar revisões, filtros por estado, e o tipo LOOKUP (fatia 3.5).
 
 ## D-039 Valores relacionados (LOOKUP): leitura em tempo real, nada copiado (aceite — fatia 3.5)
+
 A spec pede declarar «live ou snapshot». Escolheu-se **live**: o valor relacionado **não se guarda** no registo; lê-se do registo de origem em cada resposta. Assim a autorização do destino (RBAC + modo OWNER + ABAC +
 regras de campo + `dynamic.sensitive`) aplica-se **a cada leitura** e o valor nunca sobrevive a uma mudança de permissões nem fica desactualizado; a contrapartida é não se poder pesquisar, filtrar, ordenar nem usar em regras
 ou fórmulas (o servidor recusa-o). Definição: `{relationField, sourceField, onMissing}` em `validation`; o servidor deriva `sourceType`/`scale` (a interface precisa deles para formatar). Segue a versão **em vigor** da entidade,
@@ -482,6 +520,7 @@ nem a existência nem o conteúdo se revelam (como o 404 de IDs alheios). `onMis
 distinto (sem cache entre pedidos); retirar a origem do destino deixa o valor vazio sem avisar quem a usa; `snapshot` por fazer; a aplicação da permissão faz-se com os mesmos `AccessControl` e ports de D-035.
 
 ## D-040 Formulários: layout em JSON validado, ligações por código, nada duplicado (aceite — fatia 3.6)
+
 `form_definitions` guarda o layout como JSON validado pelo servidor (secções e ligações a campos **por código**) em vez de tabelas `FormSection`/`FormFieldBinding` separadas: o formulário nunca duplica a definição de um campo
 e é versionado e imutável como um todo (a spec pede um layout json e a imutabilidade da revisão publicada). Condições: as da interface (`eq/neq/gt/gte/lt/lte`, `in/nin`, `empty/notEmpty`, `and/or/not`) com códigos de campo,
 só sobre campos activos **não sensíveis**; nunca código. **Desvios assinalados à especificação:** largura da ligação `span` 1–3 e secção `columns` 1–3 (a spec indica `width` 1–12); `FormSubmission` não existe (o CRUD escreve directamente na
@@ -492,6 +531,7 @@ quem lê os registos vê os publicados (`/dynamic/{entity}/forms`) com `issues` 
 não incluir campos opcionais (ficam por preencher); o Form Builder visual e a vista móvel/papéis simulados são a fatia 3.7.
 
 ## D-041 Form Builder: o estado do editor é o layout do servidor (aceite — fatia 3.7)
+
 O builder edita directamente as secções que o servidor guarda (códigos de campo, condições declarativas), com operações puras e imutáveis (`form-layout.ts`) testadas à parte: nada se converte de e para um modelo paralelo, pelo que o que se vê é o que se grava.
 **Condições:** o construtor representa comparações ligadas por «e»/«ou» (números como número, booleanos, texto); `in/nin`, `not` e aninhamento mostram-se descritos e **preservam-se** até serem refeitos. Só campos não sensíveis (como no servidor).
 **Arrastar e largar** usa a API nativa do navegador (sem `@angular/cdk`, que exigiria uma dependência nova e ADR); subir/descer por botões garante o uso por teclado. **Pré-visualização:** o mesmo renderer dos registos, alimentado pelo layout em edição
@@ -500,6 +540,7 @@ com o caminho completo). **Permissões:** `form.read|design|publish` → `config
 valores escondidos; um formulário publicado nunca se edita (nova revisão).
 
 ## D-042 Máquinas de estados: estado à parte, transição atómica, outbox sem worker (aceite — fatia 3.8)
+
 **Estado fora do registo.** O estado vive em `record_states` (com a sua `version`) e não em `dynamic_records`: o módulo de estados não escreve nas tabelas dos registos (regra de módulos) e o PATCH genérico **não consegue** alterar o estado (não existe campo `status`). O módulo de metadados
 chama uma porta (`RecordStates`, registada em `start/dynamic.ts`, falha fechada) para dar o estado inicial na transacção da criação, recusar alterações em estados fechados (`editable: false`) e juntar `state` às respostas. **Uma máquina em vigor por entidade**; estados e transições em JSON validado
 (como D-040). **Transição:** bloqueia a linha do estado, valida `expectedVersion`, lê os dados **actuais** pelo módulo de metadados (só o que a pessoa vê; uma guarda sobre campos escondidos falha fechada), exige `dynamic.transition` (ABAC com `resource.state`) mais a permissão da transição (só códigos do catálogo: o tenant não inventa permissões),
@@ -509,11 +550,13 @@ avalia a guarda (condição declarativa, nunca código) e escreve estado + hist�
 **Categorias:** `INITIAL/ACTIVE/FINAL/CANCELLED` definem a edição por omissão; nomes de estado nunca produzem efeitos de negócio (faturar, movimentar stock…), que são comandos próprios. **Limites:** sem designer visual (fatia 3.9), sem `action_code`, a listagem não mostra o estado.
 
 ## D-043 Designer de máquinas de estados: o modelo do servidor, o mapa como verificação (aceite — fatia 3.9)
+
 O designer edita directamente os estados e as transições que o servidor guarda, com operações puras e imutáveis (`state-machine-model.ts`): remover um estado ajusta as transições dependentes (e avisa), mudar um código acompanha as referências, e «tornar inicial» garante um só estado inicial. Os códigos gerados acompanham o rótulo
 enquanto forem gerados (`estado*`/`transicao*` ou iguais ao `slug` do rótulo); um código escolhido à mão nunca se mexe. **Guardas:** o construtor reutiliza a gramática e o módulo das regras (D-038), com preservação das condições avançadas; só campos não sensíveis (o servidor também recusa). **Mapa:** mostra as saídas de cada estado
 e calcula a alcançabilidade com o mesmo critério do servidor (feedback imediato), mas a autoridade é a verificação do servidor antes de publicar. O que o servidor impede continua impedido: publicar uma revisão que retire um estado em uso por registos (`STATE_IN_USE`) e qualquer alteração a uma máquina publicada (nova revisão). **Limites:** sem diagrama gráfico (o mapa é textual), sem reordenação por arrastar, permissão adicional em texto livre.
 
 ## D-044 Workflows de aprovação: etapas em sequência, tarefas em paralelo, decisão sob bloqueio (aceite — fatia 3.10)
+
 **Modelo.** A definição (`workflow_definitions`, revisões DRAFT → PUBLISHED → RETIRED, imutável depois de publicada por trigger, **uma publicada por entidade e código**) guarda `graph = { stages[], amountField?, currencyField? }`: uma **sequência de etapas** em vez de um grafo arbitrário (a especificação diz «graph json»; ramificações e junções livres ficam por decidir).
 Paralelismo = várias tarefas na mesma etapa (uma por responsável, pessoa ou **papel**: tarefa de grupo, reclamada atomicamente) e critério `ALL`/`ANY`/`QUORUM`; uma **condição** (AST das políticas de acesso, sobre o registo congelado) dispensa a etapa — é assim que «acima da alçada» se exprime. Nunca se executa código do tenant.
 **Publicar** verifica condições e campos contra a entidade e que **todos os responsáveis são resolvíveis** (membro activo; papel com pelo menos um titular activo). **Submeter** exige `workflow.submit` e leitura do registo, congela `submitted_snapshot` (o que quem submete vê, sem campos sensíveis ou escondidos) e `resource_version`, retém a revisão usada e abre as tarefas da primeira etapa aplicável;
@@ -525,6 +568,7 @@ a «menor alçada» é o máximo da delegação (não há alçada por utilizador
 **Limites:** sem ramificações, sem migração de processos em curso entre revisões (cada instância mantém a sua), sem devolução a uma etapa anterior (devolver termina o processo), alteração de qualquer valor cancela (não há campos «relevantes» configuráveis), janela residual entre a leitura do registo e o commit da submissão.
 
 ## D-045 Automações: inbox no outbox, execução em nome de quem activa, causalidade limitada (aceite — fatia 3.11)
+
 **Consumo do outbox.** Primeiro consumidor real do outbox (D-015): `outbox_deliveries` é a **inbox** (um evento por consumidor, escrita na mesma transacção do despacho) e o consumidor lê os eventos ainda não entregues **por ordem de criação sem cursor** — transacções concorrentes confirmam fora de ordem e um cursor saltaria eventos. Os eventos continuam `PENDING` no outbox (não há publicação para fora);
 a inbox cresce com o outbox e **ainda não há retenção** (a limpar quando houver política). **Trabalhador:** `node ace automation:work [--once] [--interval=5]` é um ciclo simples de sondagem por tenant operacional (sem biblioteca de filas: ainda não há necessidade que o justifique); um tenant suspenso, a fechar ou fechado **nunca é processado**.
 **Definição.** `automations` com **exactamente um** gatilho (um tipo de evento do catálogo, ou um calendário de cinco campos num fuso, intervalo mínimo de 5 minutos), condição AST das políticas de acesso sobre os campos do evento e acções do catálogo com parâmetros literais ou `{ "from": "payload.campo" }` (nunca código); cada alteração é uma nova versão e **uma activa não se altera**.
@@ -536,6 +580,7 @@ estas execuções ficam registadas como `DEAD` e **não se reprocessam**. Um cic
 **Limites:** at-least-once (uma falha entre a acção e o registo do progresso repete a acção: as acções não são idempotentes por si — uma transição repetida falha de forma visível); sem acções de notificação ou de criação de tarefas (não existem esses módulos); sem retenção de execuções nem da inbox; as acções que um módulo oferece têm de existir no arranque (uma automação que refere uma acção desaparecida falha ao activar); a profundidade e o limite por hora são constantes (não configuráveis por tenant).
 
 ## D-046 Catálogo (M03): variante como unidade vendável, preço por tabela e escalão, resolução com origem (aceite — fatia 4.1)
+
 **Modelo.** Primeiro módulo de negócio no registo (`catalog`, funcionalidades `catalog.products` e `catalog.prices`; `middleware.feature` exige licença, módulo activo e funcionalidade ligada) e primeiro código em `app/modules/` (alias `#modules/*`; a regra de fronteiras e o teste de arquitectura passam a cobri-lo). `products` (código imutável por tenant; `GOODS` ou `SERVICE`; unidade de base; `track_stock`; rastreio `NONE|LOT|SERIAL`) e `product_variants`: **a variante é a unidade vendável e a que levará stock e linhas de documento**; o SKU é único no tenant e imutável, o código de barras único quando existe, os atributos são pares simples. Criar um produto cria sempre a **variante por omissão** (SKU = código do produto, salvo indicação); essa variante não se desactiva com o produto activo. Nada se apaga: produtos, variantes e (futuramente) documentos desactivam-se; só os itens de uma tabela de preços se removem. As categorias são uma árvore (o servidor recusa ciclos) sem estado activo.
 **Regras no domínio e na base.** Um serviço nunca controla nem rastreia stock; lotes e séries exigem controlar stock (validado no domínio **e** por `CHECK` na base: nem SQL directo contorna). Dinheiro é `numeric(19,4)`, quantidades `numeric(19,6)`, desconto máximo `numeric(5,4)` entre 0 e 1: atravessam a API como **texto**, comparam-se sem `number` e uma quantidade mínima tem de ser estritamente positiva.
 **Preço.** `price_lists` (organização, moeda — ambas imutáveis, porque mudá-las mudaria o sentido dos itens —, período `[valid_from, valid_to]`, IVA incluído, prioridade −1000..1000) e `price_list_items` (variante, escalão `min_quantity`, preço, desconto máximo; único por tabela+variante+escalão). **Resolução** (`GET /prices/resolve`, `price.read`): em cada tabela aplicável (organização, moeda, data) vale o **escalão mais alto cuja quantidade mínima é atingida**; entre tabelas vence a de **maior prioridade**; duas tabelas aplicáveis com a **mesma prioridade** → `409 PRICE_AMBIGUOUS` (nunca se escolhe ao acaso, mesmo que os preços coincidam: a configuração é que está errada); sem preço → `404 PRICE_NOT_FOUND`; variante inactiva → 409. A resposta traz o **preço, o desconto máximo e a origem** (tabela, prioridade, escalão, período): **quem emite um documento guarda-os em snapshot** — alterar a tabela depois não mexe em linhas já criadas (o que a especificação exige; ainda não há documentos que o provem de ponta a ponta).
@@ -544,6 +589,7 @@ estas execuções ficam registadas como `DEAD` e **não se reprocessam**. Um cic
 **Limites.** Sem preços em moeda diferente por conversão (uma tabela por moeda), sem preço por cliente/segmento (as tabelas escolhem-se por organização; segmentos vêm com M01), sem promoções nem arredondamento fiscal (os impostos aplicam-se nos documentos), sem imagens, sem unidades alternativas por produto (usa-se a conversão das unidades do tenant), sem importação em lote nem exportação, sem pesquisa além de `ILIKE` em código, nome, SKU e código de barras, sem desactivação de categorias, sem edição de variante ou de item de preço na interface (só criar e remover itens; as variantes e os itens editam-se pela API).
 
 ## D-047 Clientes (M01): condições comerciais sobre a Party, crédito como campo sensível, bloqueio que só recusa vendas (aceite — fatia 4.2)
+
 **Modelo.** Segundo módulo de negócio no registo (`customers`, funcionalidades `customers.accounts` e `customers.interactions`; o módulo do servidor difere do `crm` porque o CRM comercial (M02) é outro módulo). `customers` liga uma Party a uma organização do tenant (único por `tenant+organização+Party`; a mesma Party pode ser cliente de várias organizações e, mais tarde, fornecedor) e guarda **só** as condições comerciais: código imutável, segmento, gestor de conta (membro activo), prazo de pagamento (0–3650 dias), limite de crédito (`numeric(19,4)`, texto na API), moeda (por omissão a base da organização) e estado. **Nome, NIF e contactos continuam a ser da Party**: a lista e o detalhe lêem-nos por junção de leitura (`parties`, `organization_parties`), nunca escrevem; os contactos do detalhe só vêm a quem tem `party.read`. A pesquisa cobre nome da Party, código e NIF de organizações (o NIF de pessoas é campo sensível da Party e não se pesquisa).
 **Crédito.** O limite e a moeda são financeiros: só se vêem (`null` caso contrário, na lista e no detalhe) e só se indicam ou alteram com `customer.credit_manage`; sem ela, indicar um deles dá 403 e as restantes condições alteram-se sem tocar no crédito. **Desvio da especificação:** a especificação escreve `customer.credit.manage`, mas o formato de permissões do catálogo (`recurso.acção`, D-014) só admite dois segmentos; usa-se `customer.credit_manage`. Reconciliar na especificação.
 **Bloqueio.** `ACTIVE`/`INACTIVE` mudam-se por edição; `BLOCKED` só se alcança e deixa por `block` (exige motivo, `customer.block`) e `unblock`, nunca por `PATCH status`. Um cliente bloqueado mantém-se editável (prazo, segmento…) e **continua a poder pagar e regularizar**; o que recusa é a confirmação de venda: `customerServices().customers.assertSaleAllowed(contexto, id)` devolve 409 `CUSTOMER_BLOCKED` (ou `CUSTOMER_INACTIVE`) e 404 se não existir, para as propostas e encomendas (4.3) chamarem na confirmação. **Ainda não existe verificação de crédito** (exposição = contas a receber e reservas, que só chegam com a facturação, 4.6): o limite é guardado e protegido, mas nada o aplica; **não há saldo** no detalhe pelo mesmo motivo (a spec pede-o derivado das contas a receber).
@@ -551,6 +597,7 @@ estas execuções ficam registadas como `DEAD` e **não se reprocessam**. Um cic
 **Limites.** A interface regista e lista as interacções **de um cliente** (a lista global e a agenda de seguimentos existem só na API: `GET /interactions?followUpBefore=…`); sem importação, sem fusão de clientes duplicados, sem hierarquia de grupos, sem listas de contactos próprias (usam-se as da Party), sem desactivar o cliente em lote. O gestor de conta só se escolhe na interface a quem pode listar membros.
 
 ## D-048 Propostas e encomendas (M04): instantâneo exacto, confirmar ≠ reservar ≠ expedir ≠ facturar (aceite — fatia 4.3)
+
 **Modelo.** Terceiro módulo de negócio no registo (`orders`, funcionalidades `orders.quotes` e `orders.orders`; depende de `catalog` e `customers`). `sales_quotes` (rascunho → enviada → aceite/rejeitada; **expirada é derivada**: uma proposta enviada fora da validade; nunca se grava), `sales_orders` (rascunho → confirmada → cancelada; `PARTIAL` e `FULFILLED` existem no esquema para as expedições, 4.5) e `sales_lines`. **Desvio da especificação:** a linha tem duas chaves estrangeiras (`quote_id` ou `order_id`, exactamente uma) em vez de `document_type + document_id`, para a base garantir a integridade (FK composta com o tenant); os totais são colunas `numeric(19,4)` (não JSON), com `CHECK total = líquido + imposto`. Números por sequência do tenant (`QUOTE` ao enviar, `SALES_ORDER` ao confirmar, série `A`; sem sequência configurada → 409 `SEQUENCE_NOT_CONFIGURED` e nada muda).
 **Instantâneo.** O cliente só indica variante, quantidade e desconto: **o preço, o escalão, o desconto máximo e a origem vêm da resolução do catálogo (D-046)**, o imposto da taxa válida na data para a `taxCategory` do produto (sem categoria = 0 %; categoria sem taxa → 422 `NO_TAX_RATE`; duas taxas → 409), a descrição, a unidade e a taxa ficam copiadas na linha. Alterar o catálogo ou as tabelas depois **não mexe** em linhas existentes (provado por teste); aceitar uma proposta copia as linhas **tal como foram propostas**, sem recalcular. As linhas de um documento que já não é rascunho não se acrescentam, alteram nem removem — **por trigger na base** (nem SQL directo). A quantidade respeita a precisão da unidade; o desconto não passa o máximo do preço (422 `DISCOUNT_EXCEEDS`); o preço resolve-se para a data da encomenda (a de hoje, nas propostas).
 **Aritmética.** Tudo em `bigint` com escala fixa (`domain/money.ts`), nunca `number`: `qtd × preço × (1 − desconto)` arredondado **uma vez** a 4 casas; depois o imposto sobre o líquido, ou — se o preço inclui imposto (flag da tabela de preços, que manda sobre a configuração `tax.pricesIncludeTax`) — o líquido extraído do total (o total não muda). Modo `HALF_UP` ou `HALF_EVEN` da configuração `tax.roundingMode`. O total do documento é a **soma das linhas já arredondadas**.
@@ -558,8 +605,8 @@ estas execuções ficam registadas como `DEAD` e **não se reprocessam**. Um cic
 **Autorização.** `quote.read|manage`, `order.read|manage` e `sales.confirm` (a spec só nomeia esta última). Tabelas de tenant, auditadas e na matriz de isolamento.
 **Limites.** Sem verificação de crédito nem de stock (ganchos prontos, sem implementações até 4.4/4.6); sem filiais (`branch_id`), sem preço ou desconto manuais (só os do catálogo, sem alçada), sem revisão de propostas enviadas, sem cópia de proposta, sem impressão/PDF/envio por email, sem linhas livres (sem variante), sem quantidades pedidas/reservadas/entregues/facturadas no detalhe (só existe o pedido), sem mudança de moeda depois de haver linhas, sem edição de linhas na interface (remover e voltar a acrescentar; a API suporta `PATCH`), a interface só escolhe o cliente (e por isso a organização) a quem pode listar clientes.
 
-
 ## D-049 Interfaces em falta da Fase 1: só apresentação sobre APIs existentes (aceite — fatia 1.10)
+
 - **Âmbito.** Frontend apenas; nenhuma rota, tabela ou permissão nova no servidor. Páginas: perfis (CRUD e permissões por módulo),
   políticas ABAC (construtor de condições + regras de campo), simulador de acessos, perfis e âmbitos por membro,
   centros de custo e equipas, «Pessoas e entidades» (Party) e «A minha conta» (sessões, palavra-passe, eventos de segurança).
@@ -575,11 +622,12 @@ estas execuções ficam registadas como `DEAD` e **não se reprocessam**. Um cic
   dinâmico continuam a ter partes em mock (ver plano 2.9).
 
 ## D-015 Filas e workers (adiada)
+
 Redis está presente (cache, limites de taxa). A biblioteca de filas e o processo worker serão escolhidos quando houver
 o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
 
-
 ## D-050 Inventário (M07): livro imutável, saldos sob bloqueio, reservas na transacção da encomenda (aceite — fatia 4.4)
+
 - **Livro e saldo.** `stock_movements` só se acrescenta (trigger; nem a conta dona o altera sem o interruptor de retenção) e tem
   **origem única** por tipo/documento/linha/efeito: repetir um comando devolve o movimento já lançado (idempotente) e outro
   conteúdo com a mesma origem é 409 `SOURCE_CONFLICT`. `stock_balances` é derivado e actualiza-se na mesma transacção, sob
@@ -607,8 +655,8 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   (4.8), expedições que consomem reservas (4.5), «em trânsito», política explícita para sair de lotes expirados, trabalhador
   para expirar reservas, valorização em relatórios.
 
-
 ## D-051 Expedições (M04): dentro de `orders`, saldo por linha sob bloqueio, baixa de stock por efeito registado (aceite — fatia 4.5)
+
 - **Onde.** As expedições vivem no módulo `orders` (spec M04: `/shipments`, `shipment.post`), na funcionalidade `orders.shipments`;
   permissões `shipment.read`, `shipment.manage` (rascunhos) e `shipment.post` (lançar e reverter). O módulo `orders` continua sem
   conhecer o inventário: a baixa e a reposição de stock são **efeitos registados** (`registerShipmentEffects`) que correm na
@@ -632,6 +680,7 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   transporte, devoluções (4.8).
 
 ## D-052 Contratos, facturas e notas de crédito (M05): emitir é distinto, o emitido não se altera (aceite — fatia 4.6)
+
 - **Onde.** Módulo `invoicing` (dependências: `core`, `customers`; `orders` opcional), funcionalidades `invoicing.contracts` e
   `invoicing.invoices`. Permissões `invoice.read|manage|issue`, `credit_note.manage|issue` e `contract.read|manage` (dois segmentos:
   o código do servidor não admite hífen, por isso `credit_note` e não `credit-note`). A facturação lê encomendas, clientes, Party,
@@ -664,6 +713,7 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   exposição de crédito do cliente, séries por tipo de documento.
 
 ## D-053 Compras (M06): fornecedores, requisições, encomendas e recepções; a entrada de stock é a recepção (aceite — fatia 4.7)
+
 - **Onde.** Módulo `procurement` (dependências: `core`, `catalog`; `inventory` opcional), funcionalidades `procurement.suppliers|requisitions|orders|receipts`.
   Permissões `supplier.read|manage`, `requisition.read|manage|approve`, `purchase.read|manage|confirm` e `receipt.read|manage|post`.
   O domínio tem a sua aritmética decimal (`domain/decimal.ts`); o inventário liga-se por `registerReceiptEffects` (as compras não
@@ -677,7 +727,7 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   (trigger). Converter cria **uma** encomenda em rascunho (única por requisição, idempotente) e exige o custo e a taxa de cada
   linha, porque a requisição não leva preços.
 - **Encomenda a fornecedor.** `DRAFT → ORDERED` (número `PURCHASE_ORDER`, evento `procurement.purchase_order.confirmed`) `→ PARTIAL → RECEIVED`,
-  ou `CANCELLED` (motivo; só enquanto nenhuma recepção lançada a tocou). Líquido = quantidade × custo e imposto = líquido × taxa
+  ou `CANCELLED` (motivo). Numa encomenda `PARTIAL` cancela-se o **restante**: as recepções lançadas e o stock mantêm-se, a encomenda deixa de receber e reverter uma recepção só devolve o stock (não reabre a encomenda); uma `RECEIVED` não tem restante (409 `PURCHASE_ORDER_RECEIVED`). Líquido = quantidade × custo e imposto = líquido × taxa
   (percentagem manual por linha, sem tabela fiscal), cada um arredondado uma vez; o total é a soma das linhas. Depois de confirmada
   só mudam o estado e o cancelamento (trigger); `RECEIVED` volta a `PARTIAL`/`ORDERED` se se reverterem recepções. Confirmar **não**
   recebe (≠ receber ≠ facturar do fornecedor ≠ pagar).
@@ -697,6 +747,7 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   alçadas/workflow, moeda diferente da do fornecedor.
 
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
+
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de
 email/SMS/WhatsApp/pagamento; calendário de férias; alçadas e segregação; política de retenção; RPO/RTO; limites de
 integração. Até decisão: parâmetros de demonstração identificados e conectores fiscais/financeiros desactivados.

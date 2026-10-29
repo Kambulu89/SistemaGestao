@@ -8,7 +8,7 @@ Auditoria de 2026-10-29 sobre o repositório no commit `f287cd4` (branch `claude
 - **Testes executados na última corrida completa:** backend 643 (unitários e funcionais, incluindo a matriz de isolamento por tabela e rota e a paridade rotas↔OpenAPI), frontend 1014 (Vitest). Lint, format, typecheck e build limpos. Migrations subidas e descidas numa base limpa em cada corrida do backend.
 - **E2E em browser real** (Playwright sobre a API real) correram por fatia, com scripts locais fora do repositório (limitação: não são reproduzíveis por terceiros nem estão em CI).
 - **Varreduras automáticas ao frontend:** sem `(click)` vazio, sem `href="#"`/`routerLink="#"`, sem botões desactivados fixos, sem `TODO/FIXME`; os *mocks* (`core/mock`, `core/testing`) só são carregados em testes (`provideMockBackend` só é importado por `core/testing`). Os ecrãs provisórios (`module-scaffold`) dizem explicitamente que o módulo não está implementado.
-- **Critérios de aceitação da especificação:** 129 critérios; ver `MODULE_COMPLETION.md` (53 verificados por teste, 10 parciais, 66 não verificados ou de módulos não implementados).
+- **Critérios de aceitação da especificação:** 129 critérios; ver `MODULE_COMPLETION.md` (60 verificados por teste, 4 parciais, 65 não verificados ou de módulos não implementados).
 
 ## 2. Estado por módulo
 
@@ -32,7 +32,7 @@ Legenda dos estados de módulo: **Não iniciado** · **Parcialmente implementado
 | C01 Tenants | Provisionamento | Criar, suspender, reactivar tenant; domínios | Parcial | Completo | Completo | Parcial | BE: tenants/platform.spec (20) · FE: platform (19) | Sem `ProvisioningStep` persistido | Persistir passos de provisionamento (baixa prioridade) |
 | C02 Planos | Planos e assinaturas | Planos versionados, assinatura, quota de membros, mudança de plano | Parcial | Parcial | Completo | Parcial | billing.spec (10) | Sem `UsageCounter`, pedido de mudança de plano nem faturação SaaS/webhooks | Contadores de uso; pedido de mudança; registo de faturação SaaS |
 | C03 Módulos | Registo | Catálogo por código, activação, overrides, `middleware.feature` | Completo | Completo | Completo | Completo | modules.spec (15) | Sem configuração por módulo | Configuração por módulo (settings já suportam o âmbito) |
-| C03 Módulos | Capacidades do frontend | Menu e rotas das capacidades do catálogo | Parcial | Completo | Completo | Parcial | module-catalog.spec | **6 capacidades** (`iam.teams`, `organization.cost-centers`, `workflow.flows`, `workflow.rules`, `configuration.forms`, `configuration.localization`) mostram o ecrã provisório «ainda não implementadas» embora a função exista noutras rotas (A-01) | Ligar cada capacidade à página real |
+| C03 Módulos | Capacidades do frontend | Menu e rotas das capacidades do catálogo | Completo | Completo | Completo | Completo | module-catalog.spec · capability-redirect.spec (11) | A-01 **resolvida**: as 6 capacidades com função noutra rota (`iam.teams`, `organization.cost-centers`, `workflow.flows`, `workflow.rules`, `configuration.forms`, `configuration.localization`) levam agora à página real | — |
 | C04 Identidade | Autenticação | Login, sessão opaca, CSRF, recuperação, verificação de email, sessões | Completo | Parcial | Completo | Completo | auth.spec (24) · FE auth (10) | Sem MFA/SSO nem fornecedor de email (D-021) | MFA (TOTP) e driver de email — decisão de produto |
 | C05 Membros | Convites e membros | Membership, convites, quota, último admin, preferências | Completo | Completo | Completo | Completo | members.spec (18) · FE users | Sem reenvio de convite nem auto-registo | Reenvio de convite |
 | C06 Autorização | RBAC/ABAC | Papéis, atribuições, políticas AST, simulação, regras de campo | Completo | Parcial | Completo | Completo | iam.spec (13) · FE permissions | Sem filtro de linhas, cache de decisões nem auditoria própria | Auditoria das alterações de papéis/políticas já via triggers; cache fora de âmbito |
@@ -54,7 +54,7 @@ Legenda dos estados de módulo: **Não iniciado** · **Parcialmente implementado
 | M05 Facturação | Facturas e notas de crédito | Emissão atómica, snapshot, notas, imutabilidade | Completo | Parcial | Completo | Completo | invoicing.spec (19) | Sem recebível, certificação fiscal, PDF, notas de débito; 2 critérios só parciais | Receivable ao emitir (M09); PDF (S01) |
 | M05 Facturação | Contratos | Rascunho/activo/terminado, expirado derivado | Completo | Parcial | Completo | Completo | invoicing.spec | Sem facturação recorrente | Recorrência por contrato |
 | M06 Compras | Fornecedores e requisições | Fornecedor sobre Party, requisição, aprovação por outra pessoa | Completo | Parcial | Completo | Completo | procurement.spec (16) | Sem cotações nem comparação | Cotações (`/supplier-quotations`) |
-| M06 Compras | Encomendas e recepções | Encomenda, recepção, entrada de stock, reversão | Completo | Parcial | Completo | Completo | procurement.spec | **Desvio:** não cancela o restante depois de recepção parcial; sem aceite/rejeitado na recepção, três vias, devoluções ao fornecedor | Corrigir o cancelamento do restante; qualidade na recepção; 3 vias com M09 |
+| M06 Compras | Encomendas e recepções | Encomenda, recepção, entrada de stock, reversão | Completo | Parcial | Completo | Completo | procurement.spec | A-02 **resolvida**: cancela-se o restante de uma encomenda parcial, preservando recepções e stock; continua sem aceite/rejeitado na recepção, três vias, devoluções ao fornecedor | Qualidade na recepção; 3 vias com M09 |
 | M07 Inventário | Armazéns, movimentos, lotes, reservas | Livro imutável, saldos, custo médio, reservas | Completo | Parcial | Completo | Completo | inventory.spec (22) | Sem números de série, «em trânsito» nem trabalhador de expiração | Trânsito (M08); trabalhador de expiração |
 | M08 Logística de stock | Transferências, contagens, devoluções | Transferência com trânsito, contagem com congelamento, devolução | Ausente | Ausente | Ausente | Ausente | — | Módulo não iniciado (`inventory.movements`, `inventory.stocktaking` provisórios) | Implementar (fila 2) |
 | M09 Tesouraria | Contas, recebíveis, pagamentos, conciliação | Obrigações, alocações, reversão, extrato | Ausente | Ausente | Ausente | Ausente | — | Módulo não iniciado; **bloqueia** crédito (M01/M04), recebível (M05) e três vias (M06) | Implementar primeiro (fila 1) |
@@ -74,9 +74,9 @@ Legenda dos estados de módulo: **Não iniciado** · **Parcialmente implementado
 
 | ID | Lacuna | Módulo | Gravidade | Estado |
 | --- | --- | --- | --- | --- |
-| A-01 | Seis capacidades do catálogo mostram o ecrã provisório «ainda não implementadas» embora a funcionalidade exista noutras rotas (equipas e centros de custo na Organização, fluxos e regras/automações, entidades, numeração/impostos nas Configurações) | C03/C07/C09/C12–C15 | Média (UX enganadora) | Aberta |
-| A-02 | Cancelar a encomenda a fornecedor é recusado depois de uma recepção parcial; a especificação pede cancelar o restante preservando a recepção | M06 | Média (desvio da spec) | Aberta |
-| A-03 | Critérios sem teste automático: alteração do NIF/cliente depois de emitir a factura (C08.3, M05.2), falha depois de numerar (M05.1), orçamento de avaliação de regras (C12.1), transição inexistente → 409 (C13.1), regras e documentos emitidos (C12.3) | C08/C12/C13/M05 | Média | Aberta |
+| A-01 | Seis capacidades do catálogo mostravam o ecrã provisório «ainda não implementadas» embora a funcionalidade exista noutras rotas | C03/C07/C09/C12–C15 | Média (UX enganadora) | **Resolvida** (`shared/routing/capability-redirect`, 2026-10-29) |
+| A-02 | Cancelar a encomenda a fornecedor era recusado depois de uma recepção parcial; a especificação pede cancelar o restante preservando a recepção | M06 | Média (desvio da spec) | **Resolvida** (D-053 actualizada; `procurement.spec`) |
+| A-03 | Critérios sem teste automático (C08.3, M05.1, M05.2, C12.1, C12.3; C13.1 já estava coberto) | C08/C12/C13/M05 | Média | **Resolvida** (7 critérios passam a Verificado) |
 | A-04 | Crédito do cliente, saldo e recebível não existem (dependem de M09): critérios M01.3, M05.3 e a reserva de crédito de M04 | M01/M04/M05 | Alta (bloqueia fluxo order-to-cash) | Aberta — depende de M09 |
 | A-05 | Três vias (encomenda–recepção–factura do fornecedor), contas a pagar e cotações | M06/M09 | Alta | Aberta — depende de M09 |
 | A-06 | Devoluções, transferências e inventários físicos | M07/M08 | Alta | Aberta |
@@ -89,7 +89,7 @@ Legenda dos estados de módulo: **Não iniciado** · **Parcialmente implementado
 
 ## 5. Ordem de desenvolvimento (por dependências)
 
-1. **Reconciliação das capacidades (A-01)** e testes em falta (A-03), correcção do cancelamento (A-02): fecham inconsistências sem dependências.
+1. ~~Reconciliação das capacidades (A-01), testes em falta (A-03), correcção do cancelamento (A-02)~~ — **feito**.
 2. **M09 Tesouraria, contas a receber e a pagar** (cria o recebível ao emitir, o pagável da factura do fornecedor, o saldo e a exposição de crédito; resolve A-04/A-05).
 3. **M08 Transferências, inventários físicos e devoluções** (resolve A-06).
 4. **M02 CRM comercial.**

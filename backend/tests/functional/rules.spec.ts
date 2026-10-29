@@ -101,6 +101,40 @@ test.group('regras | ciclo de vida, publicação imutável e aplicação aos reg
     }
   })
 
+  test('publicar uma regra não altera os registos já gravados: lêem-se iguais e só as novas escritas são avaliadas', async ({
+    client,
+    assert,
+  }) => {
+    const { http } = await setup(client)
+    const before = await must<any>(
+      await http.post(records, { data: { ref: 'ANTIGO', desconto: '50.00' } }),
+      201
+    )
+    const rule = await must<any>(await http.post('/api/v1/rules', newRule()), 201)
+    await must(
+      await http.post(`/api/v1/rules/${rule.id}/publish`, { expectedVersion: rule.version }),
+      200
+    )
+    const after = await must<any>(await http.get(`${records}/${before.id}`), 200)
+    assert.deepEqual(after.data, before.data)
+    assert.equal(after.version, before.version)
+    assert.lengthOf((await http.get(`/api/v1/rules/${rule.id}/evaluations`)).body().data, 0)
+    // Só a escrita seguinte é avaliada: manter o valor fora da alçada continua bloqueado.
+    const edit = await http.patch(`${records}/${before.id}`, {
+      expectedVersion: before.version,
+      data: { desconto: '60.00' },
+    })
+    edit.assertStatus(422)
+    const fixed = await must<any>(
+      await http.patch(`${records}/${before.id}`, {
+        expectedVersion: before.version,
+        data: { desconto: '10.00' },
+      }),
+      200
+    )
+    assert.equal(fixed.data.desconto, '10.00')
+  })
+
   test('rascunho → simulação → publicação: a regra bloqueia as escritas com a mensagem de negócio', async ({
     client,
     assert,

@@ -309,20 +309,26 @@ export class PurchaseUseCases {
           'Um rascunho apaga-se; só se cancela uma encomenda confirmada.'
         )
       }
-      const received = await this.receipts.receivedByLine(scope, id)
-      if (order.status !== 'ORDERED' || received.size > 0) {
+      if (order.status === 'RECEIVED') {
         throw ApiError.conflict(
-          'PURCHASE_ORDER_HAS_RECEIPTS',
-          'Uma encomenda já recebida (total ou parcialmente) não se cancela: reverta as recepções.'
+          'PURCHASE_ORDER_RECEIVED',
+          'A encomenda já foi toda recebida: não há restante a cancelar. Reverta a recepção se foi um engano.'
         )
       }
+      // Numa encomenda parcialmente recebida cancela-se o restante; as recepções lançadas e o stock ficam como estão.
+      const received = await this.receipts.receivedByLine(scope, id)
       const cancelled = await this.purchases.cancel(scope, id, text)
       await this.outbox.append(scope, {
         aggregateType: 'purchase_order',
         aggregateId: id,
         aggregateVersion: cancelled.version,
         eventType: 'procurement.purchase_order.cancelled',
-        payload: { purchaseOrderId: id, number: order.number, reason: text },
+        payload: {
+          purchaseOrderId: id,
+          number: order.number,
+          reason: text,
+          remainderOnly: received.size > 0,
+        },
         correlationId: context.correlationId,
       })
       return { order: await this.detail(scope, id), idempotent: false }

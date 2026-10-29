@@ -261,7 +261,9 @@ export class ReceiptUseCases {
       const orderLines = await this.purchases.listLines(scope, order.id)
       const reversed = await this.receipts.reverse(scope, id, text)
       await runReversedEffects(scope, reversed, order, this.refsOf(lines, orderLines))
-      const after = await this.refreshOrder(scope, order, orderLines)
+      // O restante cancelado mantém-se cancelado: reverter uma recepção só devolve o stock, não reabre a encomenda.
+      const after =
+        order.status === 'CANCELLED' ? order : await this.refreshOrder(scope, order, orderLines)
       await this.outbox.append(scope, {
         aggregateType: 'goods_receipt',
         aggregateId: id,

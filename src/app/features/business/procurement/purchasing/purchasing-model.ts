@@ -63,8 +63,8 @@ const PURCHASING_ERRORS: Readonly<Record<string, string>> = {
   PURCHASE_ORDER_EMPTY: 'Uma encomenda sem linhas não se confirma.',
   PURCHASE_ORDER_CANCELLED: 'A encomenda está cancelada.',
   PURCHASE_ORDER_NOT_CONFIRMED: 'Um rascunho apaga-se; só se cancela uma encomenda confirmada.',
-  PURCHASE_ORDER_HAS_RECEIPTS:
-    'Uma encomenda já recebida (total ou parcialmente) não se cancela: reverta as recepções.',
+  PURCHASE_ORDER_RECEIVED:
+    'A encomenda já foi toda recebida: não há restante a cancelar. Reverta a recepção se foi um engano.',
   PURCHASE_ORDER_NOT_RECEIVABLE: 'Só se recebe uma encomenda confirmada que ainda tenha saldo.',
   GOODS_RECEIPT_NOT_DRAFT: 'Só uma recepção em rascunho se altera ou apaga.',
   GOODS_RECEIPT_EMPTY: 'Uma recepção sem linhas não se lança.',

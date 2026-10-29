@@ -299,6 +299,51 @@ test.group('facturas | rascunho e emissão', (g) => {
     assert.equal(events[0].payload.number, issued.invoice.number)
   })
 
+  test('mudar o NIF e o nome do cliente depois de emitir não altera a factura; uma emissão recusada não gasta número', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const empty = await must<any>(
+      await ctx.http.post('/api/v1/invoices', {
+        organizationId: ctx.org.id,
+        customerId: ctx.customer.id,
+      }),
+      201
+    )
+    // Recusada (sem linhas): nada é numerado.
+    ;(await ctx.http.post(`/api/v1/invoices/${empty.id}/issue`, {})).assertStatus(409)
+    const draft = await must<any>(await manualInvoice(ctx), 201)
+    const first = await must<any>(
+      await ctx.http.post(`/api/v1/invoices/${draft.id}/issue`, {}),
+      200
+    )
+    assert.match(first.invoice.number, /^FT A\/\d{4}\/0*1$/)
+    const before = first.invoice.customerSnapshot
+
+    const party = await must<any>(await ctx.http.get(`/api/v1/parties/${ctx.party.id}`), 200)
+    await must(
+      await ctx.http.patch(`/api/v1/parties/${ctx.party.id}`, {
+        expectedVersion: party.party?.version ?? party.version,
+        displayName: 'Nome novo, SA',
+        organization: { legalName: 'Nome novo, SA', taxCountry: 'AO', taxId: '9999999999' },
+      }),
+      200
+    )
+    const after = await must<any>(await ctx.http.get(`/api/v1/invoices/${draft.id}`), 200)
+    assert.deepEqual(after.customerSnapshot, before)
+    assert.equal(after.customerSnapshot.taxId, '5000012345')
+    assert.equal(after.customerSnapshot.name, 'Acme, Lda.')
+    // Uma factura nova já leva os dados novos, com o número seguinte (sem lacunas).
+    const next = await must<any>(await manualInvoice(ctx), 201)
+    const second = await must<any>(
+      await ctx.http.post(`/api/v1/invoices/${next.id}/issue`, {}),
+      200
+    )
+    assert.match(second.invoice.number, /^FT A\/\d{4}\/0*2$/)
+    assert.equal(second.invoice.customerSnapshot.taxId, '9999999999')
+  })
+
   test('emitir duas vezes devolve a mesma factura, sem novo número nem novo evento', async ({
     client,
     assert,

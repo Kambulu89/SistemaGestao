@@ -157,7 +157,7 @@ import {
             >
           </div>
         }
-        @if (o.status === 'ORDERED' && canConfirm()) {
+        @if ((o.status === 'ORDERED' || o.status === 'PARTIAL') && canConfirm()) {
           <div class="mt-4 max-w-md">
             <app-input
               label="Motivo do cancelamento"
@@ -178,10 +178,10 @@ import {
               >Apagar rascunho</app-button
             >
           }
-          @if (o.status === 'ORDERED' && canConfirm()) {
-            <app-button variant="secondary" [loading]="busy()" (click)="cancel()"
-              >Cancelar encomenda</app-button
-            >
+          @if ((o.status === 'ORDERED' || o.status === 'PARTIAL') && canConfirm()) {
+            <app-button variant="secondary" [loading]="busy()" (click)="cancel()">{{
+              o.status === 'PARTIAL' ? 'Cancelar o restante' : 'Cancelar encomenda'
+            }}</app-button>
           }
           <app-button variant="secondary" (click)="close()">Fechar</app-button>
         </div>
@@ -406,7 +406,11 @@ export class PurchasesTab {
     this.run(this.api.cancelPurchase(current.id, this.reason().trim()), (result) => {
       this.order.set(result.order);
       this.reason.set('');
-      this.notice.set('Encomenda cancelada.');
+      this.notice.set(
+        current.status === 'PARTIAL'
+          ? 'Restante cancelado: as recepções lançadas e o stock mantêm-se.'
+          : 'Encomenda cancelada.',
+      );
       this.reload.update((n) => n + 1);
     });
   }

@@ -385,34 +385,37 @@ test.group('encomendas a fornecedor', (g) => {
     assert.equal(noLines.body().error.code, 'PURCHASE_ORDER_EMPTY')
   })
 
-  test('cancelar exige motivo e só é possível enquanto nada foi recebido', async ({
+  test('cancelar exige motivo; numa encomenda parcial cancela-se o restante e a recepção fica', async ({
     client,
     assert,
   }) => {
     const ctx = await setup(client)
-    const order = await confirmedOrder(ctx, [
-      { variantId: ctx.shirt.id, quantity: '10', unitCost: '5' },
-    ])
+    const v = ctx.shirt.id
+    const order = await confirmedOrder(ctx, [{ variantId: v, quantity: '10', unitCost: '5' }])
     const noReason = await ctx.http.post(`/api/v1/purchase-orders/${order.id}/cancel`, {})
     noReason.assertStatus(422)
     const receipt = await draftReceipt(ctx, order.id, [
       { purchaseLineId: order.lineIds[0]!, quantity: '4' },
     ])
     await must(await ctx.http.post(`/api/v1/goods-receipts/${receipt.id}/post`, {}), 200)
-    const blocked = await ctx.http.post(`/api/v1/purchase-orders/${order.id}/cancel`, {
-      reason: 'x',
-    })
-    blocked.assertStatus(409)
-    assert.equal(blocked.body().error.code, 'PURCHASE_ORDER_HAS_RECEIPTS')
-    await must(
-      await ctx.http.post(`/api/v1/goods-receipts/${receipt.id}/reverse`, { reason: 'Engano' }),
-      200
-    )
     const cancelled = await must<any>(
       await ctx.http.post(`/api/v1/purchase-orders/${order.id}/cancel`, { reason: 'Desistência' }),
       200
     )
+    assert.isFalse(cancelled.idempotent)
     assert.equal(cancelled.order.status, 'CANCELLED')
+    // A recepção lançada e o stock preservam-se; a encomenda cancelada já não recebe mais.
+    assert.equal(cancelled.order.lines[0].receivedQty, '4.000000')
+    assert.deepEqual(await balances(ctx, v), [{ onHand: '4.000000', lot: null }])
+    assert.equal(
+      (await must<any>(await ctx.http.get(`/api/v1/goods-receipts/${receipt.id}`), 200)).status,
+      'POSTED'
+    )
+    const events = await owner<any>(
+      `select payload from outbox_events where event_type = 'procurement.purchase_order.cancelled'`,
+      ctx.tenant
+    )
+    assert.isTrue(events[0].payload.remainderOnly)
     const again = await must<any>(
       await ctx.http.post(`/api/v1/purchase-orders/${order.id}/cancel`, { reason: 'Desistência' }),
       200
@@ -421,8 +424,46 @@ test.group('encomendas a fornecedor', (g) => {
     const receive = await ctx.http.post('/api/v1/goods-receipts', { purchaseOrderId: order.id })
     receive.assertStatus(409)
     assert.equal(receive.body().error.code, 'PURCHASE_ORDER_NOT_RECEIVABLE')
-    const reconfirm = await ctx.http.post(`/api/v1/purchase-orders/${order.id}/confirm`, {})
-    reconfirm.assertStatus(409)
+    assert.equal(
+      (await ctx.http.post(`/api/v1/purchase-orders/${order.id}/confirm`, {})).status(),
+      409
+    )
+    // Reverter a recepção devolve o stock, mas não reabre a encomenda cancelada.
+    await must(
+      await ctx.http.post(`/api/v1/goods-receipts/${receipt.id}/reverse`, { reason: 'Engano' }),
+      200
+    )
+    assert.deepEqual(await balances(ctx, v), [{ onHand: '0.000000', lot: null }])
+    assert.equal((await orderDetail(ctx, order.id)).status, 'CANCELLED')
+  })
+
+  test('uma encomenda toda recebida não tem restante a cancelar; uma sem recepções cancela-se inteira', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const v = ctx.shirt.id
+    const done = await confirmedOrder(ctx, [{ variantId: v, quantity: '2', unitCost: '5' }])
+    const receipt = await draftReceipt(ctx, done.id, [
+      { purchaseLineId: done.lineIds[0]!, quantity: '2' },
+    ])
+    await must(await ctx.http.post(`/api/v1/goods-receipts/${receipt.id}/post`, {}), 200)
+    const refused = await ctx.http.post(`/api/v1/purchase-orders/${done.id}/cancel`, {
+      reason: 'x',
+    })
+    refused.assertStatus(409)
+    assert.equal(refused.body().error.code, 'PURCHASE_ORDER_RECEIVED')
+    const untouched = await confirmedOrder(ctx, [{ variantId: v, quantity: '2', unitCost: '5' }])
+    const whole = await must<any>(
+      await ctx.http.post(`/api/v1/purchase-orders/${untouched.id}/cancel`, { reason: 'Erro' }),
+      200
+    )
+    assert.equal(whole.order.status, 'CANCELLED')
+    const events = await owner<any>(
+      `select payload from outbox_events where event_type = 'procurement.purchase_order.cancelled'`,
+      ctx.tenant
+    )
+    assert.isFalse(events[0].payload.remainderOnly)
   })
 })
 

@@ -13,6 +13,14 @@ export const DYNAMIC_CORE_MODULES = [
     group: 'configuration',
     icon: 'settings',
     featureFlag: 'configuration.form-builder',
+    routes: [
+      {
+        path: '',
+        title: 'Custom Fields e Form Builder',
+        loadComponent: () =>
+          import('../../shared/routing/capability-redirect').then((m) => m.CapabilityRedirect),
+      },
+    ],
     permissions: [
       { key: 'configuration.forms.read', name: 'Ver o Core Dinâmico' },
       {

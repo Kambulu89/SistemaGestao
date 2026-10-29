@@ -382,9 +382,7 @@ describe('Encomendas', () => {
     const ordered = purchase({ number: 'OC A/2026/1', status: 'ORDERED' });
     const cancelPurchase = vi
       .fn()
-      .mockReturnValueOnce(
-        throwError(() => ({ code: 'PURCHASE_ORDER_HAS_RECEIPTS', message: 'x' })),
-      )
+      .mockReturnValueOnce(throwError(() => ({ code: 'PURCHASE_ORDER_RECEIVED', message: 'x' })))
       .mockReturnValueOnce(of({ order: { ...ordered, status: 'CANCELLED' }, idempotent: false }));
     const { tab, click, field, type, text } = await open({
       cancelPurchase,
@@ -397,10 +395,27 @@ describe('Encomendas', () => {
     expect(text()).toContain('Indique o motivo do cancelamento');
     await type(field('Motivo do cancelamento'), 'Desistência');
     await click('Cancelar encomenda');
-    expect(text()).toContain('reverta as recepções');
+    expect(text()).toContain('não há restante a cancelar');
     await click('Cancelar encomenda');
     expect(cancelPurchase).toHaveBeenLastCalledWith('po1', 'Desistência');
     expect(text()).toContain('Encomenda cancelada.');
+  });
+
+  it('numa encomenda parcial cancela-se o restante e as recepções ficam', async () => {
+    const cancelPurchase = vi.fn(() =>
+      of({ order: { ...confirmed, status: 'CANCELLED' }, idempotent: false }),
+    );
+    const { tab, click, field, type, text } = await open({
+      cancelPurchase,
+      purchases: vi.fn(() => of(page([confirmed]))),
+      purchase: vi.fn(() => of(confirmed)),
+    });
+    await tab('orders');
+    await click('Abrir');
+    await type(field('Motivo do cancelamento'), 'Fornecedor não entrega o resto');
+    await click('Cancelar o restante');
+    expect(cancelPurchase).toHaveBeenCalledWith('po1', 'Fornecedor não entrega o resto');
+    expect(text()).toContain('Restante cancelado: as recepções lançadas e o stock mantêm-se.');
   });
 
   it('só mostra confirmar a quem tem a permissão', async () => {

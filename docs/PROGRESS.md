@@ -6,20 +6,20 @@ Estado vivo do desenvolvimento. Actualizado no fim de cada módulo/fatia validad
 
 | Indicador | Valor | Como se mede |
 | --- | ---: | --- |
-| Critérios de aceitação verificados | 53 / 129 | `MODULE_COMPLETION.md` |
-| Critérios parciais | 10 | idem |
+| Critérios de aceitação verificados | 60 / 129 | `MODULE_COMPLETION.md` |
+| Critérios parciais | 4 | idem |
 | Módulos «Concluído e validado» | 0 | todos têm requisitos por cumprir |
-| Testes backend (última corrida completa) | 643 | `npm test` |
-| Testes frontend (última corrida completa) | 1014 | `npx ng test --watch=false` |
+| Testes backend (última corrida completa) | 647 | `npm test` |
+| Testes frontend (última corrida completa) | 1024 | `npx ng test --watch=false` |
 | Rotas / tabelas de tenant / migrations | 304 / 76 / 30 | `routes.ts`, `createTenantTable`, `database/migrations` |
-| Lacunas abertas (registo A-xx) | 12 (1 bloqueada) | `MODULE_AUDIT.md` §4 |
+| Lacunas abertas (registo A-xx) | 9 (1 bloqueada); 3 resolvidas | `MODULE_AUDIT.md` §4 |
 
 ## Fila de execução
 
 | # | Item | Estado | Depende de | Evidência |
 | ---: | --- | --- | --- | --- |
 | 0 | Auditoria completa (matriz, critérios, lacunas) | **Concluído** | — | `MODULE_AUDIT.md`, `MODULE_COMPLETION.md` |
-| 1 | A-01 capacidades → páginas reais · A-02 cancelar o restante · A-03 testes em falta | Não iniciado | — | — |
+| 1 | A-01 capacidades → páginas reais · A-02 cancelar o restante · A-03 testes em falta | **Concluído e validado** | — | backend 647 testes, frontend 1024; `capability-redirect.spec`, `procurement.spec`, `invoicing.spec`, `rules.spec` |
 | 2 | M09 Tesouraria, contas a receber e a pagar | Não iniciado | 1 | — |
 | 3 | M08 Transferências, inventários físicos e devoluções | Não iniciado | 2 (devolução com nota de crédito) | — |
 | 4 | M02 CRM comercial | Não iniciado | — | — |
@@ -36,7 +36,8 @@ Estados: Não iniciado · Parcialmente implementado · Implementado sem validaç
 
 | Data | O quê | Resultado | Commit |
 | --- | --- | --- | --- |
-| 2026-10-29 | Auditoria: leitura da especificação, manifestos, rotas, migrations e testes; varredura da UI | Matriz de 40 linhas, 12 lacunas, 129 critérios classificados | (ver git log) |
+| 2026-10-29 | Auditoria: leitura da especificação, manifestos, rotas, migrations e testes; varredura da UI | Matriz de 40 linhas, 12 lacunas, 129 critérios classificados | `87ef271` |
+| 2026-10-29 | W1: capacidades → páginas reais (A-01); cancelar o restante (A-02); 7 critérios passam a verificados (A-03) | 60/129 critérios; backend 647, frontend 1024; lint/format/typecheck/build limpos | (este commit) |
 
 ## Como retomar
 

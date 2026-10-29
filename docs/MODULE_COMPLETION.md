@@ -4,7 +4,7 @@ Medida objectiva de conclusão: cada módulo da especificação v2.0 tem critér
 
 Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Implementado sem validação* · *Em testes* · *Concluído e validado* · *Bloqueado*. Nenhum módulo está «Concluído e validado»: todos os implementados têm requisitos aprovados por cumprir (ver `MODULE_AUDIT.md`).
 
-**Totais:** 53 verificados · 10 parciais · 66 não verificados ou de módulos não implementados (de 129).
+**Totais:** 60 verificados · 4 parciais · 65 não verificados ou de módulos não implementados (de 129).
 
 ## Resumo por módulo
 
@@ -17,20 +17,20 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | C05 Membros convites e preferências | Parcialmente implementado | 3 | 0 | 0 |
 | C06 Papéis permissões e políticas | Parcialmente implementado | 2 | 1 | 0 |
 | C07 Organizações unidades equipas e centros de custo | Parcialmente implementado | 2 | 0 | 1 |
-| C08 Pessoas organizações externas e contactos | Parcialmente implementado | 1 | 2 | 0 |
+| C08 Pessoas organizações externas e contactos | Parcialmente implementado | 2 | 1 | 0 |
 | C09 Configurações referências impostos e sequências | Parcialmente implementado | 3 | 0 | 0 |
 | C10 Metadados entidades dinâmicas e campos | Parcialmente implementado | 4 | 0 | 0 |
 | C11 Formulários e regras de apresentação | Parcialmente implementado | 2 | 1 | 0 |
-| C12 Motor de regras e fórmulas | Parcialmente implementado | 1 | 2 | 0 |
-| C13 Máquinas de estados | Parcialmente implementado | 2 | 1 | 0 |
+| C12 Motor de regras e fórmulas | Parcialmente implementado | 3 | 0 | 0 |
+| C13 Máquinas de estados | Parcialmente implementado | 3 | 0 | 0 |
 | C14 Workflows aprovações e delegações | Parcialmente implementado | 3 | 0 | 0 |
 | C15 Automações agendadas | Parcialmente implementado | 3 | 0 | 0 |
 | M01 Clientes e relacionamento comercial | Parcialmente implementado | 2 | 0 | 1 |
 | M02 Leads oportunidades campanhas e actividades | Não iniciado | 0 | 0 | 3 |
 | M03 Catálogo variantes unidades e preços | Parcialmente implementado | 3 | 0 | 0 |
 | M04 Propostas encomendas e expedições | Parcialmente implementado | 3 | 0 | 0 |
-| M05 Contratos faturas e notas de crédito | Parcialmente implementado | 0 | 3 | 0 |
-| M06 Fornecedores requisições e compras | Parcialmente implementado | 2 | 0 | 1 |
+| M05 Contratos faturas e notas de crédito | Parcialmente implementado | 2 | 1 | 0 |
+| M06 Fornecedores requisições e compras | Parcialmente implementado | 3 | 0 | 0 |
 | M07 Armazéns stock lotes e reservas | Parcialmente implementado | 3 | 0 | 0 |
 | M08 Transferências inventários físicos e devoluções | Não iniciado | 0 | 0 | 3 |
 | M09 Tesouraria contas a receber e a pagar | Não iniciado | 0 | 0 | 4 |
@@ -80,7 +80,7 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | C07 | 3 | centro de custo de outra organização é rejeitado | Verificado | organization.spec: pai/centro de outra organização rejeitado |
 | C08 | 1 | Uma pessoa pode ser cliente e colaborador sem duplicar contactos | Parcial | o cliente partilha a Party (customers.spec); **não há colaborador** (M11) |
 | C08 | 2 | fornecedor empresarial não exige Person | Verificado | party.spec: fornecedor empresarial sem Person |
-| C08 | 3 | alteração de NIF não muda fatura emitida | Parcial | snapshot imutável da factura (trigger), mas **sem teste** que altere o NIF depois de emitir |
+| C08 | 3 | alteração de NIF não muda fatura emitida | Verificado | invoicing.spec: alterar NIF e nome da Party depois de emitir não muda o instantâneo; a factura seguinte leva os dados novos |
 | C09 | 1 | 100 emissões concorrentes produzem números distintos | Verificado | settings.spec: 100 emissões concorrentes |
 | C09 | 2 | preferência de idioma não altera imposto | Verificado | settings.spec: idioma não altera imposto |
 | C09 | 3 | períodos de taxa sobrepostos para o mesmo código são rejeitados | Verificado | settings.spec: períodos sobrepostos rejeitados |
@@ -91,10 +91,10 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | C11 | 1 | Campo oculto malicioso no payload continua sujeito à autorização | Verificado | forms.spec: campo escondido continua autorizado |
 | C11 | 2 | versão publicada não muda submissões antigas | Parcial | sem `FormSubmission`: não há submissões antigas a preservar |
 | C11 | 3 | erro inclui caminho completo do campo | Verificado | forms.spec/metadata.spec: caminho completo |
-| C12 | 1 | Expressão infinita excede orçamento e falha | Parcial | AST sem ciclos por construção; **sem teste de orçamento de custo** |
+| C12 | 1 | Expressão infinita excede orçamento e falha | Verificado | rules.spec/authorization_domain.spec: profundidade e tamanho de condições; formula_domain.spec: orçamento de elementos das fórmulas |
 | C12 | 2 | regra inválida não publica | Verificado | rules.spec: regra inválida não publica |
-| C12 | 3 | alteração de política não muda documentos já emitidos | Parcial | publicação imutável (rules.spec); **sem teste** sobre documentos já emitidos |
-| C13 | 1 | Transição inexistente falha com 409 | Parcial | conflito de versão testado; **falta teste explícito** de transição inexistente → 409 |
+| C12 | 3 | alteração de política não muda documentos já emitidos | Verificado | rules.spec: publicar uma regra não altera os registos já gravados |
+| C13 | 1 | Transição inexistente falha com 409 | Verificado | states.spec: transição inexistente a partir do estado → 409 `TRANSITION_NOT_AVAILABLE` |
 | C13 | 2 | dois comandos concorrentes só executam uma vez | Verificado | states.spec: comandos concorrentes |
 | C13 | 3 | estado final não permite edição de valores protegidos | Verificado | states.spec: ABAC por estado |
 | C14 | 1 | Duas decisões simultâneas não duplicam efeitos | Verificado | workflows.spec: decisões simultâneas |
@@ -115,11 +115,11 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | M04 | 1 | Entrega parcial deixa saldo correcto | Verificado | shipments.spec: entrega parcial |
 | M04 | 2 | confirmar duas vezes não duplica reserva | Verificado | orders.spec: confirmar duas vezes |
 | M04 | 3 | stock insuficiente não deixa encomenda confirmada sem política de backorder explícita | Verificado | inventory.spec/orders.spec: sem stock aborta a confirmação |
-| M05 | 1 | Erro ao emitir não consome documento sem registo consistente | Parcial | INVOICE_EMPTY/DUE_BEFORE_ISSUE antes de numerar e sequência sem lacunas (settings.spec); **sem teste** que force a falha depois de numerar |
-| M05 | 2 | mudança no cliente não altera snapshot | Parcial | snapshot fixado ao emitir (invoicing.spec); **sem teste** de alteração posterior do cliente |
+| M05 | 1 | Erro ao emitir não consome documento sem registo consistente | Verificado | invoicing.spec: emissão recusada não gasta número (a seguinte é a 1) e a numeração segue sem lacunas; settings.spec: a transacção anulada devolve o número |
+| M05 | 2 | mudança no cliente não altera snapshot | Verificado | invoicing.spec: instantâneo do cliente inalterado após alterar a Party |
 | M05 | 3 | crédito duplicado não reduz dívida duas vezes | Parcial | emissão da nota idempotente (invoicing.spec); **sem recebível**, logo sem dívida a reduzir |
 | M06 | 1 | Recepção dupla não duplica stock | Verificado | procurement.spec: lançar duas vezes |
-| M06 | 2 | cancelar restante de ordem parcial preserva recepção | Não verificado / não implementado | **desvio:** o cancelamento é recusado depois de recebido; a spec pede cancelar o restante preservando a recepção |
+| M06 | 2 | cancelar restante de ordem parcial preserva recepção | Verificado | procurement.spec: cancelar o restante de uma encomenda parcial preserva a recepção e o stock |
 | M06 | 3 | fornecedor bloqueado impede nova encomenda | Verificado | procurement.spec: fornecedor bloqueado |
 | M07 | 1 | Duas saídas concorrentes não tornam saldo negativo quando proibido | Verificado | inventory.spec |
 | M07 | 2 | replay de evento não duplica entrada | Verificado | inventory.spec: origem única idempotente |
