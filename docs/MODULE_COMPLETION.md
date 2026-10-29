@@ -1,0 +1,187 @@
+# Conclusão dos módulos — critérios de aceitação da especificação
+
+Medida objectiva de conclusão: cada módulo da especificação v2.0 tem critérios de **Aceitação** (129 no total). Um critério só conta como **Verificado** se existe um teste automático que o exercita e que foi executado e passou. Não se atribuem percentagens por módulo além desta contagem. Gerado a partir de `docs/especificacao-v2.docx` e dos testes em `backend/tests`.
+
+Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Implementado sem validação* · *Em testes* · *Concluído e validado* · *Bloqueado*. Nenhum módulo está «Concluído e validado»: todos os implementados têm requisitos aprovados por cumprir (ver `MODULE_AUDIT.md`).
+
+**Totais:** 53 verificados · 10 parciais · 66 não verificados ou de módulos não implementados (de 129).
+
+## Resumo por módulo
+
+| Módulo | Estado | Verificados | Parciais | Não verif./não impl. |
+| --- | --- | ---: | ---: | ---: |
+| C01 Tenants e provisionamento | Parcialmente implementado | 3 | 0 | 0 |
+| C02 Planos assinaturas e limites | Parcialmente implementado | 2 | 0 | 1 |
+| C03 Registo de módulos e funcionalidades | Parcialmente implementado | 3 | 0 | 0 |
+| C04 Identidade autenticação e sessões | Parcialmente implementado | 4 | 0 | 0 |
+| C05 Membros convites e preferências | Parcialmente implementado | 3 | 0 | 0 |
+| C06 Papéis permissões e políticas | Parcialmente implementado | 2 | 1 | 0 |
+| C07 Organizações unidades equipas e centros de custo | Parcialmente implementado | 2 | 0 | 1 |
+| C08 Pessoas organizações externas e contactos | Parcialmente implementado | 1 | 2 | 0 |
+| C09 Configurações referências impostos e sequências | Parcialmente implementado | 3 | 0 | 0 |
+| C10 Metadados entidades dinâmicas e campos | Parcialmente implementado | 4 | 0 | 0 |
+| C11 Formulários e regras de apresentação | Parcialmente implementado | 2 | 1 | 0 |
+| C12 Motor de regras e fórmulas | Parcialmente implementado | 1 | 2 | 0 |
+| C13 Máquinas de estados | Parcialmente implementado | 2 | 1 | 0 |
+| C14 Workflows aprovações e delegações | Parcialmente implementado | 3 | 0 | 0 |
+| C15 Automações agendadas | Parcialmente implementado | 3 | 0 | 0 |
+| M01 Clientes e relacionamento comercial | Parcialmente implementado | 2 | 0 | 1 |
+| M02 Leads oportunidades campanhas e actividades | Não iniciado | 0 | 0 | 3 |
+| M03 Catálogo variantes unidades e preços | Parcialmente implementado | 3 | 0 | 0 |
+| M04 Propostas encomendas e expedições | Parcialmente implementado | 3 | 0 | 0 |
+| M05 Contratos faturas e notas de crédito | Parcialmente implementado | 0 | 3 | 0 |
+| M06 Fornecedores requisições e compras | Parcialmente implementado | 2 | 0 | 1 |
+| M07 Armazéns stock lotes e reservas | Parcialmente implementado | 3 | 0 | 0 |
+| M08 Transferências inventários físicos e devoluções | Não iniciado | 0 | 0 | 3 |
+| M09 Tesouraria contas a receber e a pagar | Não iniciado | 0 | 0 | 4 |
+| M10 Orçamentos despesas e controlo de custos | Não iniciado | 0 | 0 | 3 |
+| M11 Colaboradores contratos assiduidade e férias | Não iniciado | 0 | 0 | 4 |
+| M12 Avaliação formação interna e recrutamento | Não iniciado | 0 | 0 | 3 |
+| M13 Projectos tarefas tempos e custos | Não iniciado | 0 | 0 | 3 |
+| M14 Tickets SLA e base de conhecimento | Não iniciado | 0 | 0 | 3 |
+| S01 Documentos anexos e templates | Não iniciado | 0 | 0 | 4 |
+| S02 Notificações e comunicação | Não iniciado | 0 | 0 | 3 |
+| S03 Calendário reservas e recursos | Não iniciado | 0 | 0 | 3 |
+| S04 Dashboards indicadores relatórios e pesquisa | Não iniciado | 0 | 0 | 3 |
+| S05 API pública chaves webhooks e importações | Não iniciado | 0 | 0 | 3 |
+| S06 Auditoria observabilidade e recuperação | Parcialmente implementado | 2 | 0 | 1 |
+| V01 Centro de formação | Não iniciado | 0 | 0 | 3 |
+| V02 Escola | Não iniciado | 0 | 0 | 3 |
+| V03 Clínica | Não iniciado | 0 | 0 | 3 |
+| V04 Comércio e ponto de venda | Não iniciado | 0 | 0 | 3 |
+| V05 Federação associações e desporto | Não iniciado | 0 | 0 | 4 |
+| V06 Logística e manutenção | Não iniciado | 0 | 0 | 3 |
+
+## Critérios de aceitação (detalhe)
+
+| Módulo | # | Critério da especificação | Estado | Evidência / lacuna |
+| --- | ---: | --- | --- | --- |
+| C01 | 1 | Repetir provisionamento não duplica organização nem convite | Verificado | platform.spec: «repetir não duplica» |
+| C01 | 2 | domínio duplicado devolve 409 | Verificado | tenants.spec: domínio único 409 |
+| C01 | 3 | utilizador suspenso não lê dados por URL directa | Verificado | platform.spec: suspender impede acesso por URL directa |
+| C02 | 1 | Duas criações concorrentes com uma vaga restante permitem só uma | Verificado | members.spec: concorrência com um lugar livre |
+| C02 | 2 | webhook repetido não duplica pagamento | Não verificado / não implementado | sem `SaasBillingRecord`/webhooks de pagamento do SaaS |
+| C02 | 3 | downgrade mantém histórico consultável conforme política | Verificado | billing.spec: histórico imutável; downgrade nunca elimina |
+| C03 | 1 | Não activar SALES sem dependências | Verificado | modules.spec |
+| C03 | 2 | API bloqueia feature escondida no menu | Verificado | modules.spec: API bloqueia funcionalidade desligada |
+| C03 | 3 | falha de activação permite retomar sem duplicar seeds | Verificado | modules.spec: falha deixa ERROR e a repetição retoma |
+| C04 | 1 | Token expirado ou reutilizado falha | Verificado | auth.spec: token expirado/inventado/uso único |
+| C04 | 2 | logout impede novo pedido autenticado | Verificado | auth.spec: logout invalida a sessão |
+| C04 | 3 | troca de tenant não reutiliza permissões anteriores | Verificado | iam.spec/context.spec: admin de A sem poderes em B |
+| C04 | 4 | cookies não aparecem em logs | Verificado | logger_redaction.spec |
+| C05 | 1 | Utilizador de tenant A convidado em B mantém conta única | Verificado | members.spec: mesma conta com várias memberships |
+| C05 | 2 | convite revogado falha | Verificado | members.spec: revogado não se aceita |
+| C05 | 3 | último administrador não pode sair sem sucessor | Verificado | members.spec: último administrador protegido |
+| C06 | 1 | Operador sem invoice.approve recebe 403 | Verificado | iam.spec: sem papel 403 |
+| C06 | 2 | leitura de ID alheio retorna 404 sem revelar existência | Verificado | iam.spec/isolation_matrix: ID alheio 404 |
+| C06 | 3 | salário restrito não surge numa exportação | Parcial | regras de campo testadas na pesquisa/ordenação; **não há exportações** para provar o critério |
+| C07 | 1 | Unidade não pode ser pai de si própria nem de antepassado | Verificado | organization.spec: ciclos e auto-pai (também na base) |
+| C07 | 2 | documento mantém unidade histórica | Não verificado / não implementado | os documentos de venda/compra ainda não guardam a unidade organizativa |
+| C07 | 3 | centro de custo de outra organização é rejeitado | Verificado | organization.spec: pai/centro de outra organização rejeitado |
+| C08 | 1 | Uma pessoa pode ser cliente e colaborador sem duplicar contactos | Parcial | o cliente partilha a Party (customers.spec); **não há colaborador** (M11) |
+| C08 | 2 | fornecedor empresarial não exige Person | Verificado | party.spec: fornecedor empresarial sem Person |
+| C08 | 3 | alteração de NIF não muda fatura emitida | Parcial | snapshot imutável da factura (trigger), mas **sem teste** que altere o NIF depois de emitir |
+| C09 | 1 | 100 emissões concorrentes produzem números distintos | Verificado | settings.spec: 100 emissões concorrentes |
+| C09 | 2 | preferência de idioma não altera imposto | Verificado | settings.spec: idioma não altera imposto |
+| C09 | 3 | períodos de taxa sobrepostos para o mesmo código são rejeitados | Verificado | settings.spec: períodos sobrepostos rejeitados |
+| C10 | 1 | Campo de outro tenant falha | Verificado | metadata.spec: referências de outro tenant |
+| C10 | 2 | publicar versão incompatível sem migração é bloqueado | Verificado | metadata.spec: versão incompatível bloqueada |
+| C10 | 3 | valores antigos continuam legíveis | Verificado | metadata.spec: valores antigos legíveis |
+| C10 | 4 | dois valores únicos concorrentes não passam | Verificado | metadata.spec: únicos concorrentes |
+| C11 | 1 | Campo oculto malicioso no payload continua sujeito à autorização | Verificado | forms.spec: campo escondido continua autorizado |
+| C11 | 2 | versão publicada não muda submissões antigas | Parcial | sem `FormSubmission`: não há submissões antigas a preservar |
+| C11 | 3 | erro inclui caminho completo do campo | Verificado | forms.spec/metadata.spec: caminho completo |
+| C12 | 1 | Expressão infinita excede orçamento e falha | Parcial | AST sem ciclos por construção; **sem teste de orçamento de custo** |
+| C12 | 2 | regra inválida não publica | Verificado | rules.spec: regra inválida não publica |
+| C12 | 3 | alteração de política não muda documentos já emitidos | Parcial | publicação imutável (rules.spec); **sem teste** sobre documentos já emitidos |
+| C13 | 1 | Transição inexistente falha com 409 | Parcial | conflito de versão testado; **falta teste explícito** de transição inexistente → 409 |
+| C13 | 2 | dois comandos concorrentes só executam uma vez | Verificado | states.spec: comandos concorrentes |
+| C13 | 3 | estado final não permite edição de valores protegidos | Verificado | states.spec: ABAC por estado |
+| C14 | 1 | Duas decisões simultâneas não duplicam efeitos | Verificado | workflows.spec: decisões simultâneas |
+| C14 | 2 | autor não aprova a própria despesa quando proibido | Verificado | workflows.spec: quem submete não decide |
+| C14 | 3 | versão antiga não aprova valor novo | Verificado | workflows.spec: versão antiga não aprova valor novo |
+| C15 | 1 | Evento duplicado produz um run | Verificado | automations.spec: evento duplicado |
+| C15 | 2 | ciclo A→B→A é interrompido | Verificado | automations.spec: ciclo A→B→A |
+| C15 | 3 | job de tenant suspenso não executa escrita empresarial | Verificado | automations.spec: tenant suspenso não executa |
+| M01 | 1 | Um cliente pode partilhar Party com fornecedor | Verificado | customers.spec: Party partilhada |
+| M01 | 2 | operador sem acesso financeiro não vê saldo | Verificado | customers.spec: crédito protegido |
+| M01 | 3 | cliente bloqueado continua a poder pagar | Não verificado / não implementado | sem pagamentos (M09) |
+| M02 | 1 | Conversão repetida devolve mesmos IDs | Não verificado / não implementado | módulo não implementado |
+| M02 | 2 | mover sem permissão falha | Não verificado / não implementado | módulo não implementado |
+| M02 | 3 | opt-out impede novos envios promocionais | Não verificado / não implementado | módulo não implementado |
+| M03 | 1 | SKU duplicado falha | Verificado | catalog.spec: SKU único |
+| M03 | 2 | serviço não reserva stock | Verificado | catalog.spec: serviço não controla stock |
+| M03 | 3 | linha conserva preço anterior após actualizar tabela | Verificado | catalog.spec: linha conserva preço |
+| M04 | 1 | Entrega parcial deixa saldo correcto | Verificado | shipments.spec: entrega parcial |
+| M04 | 2 | confirmar duas vezes não duplica reserva | Verificado | orders.spec: confirmar duas vezes |
+| M04 | 3 | stock insuficiente não deixa encomenda confirmada sem política de backorder explícita | Verificado | inventory.spec/orders.spec: sem stock aborta a confirmação |
+| M05 | 1 | Erro ao emitir não consome documento sem registo consistente | Parcial | INVOICE_EMPTY/DUE_BEFORE_ISSUE antes de numerar e sequência sem lacunas (settings.spec); **sem teste** que force a falha depois de numerar |
+| M05 | 2 | mudança no cliente não altera snapshot | Parcial | snapshot fixado ao emitir (invoicing.spec); **sem teste** de alteração posterior do cliente |
+| M05 | 3 | crédito duplicado não reduz dívida duas vezes | Parcial | emissão da nota idempotente (invoicing.spec); **sem recebível**, logo sem dívida a reduzir |
+| M06 | 1 | Recepção dupla não duplica stock | Verificado | procurement.spec: lançar duas vezes |
+| M06 | 2 | cancelar restante de ordem parcial preserva recepção | Não verificado / não implementado | **desvio:** o cancelamento é recusado depois de recebido; a spec pede cancelar o restante preservando a recepção |
+| M06 | 3 | fornecedor bloqueado impede nova encomenda | Verificado | procurement.spec: fornecedor bloqueado |
+| M07 | 1 | Duas saídas concorrentes não tornam saldo negativo quando proibido | Verificado | inventory.spec |
+| M07 | 2 | replay de evento não duplica entrada | Verificado | inventory.spec: origem única idempotente |
+| M07 | 3 | soma do livro reconcilia com saldo | Verificado | inventory.spec: reconcilia com o livro |
+| M08 | 1 | Recepção parcial deixa saldo em trânsito | Não verificado / não implementado | módulo não implementado |
+| M08 | 2 | contagem lançada duas vezes não repete ajuste | Não verificado / não implementado | módulo não implementado |
+| M08 | 3 | devolução superior ao vendido/recebido falha | Não verificado / não implementado | módulo não implementado |
+| M09 | 1 | Pagamento parcial mantém saldo | Não verificado / não implementado | módulo não implementado |
+| M09 | 2 | webhook repetido não liquida duas vezes | Não verificado / não implementado | módulo não implementado |
+| M09 | 3 | duas alocações concorrentes não ultrapassam dívida | Não verificado / não implementado | módulo não implementado |
+| M09 | 4 | reversão reabre saldo correcto | Não verificado / não implementado | módulo não implementado |
+| M10 | 1 | Duas despesas não consomem a mesma disponibilidade | Não verificado / não implementado | módulo não implementado |
+| M10 | 2 | rejeição liberta reserva | Não verificado / não implementado | módulo não implementado |
+| M10 | 3 | despesa aprovada mas não liquidada não aparece como paga | Não verificado / não implementado | módulo não implementado |
+| M11 | 1 | Colaborador sem conta pode ser registado | Não verificado / não implementado | módulo não implementado |
+| M11 | 2 | sobreposição de férias bloqueada | Não verificado / não implementado | módulo não implementado |
+| M11 | 3 | salário não aparece em perfil público | Não verificado / não implementado | módulo não implementado |
+| M11 | 4 | aprovação duplicada não consome saldo duas vezes | Não verificado / não implementado | módulo não implementado |
+| M12 | 1 | Pré-validação identifica colaborador sem conta antes de iniciar autoavaliação | Não verificado / não implementado | módulo não implementado |
+| M12 | 2 | UUID não substitui nome de modelo | Não verificado / não implementado | módulo não implementado |
+| M12 | 3 | meta de redução calcula progresso correcto | Não verificado / não implementado | módulo não implementado |
+| M13 | 1 | Ciclo de dependência bloqueado | Não verificado / não implementado | módulo não implementado |
+| M13 | 2 | timesheet duplicado não factura duas vezes | Não verificado / não implementado | módulo não implementado |
+| M13 | 3 | gestor só aprova equipa/âmbito autorizado | Não verificado / não implementado | módulo não implementado |
+| M14 | 1 | Nota interna não sai por email público | Não verificado / não implementado | módulo não implementado |
+| M14 | 2 | pausa não consome SLA | Não verificado / não implementado | módulo não implementado |
+| M14 | 3 | portal não consulta ticket de outro cliente pelo ID | Não verificado / não implementado | módulo não implementado |
+| S01 | 1 | URL de outro tenant falha | Não verificado / não implementado | módulo não implementado |
+| S01 | 2 | upload acima da quota é rejeitado | Não verificado / não implementado | módulo não implementado |
+| S01 | 3 | ficheiro infectado fica indisponível | Não verificado / não implementado | módulo não implementado |
+| S01 | 4 | mudar template não altera PDF emitido | Não verificado / não implementado | módulo não implementado |
+| S02 | 1 | Marcar uma notificação não marca as de outra pessoa | Não verificado / não implementado | módulo não implementado |
+| S02 | 2 | retry não envia duas vezes se provider suporta dedupe | Não verificado / não implementado | módulo não implementado |
+| S02 | 3 | ligação revalida acesso ao recurso | Não verificado / não implementado | módulo não implementado |
+| S03 | 1 | Duas reservas concorrentes do mesmo horário permitem só uma | Não verificado / não implementado | módulo não implementado |
+| S03 | 2 | ocorrência cancelada não reaparece | Não verificado / não implementado | módulo não implementado |
+| S03 | 3 | evento de uma hora conserva duração após conversão de timezone | Não verificado / não implementado | módulo não implementado |
+| S04 | 1 | Total de card coincide com listagem sob mesmos filtros | Não verificado / não implementado | módulo não implementado |
+| S04 | 2 | campo oculto não aparece em CSV | Não verificado / não implementado | módulo não implementado |
+| S04 | 3 | revogação de acesso invalida download pendente | Não verificado / não implementado | módulo não implementado |
+| S05 | 1 | Chave revogada falha imediatamente | Não verificado / não implementado | módulo não implementado |
+| S05 | 2 | webhook repetido tem mesmo event_id | Não verificado / não implementado | módulo não implementado |
+| S05 | 3 | import com erros gera relatório e não se apresenta como sucesso total | Não verificado / não implementado | módulo não implementado |
+| S06 | 1 | Mutação crítica tem auditoria | Verificado | audit.spec |
+| S06 | 2 | log não contém segredo | Verificado | logger_redaction.spec/audit.spec |
+| S06 | 3 | ensaio em ambiente isolado recupera dados, anexos e ligações sem afectar outro tenant | Não verificado / não implementado | sem backups nem restauro (S06) |
+| V01 | 1 | Última vaga não é vendida duas vezes | Não verificado / não implementado | módulo não implementado |
+| V01 | 2 | presença duplicada actualiza com auditoria | Não verificado / não implementado | módulo não implementado |
+| V01 | 3 | certificado não emite sem critérios e retry devolve o mesmo documento | Não verificado / não implementado | módulo não implementado |
+| V02 | 1 | Encarregado não vê outro aluno | Não verificado / não implementado | módulo não implementado |
+| V02 | 2 | republicar pauta não duplica nota | Não verificado / não implementado | módulo não implementado |
+| V02 | 3 | geração de parcelas repetida não duplica obrigação | Não verificado / não implementado | módulo não implementado |
+| V03 | 1 | Recepcionista não lê notas via API/exportação | Não verificado / não implementado | módulo não implementado |
+| V03 | 2 | adenda conserva original | Não verificado / não implementado | módulo não implementado |
+| V03 | 3 | profissional sem vínculo ao atendimento não acede sem política explícita | Não verificado / não implementado | módulo não implementado |
+| V04 | 1 | Duplo clique não gera duas vendas | Não verificado / não implementado | módulo não implementado |
+| V04 | 2 | falha de gateway mantém pendente sem liquidação | Não verificado / não implementado | módulo não implementado |
+| V04 | 3 | fecho reconcilia numerário sem contar cartão como dinheiro físico | Não verificado / não implementado | módulo não implementado |
+| V05 | 1 | Peso histórico não muda com cadastro | Não verificado / não implementado | módulo não implementado |
+| V05 | 2 | quota duplicada não nasce em retry | Não verificado / não implementado | módulo não implementado |
+| V05 | 3 | associação não gere prova alheia | Não verificado / não implementado | módulo não implementado |
+| V05 | 4 | graduação mantém apenas um período aberto por estilo | Não verificado / não implementado | módulo não implementado |
+| V06 | 1 | Viatura indisponível não recebe viagem | Não verificado / não implementado | módulo não implementado |
+| V06 | 2 | consumo de peça baixa uma vez | Não verificado / não implementado | módulo não implementado |
+| V06 | 3 | prova de entrega só é acessível aos intervenientes autorizados | Não verificado / não implementado | módulo não implementado |
