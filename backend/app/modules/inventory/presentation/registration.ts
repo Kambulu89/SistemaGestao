@@ -1,5 +1,6 @@
 import { registerMovementGuard, catalogServices } from '#modules/catalog/index'
 import { registerOrderEffects, registerShipmentEffects } from '#modules/orders/index'
+import { registerReceiptEffects } from '#modules/procurement/index'
 import { inventoryServices } from '#modules/inventory/presentation/composition'
 
 let registered = false
@@ -47,6 +48,28 @@ export function registerInventory(): void {
         id: shipment.id,
         orderId: order.id,
         organizationId: order.organizationId,
+      }),
+  })
+
+  registerReceiptEffects({
+    warehouseUsable: async (context, warehouseId, organizationId) => {
+      try {
+        const warehouse = await inventoryServices().warehouses.get(context, warehouseId)
+        return warehouse.organizationId === organizationId && warehouse.active
+      } catch {
+        return false
+      }
+    },
+    posted: (scope, receipt, _order, lines) =>
+      inventoryServices().receiptStock.post(
+        scope,
+        { id: receipt.id, warehouseId: receipt.warehouseId },
+        lines
+      ),
+    reversed: (scope, receipt) =>
+      inventoryServices().receiptStock.reverse(scope, {
+        id: receipt.id,
+        warehouseId: receipt.warehouseId,
       }),
   })
 }

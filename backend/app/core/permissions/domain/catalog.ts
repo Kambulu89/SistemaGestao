@@ -332,6 +332,61 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Criar, alterar, activar e terminar contratos.',
   },
   {
+    code: 'supplier.read',
+    moduleCode: 'procurement',
+    description: 'Ver fornecedores.',
+  },
+  {
+    code: 'supplier.manage',
+    moduleCode: 'procurement',
+    description: 'Criar e alterar fornecedores (condições de compra).',
+  },
+  {
+    code: 'requisition.read',
+    moduleCode: 'procurement',
+    description: 'Ver requisições de compra.',
+  },
+  {
+    code: 'requisition.manage',
+    moduleCode: 'procurement',
+    description: 'Criar, alterar e submeter requisições de compra.',
+  },
+  {
+    code: 'requisition.approve',
+    moduleCode: 'procurement',
+    description: 'Aprovar e rejeitar requisições de compra (nunca as próprias).',
+  },
+  {
+    code: 'purchase.read',
+    moduleCode: 'procurement',
+    description: 'Ver encomendas a fornecedor.',
+  },
+  {
+    code: 'purchase.manage',
+    moduleCode: 'procurement',
+    description: 'Criar e alterar encomendas a fornecedor em rascunho e converter requisições.',
+  },
+  {
+    code: 'purchase.confirm',
+    moduleCode: 'procurement',
+    description: 'Confirmar e cancelar encomendas a fornecedor.',
+  },
+  {
+    code: 'receipt.read',
+    moduleCode: 'procurement',
+    description: 'Ver recepções de mercadoria.',
+  },
+  {
+    code: 'receipt.manage',
+    moduleCode: 'procurement',
+    description: 'Criar e alterar recepções em rascunho.',
+  },
+  {
+    code: 'receipt.post',
+    moduleCode: 'procurement',
+    description: 'Lançar (entrada de stock) e reverter recepções.',
+  },
+  {
     code: 'inventory.read',
     moduleCode: 'inventory',
     description: 'Ver stock, movimentos, lotes e reservas.',

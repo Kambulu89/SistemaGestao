@@ -43,6 +43,7 @@ export const TEST_MANIFESTS: ModuleManifest[] = [
   ),
   CODE_MANIFESTS.find((m) => m.code === 'inventory') as ModuleManifest,
   CODE_MANIFESTS.find((m) => m.code === 'invoicing') as ModuleManifest,
+  CODE_MANIFESTS.find((m) => m.code === 'procurement') as ModuleManifest,
 ]
 
 export const syncTestRegistry = () =>

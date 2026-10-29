@@ -74,6 +74,24 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     ],
   },
   {
+    code: 'procurement',
+    name: 'Compras',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [
+      { code: 'core', constraint: '*', optional: false },
+      { code: 'catalog', constraint: '*', optional: false },
+      { code: 'inventory', constraint: '*', optional: true },
+    ],
+    features: [
+      { code: 'procurement.suppliers', name: 'Fornecedores', defaultEnabled: true },
+      { code: 'procurement.requisitions', name: 'Requisições de compra', defaultEnabled: true },
+      { code: 'procurement.orders', name: 'Encomendas a fornecedor', defaultEnabled: true },
+      { code: 'procurement.receipts', name: 'Recepções de mercadoria', defaultEnabled: true },
+    ],
+  },
+  {
     code: 'inventory',
     name: 'Inventário',
     kind: 'MODULE',

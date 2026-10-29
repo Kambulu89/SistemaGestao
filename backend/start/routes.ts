@@ -29,6 +29,8 @@ const FormsController = () => import('#dynamic/forms/presentation/forms_controll
 const StatesController = () => import('#dynamic/states/presentation/states_controller')
 const CatalogController = () => import('#modules/catalog/presentation/catalog_controller')
 const OrdersController = () => import('#modules/orders/presentation/orders_controller')
+const ProcurementController = () =>
+  import('#modules/procurement/presentation/procurement_controller')
 const InvoicingController = () => import('#modules/invoicing/presentation/invoicing_controller')
 const InventoryController = () => import('#modules/inventory/presentation/inventory_controller')
 const CustomersController = () => import('#modules/customers/presentation/customers_controller')
@@ -829,6 +831,134 @@ router
           .use(middleware.can({ permission: 'credit_note.issue' }))
       })
       .use(middleware.feature({ code: 'invoicing.invoices' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/suppliers', [ProcurementController, 'listSuppliers'])
+            router.get('/suppliers/:id', [ProcurementController, 'showSupplier'])
+          })
+          .use(middleware.can({ permission: 'supplier.read' }))
+        router
+          .group(() => {
+            router.post('/suppliers', [ProcurementController, 'createSupplier'])
+            router.patch('/suppliers/:id', [ProcurementController, 'updateSupplier'])
+          })
+          .use(middleware.can({ permission: 'supplier.manage' }))
+      })
+      .use(middleware.feature({ code: 'procurement.suppliers' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/purchase-requisitions', [ProcurementController, 'listRequisitions'])
+            router.get('/purchase-requisitions/:id', [ProcurementController, 'showRequisition'])
+          })
+          .use(middleware.can({ permission: 'requisition.read' }))
+        router
+          .group(() => {
+            router.post('/purchase-requisitions', [ProcurementController, 'createRequisition'])
+            router.patch('/purchase-requisitions/:id', [ProcurementController, 'updateRequisition'])
+            router.delete('/purchase-requisitions/:id', [
+              ProcurementController,
+              'removeRequisition',
+            ])
+            router.post('/purchase-requisitions/:id/lines', [
+              ProcurementController,
+              'addRequisitionLine',
+            ])
+            router.delete('/purchase-requisitions/:id/lines/:lineId', [
+              ProcurementController,
+              'removeRequisitionLine',
+            ])
+            router.post('/purchase-requisitions/:id/submit', [
+              ProcurementController,
+              'submitRequisition',
+            ])
+          })
+          .use(middleware.can({ permission: 'requisition.manage' }))
+        router
+          .group(() => {
+            router.post('/purchase-requisitions/:id/approve', [
+              ProcurementController,
+              'approveRequisition',
+            ])
+            router.post('/purchase-requisitions/:id/reject', [
+              ProcurementController,
+              'rejectRequisition',
+            ])
+          })
+          .use(middleware.can({ permission: 'requisition.approve' }))
+        router
+          .group(() => {
+            router.post('/purchase-requisitions/:id/convert', [
+              ProcurementController,
+              'convertRequisition',
+            ])
+          })
+          .use(middleware.can({ permission: 'purchase.manage' }))
+      })
+      .use(middleware.feature({ code: 'procurement.requisitions' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/purchase-orders', [ProcurementController, 'listPurchases'])
+            router.get('/purchase-orders/:id', [ProcurementController, 'showPurchase'])
+          })
+          .use(middleware.can({ permission: 'purchase.read' }))
+        router
+          .group(() => {
+            router.post('/purchase-orders', [ProcurementController, 'createPurchase'])
+            router.patch('/purchase-orders/:id', [ProcurementController, 'updatePurchase'])
+            router.delete('/purchase-orders/:id', [ProcurementController, 'removePurchase'])
+            router.post('/purchase-orders/:id/lines', [ProcurementController, 'addPurchaseLine'])
+            router.delete('/purchase-orders/:id/lines/:lineId', [
+              ProcurementController,
+              'removePurchaseLine',
+            ])
+          })
+          .use(middleware.can({ permission: 'purchase.manage' }))
+        router
+          .group(() => {
+            router.post('/purchase-orders/:id/confirm', [ProcurementController, 'confirmPurchase'])
+            router.post('/purchase-orders/:id/cancel', [ProcurementController, 'cancelPurchase'])
+          })
+          .use(middleware.can({ permission: 'purchase.confirm' }))
+      })
+      .use(middleware.feature({ code: 'procurement.orders' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/goods-receipts', [ProcurementController, 'listReceipts'])
+            router.get('/goods-receipts/:id', [ProcurementController, 'showReceipt'])
+          })
+          .use(middleware.can({ permission: 'receipt.read' }))
+        router
+          .group(() => {
+            router.post('/goods-receipts', [ProcurementController, 'createReceipt'])
+            router.patch('/goods-receipts/:id', [ProcurementController, 'updateReceipt'])
+            router.delete('/goods-receipts/:id', [ProcurementController, 'removeReceipt'])
+            router.post('/goods-receipts/:id/lines', [ProcurementController, 'addReceiptLine'])
+            router.delete('/goods-receipts/:id/lines/:lineId', [
+              ProcurementController,
+              'removeReceiptLine',
+            ])
+          })
+          .use(middleware.can({ permission: 'receipt.manage' }))
+        router
+          .group(() => {
+            router.post('/goods-receipts/:id/post', [ProcurementController, 'postReceipt'])
+            router.post('/goods-receipts/:id/reverse', [ProcurementController, 'reverseReceipt'])
+          })
+          .use(middleware.can({ permission: 'receipt.post' }))
+      })
+      .use(middleware.feature({ code: 'procurement.receipts' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

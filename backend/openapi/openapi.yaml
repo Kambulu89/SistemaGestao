@@ -5663,3 +5663,733 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /suppliers:
+    get:
+      summary: Fornecedores (supplier.read; funcionalidade procurement.suppliers)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [ACTIVE, BLOCKED, INACTIVE] },
+          }
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200':
+          {
+            description: 'Fornecedores com nome e NIF da Party; `meta.total` conta os que correspondem aos filtros.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria um fornecedor sobre uma Party (supplier.manage)
+      description: |
+        Guarda só as condições de compra; nome, NIF e contactos são da Party. Bloquear ou inactivar exige motivo. 409 `SUPPLIER_CODE_EXISTS` ou `SUPPLIER_EXISTS`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [partyId, organizationId, code]
+              properties:
+                partyId: { type: string, format: uuid }
+                organizationId: { type: string, format: uuid }
+                code: { type: string, maxLength: 50 }
+                paymentTermDays: { type: integer, minimum: 0, maximum: 3650 }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                status: { type: string, enum: [ACTIVE, BLOCKED, INACTIVE] }
+                statusReason: { type: string, nullable: true }
+      responses:
+        '201': { description: 'Fornecedor.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /suppliers/{id}:
+    get:
+      summary: Um fornecedor (supplier.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Fornecedor.' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera as condições de um fornecedor (supplier.manage)
+      description: |
+        A Party, a organização e o código não mudam (422 `IMMUTABLE`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                paymentTermDays: { type: integer }
+                currency: { type: string }
+                status: { type: string, enum: [ACTIVE, BLOCKED, INACTIVE] }
+                statusReason: { type: string, nullable: true }
+      responses:
+        '200': { description: 'Fornecedor.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /purchase-requisitions:
+    get:
+      summary: Requisições de compra (requisition.read; funcionalidade procurement.requisitions)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, CONVERTED] },
+          }
+        - {
+            name: requestedByMembershipId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Requisições; `meta.total` conta as que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma requisição em rascunho (requisition.manage)
+      description: |
+        O requerente é o membro autenticado. Uma variante só aparece uma vez (409 `REQUISITION_LINE_DUPLICATE`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId]
+              properties:
+                organizationId: { type: string, format: uuid }
+                neededOn: { type: string, format: date, nullable: true }
+                notes: { type: string, maxLength: 1000, nullable: true }
+                lines:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [variantId, quantity]
+                    properties:
+                      variantId: { type: string, format: uuid }
+                      quantity: { type: string }
+      responses:
+        '201': { description: 'Requisição com as linhas.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /purchase-requisitions/{id}:
+    get:
+      summary: Uma requisição com as linhas (requisition.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Requisição.' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera uma requisição em rascunho (requisition.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                neededOn: { type: string, format: date, nullable: true }
+                notes: { type: string, nullable: true }
+      responses:
+        '200': { description: 'Requisição.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma requisição em rascunho (requisition.manage)
+      description: |
+        Só um rascunho se apaga (409 `REQUISITION_NOT_DRAFT`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /purchase-requisitions/{id}/lines:
+    post:
+      summary: Acrescenta uma linha a uma requisição em rascunho (requisition.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, quantity]
+              properties:
+                variantId: { type: string, format: uuid }
+                quantity: { type: string }
+      responses:
+        '201': { description: 'Requisição.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /purchase-requisitions/{id}/lines/{lineId}:
+    delete:
+      summary: Remove uma linha de uma requisição em rascunho (requisition.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Requisição.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /purchase-requisitions/{id}/submit:
+    post:
+      summary: Submete a requisição (requisition.manage)
+      description: |
+        Atribui o número (sequência PURCHASE_REQUISITION). Uma requisição sem linhas não se submete (409 `REQUISITION_EMPTY`). Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`requisition` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /purchase-requisitions/{id}/approve:
+    post:
+      summary: Aprova uma requisição submetida (requisition.approve)
+      description: |
+        Quem pediu a requisição não a aprova (409 `SEGREGATION_OF_DUTIES`; a base também o recusa). Idempotente para a mesma decisão.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: '`requisition` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /purchase-requisitions/{id}/reject:
+    post:
+      summary: Rejeita uma requisição submetida, com motivo (requisition.approve)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: '`requisition` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /purchase-requisitions/{id}/convert:
+    post:
+      summary: Converte uma requisição aprovada numa encomenda em rascunho (purchase.manage)
+      description: |
+        A requisição não leva preços: `lines` traz o custo (e a taxa) de **cada** variante da requisição (422 `COST_REQUIRED`). As quantidades vêm da requisição. Idempotente: converter outra vez devolve a encomenda.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [supplierId]
+              properties:
+                supplierId: { type: string, format: uuid }
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    required: [variantId, unitCost]
+                    properties:
+                      variantId: { type: string, format: uuid }
+                      quantity: { type: string }
+                      unitCost: { type: string }
+                      taxRate: { type: string }
+      responses:
+        '200': { description: '`order` e `idempotent` (201 se criou a encomenda).' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /purchase-orders:
+    get:
+      summary: Encomendas a fornecedor (purchase.read; funcionalidade procurement.orders)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: supplierId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, ORDERED, PARTIAL, RECEIVED, CANCELLED] },
+          }
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Encomendas; `meta.total` conta as que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma encomenda a fornecedor em rascunho (purchase.manage)
+      description: |
+        A moeda é a do fornecedor. Um fornecedor bloqueado ou inactivo não recebe novas encomendas (409 `SUPPLIER_BLOCKED`, `SUPPLIER_INACTIVE`). Líquido = quantidade × custo e imposto = líquido × taxa, em aritmética exacta.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [supplierId]
+              properties:
+                supplierId: { type: string, format: uuid }
+                organizationId: { type: string, format: uuid }
+                orderDate: { type: string, format: date }
+                notes: { type: string, nullable: true }
+                lines:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [variantId, quantity, unitCost]
+                    properties:
+                      variantId: { type: string, format: uuid }
+                      quantity: { type: string }
+                      unitCost: { type: string }
+                      taxRate: { type: string }
+      responses:
+        '201': { description: 'Encomenda com as linhas e totais.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /purchase-orders/{id}:
+    get:
+      summary: Uma encomenda com as linhas e o recebido por linha (purchase.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          {
+            description: 'Encomenda; cada linha traz `receivedQty` (recepções lançadas e não revertidas).',
+          }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera o cabeçalho de uma encomenda em rascunho (purchase.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                orderDate: { type: string, format: date }
+                notes: { type: string, nullable: true }
+      responses:
+        '200': { description: 'Encomenda.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma encomenda em rascunho (purchase.manage)
+      description: |
+        Só um rascunho se apaga (409 `PURCHASE_ORDER_NOT_DRAFT`); uma criada de uma requisição também não (409 `PURCHASE_ORDER_FROM_REQUISITION`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /purchase-orders/{id}/lines:
+    post:
+      summary: Acrescenta uma linha a uma encomenda em rascunho (purchase.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, quantity, unitCost]
+              properties:
+                variantId: { type: string, format: uuid }
+                quantity: { type: string }
+                unitCost: { type: string }
+                taxRate: { type: string }
+      responses:
+        '201': { description: 'Encomenda.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /purchase-orders/{id}/lines/{lineId}:
+    delete:
+      summary: Remove uma linha de uma encomenda em rascunho (purchase.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Encomenda.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /purchase-orders/{id}/confirm:
+    post:
+      summary: Confirma a encomenda a fornecedor (purchase.confirm)
+      description: |
+        Atribui o número (sequência PURCHASE_ORDER) e escreve `procurement.purchase_order.confirmed`. Confirmar não recebe: a entrada de stock é uma recepção. Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`order` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /purchase-orders/{id}/cancel:
+    post:
+      summary: Cancela uma encomenda confirmada, com motivo (purchase.confirm)
+      description: |
+        Só enquanto nenhuma recepção lançada a tocou (409 `PURCHASE_ORDER_HAS_RECEIPTS`). Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: '`order` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /goods-receipts:
+    get:
+      summary: Recepções de mercadoria (receipt.read; funcionalidade procurement.receipts)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: purchaseOrderId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, POSTED, REVERSED] },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Recepções; `meta.total` conta as que correspondem aos filtros.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma recepção em rascunho de uma encomenda confirmada (receipt.manage)
+      description: |
+        Cada linha aponta para uma linha da encomenda e leva uma quantidade que cabe no saldo por receber (422 `EXCEEDS_BALANCE`). O armazém é obrigatório para lançar produtos com controlo de stock; produtos por lote exigem `lotCode`. Uma encomenda não confirmada ou toda recebida: 409 `PURCHASE_ORDER_NOT_RECEIVABLE`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purchaseOrderId]
+              properties:
+                purchaseOrderId: { type: string, format: uuid }
+                warehouseId: { type: string, format: uuid, nullable: true }
+                supplierDocument: { type: string, maxLength: 100, nullable: true }
+                notes: { type: string, nullable: true }
+                lines:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [purchaseLineId, quantity]
+                    properties:
+                      purchaseLineId: { type: string, format: uuid }
+                      quantity: { type: string }
+                      lotCode: { type: string, nullable: true }
+                      expiresOn: { type: string, format: date, nullable: true }
+      responses:
+        '201': { description: 'Recepção com as linhas.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /goods-receipts/{id}:
+    get:
+      summary: Uma recepção com as linhas (receipt.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Recepção.' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera o cabeçalho de uma recepção em rascunho (receipt.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                warehouseId: { type: string, format: uuid, nullable: true }
+                supplierDocument: { type: string, nullable: true }
+                notes: { type: string, nullable: true }
+      responses:
+        '200': { description: 'Recepção.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma recepção em rascunho (receipt.manage)
+      description: |
+        Uma lançada reverte-se, nunca se apaga (409 `GOODS_RECEIPT_NOT_DRAFT`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /goods-receipts/{id}/lines:
+    post:
+      summary: Acrescenta uma linha a uma recepção em rascunho (receipt.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purchaseLineId, quantity]
+              properties:
+                purchaseLineId: { type: string, format: uuid }
+                quantity: { type: string }
+                lotCode: { type: string, nullable: true }
+                expiresOn: { type: string, format: date, nullable: true }
+      responses:
+        '201': { description: 'Recepção.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /goods-receipts/{id}/lines/{lineId}:
+    delete:
+      summary: Remove uma linha de uma recepção em rascunho (receipt.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Recepção.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /goods-receipts/{id}/post:
+    post:
+      summary: Lança a recepção (receipt.post)
+      description: |
+        Confere o saldo de cada linha sob bloqueio da encomenda (409 `GOODS_RECEIPT_NOT_POSTABLE`), atribui o número (sequência GOODS_RECEIPT), **dá entrada do stock na mesma transacção** ao custo da linha da encomenda (no primeiro local activo do armazém, criando o lote nos produtos por lote) e passa a encomenda a `PARTIAL` ou `RECEIVED`. Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`receipt` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /goods-receipts/{id}/reverse:
+    post:
+      summary: Reverte uma recepção lançada, com motivo (receipt.post)
+      description: |
+        Tira o stock com movimentos opostos ao custo original e reabre o saldo da encomenda; falha se o stock já foi consumido. Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: '`receipt` e `idempotent`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }

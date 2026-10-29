@@ -4,6 +4,7 @@ import { settingsServices } from '#core/settings/index'
 import { LucidTenantDatabase } from '#core/tenancy/index'
 import { catalogServices } from '#modules/catalog/index'
 import { OrderStock } from '#modules/inventory/application/order_stock'
+import { ReceiptStock } from '#modules/inventory/application/receipt_stock'
 import { ShipmentStock } from '#modules/inventory/application/shipment_stock'
 import type { References } from '#modules/inventory/application/ports'
 import { StockUseCases } from '#modules/inventory/application/stock_use_cases'
@@ -71,6 +72,7 @@ function build() {
     stock,
     orderStock: new OrderStock(warehouses, ledger, reservations, stock, references, outbox, clock),
     shipmentStock: new ShipmentStock(warehouses, ledger, reservations, stock, references, clock),
+    receiptStock: new ReceiptStock(warehouses, lots, ledger, stock, references),
     ledger,
   }
 }

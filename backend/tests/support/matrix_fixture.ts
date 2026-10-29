@@ -71,6 +71,15 @@ export interface World {
     shipmentLine: string
     shipmentOrderLine: string
     contract: string
+    supplier: string
+    requisition: string
+    requisitionLine: string
+    purchase: string
+    purchaseLine: string
+    orderedPurchase: string
+    orderedPurchaseLine: string
+    goodsReceipt: string
+    goodsReceiptLine: string
     invoice: string
     issuedInvoice: string
     invoiceLine: string
@@ -125,7 +134,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await syncTestRegistry()
   await license(
     t,
-    ['crm', 'catalog', 'customers', 'orders', 'inventory', 'invoicing'],
+    ['crm', 'catalog', 'customers', 'orders', 'inventory', 'invoicing', 'procurement'],
     ['crm.scoring']
   )
   await must(await http.post('/api/v1/tenant/modules/crm/enable', {}), 200)
@@ -134,6 +143,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await must(await http.post('/api/v1/tenant/modules/orders/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/inventory/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/invoicing/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/procurement/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -606,6 +616,9 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     ['SALES_ORDER', 'ENC {SERIES}/{YYYY}/'],
     ['CREDIT_NOTE', 'NC {SERIES}/{YYYY}/'],
     ['CONTRACT', 'CT {SERIES}/{YYYY}/'],
+    ['PURCHASE_REQUISITION', 'REQ {SERIES}/{YYYY}/'],
+    ['PURCHASE_ORDER', 'OC {SERIES}/{YYYY}/'],
+    ['GOODS_RECEIPT', 'REC {SERIES}/{YYYY}/'],
   ] as const) {
     await must(
       await http.post('/api/v1/sequences', {
@@ -721,6 +734,41 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // M06: um fornecedor, uma requisição, uma encomenda em rascunho, outra confirmada e uma recepção em rascunho, nos dois tenants.
+  const supplier = await must<{ id: string }>(
+    await http.post('/api/v1/suppliers', {
+      partyId: orgParty.id,
+      organizationId: organization.id,
+      code: 'FOR-1',
+      paymentTermDays: 30,
+    }),
+    201
+  )
+  const requisition = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/purchase-requisitions', {
+      organizationId: organization.id,
+      lines: [{ variantId: variant.id, quantity: '5' }],
+    }),
+    201
+  )
+  const purchaseLine = { variantId: variant.id, quantity: '10', unitCost: '5', taxRate: '14' }
+  const purchaseDraft = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/purchase-orders', { supplierId: supplier.id, lines: [purchaseLine] }),
+    201
+  )
+  const ordered = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/purchase-orders', { supplierId: supplier.id, lines: [purchaseLine] }),
+    201
+  )
+  await must(await http.post(`/api/v1/purchase-orders/${ordered.id}/confirm`, {}), 200)
+  const goodsReceipt = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/goods-receipts', {
+      purchaseOrderId: ordered.id,
+      warehouseId: warehouse.id,
+      lines: [{ purchaseLineId: (ordered.lines[0] as { id: string }).id, quantity: '3' }],
+    }),
+    201
+  )
   const manualLine = {
     description: 'Serviço de consultoria',
     quantity: '2',
@@ -821,6 +869,15 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       shipmentLine: (shipment.lines[0] as { id: string }).id,
       shipmentOrderLine: shippableLine.id,
       contract: contract.id,
+      supplier: supplier.id,
+      requisition: requisition.id,
+      requisitionLine: (requisition.lines[0] as { id: string }).id,
+      purchase: purchaseDraft.id,
+      purchaseLine: (purchaseDraft.lines[0] as { id: string }).id,
+      orderedPurchase: ordered.id,
+      orderedPurchaseLine: (ordered.lines[0] as { id: string }).id,
+      goodsReceipt: goodsReceipt.id,
+      goodsReceiptLine: (goodsReceipt.lines[0] as { id: string }).id,
       invoice: invoiceDraft.id,
       issuedInvoice: invoiceIssued.id,
       invoiceLine: (invoiceIssued.lines[0] as { id: string }).id,

@@ -50,6 +50,11 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   // Facturação (M05): as páginas usam os códigos do servidor; o alias só abre a rota do módulo (facturas ou contratos).
   'invoice.read': ['sales.billing.read'],
   'contract.read': ['sales.billing.read'],
+  // Compras (M06): as páginas usam os códigos do servidor; o alias só abre a rota do módulo.
+  'supplier.read': ['procurement.read'],
+  'requisition.read': ['procurement.read'],
+  'purchase.read': ['procurement.read'],
+  'receipt.read': ['procurement.read'],
   // Catálogo e preços (M03): as páginas usam o código do servidor; ler preços é independente de ler produtos.
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],

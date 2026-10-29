@@ -663,6 +663,39 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
 - **Fica por fazer.** Recebimentos e reconciliação (Finanças), facturação recorrente por contrato, PDF/SAF-T, notas de débito,
   exposição de crédito do cliente, séries por tipo de documento.
 
+## D-053 Compras (M06): fornecedores, requisições, encomendas e recepções; a entrada de stock é a recepção (aceite — fatia 4.7)
+- **Onde.** Módulo `procurement` (dependências: `core`, `catalog`; `inventory` opcional), funcionalidades `procurement.suppliers|requisitions|orders|receipts`.
+  Permissões `supplier.read|manage`, `requisition.read|manage|approve`, `purchase.read|manage|confirm` e `receipt.read|manage|post`.
+  O domínio tem a sua aritmética decimal (`domain/decimal.ts`); o inventário liga-se por `registerReceiptEffects` (as compras não
+  importam o inventário, nem para validar o armazém: `warehouseUsable` também é registado — sem inventário registado nenhum
+  armazém é aceite).
+- **Fornecedor.** Condições de compra sobre uma Party por organização (prazo, moeda, estado `ACTIVE|BLOCKED|INACTIVE` com motivo);
+  nome e NIF vêm da Party por junção de leitura. Um bloqueado ou inactivo não recebe novas encomendas (409), mas as já confirmadas
+  continuam a receber-se.
+- **Requisição.** `DRAFT → SUBMITTED` (número `PURCHASE_REQUISITION`) `→ APPROVED|REJECTED → CONVERTED`. **Segregação de funções:**
+  quem pediu não aprova nem rejeita (409 `SEGREGATION_OF_DUTIES`, e a base recusa-o por CHECK). Depois de submetida não se altera
+  (trigger). Converter cria **uma** encomenda em rascunho (única por requisição, idempotente) e exige o custo e a taxa de cada
+  linha, porque a requisição não leva preços.
+- **Encomenda a fornecedor.** `DRAFT → ORDERED` (número `PURCHASE_ORDER`, evento `procurement.purchase_order.confirmed`) `→ PARTIAL → RECEIVED`,
+  ou `CANCELLED` (motivo; só enquanto nenhuma recepção lançada a tocou). Líquido = quantidade × custo e imposto = líquido × taxa
+  (percentagem manual por linha, sem tabela fiscal), cada um arredondado uma vez; o total é a soma das linhas. Depois de confirmada
+  só mudam o estado e o cancelamento (trigger); `RECEIVED` volta a `PARTIAL`/`ORDERED` se se reverterem recepções. Confirmar **não**
+  recebe (≠ receber ≠ facturar do fornecedor ≠ pagar).
+- **Recepção.** `DRAFT → POSTED → REVERSED`. O recebido de uma linha é sempre a soma das recepções lançadas e não revertidas (nunca
+  um campo) e confere-se **sob bloqueio da encomenda**: duas recepções concorrentes nunca recebem mais do que foi encomendado
+  (409 `GOODS_RECEIPT_NOT_POSTABLE`). Lançar dá entrada do stock **na mesma transacção**, ao custo da linha da encomenda (alimenta
+  o custo médio), no primeiro local activo do armazém da recepção; produtos por lote exigem o código do lote (criado se não
+  existir, com a validade); serviços e produtos sem controlo de stock não se movem; sem armazém e com produtos de stock a
+  recepção não se lança. Reverter tira o stock com movimentos opostos ao custo original e **falha** se o stock já foi consumido
+  (nada muda). Lançada, a recepção é imutável (trigger, incluindo as linhas).
+- **Eventos.** `procurement.goods_receipt.posted|reversed` e `procurement.purchase_order.confirmed|cancelled` no outbox.
+- **Desvios da spec.** Uma só página «Compras» sob a capacidade `procurement.suppliers` do frontend (a capacidade `procurement.orders`,
+  «Cotações e ordens de compra», continua por implementar porque não há pedidos de cotação); recepção sem `warehouse_id` obrigatório
+  (opcional, exigido só se houver stock); sem escolha de local nem números de série.
+- **Fica por fazer.** Pedidos de cotação e comparação de propostas, três vias (encomenda–recepção–factura do fornecedor), contas a
+  pagar, devoluções ao fornecedor (4.8), unidades de compra distintas da unidade base, taxas por tabela fiscal, aprovação por
+  alçadas/workflow, moeda diferente da do fornecedor.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de
 email/SMS/WhatsApp/pagamento; calendário de férias; alçadas e segregação; política de retenção; RPO/RTO; limites de
