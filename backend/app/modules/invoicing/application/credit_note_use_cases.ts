@@ -9,6 +9,7 @@ import {
   type CreditNoteStatus,
   type Issue,
 } from '#modules/invoicing/domain/invoicing'
+import { runCreditNoteEffects } from '#modules/invoicing/application/registry'
 import { invoicingValidation } from '#modules/invoicing/application/contract_use_cases'
 import type {
   CreditedAmounts,
@@ -222,6 +223,12 @@ export class CreditNoteUseCases {
         invoiceLines.map((l) => ({ line: asLine(l), credited: asCredited(after.get(l.id)) }))
       )
       if (closed) await this.invoices.markCredited(scope, invoice.id)
+      // O crédito aplicado ao recebível (e afins), na mesma transacção.
+      await runCreditNoteEffects(
+        scope,
+        issued,
+        (await this.invoices.find(scope, invoice.id)) as typeof invoice
+      )
       await this.outbox.append(scope, {
         aggregateType: 'credit_note',
         aggregateId: id,

@@ -92,6 +92,34 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     ],
   },
   {
+    code: 'finance',
+    name: 'Tesouraria, contas a receber e a pagar',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [
+      { code: 'core', constraint: '*', optional: false },
+      { code: 'customers', constraint: '*', optional: true },
+      { code: 'orders', constraint: '*', optional: true },
+      { code: 'invoicing', constraint: '*', optional: true },
+      { code: 'procurement', constraint: '*', optional: true },
+    ],
+    features: [
+      { code: 'finance.treasury', name: 'Contas de tesouraria', defaultEnabled: true },
+      {
+        code: 'finance.obligations',
+        name: 'Contas a receber e a pagar',
+        defaultEnabled: true,
+      },
+      { code: 'finance.payments', name: 'Pagamentos e recebimentos', defaultEnabled: true },
+      {
+        code: 'finance.supplier_invoices',
+        name: 'Facturas de fornecedor',
+        defaultEnabled: true,
+      },
+    ],
+  },
+  {
     code: 'inventory',
     name: 'Inventário',
     kind: 'MODULE',

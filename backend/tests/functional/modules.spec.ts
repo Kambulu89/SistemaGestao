@@ -68,10 +68,12 @@ test.group('módulos | registo', (group) => {
     assert.strictEqual((error as any).details[0].code, 'DEPENDENCY_CYCLE')
 
     // O que sai do código passa a DEPRECATED (a linha e a história mantêm-se).
-    // Sai o inventário e quem depende dele (a dependência, ainda que opcional, tem de existir no registo).
-    const without = TEST_MANIFESTS.filter((m) => m.code !== 'inventory' && m.code !== 'procurement')
+    // Sai o inventário e quem depende dele (a dependência, ainda que opcional, tem de existir no registo): as compras
+    // (opcional), as finanças (opcional das compras) e as vendas (opcional das finanças).
+    const leaving = ['inventory', 'procurement', 'finance', 'sales']
+    const without = TEST_MANIFESTS.filter((m) => !leaving.includes(m.code))
     const result = await sync.execute(without)
-    assert.strictEqual(result.deprecated, 2)
+    assert.strictEqual(result.deprecated, leaving.length)
     const row = await db.connection('owner').from('modules').where('code', 'inventory').first()
     assert.strictEqual(row.status, 'DEPRECATED')
     await sync.execute(TEST_MANIFESTS)

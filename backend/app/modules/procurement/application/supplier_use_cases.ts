@@ -63,7 +63,7 @@ export class SupplierUseCases {
       })
     }
     const values = normalizeSupplier(input, null, currency ?? 'AOA', issues)
-    if (!values) throw procurementValidation(issues)
+    if (!values || issues.length > 0) throw procurementValidation(issues)
     if (!(await this.references.partyExists(context, values.partyId))) {
       throw procurementValidation([
         { path: 'partyId', code: 'UNKNOWN_PARTY', message: 'A pessoa ou organização não existe.' },

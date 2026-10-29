@@ -6393,3 +6393,610 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /treasury-accounts:
+    get:
+      summary: Contas de tesouraria com saldo derivado (treasury.read; funcionalidade finance.treasury)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - { name: active, in: query, required: false, schema: { type: boolean } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200':
+          {
+            description: 'Contas; o identificador só aparece a quem tem treasury.manage; `meta.total`.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma conta de tesouraria (treasury.manage)
+      description: |
+        A moeda omissa é a base da organização. 409 `ACCOUNT_CODE_EXISTS`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, code, type, name]
+              properties:
+                organizationId: { type: string, format: uuid }
+                code: { type: string, maxLength: 50 }
+                type: { type: string, enum: [CASH, BANK] }
+                name: { type: string, maxLength: 160 }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                bankName: { type: string, nullable: true }
+                accountIdentifier: { type: string, nullable: true }
+                active: { type: boolean }
+      responses:
+        '201': { description: 'Conta.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /treasury-accounts/{id}:
+    get:
+      summary: Uma conta (treasury.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Conta.' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera nome, dados bancários ou estado da conta (treasury.manage)
+      description: |
+        Organização, código, tipo e moeda não mudam (422 `IMMUTABLE`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                name: { type: string }
+                bankName: { type: string, nullable: true }
+                accountIdentifier: { type: string, nullable: true }
+                active: { type: boolean }
+      responses:
+        '200': { description: 'Conta.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /treasury-accounts/{id}/entries:
+    get:
+      summary: Extracto — movimentos de tesouraria da conta (treasury.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Movimentos imutáveis, do mais recente; `meta.total`.' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /receivables:
+    get:
+      summary: Contas a receber (receivable.read; funcionalidade finance.obligations)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: partyId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: view,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [OPEN, PARTIAL, OVERDUE, CLOSED, CANCELLED] },
+          }
+        - { name: dueBefore, in: query, required: false, schema: { type: string, format: date } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200':
+          {
+            description: 'Obrigações com saldo derivado (original − créditos − alocações confirmadas) e vista (aberto, parcial, vencido, liquidado); `meta.total`.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /receivables/{id}:
+    get:
+      summary: Uma obrigação com alocações e créditos (receivable.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Obrigação.' }
+        '404': { $ref: '#/components/responses/Error' }
+  /payables:
+    get:
+      summary: Contas a pagar (payable.read; funcionalidade finance.obligations)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: partyId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: view,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [OPEN, PARTIAL, OVERDUE, CLOSED, CANCELLED] },
+          }
+        - { name: dueBefore, in: query, required: false, schema: { type: string, format: date } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200':
+          {
+            description: 'Obrigações com saldo derivado (original − créditos − alocações confirmadas) e vista (aberto, parcial, vencido, liquidado); `meta.total`.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /payables/{id}:
+    get:
+      summary: Uma obrigação com alocações (payable.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Obrigação.' }
+        '404': { $ref: '#/components/responses/Error' }
+  /customers/{id}/credit:
+    get:
+      summary: Exposição de crédito de um cliente (receivable.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          {
+            description: 'Recebíveis em aberto + reservas das encomendas confirmadas; o limite e a folga só aparecem a quem tem customer.credit_manage.',
+          }
+        '404': { $ref: '#/components/responses/Error' }
+  /payments:
+    get:
+      summary: Pagamentos e recebimentos (payment.read; funcionalidade finance.payments)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: direction,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [INBOUND, OUTBOUND] },
+          }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, PENDING, CONFIRMED, FAILED, REVERSED] },
+          }
+        - { name: partyId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: treasuryAccountId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Pagamentos; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Regista um pagamento em rascunho (payment.manage)
+      description: |
+        A moeda é a da conta e tem de coincidir com a das obrigações (422 `CURRENCY_MISMATCH`); a soma das alocações iguala o montante (422 `ALLOCATION_MISMATCH`). A mesma `Idempotency-Key` com dados diferentes: 409 `IDEMPOTENCY_KEY_REUSED`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - {
+            name: Idempotency-Key,
+            in: header,
+            required: false,
+            schema: { type: string, maxLength: 100 },
+          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId, direction, partyId, treasuryAccountId, amount, allocations]
+              properties:
+                organizationId: { type: string, format: uuid }
+                direction: { type: string, enum: [INBOUND, OUTBOUND] }
+                partyId: { type: string, format: uuid }
+                treasuryAccountId: { type: string, format: uuid }
+                amount: { type: string }
+                method: { type: string, enum: [CASH, TRANSFER, CARD, OTHER] }
+                occurredOn: { type: string, format: date }
+                reference: { type: string, nullable: true }
+                allocations:
+                  {
+                    type: array,
+                    minItems: 1,
+                    maxItems: 100,
+                    items:
+                      {
+                        type: object,
+                        required: [amount],
+                        properties:
+                          {
+                            receivableId: { type: string, format: uuid },
+                            payableId: { type: string, format: uuid },
+                            amount: { type: string },
+                          },
+                      },
+                  }
+      responses:
+        '201': { description: 'Pagamento com alocações.' }
+        '200': { description: 'Repetição idempotente: devolve o já criado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /payments/{id}:
+    get:
+      summary: Um pagamento com alocações (payment.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Pagamento.' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga um pagamento em rascunho (payment.manage)
+      description: |
+        Um confirmado reverte-se, nunca se apaga (409 `PAYMENT_STATE`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /payments/{id}/submit:
+    post:
+      summary: Submete o pagamento (rascunho → pendente) (payment.manage)
+      description: |
+        Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Pagamento.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /payments/{id}/confirm:
+    post:
+      summary: Confirma o pagamento — move dinheiro (payment.confirm)
+      description: |
+        Sob bloqueio das obrigações: nenhuma fica paga a mais (409 `PAYMENT_NOT_APPLICABLE` com `OVERPAYMENT` ou `OBLIGATION_NOT_OPEN`), lança o movimento de tesouraria e fecha o que ficou liquidado, numa só transacção. Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Pagamento confirmado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /payments/{id}/fail:
+    post:
+      summary: Marca um pagamento pendente como falhado, com motivo (payment.confirm)
+      description: |
+        Idempotente. Não afecta saldos.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: 'Pagamento.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /payments/{id}/reverse:
+    post:
+      summary: Reverte um pagamento confirmado, com motivo (payment.confirm)
+      description: |
+        Repõe os saldos das obrigações (reabre as fechadas) e lança o movimento inverso na conta. Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: 'Pagamento revertido.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /supplier-invoices:
+    get:
+      summary: Facturas de fornecedor (supplier_invoice.read; funcionalidade finance.supplier_invoices)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: supplierId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, VALIDATED, DISPUTED, VOID] },
+          }
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Facturas; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Regista uma factura de fornecedor em rascunho (supplier_invoice.manage)
+      description: |
+        Vencimento omisso = data + prazo do fornecedor. 409 `SUPPLIER_INVOICE_NUMBER_EXISTS`.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [supplierId, externalNumber]
+              properties:
+                supplierId: { type: string, format: uuid }
+                organizationId: { type: string, format: uuid }
+                externalNumber: { type: string, maxLength: 80 }
+                purchaseOrderId: { type: string, format: uuid, nullable: true }
+                invoiceDate: { type: string, format: date }
+                dueOn: { type: string, format: date }
+                currency: { type: string }
+                notes: { type: string, nullable: true }
+                lines:
+                  {
+                    type: array,
+                    maxItems: 100,
+                    items:
+                      {
+                        type: object,
+                        required: [description, quantity, unitPrice],
+                        properties:
+                          {
+                            purchaseLineId: { type: string, format: uuid, nullable: true },
+                            description: { type: string },
+                            quantity: { type: string },
+                            unitPrice: { type: string },
+                            taxRate: { type: string },
+                          },
+                      },
+                  }
+      responses:
+        '201': { description: 'Factura com linhas.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /supplier-invoices/{id}:
+    get:
+      summary: Uma factura de fornecedor com linhas e conferência (supplier_invoice.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Factura.' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera o cabeçalho de uma factura em rascunho ou em disputa (supplier_invoice.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                externalNumber: { type: string }
+                purchaseOrderId: { type: string, format: uuid, nullable: true }
+                invoiceDate: { type: string, format: date }
+                dueOn: { type: string, format: date }
+                notes: { type: string, nullable: true }
+      responses:
+        '200': { description: 'Factura (volta a rascunho).' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: Apaga uma factura em rascunho (supplier_invoice.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /supplier-invoices/{id}/lines:
+    post:
+      summary: Acrescenta uma linha (supplier_invoice.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description, quantity, unitPrice]
+              properties:
+                purchaseLineId: { type: string, format: uuid, nullable: true }
+                description: { type: string }
+                quantity: { type: string }
+                unitPrice: { type: string }
+                taxRate: { type: string }
+      responses:
+        '201': { description: 'Factura.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /supplier-invoices/{id}/lines/{lineId}:
+    delete:
+      summary: Remove uma linha (supplier_invoice.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lineId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Factura.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /supplier-invoices/{id}/validate:
+    post:
+      summary: Valida a factura e cria a conta a pagar (supplier_invoice.validate)
+      description: |
+        Com encomenda, confere a três vias (não facturar mais do que o recebido nem a preço acima do encomendado). Com divergências fica `DISPUTED`; só avança com `overrideReason` e a permissão supplier_invoice.override (403 sem ela). Validada é imutável. Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                overrideReason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: 'Factura validada, ou em disputa com as divergências em `matching`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /supplier-invoices/{id}/void:
+    post:
+      summary: Anula uma factura em rascunho ou em disputa (supplier_invoice.validate)
+      description: |
+        Uma validada não se anula (409 `SUPPLIER_INVOICE_STATE`). Idempotente.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Factura anulada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }

@@ -35,7 +35,7 @@ export const TEST_MANIFESTS: ModuleManifest[] = [
   CODE_MANIFESTS.find((m) => m.code === 'catalog') as ModuleManifest,
   CODE_MANIFESTS.find((m) => m.code === 'customers') as ModuleManifest,
   CODE_MANIFESTS.find((m) => m.code === 'orders') as ModuleManifest,
-  mod('finance', [dep('core')], [feature('finance.ledger', true)]),
+  CODE_MANIFESTS.find((m) => m.code === 'finance') as ModuleManifest,
   mod(
     'sales',
     [dep('core'), dep('crm', false, '^1'), dep('catalog'), dep('finance', true)],

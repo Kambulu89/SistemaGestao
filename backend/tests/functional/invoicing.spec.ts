@@ -1067,3 +1067,24 @@ test.group('facturação | autorização, funcionalidades, auditoria e isolament
     assert.lengthOf(await owner('select 1 from invoices', ctx.tenant), 1)
   })
 })
+
+test.group('contratos | referências', (g) => {
+  common(g)
+
+  test('uma organização inexistente é um erro de validação, nunca uma falha interna', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const response = await ctx.http.post('/api/v1/contracts', {
+      organizationId: '00000000-0000-4000-8000-000000000000',
+      partyId: ctx.party.id,
+      title: 'Manutenção',
+      startDate: '2026-01-01',
+      endDate: '2026-12-31',
+      amount: '100',
+    })
+    assert.equal(response.status(), 422)
+    assert.equal(response.body().error.details[0].code, 'UNKNOWN_ORGANIZATION')
+  })
+})

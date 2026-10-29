@@ -387,6 +387,61 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Lançar (entrada de stock) e reverter recepções.',
   },
   {
+    code: 'treasury.read',
+    moduleCode: 'finance',
+    description: 'Ver contas de tesouraria, saldos e extractos.',
+  },
+  {
+    code: 'treasury.manage',
+    moduleCode: 'finance',
+    description: 'Criar e alterar contas de tesouraria (incluindo o identificador da conta).',
+  },
+  {
+    code: 'receivable.read',
+    moduleCode: 'finance',
+    description: 'Ver contas a receber e a exposição de crédito dos clientes.',
+  },
+  {
+    code: 'payable.read',
+    moduleCode: 'finance',
+    description: 'Ver contas a pagar.',
+  },
+  {
+    code: 'payment.read',
+    moduleCode: 'finance',
+    description: 'Ver pagamentos e recebimentos.',
+  },
+  {
+    code: 'payment.manage',
+    moduleCode: 'finance',
+    description: 'Registar, submeter e apagar pagamentos em rascunho.',
+  },
+  {
+    code: 'payment.confirm',
+    moduleCode: 'finance',
+    description: 'Confirmar, marcar como falhados e reverter pagamentos (movimenta dinheiro).',
+  },
+  {
+    code: 'supplier_invoice.read',
+    moduleCode: 'finance',
+    description: 'Ver facturas de fornecedor.',
+  },
+  {
+    code: 'supplier_invoice.manage',
+    moduleCode: 'finance',
+    description: 'Criar e alterar facturas de fornecedor em rascunho.',
+  },
+  {
+    code: 'supplier_invoice.validate',
+    moduleCode: 'finance',
+    description: 'Validar e anular facturas de fornecedor (cria a conta a pagar).',
+  },
+  {
+    code: 'supplier_invoice.override',
+    moduleCode: 'finance',
+    description: 'Validar uma factura com divergências na conferência, com justificação.',
+  },
+  {
     code: 'inventory.read',
     moduleCode: 'inventory',
     description: 'Ver stock, movimentos, lotes e reservas.',

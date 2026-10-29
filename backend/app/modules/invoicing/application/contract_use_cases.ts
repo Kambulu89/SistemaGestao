@@ -95,7 +95,7 @@ export class ContractUseCases {
       })
     }
     const values = normalizeContract(input, null, currency ?? 'AOA', issues)
-    if (!values) throw invoicingValidation(issues)
+    if (!values || issues.length > 0) throw invoicingValidation(issues)
     if (!(await this.references.partyExists(context, values.partyId))) {
       throw invoicingValidation([
         { path: 'partyId', code: 'UNKNOWN_PARTY', message: 'A contraparte não existe.' },

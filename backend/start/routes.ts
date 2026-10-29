@@ -31,6 +31,7 @@ const CatalogController = () => import('#modules/catalog/presentation/catalog_co
 const OrdersController = () => import('#modules/orders/presentation/orders_controller')
 const ProcurementController = () =>
   import('#modules/procurement/presentation/procurement_controller')
+const FinanceController = () => import('#modules/finance/presentation/finance_controller')
 const InvoicingController = () => import('#modules/invoicing/presentation/invoicing_controller')
 const InventoryController = () => import('#modules/inventory/presentation/inventory_controller')
 const CustomersController = () => import('#modules/customers/presentation/customers_controller')
@@ -959,6 +960,113 @@ router
           .use(middleware.can({ permission: 'receipt.post' }))
       })
       .use(middleware.feature({ code: 'procurement.receipts' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Tesouraria, contas a receber e a pagar (M09): módulo `finance` do registo. Funcionalidades `finance.treasury`,
+ * `finance.obligations`, `finance.payments` e `finance.supplier_invoices`. Os recebíveis nascem de facturas
+ * emitidas e os pagáveis de facturas de fornecedor validadas; ninguém os edita. Confirmar um pagamento é a única
+ * operação que movimenta dinheiro, e só se desfaz por reversão.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/treasury-accounts', [FinanceController, 'listAccounts'])
+            router.get('/treasury-accounts/:id', [FinanceController, 'showAccount'])
+            router.get('/treasury-accounts/:id/entries', [FinanceController, 'statement'])
+          })
+          .use(middleware.can({ permission: 'treasury.read' }))
+        router
+          .group(() => {
+            router.post('/treasury-accounts', [FinanceController, 'createAccount'])
+            router.patch('/treasury-accounts/:id', [FinanceController, 'updateAccount'])
+          })
+          .use(middleware.can({ permission: 'treasury.manage' }))
+      })
+      .use(middleware.feature({ code: 'finance.treasury' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/receivables', [FinanceController, 'listReceivables'])
+            router.get('/receivables/:id', [FinanceController, 'showReceivable'])
+            router.get('/customers/:id/credit', [FinanceController, 'customerCredit'])
+          })
+          .use(middleware.can({ permission: 'receivable.read' }))
+        router
+          .group(() => {
+            router.get('/payables', [FinanceController, 'listPayables'])
+            router.get('/payables/:id', [FinanceController, 'showPayable'])
+          })
+          .use(middleware.can({ permission: 'payable.read' }))
+      })
+      .use(middleware.feature({ code: 'finance.obligations' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/payments', [FinanceController, 'listPayments'])
+            router.get('/payments/:id', [FinanceController, 'showPayment'])
+          })
+          .use(middleware.can({ permission: 'payment.read' }))
+        router
+          .group(() => {
+            router.post('/payments', [FinanceController, 'createPayment'])
+            router.post('/payments/:id/submit', [FinanceController, 'submitPayment'])
+            router.delete('/payments/:id', [FinanceController, 'removePayment'])
+          })
+          .use(middleware.can({ permission: 'payment.manage' }))
+        router
+          .group(() => {
+            router.post('/payments/:id/confirm', [FinanceController, 'confirmPayment'])
+            router.post('/payments/:id/fail', [FinanceController, 'failPayment'])
+            router.post('/payments/:id/reverse', [FinanceController, 'reversePayment'])
+          })
+          .use(middleware.can({ permission: 'payment.confirm' }))
+      })
+      .use(middleware.feature({ code: 'finance.payments' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/supplier-invoices', [FinanceController, 'listSupplierInvoices'])
+            router.get('/supplier-invoices/:id', [FinanceController, 'showSupplierInvoice'])
+          })
+          .use(middleware.can({ permission: 'supplier_invoice.read' }))
+        router
+          .group(() => {
+            router.post('/supplier-invoices', [FinanceController, 'createSupplierInvoice'])
+            router.patch('/supplier-invoices/:id', [FinanceController, 'updateSupplierInvoice'])
+            router.delete('/supplier-invoices/:id', [FinanceController, 'removeSupplierInvoice'])
+            router.post('/supplier-invoices/:id/lines', [
+              FinanceController,
+              'addSupplierInvoiceLine',
+            ])
+            router.delete('/supplier-invoices/:id/lines/:lineId', [
+              FinanceController,
+              'removeSupplierInvoiceLine',
+            ])
+          })
+          .use(middleware.can({ permission: 'supplier_invoice.manage' }))
+        router
+          .group(() => {
+            router.post('/supplier-invoices/:id/validate', [
+              FinanceController,
+              'validateSupplierInvoice',
+            ])
+            router.post('/supplier-invoices/:id/void', [FinanceController, 'voidSupplierInvoice'])
+          })
+          .use(middleware.can({ permission: 'supplier_invoice.validate' }))
+      })
+      .use(middleware.feature({ code: 'finance.supplier_invoices' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

@@ -16,6 +16,8 @@ export const CAPABILITY_TARGETS: Readonly<Record<string, string>> = {
   [moduleId('workflow.rules')]: 'automations',
   [moduleId('configuration.forms')]: 'entities',
   [moduleId('configuration.localization')]: 'settings',
+  [moduleId('finance.receivables-payables')]: 'finance/cash-banks',
+  [moduleId('finance.payments-budget')]: 'finance/cash-banks',
 };
 
 @Component({
@@ -31,7 +33,8 @@ export class CapabilityRedirect {
     const slug = inject(TenantContextService).tenant()?.slug;
     const id = route.snapshot.data['moduleId'] as string | undefined;
     const target = id ? CAPABILITY_TARGETS[id] : undefined;
-    if (slug && target) void router.navigate(['/t', slug, target], { replaceUrl: true });
+    if (slug && target)
+      void router.navigate(['/t', slug, ...target.split('/')], { replaceUrl: true });
     else void router.navigate(['/']);
   }
 }

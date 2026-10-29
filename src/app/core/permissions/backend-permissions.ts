@@ -55,6 +55,13 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'requisition.read': ['procurement.read'],
   'purchase.read': ['procurement.read'],
   'receipt.read': ['procurement.read'],
+  // Tesouraria (M09): as páginas usam os códigos do servidor; o alias só abre a rota do módulo.
+  // As capacidades «Contas a receber/pagar» e «Pagamentos e orçamento» do catálogo levam a essa mesma página.
+  'treasury.read': ['finance.read'],
+  'receivable.read': ['finance.read', 'finance.receivables-payables.read'],
+  'payable.read': ['finance.read', 'finance.receivables-payables.read'],
+  'payment.read': ['finance.read', 'finance.payments-budget.read'],
+  'supplier_invoice.read': ['finance.read'],
   // Catálogo e preços (M03): as páginas usam o código do servidor; ler preços é independente de ler produtos.
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],

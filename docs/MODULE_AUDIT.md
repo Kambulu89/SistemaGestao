@@ -4,8 +4,8 @@ Auditoria de 2026-10-29 sobre o repositório no commit `f287cd4` (branch `claude
 
 ## 1. Método e evidências
 
-- **Inventário:** manifestos do frontend (`defineModule`, 35 capacidades), módulos do backend (`app/core`, `app/platform`, `app/dynamic`, `app/modules`), 304 rotas em `backend/start/routes.ts`, 30 migrations e 76 tabelas de tenant (`createTenantTable`).
-- **Testes executados na última corrida completa:** backend 643 (unitários e funcionais, incluindo a matriz de isolamento por tabela e rota e a paridade rotas↔OpenAPI), frontend 1014 (Vitest). Lint, format, typecheck e build limpos. Migrations subidas e descidas numa base limpa em cada corrida do backend.
+- **Inventário:** manifestos do frontend (`defineModule`, 35 capacidades), módulos do backend (`app/core`, `app/platform`, `app/dynamic`, `app/modules`), 331 rotas em `backend/start/routes.ts`, 31 migrations e 86 tabelas de tenant (`createTenantTable`).
+- **Testes executados na última corrida completa:** backend 680 (unitários e funcionais, incluindo a matriz de isolamento por tabela e rota e a paridade rotas↔OpenAPI), frontend 1042 (Vitest). Lint, format, typecheck e build limpos. Migrations subidas e descidas numa base limpa em cada corrida do backend.
 - **E2E em browser real** (Playwright sobre a API real) correram por fatia, com scripts locais fora do repositório (limitação: não são reproduzíveis por terceiros nem estão em CI).
 - **Varreduras automáticas ao frontend:** sem `(click)` vazio, sem `href="#"`/`routerLink="#"`, sem botões desactivados fixos, sem `TODO/FIXME`; os *mocks* (`core/mock`, `core/testing`) só são carregados em testes (`provideMockBackend` só é importado por `core/testing`). Os ecrãs provisórios (`module-scaffold`) dizem explicitamente que o módulo não está implementado.
 - **Critérios de aceitação da especificação:** 129 critérios; ver `MODULE_COMPLETION.md` (60 verificados por teste, 4 parciais, 65 não verificados ou de módulos não implementados).
@@ -19,7 +19,7 @@ Legenda dos estados de módulo: **Não iniciado** · **Parcialmente implementado
 | Fundação (C01–C09, S06 mínimo) | tenants, planos, módulos, identidade, membros, autorização, organização, Party, configurações, auditoria | Parcialmente implementado (fatias validadas; lacunas na matriz) |
 | Core dinâmico (C10–C15) | entidades/campos, formulários, regras, estados, workflows, automações | Parcialmente implementado |
 | Negócio implementado | M01 clientes, M03 catálogo, M04 vendas/expedições, M05 facturação, M06 compras, M07 inventário | Parcialmente implementado |
-| Negócio por fazer | M02, M08, M09, M10, M11, M12, M13, M14 | Não iniciado |
+| Negócio por fazer | M02, M08, M10, M11, M12, M13, M14 | Não iniciado |
 | Serviços transversais por fazer | S01 documentos, S02 notificações, S03 calendário, S04 relatórios, S05 integrações, S06 (UI/exportação/recuperação) | Não iniciado |
 | Verticais | V01–V06 | Não iniciado |
 
@@ -57,7 +57,7 @@ Legenda dos estados de módulo: **Não iniciado** · **Parcialmente implementado
 | M06 Compras | Encomendas e recepções | Encomenda, recepção, entrada de stock, reversão | Completo | Parcial | Completo | Completo | procurement.spec | A-02 **resolvida**: cancela-se o restante de uma encomenda parcial, preservando recepções e stock; continua sem aceite/rejeitado na recepção, três vias, devoluções ao fornecedor | Qualidade na recepção; 3 vias com M09 |
 | M07 Inventário | Armazéns, movimentos, lotes, reservas | Livro imutável, saldos, custo médio, reservas | Completo | Parcial | Completo | Completo | inventory.spec (22) | Sem números de série, «em trânsito» nem trabalhador de expiração | Trânsito (M08); trabalhador de expiração |
 | M08 Logística de stock | Transferências, contagens, devoluções | Transferência com trânsito, contagem com congelamento, devolução | Ausente | Ausente | Ausente | Ausente | — | Módulo não iniciado (`inventory.movements`, `inventory.stocktaking` provisórios) | Implementar (fila 2) |
-| M09 Tesouraria | Contas, recebíveis, pagamentos, conciliação | Obrigações, alocações, reversão, extrato | Ausente | Ausente | Ausente | Ausente | — | Módulo não iniciado; **bloqueia** crédito (M01/M04), recebível (M05) e três vias (M06) | Implementar primeiro (fila 1) |
+| M09 Tesouraria | Contas, recebíveis, pagáveis, pagamentos, facturas de fornecedor | Obrigações, alocações, confirmação atómica, reversão, extracto, crédito, três vias | Completo | Parcial | Completo | Completo | finance.spec (15) · finance_domain.spec (14) · FE treasury-page.spec | Fatia 5.1 feita (D-054): **sem conciliação bancária** (5.2), webhooks, multi-moeda, prestações, notas de fornecedor nem devolução de excedente; 1 critério parcial (webhook) | Conciliação (5.2); relatórios de antiguidade (S04) |
 | M10 Orçamentos | Orçamentos e despesas | Orçamento, reserva de disponibilidade, despesas | Ausente | Ausente | Ausente | Ausente | — | Não iniciado | Fila 5 |
 | M11 RH | Colaboradores, contratos, assiduidade, férias | Colaborador sem conta, férias, salário protegido | Ausente | Ausente | Ausente | Ausente | — | Não iniciado | Fila 5 |
 | M12 Talento | Avaliação, formação, recrutamento | Ciclos, objectivos, vagas | Ausente | Ausente | Ausente | Ausente | — | Não iniciado | Fila 5 |
@@ -77,8 +77,8 @@ Legenda dos estados de módulo: **Não iniciado** · **Parcialmente implementado
 | A-01 | Seis capacidades do catálogo mostravam o ecrã provisório «ainda não implementadas» embora a funcionalidade exista noutras rotas | C03/C07/C09/C12–C15 | Média (UX enganadora) | **Resolvida** (`shared/routing/capability-redirect`, 2026-10-29) |
 | A-02 | Cancelar a encomenda a fornecedor era recusado depois de uma recepção parcial; a especificação pede cancelar o restante preservando a recepção | M06 | Média (desvio da spec) | **Resolvida** (D-053 actualizada; `procurement.spec`) |
 | A-03 | Critérios sem teste automático (C08.3, M05.1, M05.2, C12.1, C12.3; C13.1 já estava coberto) | C08/C12/C13/M05 | Média | **Resolvida** (7 critérios passam a Verificado) |
-| A-04 | Crédito do cliente, saldo e recebível não existem (dependem de M09): critérios M01.3, M05.3 e a reserva de crédito de M04 | M01/M04/M05 | Alta (bloqueia fluxo order-to-cash) | Aberta — depende de M09 |
-| A-05 | Três vias (encomenda–recepção–factura do fornecedor), contas a pagar e cotações | M06/M09 | Alta | Aberta — depende de M09 |
+| A-04 | Crédito do cliente, saldo e recebível não existem (dependem de M09): critérios M01.3, M05.3 e a reserva de crédito de M04 | M01/M04/M05 | Alta (bloqueia fluxo order-to-cash) | **Resolvida** (D-054: recebível ao emitir, crédito abatido por notas, limite e reserva de crédito na confirmação; critérios M01.3 e M05.3 verificados; M04: reserva de crédito feita) |
+| A-05 | Três vias (encomenda–recepção–factura do fornecedor), contas a pagar e cotações | M06/M09 | Alta | **Parcialmente resolvida** (D-054: três vias e contas a pagar feitas; **cotações** continuam por fazer) |
 | A-06 | Devoluções, transferências e inventários físicos | M07/M08 | Alta | Aberta |
 | A-07 | UI de auditoria, exportação e retenção; sem backup/restauro | S06 | Média | Aberta |
 | A-08 | Catálogo: edição de variantes e itens de preço na UI, desactivação de categorias | M03 | Média | Aberta |
@@ -90,7 +90,7 @@ Legenda dos estados de módulo: **Não iniciado** · **Parcialmente implementado
 ## 5. Ordem de desenvolvimento (por dependências)
 
 1. ~~Reconciliação das capacidades (A-01), testes em falta (A-03), correcção do cancelamento (A-02)~~ — **feito**.
-2. **M09 Tesouraria, contas a receber e a pagar** (cria o recebível ao emitir, o pagável da factura do fornecedor, o saldo e a exposição de crédito; resolve A-04/A-05).
+2. ~~**M09 Tesouraria, contas a receber e a pagar**~~ — **fatia 5.1 feita** (A-04 resolvida, A-05 parcial); falta a conciliação bancária (5.2).
 3. **M08 Transferências, inventários físicos e devoluções** (resolve A-06).
 4. **M02 CRM comercial.**
 5. **S02 Notificações → S01 Documentos/PDF → S04 Relatórios/Exportações → S03 Calendário → S05 Integrações → S06 UI/recuperação.**

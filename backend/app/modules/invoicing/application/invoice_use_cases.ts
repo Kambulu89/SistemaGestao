@@ -13,6 +13,7 @@ import {
   type ManualLineInput,
 } from '#modules/invoicing/domain/invoicing'
 import { orderLineValues } from '#modules/invoicing/application/order_line_values'
+import { runIssuedEffects } from '#modules/invoicing/application/registry'
 import { invoicingValidation } from '#modules/invoicing/application/contract_use_cases'
 import type {
   ContractStore,
@@ -365,6 +366,8 @@ export class InvoiceUseCases {
         },
         correlationId: context.correlationId,
       })
+      // O recebível (e afins): um erro aqui anula a emissão por inteiro.
+      await runIssuedEffects(scope, issued)
       return { invoice: await this.detail(scope, id), idempotent: false }
     }, context)
   }

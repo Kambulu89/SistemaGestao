@@ -6,13 +6,13 @@ Estado vivo do desenvolvimento. Actualizado no fim de cada módulo/fatia validad
 
 | Indicador | Valor | Como se mede |
 | --- | ---: | --- |
-| Critérios de aceitação verificados | 60 / 129 | `MODULE_COMPLETION.md` |
+| Critérios de aceitação verificados | 65 / 129 | `MODULE_COMPLETION.md` |
 | Critérios parciais | 4 | idem |
 | Módulos «Concluído e validado» | 0 | todos têm requisitos por cumprir |
-| Testes backend (última corrida completa) | 647 | `npm test` |
-| Testes frontend (última corrida completa) | 1024 | `npx ng test --watch=false` |
-| Rotas / tabelas de tenant / migrations | 304 / 76 / 30 | `routes.ts`, `createTenantTable`, `database/migrations` |
-| Lacunas abertas (registo A-xx) | 9 (1 bloqueada); 3 resolvidas | `MODULE_AUDIT.md` §4 |
+| Testes backend (última corrida completa) | 680 | `npm test` |
+| Testes frontend (última corrida completa) | 1042 | `npx ng test --watch=false` |
+| Rotas / tabelas de tenant / migrations | 331 / 86 / 31 | `routes.ts`, `createTenantTable`, `database/migrations` |
+| Lacunas abertas (registo A-xx) | 7 (1 bloqueada); 1 parcial; 4 resolvidas | `MODULE_AUDIT.md` §4 |
 
 ## Fila de execução
 
@@ -20,7 +20,8 @@ Estado vivo do desenvolvimento. Actualizado no fim de cada módulo/fatia validad
 | ---: | --- | --- | --- | --- |
 | 0 | Auditoria completa (matriz, critérios, lacunas) | **Concluído** | — | `MODULE_AUDIT.md`, `MODULE_COMPLETION.md` |
 | 1 | A-01 capacidades → páginas reais · A-02 cancelar o restante · A-03 testes em falta | **Concluído e validado** | — | backend 647 testes, frontend 1024; `capability-redirect.spec`, `procurement.spec`, `invoicing.spec`, `rules.spec` |
-| 2 | M09 Tesouraria, contas a receber e a pagar | Não iniciado | 1 | — |
+| 2 | M09 Tesouraria, contas a receber e a pagar — **fatia 5.1** (obrigações, pagamentos, facturas de fornecedor, crédito) | **Concluída e validada** (módulo: Parcialmente implementado) | 1 | `finance.spec` (15), `finance_domain.spec` (14), `treasury-page.spec`, E2E `e2e49.mjs` (24 verificações); D-054 |
+| 2b | M09 fatia 5.2 — conciliação bancária (extractos, correspondências) | Não iniciado | 2 | — |
 | 3 | M08 Transferências, inventários físicos e devoluções | Não iniciado | 2 (devolução com nota de crédito) | — |
 | 4 | M02 CRM comercial | Não iniciado | — | — |
 | 5 | S02 Notificações | Não iniciado | — | — |
@@ -37,7 +38,8 @@ Estados: Não iniciado · Parcialmente implementado · Implementado sem validaç
 | Data | O quê | Resultado | Commit |
 | --- | --- | --- | --- |
 | 2026-10-29 | Auditoria: leitura da especificação, manifestos, rotas, migrations e testes; varredura da UI | Matriz de 40 linhas, 12 lacunas, 129 critérios classificados | `87ef271` |
-| 2026-10-29 | W1: capacidades → páginas reais (A-01); cancelar o restante (A-02); 7 critérios passam a verificados (A-03) | 60/129 critérios; backend 647, frontend 1024; lint/format/typecheck/build limpos | (este commit) |
+| 2026-10-29 | W1: capacidades → páginas reais (A-01); cancelar o restante (A-02); 7 critérios passam a verificados (A-03) | 60/129 critérios; backend 647, frontend 1024; lint/format/typecheck/build limpos | `4f1a2b0` |
+| 2026-10-29 | M09 fatia 5.1: núcleo `core/decimal`, hook `registerInvoiceEffects`, módulo `finance` (migration 30, 10 tabelas), API de 28 rotas, página «Tesouraria»; corrige 500 em contratos e fornecedores com organização inexistente | 65/129 critérios; backend 680, frontend 1042; lint/format/typecheck/build limpos; E2E 24/24 | (este commit) |
 
 ## Como retomar
 

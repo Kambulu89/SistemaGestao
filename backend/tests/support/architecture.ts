@@ -22,7 +22,9 @@ export interface ArchitectureViolation {
 const GROUPS = ['core', 'platform', 'modules', 'dynamic', 'verticals'] as const
 const LAYERS = ['domain', 'application', 'infrastructure', 'presentation'] as const
 /** Módulos partilhados por todos (kernel HTTP): não têm camadas nem restrições de importação. */
-const SHARED_KERNEL = new Set(['core/http'])
+const SHARED_KERNEL = new Set(['core/http', 'core/decimal'])
+/** Núcleo puro que os domínios dos módulos podem importar (aritmética exacta). */
+const PURE_KERNEL = new Set(['core/decimal'])
 
 const ALIASES: Record<string, string> = {
   '#core/': 'app/core/',
@@ -132,7 +134,8 @@ export function checkArchitecture(files: SourceFile[]): ArchitectureViolation[] 
           }
           if (target) {
             const sameDomain = there?.key === here.key && there.layer === 'domain'
-            if (!sameDomain)
+            const pureKernel = there !== null && PURE_KERNEL.has(there.key)
+            if (!sameDomain && !pureKernel)
               add('R1', `domain só pode importar do próprio domain (importa "${specifier}").`)
           }
         }

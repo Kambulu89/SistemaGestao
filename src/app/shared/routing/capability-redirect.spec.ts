@@ -28,7 +28,16 @@ describe('CapabilityRedirect', () => {
 
   it.each(Object.entries(CAPABILITY_TARGETS))('%s → %s', (id, target) => {
     TestBed.resetTestingModule();
-    expect(open(id)).toHaveBeenCalledWith(['/t', 'demo', target], { replaceUrl: true });
+    expect(open(id)).toHaveBeenCalledWith(['/t', 'demo', ...target.split('/')], {
+      replaceUrl: true,
+    });
+  });
+
+  it('um destino com vários segmentos navega por segmentos (nunca um só com «/» codificada)', () => {
+    expect(open(moduleId('finance.receivables-payables'))).toHaveBeenCalledWith(
+      ['/t', 'demo', 'finance', 'cash-banks'],
+      { replaceUrl: true },
+    );
   });
 
   it('sem tenant ou sem destino volta ao início, sem navegar para um destino inventado', () => {

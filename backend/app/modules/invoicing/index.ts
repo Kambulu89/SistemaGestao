@@ -7,5 +7,9 @@ export type {
   Invoice,
   InvoiceLine,
 } from '#modules/invoicing/application/ports'
+export {
+  registerInvoiceEffects,
+  type InvoiceEffects,
+} from '#modules/invoicing/application/registry'
 export type { InvoiceDetail } from '#modules/invoicing/application/invoice_use_cases'
 export type { CreditNoteDetail } from '#modules/invoicing/application/credit_note_use_cases'

@@ -39,6 +39,11 @@ test.group('fronteiras de módulo: detecção (controlos negativos)', () => {
   })
 
   test('R1: domain só depende do próprio domain', ({ assert }) => {
+    // Excepção única: a aritmética exacta partilhada (núcleo puro) pode ser importada por qualquer domínio.
+    assert.deepEqual(
+      rules([file('app/modules/m/domain/a.ts', `import { toScaled } from '#core/decimal/index'`)]),
+      []
+    )
     assert.deepEqual(rules([file('app/core/m/domain/a.ts', `import x from './b.js'`)]), [])
     assert.include(
       rules([file('app/core/m/domain/a.ts', `import x from '#core/m/infrastructure/repo'`)]),

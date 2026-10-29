@@ -4,7 +4,7 @@ Medida objectiva de conclusão: cada módulo da especificação v2.0 tem critér
 
 Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Implementado sem validação* · *Em testes* · *Concluído e validado* · *Bloqueado*. Nenhum módulo está «Concluído e validado»: todos os implementados têm requisitos aprovados por cumprir (ver `MODULE_AUDIT.md`).
 
-**Totais:** 60 verificados · 4 parciais · 65 não verificados ou de módulos não implementados (de 129).
+**Totais:** 65 verificados · 4 parciais · 60 não verificados ou de módulos não implementados (de 129).
 
 ## Resumo por módulo
 
@@ -25,15 +25,15 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | C13 Máquinas de estados | Parcialmente implementado | 3 | 0 | 0 |
 | C14 Workflows aprovações e delegações | Parcialmente implementado | 3 | 0 | 0 |
 | C15 Automações agendadas | Parcialmente implementado | 3 | 0 | 0 |
-| M01 Clientes e relacionamento comercial | Parcialmente implementado | 2 | 0 | 1 |
+| M01 Clientes e relacionamento comercial | Parcialmente implementado | 3 | 0 | 0 |
 | M02 Leads oportunidades campanhas e actividades | Não iniciado | 0 | 0 | 3 |
 | M03 Catálogo variantes unidades e preços | Parcialmente implementado | 3 | 0 | 0 |
 | M04 Propostas encomendas e expedições | Parcialmente implementado | 3 | 0 | 0 |
-| M05 Contratos faturas e notas de crédito | Parcialmente implementado | 2 | 1 | 0 |
+| M05 Contratos faturas e notas de crédito | Parcialmente implementado | 3 | 0 | 0 |
 | M06 Fornecedores requisições e compras | Parcialmente implementado | 3 | 0 | 0 |
 | M07 Armazéns stock lotes e reservas | Parcialmente implementado | 3 | 0 | 0 |
 | M08 Transferências inventários físicos e devoluções | Não iniciado | 0 | 0 | 3 |
-| M09 Tesouraria contas a receber e a pagar | Não iniciado | 0 | 0 | 4 |
+| M09 Tesouraria contas a receber e a pagar | Parcialmente implementado | 3 | 1 | 0 |
 | M10 Orçamentos despesas e controlo de custos | Não iniciado | 0 | 0 | 3 |
 | M11 Colaboradores contratos assiduidade e férias | Não iniciado | 0 | 0 | 4 |
 | M12 Avaliação formação interna e recrutamento | Não iniciado | 0 | 0 | 3 |
@@ -105,7 +105,7 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | C15 | 3 | job de tenant suspenso não executa escrita empresarial | Verificado | automations.spec: tenant suspenso não executa |
 | M01 | 1 | Um cliente pode partilhar Party com fornecedor | Verificado | customers.spec: Party partilhada |
 | M01 | 2 | operador sem acesso financeiro não vê saldo | Verificado | customers.spec: crédito protegido |
-| M01 | 3 | cliente bloqueado continua a poder pagar | Não verificado / não implementado | sem pagamentos (M09) |
+| M01 | 3 | cliente bloqueado continua a poder pagar | Verificado | finance.spec: cliente bloqueado confirma um recebimento |
 | M02 | 1 | Conversão repetida devolve mesmos IDs | Não verificado / não implementado | módulo não implementado |
 | M02 | 2 | mover sem permissão falha | Não verificado / não implementado | módulo não implementado |
 | M02 | 3 | opt-out impede novos envios promocionais | Não verificado / não implementado | módulo não implementado |
@@ -117,7 +117,7 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | M04 | 3 | stock insuficiente não deixa encomenda confirmada sem política de backorder explícita | Verificado | inventory.spec/orders.spec: sem stock aborta a confirmação |
 | M05 | 1 | Erro ao emitir não consome documento sem registo consistente | Verificado | invoicing.spec: emissão recusada não gasta número (a seguinte é a 1) e a numeração segue sem lacunas; settings.spec: a transacção anulada devolve o número |
 | M05 | 2 | mudança no cliente não altera snapshot | Verificado | invoicing.spec: instantâneo do cliente inalterado após alterar a Party |
-| M05 | 3 | crédito duplicado não reduz dívida duas vezes | Parcial | emissão da nota idempotente (invoicing.spec); **sem recebível**, logo sem dívida a reduzir |
+| M05 | 3 | crédito duplicado não reduz dívida duas vezes | Verificado | finance.spec: a nota de crédito abate o recebível uma só vez (índice único por nota); invoicing.spec: emissão idempotente |
 | M06 | 1 | Recepção dupla não duplica stock | Verificado | procurement.spec: lançar duas vezes |
 | M06 | 2 | cancelar restante de ordem parcial preserva recepção | Verificado | procurement.spec: cancelar o restante de uma encomenda parcial preserva a recepção e o stock |
 | M06 | 3 | fornecedor bloqueado impede nova encomenda | Verificado | procurement.spec: fornecedor bloqueado |
@@ -127,10 +127,10 @@ Estados dos módulos: *Não iniciado* · *Parcialmente implementado* · *Impleme
 | M08 | 1 | Recepção parcial deixa saldo em trânsito | Não verificado / não implementado | módulo não implementado |
 | M08 | 2 | contagem lançada duas vezes não repete ajuste | Não verificado / não implementado | módulo não implementado |
 | M08 | 3 | devolução superior ao vendido/recebido falha | Não verificado / não implementado | módulo não implementado |
-| M09 | 1 | Pagamento parcial mantém saldo | Não verificado / não implementado | módulo não implementado |
-| M09 | 2 | webhook repetido não liquida duas vezes | Não verificado / não implementado | módulo não implementado |
-| M09 | 3 | duas alocações concorrentes não ultrapassam dívida | Não verificado / não implementado | módulo não implementado |
-| M09 | 4 | reversão reabre saldo correcto | Não verificado / não implementado | módulo não implementado |
+| M09 | 1 | Pagamento parcial mantém saldo | Verificado | finance.spec: recebimento parcial mantém o saldo (74) e a vista «parcial»; E2E em browser |
+| M09 | 2 | webhook repetido não liquida duas vezes | Parcial | `Idempotency-Key` na criação e confirmação idempotente (finance.spec); **sem webhook** (fornecedor de pagamento por decidir) |
+| M09 | 3 | duas alocações concorrentes não ultrapassam dívida | Verificado | finance.spec: duas confirmações concorrentes de 80 sobre 114 — uma confirma, a outra é recusada |
+| M09 | 4 | reversão reabre saldo correcto | Verificado | finance.spec e E2E: reverter reabre o saldo (114), repõe a conta e lança o movimento inverso |
 | M10 | 1 | Duas despesas não consomem a mesma disponibilidade | Não verificado / não implementado | módulo não implementado |
 | M10 | 2 | rejeição liberta reserva | Não verificado / não implementado | módulo não implementado |
 | M10 | 3 | despesa aprovada mas não liquidada não aparece como paga | Não verificado / não implementado | módulo não implementado |

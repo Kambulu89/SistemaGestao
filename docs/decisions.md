@@ -746,6 +746,45 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   pagar, devoluções ao fornecedor (4.8), unidades de compra distintas da unidade base, taxas por tabela fiscal, aprovação por
   alçadas/workflow, moeda diferente da do fornecedor.
 
+## D-054 Tesouraria, contas a receber e a pagar (M09): obrigação ≠ pagamento ≠ movimento; o saldo deriva (aceite — fatia 5.1)
+
+- **Onde.** Módulo `finance` (dependências opcionais: `customers`, `orders`, `invoicing`, `procurement`), funcionalidades
+  `finance.treasury|obligations|payments|supplier_invoices` (o código de funcionalidade não admite hífen). Permissões
+  `treasury.read|manage`, `receivable.read`, `payable.read`, `payment.read|manage|confirm`, `supplier_invoice.read|manage|validate|override`.
+  Aritmética exacta no núcleo partilhado `core/decimal` (os domínios podem importá-lo; é a única excepção à regra «o domínio só
+  importa de si»), que passa a ser a casa comum — os quatro domínios com cópia própria (`orders`, `inventory`, `invoicing`,
+  `procurement`) migram para ele quando se tocarem.
+- **Três coisas que nunca se confundem.** A **obrigação** (recebível ou pagável, nascida de um documento: factura emitida,
+  factura de fornecedor validada), o **pagamento** (a vontade de liquidar, com alocações a obrigações) e o **movimento de
+  tesouraria** (o dinheiro que entrou ou saiu da conta). O saldo de uma obrigação **nunca é um campo**: é
+  `original − créditos aplicados − alocações de pagamentos confirmados e não revertidos`. Movimentos e créditos aplicados são
+  só-de-acrescentar (trigger, também para a conta dona); a obrigação só muda de estado; um pagamento confirmado só passa a revertido.
+- **Pagamento.** `DRAFT → PENDING → CONFIRMED → REVERSED`, ou `FAILED`. Criar regista a intenção com as alocações (a soma iguala o
+  montante; mesma entidade, organização e **moeda** da conta — sem câmbio nesta fatia, `exchange_rate = 1`); `Idempotency-Key` devolve
+  o mesmo pagamento (outros dados: 409 `IDEMPOTENCY_KEY_REUSED`). **Confirmar** é a única operação que move dinheiro: bloqueia o
+  pagamento, a conta e as obrigações (por ordem de id), recusa pagar a mais (409 `PAYMENT_NOT_APPLICABLE` com `OVERPAYMENT` /
+  `OBLIGATION_NOT_OPEN`), lança o movimento e fecha o que ficou a zero, numa só transacção; duas confirmações concorrentes nunca
+  pagam a mais. **Reverter** (motivo obrigatório) marca as alocações, reabre as obrigações fechadas e lança o movimento inverso.
+  Confirmar, reverter e falhar são idempotentes pelo estado. Um cliente bloqueado continua a poder pagar.
+- **Recebíveis e crédito.** `registerInvoiceEffects.issued` cria o recebível na transacção da emissão (idempotente por documento) e
+  consome a reserva da encomenda; `creditNoteIssued` abate o recebível até ao saldo em aberto (idempotente por nota; o excedente
+  de um cliente que já pagou não se aplica — a devolução ao cliente fica fora). **Limite de crédito:** `registerConfirmationCheck`
+  recusa confirmar uma encomenda cuja exposição (recebíveis em aberto + reservas activas + a encomenda) excede o limite do
+  cliente, sob bloqueio do cliente (confirmações paralelas não o ultrapassam); `registerOrderEffects` reserva ao confirmar e
+  liberta ao cancelar. Limite `0` = sem controlo; moeda diferente da do limite é recusada. `GET /customers/:id/credit` mostra a
+  exposição; o limite e a folga só a quem tem `customer.credit_manage`.
+- **Facturas de fornecedor e três vias.** Rascunho livre; validar (com encomenda) confere por linha que não se factura mais do que
+  o **recebido** (contando as outras facturas validadas) nem a preço acima do encomendado. Com divergências a factura fica
+  `DISPUTED` (gravada, com as divergências) e só avança com justificação por quem tem `supplier_invoice.override` (separação de
+  funções); conforme, nasce o pagável (idempotente). Validada é imutável (trigger, linhas incluídas); só rascunho e disputa se anulam.
+- **Auditoria e RLS.** Todas as tabelas novas são de tenant (RLS, FKs compostas), auditadas; o identificador da conta
+  (`account_identifier`) é redigido na auditoria e só visível a quem tem `treasury.manage`. Eventos no outbox:
+  `finance.payment.confirmed|reversed` e `finance.supplier_invoice.validated`.
+- **Desvios da spec / fica por fazer.** Sem conciliação bancária e extractos importados (fatia 5.2), sem webhook de fornecedor de
+  pagamento (só `Idempotency-Key` e confirmação idempotente; fornecedor por decisão de produto §11.2), sem multi-moeda nem
+  diferenças cambiais, sem prestações (`installment_no` fica a 1), sem devolução de excedente a clientes, sem notas de
+  débito/crédito de fornecedor, sem orçamento (M10).
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

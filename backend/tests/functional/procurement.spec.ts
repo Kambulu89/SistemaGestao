@@ -1029,3 +1029,29 @@ test.group('compras | autorização, funcionalidades, auditoria e isolamento', (
     assert.lengthOf(await owner('select 1 from goods_receipts', ctx.tenant), 1)
   })
 })
+
+test.group('fornecedores | referências', (g) => {
+  common(g)
+
+  test('uma organização inexistente é um erro de validação, nunca uma falha interna', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const other = await must<any>(
+      await ctx.http.post('/api/v1/organization-parties', {
+        legalName: 'Outra Fornecedora, SA',
+        taxCountry: 'AO',
+        taxId: '5000011111',
+      }),
+      201
+    )
+    const response = await ctx.http.post('/api/v1/suppliers', {
+      partyId: other.id,
+      organizationId: '00000000-0000-4000-8000-000000000000',
+      code: 'FOR-ORG',
+    })
+    assert.equal(response.status(), 422)
+    assert.equal(response.body().error.details[0].code, 'UNKNOWN_ORGANIZATION')
+  })
+})

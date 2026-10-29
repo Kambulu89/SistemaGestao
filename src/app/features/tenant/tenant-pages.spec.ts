@@ -45,7 +45,7 @@ describe('tenant pages', () => {
     );
     expect(row?.textContent).toContain('Concedida');
     const denied = [...el.querySelectorAll('tr')].find((r) =>
-      r.textContent?.includes('finance.cash-banks.read'),
+      r.textContent?.includes('finance.payments-budget.read'),
     );
     expect(denied?.textContent).toContain('Não concedida');
   });

@@ -85,6 +85,12 @@ export interface World {
     invoiceLine: string
     creditNote: string
     creditNoteLine: string
+    treasuryAccount: string
+    receivable: string
+    payable: string
+    payment: string
+    supplierInvoice: string
+    supplierInvoiceLine: string
   }
 }
 
@@ -134,7 +140,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await syncTestRegistry()
   await license(
     t,
-    ['crm', 'catalog', 'customers', 'orders', 'inventory', 'invoicing', 'procurement'],
+    ['crm', 'catalog', 'customers', 'orders', 'inventory', 'invoicing', 'procurement', 'finance'],
     ['crm.scoring']
   )
   await must(await http.post('/api/v1/tenant/modules/crm/enable', {}), 200)
@@ -144,6 +150,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await must(await http.post('/api/v1/tenant/modules/inventory/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/invoicing/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/procurement/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/finance/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -597,7 +604,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       code: 'CLI-001',
       segmentId: segment.id,
       paymentTermDays: 30,
-      creditLimit: '1000.0000',
+      creditLimit: '1000000.0000',
     }),
     201
   )
@@ -805,6 +812,78 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // M09: uma segunda nota de crédito, emitida, para haver um crédito aplicado ao recebível.
+  const issuedCreditNote = await must<{ id: string }>(
+    await http.post('/api/v1/credit-notes', {
+      invoiceId: invoiceIssued.id,
+      reason: 'Acerto comercial',
+      lines: [{ invoiceLineId: (invoiceIssued.lines[0] as { id: string }).id, quantity: '1' }],
+    }),
+    201
+  )
+  await must(await http.post(`/api/v1/credit-notes/${issuedCreditNote.id}/issue`, {}), 200)
+  // M09: uma conta, o recebível da factura emitida, um pagamento em rascunho, uma factura de fornecedor em rascunho e outra
+  // validada (que gera o pagável), nos dois tenants.
+  const treasuryAccount = await must<{ id: string }>(
+    await http.post('/api/v1/treasury-accounts', {
+      organizationId: organization.id,
+      code: 'CAIXA',
+      name: 'Caixa central',
+      type: 'CASH',
+    }),
+    201
+  )
+  const receivables = await must<{ id: string; sourceId: string }[]>(
+    await http.get('/api/v1/receivables?limit=200'),
+    200
+  )
+  const receivable = receivables.find((r) => r.sourceId === invoiceIssued.id) as { id: string }
+  const payment = await must<{ id: string }>(
+    await http.post('/api/v1/payments', {
+      organizationId: organization.id,
+      direction: 'INBOUND',
+      partyId: orgParty.id,
+      treasuryAccountId: treasuryAccount.id,
+      amount: '10',
+      allocations: [{ receivableId: receivable.id, amount: '10' }],
+    }),
+    201
+  )
+  const confirmedPayment = await must<{ id: string }>(
+    await http.post('/api/v1/payments', {
+      organizationId: organization.id,
+      direction: 'INBOUND',
+      partyId: orgParty.id,
+      treasuryAccountId: treasuryAccount.id,
+      amount: '5',
+      allocations: [{ receivableId: receivable.id, amount: '5' }],
+    }),
+    201
+  )
+  await must(await http.post(`/api/v1/payments/${confirmedPayment.id}/confirm`, {}), 200)
+  const supplierInvoiceLine = { description: 'Serviço externo', quantity: '1', unitPrice: '10' }
+  const supplierInvoice = await must<{ id: string; lines: { id: string }[] }>(
+    await http.post('/api/v1/supplier-invoices', {
+      supplierId: supplier.id,
+      externalNumber: 'FF-001',
+      lines: [supplierInvoiceLine],
+    }),
+    201
+  )
+  const validatedInvoice = await must<{ id: string }>(
+    await http.post('/api/v1/supplier-invoices', {
+      supplierId: supplier.id,
+      externalNumber: 'FF-002',
+      lines: [supplierInvoiceLine],
+    }),
+    201
+  )
+  await must(await http.post(`/api/v1/supplier-invoices/${validatedInvoice.id}/validate`, {}), 200)
+  const payables = await must<{ id: string; sourceId: string }[]>(
+    await http.get('/api/v1/payables?limit=200'),
+    200
+  )
+  const payable = payables.find((r) => r.sourceId === validatedInvoice.id) as { id: string }
   await must(
     await http.put('/api/v1/me/preferences/ui.theme', { value: label === 'A' ? 'dark' : 'light' }),
     200
@@ -883,6 +962,12 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       invoiceLine: (invoiceIssued.lines[0] as { id: string }).id,
       creditNote: creditNote.id,
       creditNoteLine: (creditNote.lines[0] as { id: string }).id,
+      treasuryAccount: treasuryAccount.id,
+      receivable: receivable.id,
+      payable: payable.id,
+      payment: payment.id,
+      supplierInvoice: supplierInvoice.id,
+      supplierInvoiceLine: (supplierInvoice.lines[0] as { id: string }).id,
     },
   }
 }
