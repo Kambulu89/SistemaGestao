@@ -32,6 +32,8 @@ const OrdersController = () => import('#modules/orders/presentation/orders_contr
 const ProcurementController = () =>
   import('#modules/procurement/presentation/procurement_controller')
 const FinanceController = () => import('#modules/finance/presentation/finance_controller')
+const ProspectingController = () =>
+  import('#modules/prospecting/presentation/prospecting_controller')
 const InvoicingController = () => import('#modules/invoicing/presentation/invoicing_controller')
 const LogisticsController = () => import('#modules/inventory/presentation/logistics_controller')
 const InventoryController = () => import('#modules/inventory/presentation/inventory_controller')
@@ -961,6 +963,104 @@ router
           .use(middleware.can({ permission: 'receipt.post' }))
       })
       .use(middleware.feature({ code: 'procurement.receipts' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Prospecção e CRM (M02): módulo `prospecting` do registo. Funcionalidades `prospecting.leads`,
+ * `prospecting.opportunities` e `prospecting.campaigns`; permissões `crm.read|manage` e `campaign.send`. Converter uma
+ * lead cria a Party, o cliente e a oportunidade numa só transacção e é idempotente; mover uma oportunidade regista a
+ * transição com a data; uma campanha respeita o consentimento e a lista de exclusão.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/leads', [ProspectingController, 'listLeads'])
+            router.get('/leads/:id', [ProspectingController, 'showLead'])
+          })
+          .use(middleware.can({ permission: 'crm.read' }))
+        router
+          .group(() => {
+            router.post('/leads', [ProspectingController, 'createLead'])
+            router.patch('/leads/:id', [ProspectingController, 'updateLead'])
+            router.post('/leads/:id/qualify', [ProspectingController, 'qualifyLead'])
+            router.post('/leads/:id/disqualify', [ProspectingController, 'disqualifyLead'])
+            router.post('/leads/:id/convert', [ProspectingController, 'convertLead'])
+          })
+          .use(middleware.can({ permission: 'crm.manage' }))
+      })
+      .use(middleware.feature({ code: 'prospecting.leads' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/pipeline-stages', [ProspectingController, 'listStages'])
+            router.get('/opportunities', [ProspectingController, 'listOpportunities'])
+            router.get('/opportunities/metrics', [ProspectingController, 'opportunityMetrics'])
+            router.get('/opportunities/:id', [ProspectingController, 'showOpportunity'])
+            router.get('/opportunities/:id/history', [ProspectingController, 'opportunityHistory'])
+            router.get('/opportunities/:id/activities', [ProspectingController, 'listActivities'])
+          })
+          .use(middleware.can({ permission: 'crm.read' }))
+        router
+          .group(() => {
+            router.post('/pipeline-stages', [ProspectingController, 'createStage'])
+            router.patch('/pipeline-stages/:id', [ProspectingController, 'updateStage'])
+            router.post('/opportunities', [ProspectingController, 'createOpportunity'])
+            router.patch('/opportunities/:id', [ProspectingController, 'updateOpportunity'])
+            router.post('/opportunities/:id/move', [ProspectingController, 'moveOpportunity'])
+            router.post('/opportunities/:id/activities', [ProspectingController, 'addActivity'])
+            router.post('/opportunity-activities/:id/complete', [
+              ProspectingController,
+              'completeActivity',
+            ])
+          })
+          .use(middleware.can({ permission: 'crm.manage' }))
+      })
+      .use(middleware.feature({ code: 'prospecting.opportunities' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/campaigns', [ProspectingController, 'listCampaigns'])
+            router.get('/campaigns/:id', [ProspectingController, 'showCampaign'])
+            router.get('/campaigns/:id/members', [ProspectingController, 'listMembers'])
+            router.get('/marketing-exclusions', [ProspectingController, 'listExclusions'])
+          })
+          .use(middleware.can({ permission: 'crm.read' }))
+        router
+          .group(() => {
+            router.post('/campaigns', [ProspectingController, 'createCampaign'])
+            router.patch('/campaigns/:id', [ProspectingController, 'updateCampaign'])
+            router.post('/campaigns/:id/status', [ProspectingController, 'setCampaignStatus'])
+            router.post('/campaigns/:id/members', [ProspectingController, 'addMembers'])
+            router.delete('/campaigns/:id/members/:memberId', [
+              ProspectingController,
+              'removeMember',
+            ])
+            router.post('/campaigns/:id/members/:memberId/respond', [
+              ProspectingController,
+              'respondMember',
+            ])
+            router.post('/campaigns/:id/members/:memberId/opt-out', [
+              ProspectingController,
+              'optOutMember',
+            ])
+            router.post('/marketing-exclusions', [ProspectingController, 'addExclusion'])
+            router.delete('/marketing-exclusions/:id', [ProspectingController, 'removeExclusion'])
+          })
+          .use(middleware.can({ permission: 'crm.manage' }))
+        router
+          .post('/campaigns/:id/send', [ProspectingController, 'sendCampaign'])
+          .use(middleware.can({ permission: 'campaign.send' }))
+      })
+      .use(middleware.feature({ code: 'prospecting.campaigns' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

@@ -56,7 +56,17 @@ export async function deleteTestTenants() {
         .delete()
       // Os locais congelados por uma contagem têm de ser libertados antes de a apagar.
       await trx.from('stock_locations').where('tenant_id', id).update({ frozen_by_count_id: null })
+      // A lead convertida aponta para a oportunidade criada: desfaz-se a ligação antes de apagar uma e outra.
+      await trx.from('leads').where('tenant_id', id).update({ opportunity_id: null })
       for (const table of [
+        'campaign_members',
+        'marketing_exclusions',
+        'campaigns',
+        'opportunity_activities',
+        'opportunity_stage_history',
+        'opportunities',
+        'leads',
+        'pipeline_stages',
         'return_lines',
         'goods_returns',
         'count_lines',

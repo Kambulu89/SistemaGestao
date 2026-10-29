@@ -810,14 +810,14 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   é idempotente (duas chamadas, mesmo em simultâneo, geram um só ajuste: a origem do movimento é única).
 - **Devolução.** Derivada do livro e dos documentos de origem: de **cliente** sobre uma expedição lançada e não revertida, a
   **fornecedor** sobre uma recepção lançada e não revertida. O devolvível por linha é `quantidade da origem − já devolvido por
-  devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprovar recusa o excesso sob bloqueio do documento, por isso
+devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprovar recusa o excesso sob bloqueio do documento, por isso
   duas devoluções concorrentes nunca excedem a origem. Lançar (`return.post`) repõe ao **custo original** (cliente) ou tira o
   stock (fornecedor); o estado da mercadoria (`SELLABLE`, `DAMAGED`, `QUARANTINE`) encaminha-a para o armazém escolhido ou para o
   técnico, de onde não se vende.
 - **Auditoria e RLS.** Todas as tabelas novas são de tenant e auditadas; leitura da auditoria exige as permissões `*.read` novas.
   A matriz de isolamento cobre as novas rotas e tabelas (ids alheios → 404, nada muda).
 - **Desvios da spec / fica por fazer.** Depois de expedida a transferência não se cancela nem se dá baixa a diferenças em
-  trânsito (perdas) — só se recebe; contagem congelada não impede *reservas* (só movimentos); contar menos do que o reservado falha
+  trânsito (perdas) — só se recebe; contagem congelada não impede _reservas_ (só movimentos); contar menos do que o reservado falha
   com `INSUFFICIENT_STOCK`; limite de devolução por linha e não por lote; a devolução não gera nota de crédito nem reembolso
   (M05/M09 fazem-no por si); sem transferências entre organizações; sem escolha manual de lote/local no ecrã de transferência
   (o servidor escolhe); contagens por amostragem/cíclicas e séries por fazer.
@@ -858,6 +858,58 @@ o primeiro job real (outbox, Fase 2). Não se acrescenta um worker vazio.
   importação de formatos bancários normalizados (OFX/MT940/CAMT) — só CSV lido no browser; sem saldo de abertura/fecho no
   extracto nem verificação de continuidade; sem multi-moeda; sem criação de movimentos a partir de linhas sem correspondência
   (comissões, juros: seriam um lançamento de tesouraria à parte, por decidir); sem eventos no outbox (não há consumidores).
+
+## D-057 Prospecção e CRM (M02): conversão atómica numa transacção partilhada, pipeline com histórico datado e campanhas que respeitam o consentimento (aceite — fatia 6.1)
+
+- **Contexto.** A especificação (M02) pede leads, oportunidades com pipeline e histórico de transições, campanhas e actividades; uma
+  conversão «transaccional e idempotente» que resolve ou cria Party, cliente e oportunidade sem duplicar por retry; perder com
+  motivo, ganhar com evidência configurável sem criar recebimento; campanhas que respeitam o consentimento e a lista de exclusão.
+- **Módulo `prospecting`.** O código do módulo no registo é `prospecting` (funcionalidades `prospecting.leads|opportunities|campaigns`),
+  não `crm`: o registo de testes já reserva uma maquete `crm` e o nome descreve melhor o âmbito (prospecção). Permissões da
+  especificação: `crm.read`, `crm.manage` e `campaign.send` (enviar é distinto de gerir). No frontend a capacidade `crm.pipeline`
+  ganha a página real e `crm.campaigns` leva a ela.
+- **Mudança no núcleo: transacção partilhada.** Cada caso de uso abria a sua transacção, por isso um módulo não conseguia compor
+  atomicamente os casos de uso públicos de outro. `LucidTenantDatabase.run` passa a **juntar-se** à transacção em curso quando é
+  chamado dentro de outro `run` do mesmo tenant, utilizador/membership e ligação (`AsyncLocalStorage`); um tenant ou actor
+  diferente abre sempre uma transacção própria (e o `set_config` do tenant nunca se mistura). Tudo confirma ou tudo reverte. Nenhum
+  código existente aninhava `run`, por isso o comportamento anterior não muda; cobertura em `shared_transaction.spec.ts`.
+- **Migration 33** (8 tabelas de tenant, RLS, auditadas): `pipeline_stages`, `leads`, `opportunities`, `opportunity_stage_history`
+  (só de acrescentar, trigger), `opportunity_activities`, `campaigns`, `campaign_members` (exactamente uma Party ou lead, única por
+  campanha) e `marketing_exclusions` (email normalizado em minúsculas, telefone só com dígitos). Uma lead convertida não muda de
+  identidade nem de destino (trigger), mas o consentimento e os contactos ainda se actualizam.
+- **Leads.** `NEW → QUALIFIED | DISQUALIFIED (motivo) → CONVERTED`; repetir qualificar/desqualificar não faz nada; só convertida é
+  final. O email vale como chave de comparação (minúsculas).
+- **Conversão** (`POST /leads/:id/convert`, `crm.manage` **e** `customer.create` **e** `party.create`): numa só transacção, com a lead
+  bloqueada, resolve a Party (a indicada → a já ligada → uma que tenha o mesmo email, se for única → cria-a: organização se a lead
+  tem empresa, senão pessoa a partir de nome e apelido; sem apelido falha com 422 `PARTY_NAME_INCOMPLETE`, sem inventar), reutiliza o
+  cliente que a Party já tenha na organização (senão cria-o, com o responsável da lead) e cria a oportunidade na primeira etapa
+  activa. Grava os identificadores na lead. Repetir devolve os **mesmos identificadores** (200; a primeira conversão responde 201),
+  também com pedidos concorrentes; uma falha a meio (por exemplo, código de cliente repetido) reverte também a Party criada.
+- **Pipeline.** Um tenant sem etapas recebe as por omissão (Novo, Qualificado, Proposta, Negociação, Ganha, Perdida) ao primeiro
+  uso, de forma idempotente. Uma etapa terminal tem desfecho `WON` ou `LOST` (imutável); só a de ganho pode exigir evidência
+  (`requires_evidence`, configurável por etapa). **Mover** (`crm.manage`): bloqueia a oportunidade; perder exige motivo, ganhar
+  exige a evidência quando a etapa o pede e **não cria recebimento nem factura**; uma oportunidade fechada não se move nem se
+  altera (409 `OPPORTUNITY_CLOSED`); mover para onde já está não faz nada; cada transição fica no histórico com data e
+  quem a fez, e gera um evento no outbox (`crm.opportunity.moved|won|lost`). Etapas desactivadas ou com oportunidades abertas
+  não se desactivam.
+- **Métricas** (`GET /opportunities/metrics`): entradas por etapa, ganhas, perdidas, taxa de ganho (decimal exacto), valores por
+  moeda e dias médios até ganhar, calculados **pelas datas das transições** e não pelo estado actual.
+- **Campanhas.** Rascunho → activa ⇄ pausada → concluída. O destinatário é uma Party ou uma lead (uma só vez por campanha).
+  `POST /campaigns/:id/send` (`campaign.send`) só funciona numa campanha activa dentro do período e **nunca contacta** quem recusou
+  (consentimento `OPT_OUT` da lead ou valor na lista de exclusão: passam a `OPTED_OUT`); uma lead sem consentimento expresso
+  (`UNKNOWN`) e quem não tem destino para o canal ficam por contactar; uma Party recebe enquanto não estiver excluída. «Recusou»
+  numa campanha põe a lead em `OPT_OUT` e o email e telefone na lista de exclusão, para todas as campanhas. Só os destinatários
+  `TARGETED` são tocados: repetir o envio não volta a contactar ninguém. Cada contacto é um evento
+  `crm.campaign.contact_requested` (só identificadores) no outbox.
+- **Auditoria e RLS.** As oito tabelas são de tenant e auditadas (leitura da auditoria exige `crm.read`); a matriz de isolamento
+  cobre as novas rotas e tabelas (ids alheios → 404; cliente, lead, etapa e destinatário de outro tenant → 422/404) e o histórico
+  só de acrescentar por SQL.
+- **Desvios da spec / fica por fazer.** **Não há serviço de notificações** (S02): o envio regista o pedido de contacto no outbox
+  mas nada o entrega — a campanha «passa pelo NotificationService» só quando ele existir; `Opportunity` não liga ainda propostas
+  (a proposta não tem `opportunity_id`) nem `Interaction.opportunity_id`: as actividades da oportunidade são próprias; só há o
+  pipeline `DEFAULT` na API e na UI (a coluna `pipeline_code` prevê vários); sem reabrir uma oportunidade fechada, sem pontuação
+  de leads nem fusão de duplicados, sem importação de leads, sem agendamento de envios nem custo real por campanha (só o
+  orçamento); o quadro move por selecção e não por arrastar; o consentimento de uma Party vive só na lista de exclusão.
 
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
@@ -16,11 +17,18 @@ export class LucidTenantScope implements TenantScope {
   ) {}
 }
 
+/** A transacção aberta por um `run` em curso nesta cadeia assíncrona, para os `run` aninhados a juntarem. */
+const activeScope = new AsyncLocalStorage<{ connection: string; scope: LucidTenantScope }>()
+
 /**
  * Executa o trabalho numa transacção da conta de runtime com o tenant definido através de
  * `set_config('app.tenant_id', …, true)`. O valor é local à transacção: termina com o COMMIT/ROLLBACK
  * e nunca fica na ligação do pool para o tenant seguinte. As políticas RLS leem-no por
  * `app_current_tenant_id()`.
+ *
+ * Um `run` chamado **dentro** de outro `run` do mesmo tenant, actor e ligação **junta-se** à transacção em curso (é assim
+ * que um módulo compõe os casos de uso públicos de outro — por exemplo, converter uma lead cria Party, cliente e
+ * oportunidade de forma atómica): tudo confirma ou tudo reverte. Um tenant ou actor diferente nunca se junta.
  */
 export class LucidTenantDatabase implements TenantUnitOfWork {
   constructor(
@@ -32,6 +40,17 @@ export class LucidTenantDatabase implements TenantUnitOfWork {
     // Sem contexto, falha antes de abrir qualquer ligação.
     const resolved = context ?? this.store.find()
     if (!resolved) throw new MissingTenantContextError()
+
+    const outer = activeScope.getStore()
+    if (
+      outer &&
+      outer.connection === this.connection &&
+      outer.scope.context.tenantId === resolved.tenantId &&
+      outer.scope.context.membershipId === resolved.membershipId &&
+      outer.scope.context.userId === resolved.userId
+    ) {
+      return fn(outer.scope)
+    }
 
     return db.connection(this.connection).transaction(async (trx) => {
       // Tenant (RLS) e actor/correlação/IP (auditoria): variáveis locais à transacção, nunca do pool.
@@ -51,7 +70,8 @@ export class LucidTenantDatabase implements TenantUnitOfWork {
           HttpContext.get()?.request.ip() ?? '',
         ]
       )
-      return fn(new LucidTenantScope(resolved, trx))
+      const scope = new LucidTenantScope(resolved, trx)
+      return activeScope.run({ connection: this.connection, scope }, () => fn(scope))
     })
   }
 }

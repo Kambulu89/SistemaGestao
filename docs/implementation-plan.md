@@ -4,22 +4,23 @@ Fases da especificação (§11) com estado real. Cada fase entrega **fatias vert
 autorização, auditoria, testes). Uma fase só passa quando as verificações aplicáveis correram e a documentação foi
 actualizada. Estado actualizado em: Fase 3, fatia 3.2 (C10, frontend).
 
-| Fase | Âmbito (spec) | Estado |
-| --- | --- | --- |
-| **F0** Preparação | repositório, versões, Docker, CI, estrutura modular, ADRs | **Concluída** (com 2 verificações por executar — ver abaixo) |
-| **F1** Fundação | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party | **Próxima** (detalhada na secção 2) |
-| **F2** SaaS | C02, C03, C09, auditoria mínima S06 | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos) e 2.4 (configurações/sequências) e 2.5 (administração da plataforma) concluídas no backend; o frontend da Fase 2 está ligado (2b.6) (ver secção 2b) |
-| F3 Low-code | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | **Em curso**: fatias 3.1 (C10 no backend) e 3.2 (C10 no frontend) concluídas (ver secção 2c); C11–C15 só têm contratos/motores no frontend — ver `architecture.md` §7 |
-| F4 Operação comercial | M01–M08, S01 | Não iniciada |
-| F5 Gestão empresarial | M09–M14, S02–S03 | Não iniciada |
-| F6 Informação | S04 | Não iniciada |
-| F7 Integrações | S05 | Não iniciada |
-| F8 Verticais | V01 primeiro; V02–V06 por necessidade | Não iniciada |
-| F9 Escala · F10 Marketplace | SSO, base dedicada, pacotes | Só com evidência |
+| Fase                        | Âmbito (spec)                                                                          | Estado                                                                                                                                                                                                                                        |
+| --------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **F0** Preparação           | repositório, versões, Docker, CI, estrutura modular, ADRs                              | **Concluída** (com 2 verificações por executar — ver abaixo)                                                                                                                                                                                  |
+| **F1** Fundação             | C01, C04–C08: identidade, tenant, membership, RBAC/ABAC, organização, Party            | **Próxima** (detalhada na secção 2)                                                                                                                                                                                                           |
+| **F2** SaaS                 | C02, C03, C09, auditoria mínima S06                                                    | **Em curso**: fatias 2.1 (auditoria), 2.2 (planos/assinaturas) e 2.3 (registo de módulos) e 2.4 (configurações/sequências) e 2.5 (administração da plataforma) concluídas no backend; o frontend da Fase 2 está ligado (2b.6) (ver secção 2b) |
+| F3 Low-code                 | C10–C15 (Viatura ponta a ponta, Form Builder, regras, estados, aprovações, automações) | **Em curso**: fatias 3.1 (C10 no backend) e 3.2 (C10 no frontend) concluídas (ver secção 2c); C11–C15 só têm contratos/motores no frontend — ver `architecture.md` §7                                                                         |
+| F4 Operação comercial       | M01–M08, S01                                                                           | Não iniciada                                                                                                                                                                                                                                  |
+| F5 Gestão empresarial       | M09–M14, S02–S03                                                                       | Não iniciada                                                                                                                                                                                                                                  |
+| F6 Informação               | S04                                                                                    | Não iniciada                                                                                                                                                                                                                                  |
+| F7 Integrações              | S05                                                                                    | Não iniciada                                                                                                                                                                                                                                  |
+| F8 Verticais                | V01 primeiro; V02–V06 por necessidade                                                  | Não iniciada                                                                                                                                                                                                                                  |
+| F9 Escala · F10 Marketplace | SSO, base dedicada, pacotes                                                            | Só com evidência                                                                                                                                                                                                                              |
 
 ## 1. Fase 0 — Preparação (concluída)
 
 ### Entregue
+
 - Diagnóstico e documentação: `CLAUDE.md`, `docs/architecture.md`, `docs/decisions.md`, este plano; especificação em
   `docs/especificacao-v2.docx`.
 - `backend/` (AdonisJS 6): ambiente validado, ligação a PostgreSQL (duas contas) e Redis, `GET /api/v1/health` e
@@ -29,16 +30,18 @@ actualizada. Estado actualizado em: Fase 3, fatia 3.2 (C10, frontend).
 - `.env.example` (backend), `.env.test.example`, `.env.compose.example`, sem valores secretos.
 
 ### Critérios de aceitação e evidência
-| Critério | Evidência |
-| --- | --- |
-| Projecto compila e arranca | `npm run build`; servidor compilado respondeu a `/health` e `/ready` |
-| Migrations correm numa base limpa | `drop schema` + `npm run migrate` + `migrate:status` |
-| Testes executáveis | `npm test` (backend, 38) e `ng test` (frontend, 582) |
+
+| Critério                            | Evidência                                                             |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| Projecto compila e arranca          | `npm run build`; servidor compilado respondeu a `/health` e `/ready`  |
+| Migrations correm numa base limpa   | `drop schema` + `npm run migrate` + `migrate:status`                  |
+| Testes executáveis                  | `npm test` (backend, 38) e `ng test` (frontend, 582)                  |
 | Ambiente inválido impede o arranque | execução real sem variáveis → `EnvValidationException`; `env.spec.ts` |
-| Dependência em baixo → não pronto | `/ready` devolveu 503 `NOT_READY` com o Redis parado |
-| Sem segredos em logs | testes de redacção; `grep` do log do servidor sem a palavra-passe |
+| Dependência em baixo → não pronto   | `/ready` devolveu 503 `NOT_READY` com o Redis parado                  |
+| Sem segredos em logs                | testes de redacção; `grep` do log do servidor sem a palavra-passe     |
 
 ### Por verificar (dependem de infraestrutura não disponível no ambiente de análise)
+
 - `docker compose up`: o daemon Docker não estava acessível. O ficheiro foi validado com `docker compose config`, e a
   rotina `01-roles.sh` foi executada contra um PostgreSQL 16 local; **os contentores não foram arrancados**.
 - CI no GitHub Actions: o YAML é válido e os mesmos passos foram corridos localmente; o pipeline **não foi executado**.
@@ -51,19 +54,20 @@ isolamento por tenant e testes negativos com dois tenants.
 
 ### Ordem e dependências
 
-| # | Fatia | Depende de | Entrega |
-| --- | --- | --- | --- |
-| 1.1 | ✅ **Núcleo de multi-tenancy e esquema** (feita — ver secção 2.1) | F0 | colunas base B/G; padrão de migration de tabela de tenant (RLS `ENABLE`+`FORCE`, política, FK composta `(tenant_id,id)`); `TenantContext` imutável; `TenantScopedConnection` (transacção + `set_config` local; sem contexto → erro); repositório base que exige contexto; **teste de conformidade do esquema** (toda a tabela com `tenant_id` tem RLS forçada e política); verificação automática das fronteiras de módulo |
-| 1.2 | ✅ **Tenant e utilizadores** (feita — ver secção 2.2) (C01 mínimo, C04) | 1.1 | `Tenant`, `TenantDomain`, `User`, `AuthSession`; login/logout com sessão opaca em cookie HttpOnly+Secure+SameSite, CSRF, hash de palavra-passe, rate limit em Redis, sessões activas/revogação; recuperação com token de uso único. MFA e SSO ficam **fora** (documentar) |
-| 1.3 | ✅ **Membership e contexto** (feita — ver secção 2.3) (C05 parte 1) | 1.2 | `TenantMembership`; pipeline de resolução do tenant (spec §10.1) como middleware; `GET /context` com `authorizationVersion`; troca de tenant; suspensão de tenant bloqueia operações |
-| 1.4 | ✅ **Autorização** (C06; feita — ver secção 2.4) | 1.3 | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); *default deny*, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar |
-| 1.5 | ✅ **Organização** (C07; feita — ver secção 2.5) | 1.4 | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas |
-| 1.6 | ✅ **Convites e membros** (C05 parte 2; feita — ver secção 2.6) | 1.4, 1.5 | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências |
-| 1.7 | ✅ **Party** (C08; feita — ver secção 2.7) | 1.5 | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). *Item da spec F1 que não constava do pedido: confirmar se entra nesta fase.* |
-| 1.8 | ✅ **Frontend real** (feita parcialmente — ver secção 2.9) | 1.2–1.6 | adaptadores HTTP para auth/tenant/contexto/membros/papéis/organização; remover os mocks correspondentes; mapeamento de permissões (D-014); selector de tenant que cancela pedidos e limpa caches; sessão em cookie |
-| 1.9 | ✅ **Matriz de isolamento** (feita — ver secção 2.8) | todas | dois tenants de demonstração + utilizadores com papéis distintos; testes negativos (abaixo) em CI |
+| #   | Fatia                                                                   | Depende de | Entrega                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --- | ----------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.1 | ✅ **Núcleo de multi-tenancy e esquema** (feita — ver secção 2.1)       | F0         | colunas base B/G; padrão de migration de tabela de tenant (RLS `ENABLE`+`FORCE`, política, FK composta `(tenant_id,id)`); `TenantContext` imutável; `TenantScopedConnection` (transacção + `set_config` local; sem contexto → erro); repositório base que exige contexto; **teste de conformidade do esquema** (toda a tabela com `tenant_id` tem RLS forçada e política); verificação automática das fronteiras de módulo |
+| 1.2 | ✅ **Tenant e utilizadores** (feita — ver secção 2.2) (C01 mínimo, C04) | 1.1        | `Tenant`, `TenantDomain`, `User`, `AuthSession`; login/logout com sessão opaca em cookie HttpOnly+Secure+SameSite, CSRF, hash de palavra-passe, rate limit em Redis, sessões activas/revogação; recuperação com token de uso único. MFA e SSO ficam **fora** (documentar)                                                                                                                                                  |
+| 1.3 | ✅ **Membership e contexto** (feita — ver secção 2.3) (C05 parte 1)     | 1.2        | `TenantMembership`; pipeline de resolução do tenant (spec §10.1) como middleware; `GET /context` com `authorizationVersion`; troca de tenant; suspensão de tenant bloqueia operações                                                                                                                                                                                                                                       |
+| 1.4 | ✅ **Autorização** (C06; feita — ver secção 2.4)                        | 1.3        | `Permission` (catálogo por seed), `Role`, `RolePermission`, `RoleAssignment`, `MembershipScope`, `AccessPolicy` (AST ABAC declarativa, sem código); _default deny_, DENY prevalece, filtro de linhas antes de paginar, regras de campo; `POST /authorization/simulate`; decidir D-014 antes de começar                                                                                                                     |
+| 1.5 | ✅ **Organização** (C07; feita — ver secção 2.5)                        | 1.4        | `Organization`, `OrganizationUnit` (árvore sem ciclos, pai da mesma organização), `CostCenter`, `TeamMember`; FKs compostas                                                                                                                                                                                                                                                                                                |
+| 1.6 | ✅ **Convites e membros** (C05 parte 2; feita — ver secção 2.6)         | 1.4, 1.5   | `Invitation` (aceitação exige controlo do email), quotas (stub declarado), último administrador protegido, invalidação da versão de autorização, preferências                                                                                                                                                                                                                                                              |
+| 1.7 | ✅ **Party** (C08; feita — ver secção 2.7)                              | 1.5        | `Party`/`Person`/`OrganizationParty`/`Contact`/`Address`; aviso de duplicados (sem fusão automática). _Item da spec F1 que não constava do pedido: confirmar se entra nesta fase._                                                                                                                                                                                                                                         |
+| 1.8 | ✅ **Frontend real** (feita parcialmente — ver secção 2.9)              | 1.2–1.6    | adaptadores HTTP para auth/tenant/contexto/membros/papéis/organização; remover os mocks correspondentes; mapeamento de permissões (D-014); selector de tenant que cancela pedidos e limpa caches; sessão em cookie                                                                                                                                                                                                         |
+| 1.9 | ✅ **Matriz de isolamento** (feita — ver secção 2.8)                    | todas      | dois tenants de demonstração + utilizadores com papéis distintos; testes negativos (abaixo) em CI                                                                                                                                                                                                                                                                                                                          |
 
 ### 2.1 Fatia 1.1 — concluída
+
 **Entregue:** `TenantContext` imutável e `TenantContextStore`; `LucidTenantDatabase` (transacção + `set_config` local);
 `TenantRepository` (colunas base, versões, 404/409); helpers `createTenantTable`/`createGlobalTable`/`tenantForeignKey`;
 enumeração explícita de tabelas globais; verificador de conformidade do esquema; verificador de fronteiras de módulo
@@ -84,6 +88,7 @@ omissão). Cache, jobs, ficheiros, pesquisa, exportações e WebSocket não exis
 fica para quando forem criados. O `TenantContext` passou a ser construído pelo middleware `tenant` na fatia 1.3.
 
 ### 2.2 Fatia 1.2 — concluída
+
 **Entregue:** migrations `tenants`, `tenant_domains`, `users`, `auth_sessions`, `one_time_tokens`; módulos `core/auth`
 (login, logout, `GET /me`, sessões activas e revogação, alteração de palavra-passe, recuperação, verificação de email)
 e `platform/tenants` (ciclo de vida, domínios únicos e verificação); middleware `auth`/`origin`; comandos `tenant:create`,
@@ -102,6 +107,7 @@ a passar com o código novo. Lint, `format:check`, `typecheck`, `build` e migrat
 com cookie e `401` indistinguível, sem a palavra-passe no log.
 
 **Por verificar / limitações assumidas:**
+
 - Sem fornecedor de email (D-021): recuperação e verificação só são testáveis via `dev-redis`.
 - `trustProxy` por configurar (D-020): o IP de rate limit é o do socket.
 - Não existe auditoria (`AuditLog`/`SecurityEvent`, Fase 2): login, logout e alterações de palavra-passe **não** são
@@ -114,6 +120,7 @@ com cookie e `401` indistinguível, sem a palavra-passe no log.
   servidor compilado; não há teste automático que capture os logs de um pedido real.
 
 ### 2.3 Fatia 1.3 — concluída
+
 **Entregue:** migration `tenant_memberships` (RLS forçada, `unique(tenant_id,user_id)`, `authorization_version`, política de
 leitura própria); módulo `core/membership` (estados INVITED/ACTIVE/SUSPENDED/LEFT, `AddMember`, `ChangeMembershipStatus`,
 directório de leitura por utilizador); em `platform/tenants`: `ResolveTenantContext`, `ListMyTenants`, middleware `tenant`,
@@ -131,6 +138,7 @@ Lint, `format:check`, `typecheck`, `build` e migrations numa base limpa (4 migra
 comandos `membership:status` executados; o dono vê 0 linhas sem contexto (FORCE RLS).
 
 **Por verificar / limitações:**
+
 - `GET /context` não traz módulos, funcionalidades, permissões nem configurações (C03/C06/C09 não existem).
 - `unitScope` fica vazio (nega por omissão) até haver `MembershipScope`/organizações (1.4/1.5).
 - Sem API HTTP de membros/convites (1.6); `AddMember` com `userId` inexistente depende da FK e não tem tradução de erro
@@ -139,6 +147,7 @@ comandos `membership:status` executados; o dono vê 0 linhas sem contexto (FORCE
 - O pedido paga duas consultas extra por pedido de tenant (tenant + membership); optimizar só se a medição o justificar.
 
 ### 2.4 Fatia 1.4 — concluída
+
 **Entregue:** migration `permissions` (global) + `roles`, `role_permissions`, `role_assignments`, `access_policies` (tenant,
 RLS forçada); módulo `core/permissions` (catálogo, condições ABAC declarativas, decisão RBAC+ABAC, regras de campo, casos
 de uso de papéis/atribuições/políticas/simulação, `EnsureTenantAdmin`); middleware `can`; endpoints `/permissions`,
@@ -161,6 +170,7 @@ seeder duas vezes a passar; servidor compilado: `GET /context` do admin demo dev
 tenant dá 403.
 
 **Por verificar / limitações:**
+
 - `MembershipScope` e hierarquia de unidades: 1.5 (atribuições por unidade só casam com `resource.unitId` igual).
 - Filtro de linhas antes de paginar/agregar e ocultação de campos em pesquisa, exportação, auditoria e realtime: o motor
   (`decide`, `redactFields`) existe e está testado, mas **ainda não há** listagens de domínio, pesquisa, exportações nem
@@ -172,6 +182,7 @@ tenant dá 403.
 - O catálogo só tem permissões do núcleo (`iam`, `member`, `organization`); cada módulo acrescenta as suas.
 
 ### 2.5 Fatia 1.5 — concluída
+
 **Entregue:** migration `organizations`, `organization_units`, `cost_centers`, `team_members`, `membership_scopes` (mais as FKs
 compostas de `role_assignments.organization_unit_id` e `tenant_memberships.default_organization_id`); módulo `core/organization`
 (casos de uso, store Lucid, API `/organizations`, `/organization-units`, `/organization-units/:id/members`, `/team-members/:id`,
@@ -195,6 +206,7 @@ migrations numa base limpa (6), seeder duas vezes e `iam:sync` a passar; servido
 `/context` traz o `unitScope` com as 3.
 
 **Por verificar / limitações:**
+
 - O filtro por âmbito de unidade nos **dados de domínio** (linhas, pesquisa, exportações) não tem onde aplicar-se ainda: só
   existem decisões individuais (`decide`) e a lista `subject.unitIds`; o filtro de linhas antes de paginar fica para o primeiro
   módulo com listagens por unidade.
@@ -204,6 +216,7 @@ migrations numa base limpa (6), seeder duas vezes e `iam:sync` a passar; servido
 - O lock consultivo serializa a edição da estrutura de um tenant (adequado a edições raras; rever se houver importações em massa).
 
 ### 2.6 Fatia 1.6 — concluída
+
 **Entregue:** migration `invitations`, `user_preferences` e `tenants.max_members`; módulo `core/members` (convites, membros,
 preferências); `AdminGuard` no módulo de permissões; API `/invitations` (listar, criar, revogar), `POST /invitations/accept`,
 `/memberships` (listar, ver, suspender/reactivar/terminar), `/me/preferences`, `/me/default-organization`; comando
@@ -224,6 +237,7 @@ omissão. Lint, `format:check`, `typecheck`, `build`, migrations numa base limpa
 servidor compilado: o admin demo cria um convite e lista os membros.
 
 **Por verificar / limitações:**
+
 - Sem fornecedor de email o convite só chega via `dev-redis` (D-021). Nada reenvia um convite (revoga-se e cria-se outro).
 - (Superado na 2.2) Quota provisória por tenant (`max_members`), não por plano (C02). O limite não impede que um convite seja **criado** acima do
   limite, só aceite.
@@ -234,6 +248,7 @@ servidor compilado: o admin demo cria um convite e lista os membros.
 - Alterar a organização por omissão não valida unidades; preferências sem versões/expectedVersion (última escrita ganha).
 
 ### 2.7 Fatia 1.7 — concluída
+
 **Entregue:** migration `parties`, `people`, `organization_parties`, `contacts`, `addresses`, `party_relationships` e a FK
 `tenant_memberships.person_id → people`; módulo `core/party` (casos de uso, store Lucid, API `/parties`, `/people`,
 `/organization-parties`, `/parties/:id/contacts|addresses|relationships|possible-duplicates`, `/contacts/:id`, `/addresses/:id`,
@@ -256,6 +271,7 @@ de `nationality` (403); ligação membership↔pessoa (única, só PERSON, desli
 compilado lista os dois cadastros demo.
 
 **Por verificar / limitações:**
+
 - **Fusão assistida (`party.merge`) não feita:** precisa de auditoria (Fase 2) e de módulos com ligações a remapear.
 - "Uma pessoa pode ser cliente e colaborador": o modelo permite (um party, vários perfis), mas Customer/Employee ainda não
   existem; só está testado que não se duplica contacto e que o aviso de duplicados não dispara entre tenants.
@@ -264,6 +280,7 @@ compilado lista os dois cadastros demo.
 - Sem auditoria das alterações a dados pessoais (Fase 2) — relevante para dados sensíveis/RGPD.
 
 ### 2.8 Fatia 1.9 — concluída
+
 **Entregue:** `tests/functional/isolation_matrix.spec.ts` + `tests/support/matrix_fixture.ts`: dois tenants com **os mesmos**
 códigos, nomes, emails, NIF e documento, cada um com todas as entidades de tenant (papéis, atribuições, políticas, organização,
 unidades, centro de custo, equipa, âmbito, pessoa, organização externa, contacto, morada, relação, convite, preferência) e
@@ -271,6 +288,7 @@ utilizadores com papéis distintos (administrador, membro com papel limitado, op
 na CI (`.github/workflows/ci.yml`). Nenhuma alteração ao código de produção foi necessária: a matriz não encontrou fugas.
 
 **O que a matriz impõe (13 testes, 232 no total):**
+
 - Ids de **outro tenant → 404 em 30 operações** (GET/PATCH/DELETE/POST sobre cada recurso), nos dois sentidos, e o estado dos dois
   tenants fica **idêntico** antes e depois (snapshot completo de listagens e detalhes).
 - Listagens só com dados do próprio tenant e com a mesma dimensão; preferências, pesquisa (`q`) e duplicados não atravessam tenants.
@@ -291,6 +309,7 @@ na CI (`.github/workflows/ci.yml`). Nenhuma alteração ao código de produção
 (a RLS escondia a linha alvo e a FK nunca era exercida); corrigido lendo o id com o contexto do outro tenant.
 
 **Por verificar / limitações:**
+
 - Cache, jobs, ficheiros, pesquisa dedicada, relatórios, exportações e WebSocket **não existem**: o isolamento deles fica por testar
   (só há a guarda de prefixos do Redis) e passa a ser obrigatório quando forem criados — a guarda do Redis e a descoberta
   automática de tabelas obrigam a estender a matriz.
@@ -300,6 +319,7 @@ na CI (`.github/workflows/ci.yml`). Nenhuma alteração ao código de produção
 - Não houve execução da CI no GitHub (continua por executar); os mesmos comandos correm localmente.
 
 ### 2.9 Fatia 1.8 — concluída (parcialmente: ver limites)
+
 **Entregue (frontend `src/`):** `HttpAuthGateway` e `HttpTenantGateway` (login, logout, restauro de sessão por `GET /me`,
 recuperação e nova palavra-passe, organizações do utilizador, contexto do tenant); sessão **só em cookie `HttpOnly`** + CSRF em
 memória; `ApiService` que desembrulha o envelope; interceptores de credenciais/CSRF/selector de tenant, de cancelamento na troca de
@@ -317,11 +337,11 @@ ao trocar de tenant). `ng lint`, `format:check`, `check:generic` e `ng build` (p
 (Chromium, Playwright) contra a API real e a base de dados**, front em `localhost:4200` e API em `localhost:3333` (cross-origin com
 cookies): **26/26** verificações — login errado/certo, cookie `HttpOnly`+`SameSite=Lax` invisível a `document.cookie`, storage sem
 sessão, membros reais, convite (201), segundo convite (409), revogação, suspender o último administrador (LAST_ADMIN explicado),
-árvore de unidades, código de unidade repetido (409 no campo), criar unidade, perfis, recarregar mantém a sessão, logout (`/me` →
-401) e área do tenant a pedir login de novo, membro de dois tenants com o seu selector, membro sem perfis recusado, tenant alheio →
+árvore de unidades, código de unidade repetido (409 no campo), criar unidade, perfis, recarregar mantém a sessão, logout (`/me` → 401) e área do tenant a pedir login de novo, membro de dois tenants com o seu selector, membro sem perfis recusado, tenant alheio →
 sem acesso, sem erros de JavaScript. O script do E2E **não** está no repositório (usou o Playwright global do ambiente).
 
 **Por verificar / limites (a fatia NÃO elimina todos os mocks):**
+
 - **Ainda mock no caminho real:** entidades dinâmicas, campos personalizados e registos (C10–C15 sem backend); administração da
   plataforma; e, provisoriamente, **módulos/subscrição/feature flags** do contexto (`provisional-entitlements.ts`). Páginas de
   módulos de negócio (CRM, vendas…) continuam scaffolds e o servidor não concede permissões para elas.
@@ -337,26 +357,28 @@ sem acesso, sem erros de JavaScript. O script do E2E **não** está no repositó
   não houve verificação em ecrãs pequenos, nem de acessibilidade para além do que os componentes partilhados já cobrem.
 
 ### Critérios de aceitação da Fase 1 — estado
-Gate da spec: *"Testes negativos em dois tenants aprovados"* — **cumprido ao nível do backend** (fatia 1.9). A Fase 1 **não está
+
+Gate da spec: _"Testes negativos em dois tenants aprovados"_ — **cumprido ao nível do backend** (fatia 1.9). A Fase 1 **não está
 fechada**: a fatia 1.8 ligou o frontend mas ficou parcial (ver 2.9), a auditoria das mutações críticas foi entregue na fatia 2.1.
 
-| Critério | Estado | Evidência |
-| --- | --- | --- |
-| Isolamento com dois tenants de códigos semelhantes (404, FK composta, RLS, ligação reutilizada, `tenant_id` no corpo) | FEITO (backend) | `isolation_matrix.spec.ts`, `tenancy.spec.ts`, `schema_conformance.spec.ts` |
-| Isolamento de cache, jobs, ficheiros, pesquisa, relatórios, exportações, WebSocket | PENDENTE (não existem) | só a guarda de prefixos do Redis |
-| C01 tenant suspenso bloqueia por URL directa; domínio duplicado 409 | FEITO | `context.spec.ts`, `tenants.spec.ts`, matriz |
-| C04 token expirado/reutilizado, logout, troca de tenant, cookies fora dos logs, recuperação sem revelar email | FEITO (logs: só redacção + verificação manual) | `auth.spec.ts`, `logger_redaction.spec.ts`, matriz |
-| C05 conta única em vários tenants, convite revogado falha, último administrador, `authorizationVersion` | FEITO | `members.spec.ts` |
-| C06 sem permissão 403, ID alheio 404, DENY prevalece, simulação não concede | FEITO | `iam.spec.ts`, `authorization_domain.spec.ts`, matriz |
-| C06 campo restrito oculto em exportação/pesquisa/auditoria/realtime | PARCIAL (API e pesquisa de Party; resto não existe) | `party.spec.ts` |
-| C07 unidade não é pai de si nem de antepassado; centro de custo de outra organização rejeitado | FEITO | `organization.spec.ts` (+ FK na base) |
-| C08 fornecedor sem Person; pessoa cliente e colaborador sem duplicar contactos | PARCIAL (Customer/Employee não existem) | `party.spec.ts` |
-| Concorrência: convites/membership com limite de utilizadores | FEITO | `members.spec.ts` |
-| OpenAPI, regras no servidor, permissões e isolamento testados, migrations/seeds numa base limpa | FEITO | paridade OpenAPI↔rotas; migrations (8) e seeder em base limpa |
-| Auditoria das mutações críticas | FEITO (fatia 2.1) | `audit.spec.ts`, matriz de isolamento, D-029 |
-| UI com sucesso/vazio/erro/409, sem mocks no caminho real | PARCIAL (fatia 1.8): membros, organização, perfis e auth reais; papéis, políticas, âmbitos, Party e conta têm UI real (fatia 1.10, D-049); persistem mocks do core dinâmico e da plataforma | `ng test` (647), E2E no browser (26/26) |
+| Critério                                                                                                              | Estado                                                                                                                                                                                      | Evidência                                                                   |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Isolamento com dois tenants de códigos semelhantes (404, FK composta, RLS, ligação reutilizada, `tenant_id` no corpo) | FEITO (backend)                                                                                                                                                                             | `isolation_matrix.spec.ts`, `tenancy.spec.ts`, `schema_conformance.spec.ts` |
+| Isolamento de cache, jobs, ficheiros, pesquisa, relatórios, exportações, WebSocket                                    | PENDENTE (não existem)                                                                                                                                                                      | só a guarda de prefixos do Redis                                            |
+| C01 tenant suspenso bloqueia por URL directa; domínio duplicado 409                                                   | FEITO                                                                                                                                                                                       | `context.spec.ts`, `tenants.spec.ts`, matriz                                |
+| C04 token expirado/reutilizado, logout, troca de tenant, cookies fora dos logs, recuperação sem revelar email         | FEITO (logs: só redacção + verificação manual)                                                                                                                                              | `auth.spec.ts`, `logger_redaction.spec.ts`, matriz                          |
+| C05 conta única em vários tenants, convite revogado falha, último administrador, `authorizationVersion`               | FEITO                                                                                                                                                                                       | `members.spec.ts`                                                           |
+| C06 sem permissão 403, ID alheio 404, DENY prevalece, simulação não concede                                           | FEITO                                                                                                                                                                                       | `iam.spec.ts`, `authorization_domain.spec.ts`, matriz                       |
+| C06 campo restrito oculto em exportação/pesquisa/auditoria/realtime                                                   | PARCIAL (API e pesquisa de Party; resto não existe)                                                                                                                                         | `party.spec.ts`                                                             |
+| C07 unidade não é pai de si nem de antepassado; centro de custo de outra organização rejeitado                        | FEITO                                                                                                                                                                                       | `organization.spec.ts` (+ FK na base)                                       |
+| C08 fornecedor sem Person; pessoa cliente e colaborador sem duplicar contactos                                        | PARCIAL (Customer/Employee não existem)                                                                                                                                                     | `party.spec.ts`                                                             |
+| Concorrência: convites/membership com limite de utilizadores                                                          | FEITO                                                                                                                                                                                       | `members.spec.ts`                                                           |
+| OpenAPI, regras no servidor, permissões e isolamento testados, migrations/seeds numa base limpa                       | FEITO                                                                                                                                                                                       | paridade OpenAPI↔rotas; migrations (8) e seeder em base limpa               |
+| Auditoria das mutações críticas                                                                                       | FEITO (fatia 2.1)                                                                                                                                                                           | `audit.spec.ts`, matriz de isolamento, D-029                                |
+| UI com sucesso/vazio/erro/409, sem mocks no caminho real                                                              | PARCIAL (fatia 1.8): membros, organização, perfis e auth reais; papéis, políticas, âmbitos, Party e conta têm UI real (fatia 1.10, D-049); persistem mocks do core dinâmico e da plataforma | `ng test` (647), E2E no browser (26/26)                                     |
 
 ### Decisões a tomar antes de começar a Fase 1
+
 1. ~~Nomenclatura de permissões (D-014)~~ — decidida na fatia 1.4.
 2. Se Party (1.7) entra na Fase 1 ou na seguinte.
 3. ~~Mecanismo de hash e de rate limit~~ — decidido na fatia 1.2 (D-019/D-020); MFA fora da Fase 1.
@@ -364,18 +386,20 @@ fechada**: a fatia 1.8 ligou o frontend mas ficou parcial (ver 2.9), a auditoria
 5. Primeiros dois tenants de demonstração (nomes, países/moeda) — parâmetros identificados como demonstração.
 
 ## 2b. Fase 2 — SaaS (em curso)
+
 Sem decomposição prévia no plano; proposta (uma fatia de cada vez, ordem sujeita a confirmação):
 
-| Fatia | Âmbito | Estado |
-| --- | --- | --- |
-| 2.1 | Auditoria mínima (S06): `audit_logs` imutável por triggers, `security_events`, consulta com RBAC e regras de campo | **Concluída** |
-| 2.2 | C02 planos, assinaturas e limites no backend (substitui a quota provisória de convites). Os entitlements provisórios do frontend ficam para depois de 2.3 | **Concluída** (backend) |
-| 2.3 | C03 registo de módulos e funcionalidades por tenant | **Concluída** (backend) |
-| 2.4 | C09 configurações, impostos, unidades e sequências (numeração sem lacunas e concorrente) | **Concluída** (backend) |
-| 2.5 | API de administração da plataforma (C01/C02) | **Concluída** (backend) |
-| 2.6 | Frontend da Fase 2: plataforma (tenants, planos, subscrições), plano, módulos e configurações do tenant; fim dos direitos provisórios | **Concluída** (ver 2b.6) |
+| Fatia | Âmbito                                                                                                                                                    | Estado                   |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| 2.1   | Auditoria mínima (S06): `audit_logs` imutável por triggers, `security_events`, consulta com RBAC e regras de campo                                        | **Concluída**            |
+| 2.2   | C02 planos, assinaturas e limites no backend (substitui a quota provisória de convites). Os entitlements provisórios do frontend ficam para depois de 2.3 | **Concluída** (backend)  |
+| 2.3   | C03 registo de módulos e funcionalidades por tenant                                                                                                       | **Concluída** (backend)  |
+| 2.4   | C09 configurações, impostos, unidades e sequências (numeração sem lacunas e concorrente)                                                                  | **Concluída** (backend)  |
+| 2.5   | API de administração da plataforma (C01/C02)                                                                                                              | **Concluída** (backend)  |
+| 2.6   | Frontend da Fase 2: plataforma (tenants, planos, subscrições), plano, módulos e configurações do tenant; fim dos direitos provisórios                     | **Concluída** (ver 2b.6) |
 
 ### 2b.1 Fatia 2.1 — concluída
+
 **Entregue** (ver D-029): migration `create_audit` (`audit_logs` tenant + imutável; `security_events` global; funções e triggers de
 auditoria sobre 18 tabelas de tenant e de mudança em `users`/`tenants`), `auditTable` nos helpers de migration, GUCs de actor em
 `LucidTenantDatabase.run()`, módulo `core/audit` (redacção, registo de eventos, consulta), permissão `audit.read`, rotas
@@ -389,6 +413,7 @@ auditoria de leitura inexistente; MFA/SSO não existem; desempenho dos triggers 
 `security_events` do utilizador mostra IP apenas nos metadados dos eventos de login.
 
 ### 2b.2 Fatia 2.2 — concluída (backend)
+
 **Entregue** (ver D-030): migration `create_billing` (`plan_versions` imutáveis depois de publicadas, `subscriptions` com uma aberta por
 tenant, `subscription_changes` append-only; remove `tenants.max_members`), módulo `platform/billing` (domínio de limites,
 direitos e transições; casos de uso de planos, atribuição idempotente, mudança de plano com adequação, estados e limite efectivo),
@@ -406,6 +431,7 @@ aceitação de convite simultâneos podem, em teoria, deixar o tenant acima do n
 membros, nada se elimina). Tenants criados antes desta fatia ficam **sem assinatura** (limite 0) até `subscription:assign`.
 
 ### 2b.3 Fatia 2.3 — concluída (backend)
+
 **Entregue** (ver D-031): migration `create_modules` (`modules`, `module_dependencies`, `features` globais; `tenant_modules` e
 `tenant_features` de tenant, auditadas), módulo `platform/modules` (validação do grafo e das versões, activação com dependências,
 desactivação sem apagar, overrides, acesso efectivo), `ResolveEntitlements` no billing, permissões `module.read`/`module.manage`,
@@ -420,6 +446,7 @@ de módulos/funcionalidades contra o registo; sem API de configuração por mód
 `provisional-entitlements.ts` (não ligado a `GET /context`/`/modules`); sem estado `DISABLING` nem tratamento de processos em curso.
 
 ### 2b.4 Fatia 2.4 — concluída (backend)
+
 **Entregue** (ver D-032): migration `create_settings` (`setting_values`, `tax_rates`, `units_of_measure`, `sequences`; RLS, FKs
 compostas, auditoria, unicidade por âmbito e trigger anti-sobreposição de taxas), módulo `core/settings` (definições por código,
 precedência, validação, conversão de unidades exacta, formatação de sequências e `SequenceIssuer`), permissões `settings.read`,
@@ -435,6 +462,7 @@ as chaves fiscais existem mas ainda não há cálculo de impostos; o custo de au
 continua sem ligação a esta API.
 
 ### 2b.5 Fatia 2.5 — concluída (backend)
+
 **Entregue** (ver D-033): migration `create_platform_grants` (concessões imutáveis, revogáveis), módulo `platform/administration`
 (autorização de plataforma, concessões, provisionamento idempotente, ciclo de vida), middleware `platform`, rotas `/api/v1/platform/*`
 (`tenants`, provisionar, estado, `suspend|resume`, `plans` com publicar/retirar, assinatura: ver/atribuir/mudar plano/estado), eventos
@@ -450,6 +478,7 @@ plataforma continua mock (nenhuma UI foi ligada a estas rotas) e `provisional-en
 frontend fica por fazer** e é a lacuna principal da Fase 2.
 
 ### 2b.6 Fatia 2.6 — frontend da Fase 2 (concluída; ver D-034)
+
 **Entregue:** `provisional-entitlements.ts` removido (o contexto traz módulos/funcionalidades do registo e, com `subscription.read`, o plano e
 o consumo); `GET /platform/me` (backend) e `mapPlatformPermissions`; área de plataforma real — painel com contagens reais, tenants
 (provisionar com passos, suspender/reactivar com motivo), planos (criar revisão, publicar, retirar) e subscrições (plano contratado,
@@ -469,23 +498,25 @@ as páginas de papéis, políticas, Party e âmbitos (Fase 1) continuam sem UI r
 (correu-se por script local); o core dinâmico (C10–C15) continua mock.
 
 ## 2c. Fase 3 — motor configurável (em curso)
+
 Decomposição proposta (uma fatia de cada vez, ordem sujeita a confirmação; a especificação não a fixa):
 
-| Fatia | Âmbito | Estado |
-| --- | --- | --- |
-| 3.1 | C10 no backend: entidades, versões imutáveis, campos tipados, registos com únicos concorrentes, sensíveis, propriedade, pesquisa e auditoria; «Viatura» como entidade definida por um tenant | **Concluída** (backend; ver 2c.1) |
-| 3.2 | Frontend de C10: Entity Designer, publicação e listagem/formulário genérico de registos sobre a API (fim do mock do core dinâmico) | **Concluída** (ver 2c.2) |
-| 3.3 | C12 no servidor: campo FORMULA (gramática restrita → AST, ordem topológica, ciclos) e regras de validação por AST (publicação imutável, simulação, avaliações registadas); FORMULA no designer | **Concluída** (ver 2c.3); LOOKUP e a UI de regras ficam por fazer |
-| 3.4 | Editor de regras (UI) sobre `/rules`: construtor de condições, simulação, publicação, revisões e avaliações | **Concluída** (ver 2c.4) |
-| 3.5 | Tipo LOOKUP (valor lido em tempo real de um registo referenciado, com a autorização do destino) | **Concluída** (ver 2c.5) |
-| 3.6 | C11 formulários no servidor (secções, ligações a campos, condições de apresentação, publicação imutável, verificação contra a entidade) e usados pelos registos no frontend | **Concluída** (ver 2c.6); Form Builder visual e submissões por fazer |
-| 3.7 | Form Builder visual sobre `/forms`: secções, arrastar campos, ajuda e condições, pré-visualização, verificação e publicação | **Concluída** (ver 2c.7); teste com papéis simulados por fazer |
-| 3.8 | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox): servidor, estado e acções nos registos | **Concluída** (ver 2c.8); designer visual por fazer |
-| 3.9 | Designer visual de máquinas de estados sobre `/state-machines` (estados, transições, guardas, mapa, verificação, publicação) | **Concluída** (ver 2c.9) |
-| 3.10 | C14 workflows de aprovação, tarefas e delegações: servidor, caixa de aprovações, painel do registo e designer | **Concluída** (ver 2c.10) |
-| 3.11 | C15 automações (servidor, trabalhador e interface) e a prova de «Viatura» ponta a ponta | **Concluída** (ver 2c.11) |
+| Fatia | Âmbito                                                                                                                                                                                         | Estado                                                               |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 3.1   | C10 no backend: entidades, versões imutáveis, campos tipados, registos com únicos concorrentes, sensíveis, propriedade, pesquisa e auditoria; «Viatura» como entidade definida por um tenant   | **Concluída** (backend; ver 2c.1)                                    |
+| 3.2   | Frontend de C10: Entity Designer, publicação e listagem/formulário genérico de registos sobre a API (fim do mock do core dinâmico)                                                             | **Concluída** (ver 2c.2)                                             |
+| 3.3   | C12 no servidor: campo FORMULA (gramática restrita → AST, ordem topológica, ciclos) e regras de validação por AST (publicação imutável, simulação, avaliações registadas); FORMULA no designer | **Concluída** (ver 2c.3); LOOKUP e a UI de regras ficam por fazer    |
+| 3.4   | Editor de regras (UI) sobre `/rules`: construtor de condições, simulação, publicação, revisões e avaliações                                                                                    | **Concluída** (ver 2c.4)                                             |
+| 3.5   | Tipo LOOKUP (valor lido em tempo real de um registo referenciado, com a autorização do destino)                                                                                                | **Concluída** (ver 2c.5)                                             |
+| 3.6   | C11 formulários no servidor (secções, ligações a campos, condições de apresentação, publicação imutável, verificação contra a entidade) e usados pelos registos no frontend                    | **Concluída** (ver 2c.6); Form Builder visual e submissões por fazer |
+| 3.7   | Form Builder visual sobre `/forms`: secções, arrastar campos, ajuda e condições, pré-visualização, verificação e publicação                                                                    | **Concluída** (ver 2c.7); teste com papéis simulados por fazer       |
+| 3.8   | C13 máquinas de estados (transições com `expectedVersion`, histórico, outbox): servidor, estado e acções nos registos                                                                          | **Concluída** (ver 2c.8); designer visual por fazer                  |
+| 3.9   | Designer visual de máquinas de estados sobre `/state-machines` (estados, transições, guardas, mapa, verificação, publicação)                                                                   | **Concluída** (ver 2c.9)                                             |
+| 3.10  | C14 workflows de aprovação, tarefas e delegações: servidor, caixa de aprovações, painel do registo e designer                                                                                  | **Concluída** (ver 2c.10)                                            |
+| 3.11  | C15 automações (servidor, trabalhador e interface) e a prova de «Viatura» ponta a ponta                                                                                                        | **Concluída** (ver 2c.11)                                            |
 
 ### 2c.1 Fatia 3.1 — C10 no backend (concluída; ver D-035)
+
 **Entregue:** migration `create_metadata` (5 tabelas de tenant com RLS, FKs compostas e auditoria; triggers de imutabilidade de versões
 publicadas e campos), módulo `dynamic/metadata` (domínio: matriz de tipos, validação/normalização de valores, decimais exactos, compatibilidade
 entre versões, unicidade, referências, pesquisa; aplicação: definição de entidades com rascunho/pré-visualização/publicação/arquivo e registos
@@ -503,6 +534,7 @@ mecanismo de migração de dados, por isso alterações incompatíveis só se fa
 das permissões `dynamic.{código}.*` face à especificação aguarda decisão. Não foi feito teste de carga nem E2E no browser (não há UI).
 
 ### 2c.2 Fatia 3.2 — C10 no frontend (concluída; ver D-036)
+
 **Entregue:** gateways HTTP de definições e de registos (`core/dynamic/http`) e tradução num só ponto (`dynamic-mapper.ts`); designer de entidades, listagem
 (paginação, ordenação, pesquisa e filtros no servidor), formulário, detalhe e histórico de auditoria sobre a API real; `/t/:slug/entities` no menu e nas
 rotas do tenant; tipos do designer limitados aos do servidor (`DESIGNER_FIELD_TYPES`); permissões `entity.*` traduzidas para as páginas; fim dos dados
@@ -525,6 +557,7 @@ Core Dinâmico foi ligado — formulários (C11), regras (C12), estados (C13), w
 que esconde um campo pesquisável não pode usar a pesquisa (422).
 
 ### 2c.3 Fatia 3.3 — fórmulas e regras no servidor (concluída; ver D-037)
+
 **Servidor.** Campo `FORMULA` (migration 15): expressão em gramática restrita (`+ - * /`, `round/min/max/abs`, até 500 caracteres/100 nós/profundidade 20) convertida em AST
 na gravação; cálculo em ponto fixo (BigInt) no servidor, em ordem topológica, no fim da validação do registo; ciclos, referências inexistentes/arquivadas/não numéricas e
 fórmulas que expõem campos sensíveis são recusadas ao gravar o rascunho e ao publicar. Módulo `app/dynamic/rules` (migration 16): regras `VALIDATE`→`BLOCK` com condição na AST de
@@ -535,6 +568,7 @@ permissões, rascunho/publicada/desactivada, revisões, janela de vigência, pri
 **Não verificado:** E2E em browser com campo FORMULA (só testes unitários dos mappers; o servidor está coberto por testes funcionais).
 
 ### 2c.4 Fatia 3.4 — editor de regras (concluída; ver D-038)
+
 **Frontend.** Página `/t/:slug/entities/:entityKey/regras` (`features/dynamic-core/rules`), ligada ao detalhe da entidade; permissões `rule.read`/`rule.manage` traduzidas para `configuration.rules.*`.
 Lista as revisões de cada regra com mensagem, prioridade, vigência e estado; cria e edita rascunhos (construtor de condições: comparações de campos ligadas por «e»/«ou», «preenchido»/«vazio»);
 publica, desactiva e abre revisões (`expectedVersion`); simula com valores de exemplo (só os campos que a condição lê) e consulta as avaliações recusadas. Uma condição que o construtor
@@ -545,6 +579,7 @@ o servidor bloquear a gravação de um registo com a mensagem, gravar com valor 
 LOOKUP continua por fazer (fatia 3.5); sem remoção de rascunhos (a API não a tem).
 
 ### 2c.5 Fatia 3.5 — valores relacionados, LOOKUP (concluída; ver D-039)
+
 **Servidor.** Campo `LOOKUP` (migration 17) com `validation {relationField, sourceField, onMissing}`; o servidor acrescenta `sourceType` e `scale` do campo de origem. **Nunca se guarda**: lê-se do registo de origem
 em cada `GET`/listagem/escrita (`LookupReader`), segundo a **versão em vigor** da entidade (os registos antigos também o mostram). Só aparece a quem pode ler o registo de origem (permissão `dynamic.read`, modo
 OWNER/`dynamic.all`, políticas ABAC da entidade de destino, regras de campo `HIDDEN`) e, se a origem for sensível, a quem tem `dynamic.sensitive`; caso contrário `null`. Definição verificada ao gravar o rascunho e
@@ -557,6 +592,7 @@ ver o valor (decimal formatado) na lista e no detalhe, incluindo num registo esc
 mostra vazio (a publicação do destino não verifica quem o usa); N leituras por página de resultados (uma por registo de origem distinto, sem cache entre pedidos); `snapshot` (cópia ao gravar) não existe.
 
 ### 2c.6 Fatia 3.6 — formulários (concluída; ver D-040)
+
 **Servidor.** Módulo `app/dynamic/forms` (migration 18, `form_definitions`): formulário por entidade e código, revisões `DRAFT → PUBLISHED → RETIRED`, publicada imutável (trigger; só passa a `RETIRED`), um rascunho e
 uma publicada por código, `schema_revision` com a revisão da entidade verificada. Layout = secções (`columns` 1–3, `visibleWhen`) com ligações a campos **por código** (`span`, `label`, `placeholder`, `help`,
 `visible`, `editable`, `required`, `visibleWhen/editableWhen/requiredWhen`); condições declarativas (`eq…lte`, `in/nin`, `empty/notEmpty`, `and/or/not`; ≤ 8 níveis, ≤ 50 nós). Rascunho só precisa de estar bem
@@ -570,6 +606,7 @@ secções e título, rótulo/ajuda do formulário, secção condicionada, campo 
 `span`/`columns` até 3 (a spec fala em 1–12 para a largura) — ver D-040.
 
 ### 2c.7 Fatia 3.7 — Form Builder (concluída; ver D-041)
+
 **Frontend** (`features/dynamic-core/forms`; servidor inalterado). Página `/t/:slug/entities/:entityKey/formularios` ligada ao detalhe da entidade; permissões `form.read|design|publish` traduzidas para `configuration.form-layouts.*`.
 Lista as revisões (modos, por omissão, estado, «com problemas») e permite criar formulários, editar o rascunho, abrir nova revisão, publicar e retirar. O editor: nome, código, descrição, modos e «por omissão»; secções (título, 1–3 colunas, condição
 de visibilidade, subir/descer/remover); campos ligados por código com **arrastar e largar** (e botões subir/descer para teclado) entre secções; por campo, rótulo, ajuda, texto de exemplo, largura, escondido/só leitura/obrigatório e as
@@ -581,6 +618,7 @@ guardar, verificar, publicar, uso do formulário nos registos (rótulo, ajuda e 
 ecrã (só limita a largura); sem teste com papéis simulados; sem grupos nem valores por omissão por formulário; arrastar só com rato (os botões cobrem o teclado); sem `@angular/cdk` (sem ADR para nova dependência).
 
 ### 2c.8 Fatia 3.8 — máquinas de estados (concluída; ver D-042)
+
 **Servidor.** Módulo `app/dynamic/states` (migrations 19–20): `state_machines` (revisões DRAFT → PUBLISHED → RETIRED, estados e transições em JSON validado, imutável depois de publicada, **uma em vigor por entidade**), `record_states` (o estado
 de cada registo e a sua `version`, à parte dos registos), `state_history` (só de acrescentar) e `outbox_events` (módulo `core/outbox`). Estados: `code`, `label`, `category` (INITIAL/ACTIVE/FINAL/CANCELLED), `editable`, `color`. Transições: `from[]`, `to`, `permission?` (do catálogo),
 `guard?` (condição das políticas de acesso sobre `resource.<campo não sensível>`/`subject.*`/`env.now`), `reasonRequired`. Publicar verifica: um só estado inicial, estados alcançáveis, nenhuma saída de um estado final/cancelado, guardas contra a entidade, permissões conhecidas e que nenhum
@@ -594,6 +632,7 @@ transição, guarda que esconde «Concluir», motivo obrigatório, estado final 
 guarda por transição, sem `action_code`; categorias semânticas fiscais/financeiras/de stock não aplicam efeitos (por desenho: nenhum estado emite documentos); a guarda lê os dados que a pessoa pode ver (campos escondidos/sensíveis não contam); a listagem de registos não mostra o estado.
 
 ### 2c.9 Fatia 3.9 — designer de máquinas de estados (concluída; ver D-043)
+
 **Frontend** (`features/dynamic-core/states`; servidor inalterado). Página `/t/:slug/entities/:entityKey/estados` ligada ao detalhe da entidade; `state.read|design|publish` → `configuration.state-machines.*`. Lista as revisões (conteúdo, estado, «com problemas») e permite criar, editar o rascunho,
 abrir nova revisão, publicar e retirar. O editor: nome, código e descrição; **estados** (rótulo, código que acompanha o rótulo enquanto for gerado, categoria, «aceita alterações de valores», cor, «tornar inicial» — há sempre um só inicial — e remover, que ajusta as transições e avisa);
 **transições** (rótulo, código, origens por caixas, destino, permissão adicional do catálogo, «exige um motivo» e **guarda** construída com comparações de campos ligadas por «e»/«ou», a mesma gramática das regras; guardas mais ricas ficam descritas como «avançadas» e preservadas; só campos não sensíveis);
@@ -604,6 +643,7 @@ publicar, registo novo no estado inicial desenhado, guarda a oferecer/esconder �
 **Não verificado / limites:** o E2E correu por script local; o mapa é uma lista (sem diagrama gráfico); o código de um estado em uso por registos não se pode alterar numa revisão (o servidor recusa a publicação); a permissão adicional é texto livre validado pelo servidor (sem lista do catálogo); sem arrastar para reordenar estados.
 
 ### 2c.10 Fatia 3.10 — workflows de aprovação, tarefas e delegações (concluída; ver D-044)
+
 **Servidor.** Módulo `app/dynamic/workflows` (migration 21): `workflow_definitions` (revisões DRAFT → PUBLISHED → RETIRED, `graph` em JSON validado, imutável depois de publicada por trigger, uma publicada por entidade e código), `workflow_instances` (registo, `resource_version`, `submitted_snapshot`, revisão usada, estado, motivo do fim; **um só processo em curso por registo**),
 `workflow_tasks` (uma por responsável: pessoa ou papel; `OPEN → CLAIMED → APPROVED/REJECTED/RETURNED/CANCELLED`, `due_at`, quem decidiu e por que delegação) e `approval_delegations`; instâncias e tarefas terminadas são imutáveis por trigger. A definição é uma sequência de **etapas** com responsáveis, critério `ALL`/`ANY`/`QUORUM`, prazo em horas, condição AST de aplicação e `allowSelfApproval`
 (+ `amountField`/`currencyField`). Publicar verifica condições, campos e responsáveis resolvíveis. API: `/workflows` (+ `preview`, `publish`, `retire`, `revisions`; `workflow.read|design|publish`), `GET /dynamic/{entity}/workflows` (o que se pode submeter), `POST /workflow-instances` (`workflow.submit`), `GET /workflow-instances[/{id}]`, `POST …/cancel`,
@@ -619,6 +659,7 @@ matriz de isolamento estendida a todas as rotas e tabelas; paridade do OpenAPI) 
 qualquer alteração do registo cancela o processo; o aprovador vê o `snapshot` sem precisar de `dynamic.read` (a confirmar); sem lista de «workflows» na listagem dos registos; o utilizador de um registo precisa de `entity.read` para a interface carregar a entidade (limitação anterior do registo de entidades no cliente).
 
 ### 2c.11 Fatia 3.11 — automações e «Viatura» de ponta a ponta (concluída; ver D-045)
+
 **Servidor.** Módulo `app/dynamic/automations` (migration 22): `automations` (gatilho único: evento ou calendário com fuso; condição AST; acções; estado DRAFT/ACTIVE/PAUSED; versão a cada alteração; membro de execução; próxima execução), `automation_runs` (chave de deduplicação única, estado PENDING/RUNNING/SUCCEEDED/FAILED/DEAD, tentativas, progresso, profundidade e execução causadora, erro, quem reprocessou), `outbox_deliveries` (inbox) e, no outbox,
 `causation_run_id`/`causation_depth`. Os módulos de estados e de workflows registam os seus eventos e acções no catálogo. O motor (`AutomationEngine`) despacha os eventos novos e os calendários vencidos e executa as execuções devidas (bloqueio `SKIP LOCKED`, recuperação de execuções presas), em nome de quem activou; `automation:work` percorre os tenants operacionais. API: `GET /automations/catalog`, `/automations`
 (+ `activate`, `pause`, `simulate`; `automation.read|manage`), `/automation-runs` e `POST /automation-runs/{id}/retry`.
@@ -632,24 +673,26 @@ registo concluído em nome de quem activou, histórico, pausa que bloqueia execu
 **Não verificado / limites:** o E2E correu por script local (`e2e311.mjs`, só na pasta temporária da sessão); a prova de «Viatura» é um teste de API — o registo, a pesquisa e a auditoria **na interface** já foram verificados em browser nas fatias anteriores mas não se repetiram aqui; o trabalhador é um processo à parte (não arranca com a API); sem acções de notificação ou de tarefas, sem retenção da inbox nem das execuções,
 at-least-once sem idempotência própria das acções, e um calendário só dispara com o trabalhador a correr (D-045).
 
-## 2d. Fase 4 — comércio e inventário (em curso; fatias 4.1–4.8, 5.1 e 5.2 concluídas)
+## 2d. Fase 4 — comércio e inventário (em curso; fatias 4.1–4.8, 5.1, 5.2 e 6.1 concluídas)
+
 A especificação (F4) pede M01 a M08 e S01 «em fatias: catálogo/clientes, propostas/encomendas, expedições, faturas/créditos, compras/recepções e inventário», com testes dos fluxos 9.3 e 9.4 (operações parciais e reversões) e sem confundir confirmação, reserva, expedição, emissão e recebimento. A decomposição abaixo é **proposta** (a especificação não a fixa; sujeita a confirmação):
 
-| Fatia | Âmbito | Estado |
-| --- | --- | --- |
-| 4.1 | M03 catálogo: categorias, produtos, variantes (SKU), tabelas de preços e resolução de preço; primeiro módulo de negócio no registo (`catalog`) | **Concluída** (ver 2d.1 e D-046) |
-| 4.2 | M01 clientes (sobre a Party), segmentos e interacções | **Concluída** (ver 2d.2 e D-047) |
-| 4.3 | M04 propostas e encomendas (preço em snapshot, confirmação ≠ reserva) | **Concluída** (ver 2d.3 e D-048) |
-| 4.4 | M07 armazéns, movimentos de stock rastreáveis, lotes e reservas | **Concluída** (ver 2d.4 e D-050) |
-| 4.5 | M04 expedições (baixa de stock) | **Concluída** (ver 2d.5 e D-051) |
-| 4.6 | M05 contratos, faturas e notas de crédito (S01: documentos emitidos) | **Concluída** (ver 2d.6 e D-052) |
-| 4.7 | M06 fornecedores, requisições e compras/recepções | **Concluída** (ver 2d.7 e D-053) |
-| 4.8 | M08 transferências, inventários físicos e devoluções | **Concluída** (ver 2d.9 e D-055) |
-| 5.1 | M09 tesouraria, contas a receber e a pagar; crédito do cliente e três vias | **Concluída** (ver 2d.8 e D-054) |
-| 5.2 | M09 conciliação bancária (extractos, correspondências) | **Concluída** (ver 2d.10 e D-056) |
-| (a seguir) | M02 leads, oportunidades e campanhas | Por fazer |
+| Fatia | Âmbito                                                                                                                                         | Estado                            |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| 4.1   | M03 catálogo: categorias, produtos, variantes (SKU), tabelas de preços e resolução de preço; primeiro módulo de negócio no registo (`catalog`) | **Concluída** (ver 2d.1 e D-046)  |
+| 4.2   | M01 clientes (sobre a Party), segmentos e interacções                                                                                          | **Concluída** (ver 2d.2 e D-047)  |
+| 4.3   | M04 propostas e encomendas (preço em snapshot, confirmação ≠ reserva)                                                                          | **Concluída** (ver 2d.3 e D-048)  |
+| 4.4   | M07 armazéns, movimentos de stock rastreáveis, lotes e reservas                                                                                | **Concluída** (ver 2d.4 e D-050)  |
+| 4.5   | M04 expedições (baixa de stock)                                                                                                                | **Concluída** (ver 2d.5 e D-051)  |
+| 4.6   | M05 contratos, faturas e notas de crédito (S01: documentos emitidos)                                                                           | **Concluída** (ver 2d.6 e D-052)  |
+| 4.7   | M06 fornecedores, requisições e compras/recepções                                                                                              | **Concluída** (ver 2d.7 e D-053)  |
+| 4.8   | M08 transferências, inventários físicos e devoluções                                                                                           | **Concluída** (ver 2d.9 e D-055)  |
+| 5.1   | M09 tesouraria, contas a receber e a pagar; crédito do cliente e três vias                                                                     | **Concluída** (ver 2d.8 e D-054)  |
+| 5.2   | M09 conciliação bancária (extractos, correspondências)                                                                                         | **Concluída** (ver 2d.10 e D-056) |
+| 6.1   | M02 leads, oportunidades, pipeline e campanhas; transacção partilhada entre casos de uso                                                       | **Concluída** (ver 2d.11 e D-057) |
 
 ### 2d.1 Fatia 4.1 — catálogo (M03; concluída, ver D-046)
+
 **Mapa.** Backend `app/modules/catalog` (domain, application, infrastructure, presentation; migration 23): `product_categories` (árvore), `products` (GOODS/SERVICE, unidade base, rastreio NONE/LOT/SERIAL), `product_variants` (SKU único por tenant, código de barras único quando existe, atributos, uma variante por omissão),
 `price_lists` (organização, moeda, validade, IVA incluído, prioridade) e `price_list_items` (escalão `min_quantity` > 0, `unit_price` money, `max_discount` 0..1; único por tabela+variante+escalão). Permissões `catalog.read|manage` e `price.read|manage`; rotas atrás de `middleware.feature` (`catalog.products`, `catalog.prices`) e do manifesto `catalog` no registo de módulos.
 API: `/product-categories`, `/products`, `/products/{id}/variants`, `/variants`, `/price-lists`, `/price-lists/{id}/items` e `GET /prices/resolve`. Frontend: módulo «Catálogo e preços» com produtos e variantes, categorias, tabelas de preços e o simulador de preço.
@@ -659,65 +702,83 @@ API: `/product-categories`, `/products`, `/products/{id}/variants`, `/variants`,
 **Não verificado / limites:** o E2E correu por script local (`e2e41.mjs`, só na pasta temporária da sessão) e a base de desenvolvimento recebeu apenas a migration 23 e um plano de demonstração (`demo_catalog`) para os tenants `demo_a`/`demo_b`; **o bloqueio por movimentos de stock está provado só com uma guarda de teste** (não há inventário até à 4.4); nenhum documento usa ainda o preço em snapshot (4.3); sem desactivação de categorias, sem editar variantes nem itens de preço na interface, sem promoções, preços por cliente/segmento, importação nem imagens (D-046). A decomposição da Fase 4 continua uma **proposta** à espera de confirmação.
 
 ### 2d.2 Fatia 4.2 — clientes (M01; concluída, ver D-047)
+
 **Mapa.** Backend `app/modules/customers` (migration 24): `customer_segments`, `customers` (Party + organização, condições comerciais, estado `ACTIVE|BLOCKED|INACTIVE`) e `interactions` (sobre a Party). Permissões `customer.read|create|update|block|credit_manage`; rotas `/customers`, `/customers/{id}/block|unblock`, `/customer-segments`, `/interactions` atrás de `middleware.feature` (`customers.accounts`, `customers.interactions`). Frontend: o módulo `crm.customers` (que passa a apontar ao módulo `customers` do servidor) ganha a página «Clientes» (lista com pesquisa e filtros, cadastro sobre Party existente ou criação guiada, crédito, bloqueio com motivo, contactos, interacções) e os segmentos.
 **Aceitação (spec M01).** Um cliente partilha a Party (não a duplica; a mesma Party em duas organizações são dois clientes); o operador sem acesso financeiro não vê o limite de crédito; um cliente bloqueado continua a poder ser regularizado e só recusa novas confirmações de venda (`assertSaleAllowed`).
 **Verificação (fatia 4.2).** Backend: lint, format, typecheck, `npm test` (516 testes: 8 unitários do domínio, 11 funcionais — Party partilhada e duplicada, ids/referências de outro tenant, pesquisa e filtros, crédito por permissão, bloqueio e `assertSaleAllowed`, interacções, permissões e módulo desligado, auditoria — e a matriz de isolamento e a paridade do OpenAPI estendidas) com a migration 24 subida e descida numa base limpa. Frontend: lint, format, `check:generic`, `ng test` (870) e build. E2E em browser real sobre a API real (12 verificações, zero erros de página): segmento, cliente com criação guiada da organização (e do NIF), crédito, recusa da mesma Party na mesma organização, pesquisa por NIF, bloqueio com motivo e desbloqueio, interacção na linha do tempo e isolamento (404 e lista vazia no outro tenant). O E2E apanhou que a criação guiada de uma organização com NIF falhava (a Party exige o país da identificação fiscal) e que a mensagem genérica «Verifique os campos» escondia a causa — corrigidos (país da organização vendedora; a interface mostra agora as mensagens por campo).
 **Não verificado / limites:** o E2E correu por script local (`e2e42.mjs`, só na pasta temporária da sessão); a visão sem crédito está provada por testes de API e de componente, **não** em browser (exigiria outro utilizador); **não há verificação de crédito nem saldo** (4.6); a interface só regista interacções dentro de um cliente; a base de desenvolvimento recebeu a migration 24 e uma nova revisão do plano `demo_catalog` (módulo `customers`) para `demo_a`/`demo_b`; o desvio `customer.credit_manage` está por reconciliar com a especificação.
 
 ### 2d.3 Fatia 4.3 — propostas e encomendas (M04; concluída, ver D-048)
+
 **Mapa.** Backend `app/modules/orders` (migration 25): `sales_quotes`, `sales_orders` e `sales_lines` (instantâneo de preço, imposto e totais; linhas imutáveis fora do rascunho por trigger). Permissões `quote.read|manage`, `order.read|manage`, `sales.confirm`; rotas `/quotes` (linhas, `send`, `reject`, `accept`) e `/sales-orders` (linhas, `confirm`, `cancel`) atrás de `middleware.feature` (`orders.quotes`, `orders.orders`). Eventos de outbox `sales.quote.accepted`, `sales.order.confirmed`, `sales.order.cancelled`. Frontend: o módulo `sales.orders` («Orçamentos e vendas») ganha a página «Propostas e encomendas».
 **Aceitação (spec M04, o que esta fatia cobre).** Confirmar duas vezes (ou em concorrência) não duplica nada — um número, um evento; uma proposta aceite converte-se por comando idempotente; o preço da linha não muda quando o catálogo muda; confirmação ≠ reserva ≠ expedição ≠ factura; cliente bloqueado não recebe novas confirmações; uma verificação registada (stock) pode recusar a confirmação sem deixar a encomenda confirmada. **Fica para as fatias seguintes:** entrega parcial e saldo (4.5), stock insuficiente e reservas reais (4.4), crédito na confirmação (4.6) — as duas últimas ligam-se por `registerConfirmationCheck` e pelo evento `sales.order.confirmed`.
 **Verificação (fatia 4.3).** Backend: lint, format, typecheck, build e `npm test` (541 testes: 10 unitários da aritmética e do domínio, 15 funcionais — preço/escalão/imposto vindos do servidor, instantâneo e imutabilidade por SQL, envio e numeração, aceitação idempotente, expiração, confirmação idempotente e concorrente, verificações que recusam, bloqueio de cliente, cancelamento, permissões, módulo desligado, auditoria e isolamento — e a matriz de isolamento e a paridade do OpenAPI estendidas) com a migration 25 subida e descida numa base limpa. Frontend: lint, format, `check:generic`, `ng test` (885) e build. E2E em browser real sobre a API real (17 verificações, zero erros de página): proposta com duas linhas (escalão de 10 e desconto) e totais exactos do servidor, desconto acima do máximo recusado, envio com número, aceitação, encomenda com os mesmos totais, morada, confirmação com o aviso de que não reserva nem expede, cancelamento com motivo, cliente bloqueado a recusar a confirmação (a encomenda continua rascunho, sem número) e isolamento (404 no outro tenant).
 **Não verificado / limites:** o E2E correu por script local (`e2e43.mjs`, só na pasta temporária da sessão); o gancho das verificações de confirmação está provado com uma verificação de teste (não há inventário nem finanças); a expiração foi testada alterando a validade por SQL (não há relógio simulado); a base de desenvolvimento recebeu a migration 25 e uma nova revisão do plano `demo_catalog` (módulo `orders`) para `demo_a`/`demo_b`; ver os limites de D-048 (sem crédito, stock, filiais, preços manuais, PDF, edição de linhas na interface).
 
 ### 2d.4 Fatia 4.4 — inventário (M07; concluída, ver D-050)
+
 **Mapa.** Backend `app/modules/inventory` (migration 26): `warehouses`, `stock_locations`, `lots`, `stock_balances`, `stock_movements` (só de acrescentar), `stock_costs` (custo médio) e `stock_reservations`. Permissões `inventory.read|adjust|reserve` e `warehouse.manage`; rotas `/warehouses`, `/stock-locations`, `/lots`, `/stock-balances`, `/stock-movements` (+ `/reverse`), `/stock-adjustments` e `/stock-reservations` (+ `/release`, `/expire`); módulo `inventory` no registo (`inventory.warehouses`, `inventory.stock`). Ligações: efeitos de confirmação/cancelamento nas encomendas (`registerOrderEffects`, `start/modules.ts`) e verificação de movimentos no catálogo. Frontend `features/business/inventory/stock` (separadores Stock, Movimentos, Reservas, Armazéns, Lotes).
 **Aceitação (spec M07, o que esta fatia cobre).** Duas saídas concorrentes não tornam o saldo negativo quando proibido; repetir a origem não duplica o movimento; a soma do livro reconcilia com o saldo; confirmar duas vezes não duplica a reserva; stock insuficiente não deixa a encomenda confirmada (nem gasta o número); cancelar liberta as reservas.
 **Verificação (fatia 4.4).** Backend: lint, format, typecheck e `npm test` (573 testes: +10 unitários — decimais, custo médio, validação — e +22 funcionais — armazéns/locais/lotes, ajustes e reversões, concorrência, idempotência, reservas, encomendas com FEFO e backorder, permissões, isolamento e auditoria; a matriz de isolamento e a paridade do OpenAPI cobrem as rotas e tabelas novas; migrations subidas e descidas numa base limpa). Frontend: lint, format, `check:generic`, `ng test` (974) e build. E2E em browser real (`e2e44.mjs`, script local na pasta temporária da sessão; 22 verificações): criar armazém e local, armazém de vendas, ajuste com custo, confirmar encomenda (reserva 3, disponível 7), saída acima do disponível recusada, reversão recusada abaixo do reservado e aceite depois de cancelar a encomenda, lote, isolamento do tenant B.
 **Não verificado / limites:** o E2E correu por script local; não há expedição que consome reservas (4.5), nem recepções (4.7), transferências e inventários físicos (4.8); números de série recusados; sem trabalhador que expire reservas; os testes de concorrência usam o servidor de testes num só processo; em desenvolvimento é preciso correr `node ace iam:sync` e `modules:sync` para o novo módulo e as novas permissões.
 
 ### 2d.5 Fatia 4.5 — expedições (M04; concluída, ver D-051)
+
 **Mapa.** Backend (módulo `orders`, migration 27): `shipments` e `shipment_lines` (imutáveis depois de lançadas, por trigger); permissões `shipment.read|manage|post`; funcionalidade `orders.shipments`; rotas `/shipments` (+ `/lines`, `/post`, `/reverse`); `GET /sales-orders/{id}` passa a trazer `shippedQty` por linha; efeitos `registerShipmentEffects` implementados pelo inventário (`ShipmentStock`: consumir reservas, stock livre FEFO, reverter). Frontend: separador «Expedições» em «Propostas e encomendas» (criar com saldo proposto, lançar, reverter, apagar rascunho) e coluna «Expedida» nas linhas da encomenda.
 **Aceitação (spec M04, o que esta fatia cobre).** Entrega parcial deixa o saldo correcto; confirmar ≠ reservar ≠ expedir (a confirmação reserva, a expedição baixa); a soma lançada nunca ultrapassa a linha, mesmo em concorrência; lançar duas vezes não baixa duas vezes; reverter repõe stock e saldo; stock insuficiente não deixa a expedição lançada.
 **Verificação (fatia 4.5).** Backend: lint, format, typecheck e `npm test` (589 testes: +4 unitários do domínio e +12 funcionais — rascunho/validações, parcial → concluída, idempotência e imutabilidade por SQL, concorrência (3 rascunhos de 6 sobre 10), falta de stock, lotes, serviços e sem armazém de vendas, sequência em falta, reversão, permissões, feature, auditoria e isolamento; a matriz e a paridade do OpenAPI cobrem as rotas e tabelas novas; migrations subidas e descidas). Frontend: lint, format, `ng test` (983) e build. E2E em browser real (`e2e45.mjs`, script local na pasta temporária; 19 verificações): 4 de 10 (stock 6/reservado 6, encomenda parcial, coluna «Expedida»), os 6 restantes (stock 0, encomenda concluída), reversão com motivo (stock reposto, encomenda parcial), segunda expedição que excede o saldo recusada pelo servidor, isolamento do tenant B.
 **Não verificado / limites:** o E2E correu por script local; sem escolha manual de lote/local nem números de série; sem facturação (4.6) nem devoluções (4.8); a reversão não restaura reservas; os testes de concorrência usam o servidor de testes num só processo; em desenvolvimento é preciso `modules:sync` e `iam:sync` e uma sequência `SHIPMENT` por organização (sem ela lançar falha por inteiro).
 
 ### 2d.6 Fatia 4.6 — contratos, facturas e notas de crédito (M05; concluída, ver D-052)
+
 **Mapa.** Backend (módulo `invoicing`, migration 28): `contracts`, `invoices`, `invoice_lines`, `credit_notes` e `credit_note_lines` (imutáveis depois de emitidos, por trigger); permissões `invoice.read|manage|issue`, `credit_note.manage|issue`, `contract.read|manage`; funcionalidades `invoicing.contracts` e `invoicing.invoices`; rotas `/contracts` (+ `/activate`, `/terminate`), `/invoices` (+ `/lines`, `/issue`), `/credit-notes` (+ `/lines`, `/issue`) e `GET /sales-orders/{id}/billable`; sequências `INVOICE`, `CREDIT_NOTE` e `CONTRACT` por organização. Frontend: página «Facturação e contratos» (`sales/billing`: separadores Facturas, Notas de crédito e Contratos) ligada ao módulo `sales.billing`.
 **Aceitação (spec M05/S01, o que esta fatia cobre).** Uma factura emitida não se altera (nem pela API nem por SQL); emitir é atómico e idempotente (um número, um evento); o cliente e a morada ficam fixados ao emitir; facturar segue o expedido (bens com stock) ou o encomendado (serviços) e nunca duas vezes a mesma quantidade, mesmo em concorrência; a nota de crédito nunca excede o facturado e não devolve stock; o contrato activo tem campos bloqueados e o estado «expirado» é derivado.
 **Verificação (fatia 4.6).** Backend: lint, format, typecheck, build e `npm test` (620 testes: +12 unitários do domínio e +19 funcionais — emissão com totais exactos e instantâneo, idempotência, imutabilidade por SQL, vazia/vencimento, elegibilidade parcial por expedição e serviços, concorrência de emissão e de notas, creditar repõe o facturável sem mexer no stock, contratos, permissões, feature, auditoria e isolamento; a matriz e a paridade do OpenAPI cobrem as rotas e tabelas novas; migrations subidas e descidas). Frontend: lint, format, check:generic, `ng test` (1001) e build. E2E em browser real (`e2e46.mjs`, script local na pasta temporária; 25 verificações): factura de uma encomenda (4 expedidos + 1 serviço, quantidade acima recusada, totais, emissão, instantâneo), nota de crédito parcial (facturável reposto, stock inalterado, excesso recusado), factura de linhas livres (isenção exige motivo), contrato (data inválida, activar, terminar), isolamento do tenant B.
 **Não verificado / limites:** o E2E correu por script local; **não há verificação de crédito** na confirmação da encomenda nem recebíveis (Finanças) — o estado de pagamento não existe; sem certificação fiscal, PDF/SAF-T nem facturação recorrente; a política de arredondamento fixada na factura é a vigente ao emitir (as linhas foram calculadas ao criar o rascunho); a UI não permite editar o motivo de uma nota nem a contraparte de um contrato; os testes de concorrência usam o servidor de testes num só processo; em desenvolvimento é preciso `modules:sync`, `iam:sync`, um plano com o módulo `invoicing` e as sequências `INVOICE`, `CREDIT_NOTE` e `CONTRACT` por organização.
 
 ### 2d.7 Fatia 4.7 — compras (M06; concluída, ver D-053)
+
 **Mapa.** Backend (módulo `procurement`, migration 29): `suppliers`, `purchase_requisitions` + `requisition_lines`, `purchase_orders` + `purchase_lines`, `goods_receipts` + `goods_receipt_lines` (imutáveis depois de submetidas, confirmadas ou lançadas, por trigger); permissões `supplier.*`, `requisition.*`, `purchase.*` e `receipt.*`; funcionalidades `procurement.suppliers|requisitions|orders|receipts`; rotas `/suppliers`, `/purchase-requisitions` (+ `/lines`, `/submit`, `/approve`, `/reject`, `/convert`), `/purchase-orders` (+ `/lines`, `/confirm`, `/cancel`) e `/goods-receipts` (+ `/lines`, `/post`, `/reverse`); sequências `PURCHASE_REQUISITION`, `PURCHASE_ORDER` e `GOODS_RECEIPT`; efeito `registerReceiptEffects` implementado pelo inventário (`ReceiptStock`: entrada ao custo da linha, lote, reversão). Frontend: página «Compras» (`procurement/purchasing`: Fornecedores, Requisições, Encomendas, Recepções).
 **Aceitação (spec M06, o que esta fatia cobre).** A recepção parcial deixa o saldo correcto e a encomenda segue `ORDERED → PARTIAL → RECEIVED`; a soma lançada nunca ultrapassa a linha, mesmo em concorrência; lançar duas vezes não dá entrada duas vezes; a entrada de stock é ao custo da encomenda; quem pede uma requisição não a aprova; uma encomenda confirmada ou uma recepção lançada não se altera (nem por SQL); reverter uma recepção cujo stock já foi consumido é recusado sem alterar nada.
 **Verificação (fatia 4.7).** Backend: lint, format, typecheck, build e `npm test` (643 testes: +8 unitários do domínio e +16 funcionais — fornecedores (duplicados, imutáveis, bloqueio), encomendas (totais exactos, confirmação idempotente, imutabilidade por SQL, cancelamento), recepções (parcial → recebida, idempotência, validações, concorrência 6+6 sobre 10, lotes e serviços, reversão e stock consumido), requisições (fluxo completo, segregação, conversão idempotente, rejeição), permissões, feature, auditoria e isolamento; a matriz e a paridade do OpenAPI cobrem as rotas e tabelas novas; migrations subidas e descidas). Frontend: lint, format, check:generic, `ng test` (1014) e build. E2E em browser real (`e2e47.mjs`, script local na pasta temporária; 28 verificações): fornecedor (criar, bloquear com motivo, API recusa encomenda, reactivar), encomenda (custo inválido, totais 50 + 7 = 57, confirmar), recepções (4 + 6 de 10: stock e estado, custo 5,0000, reverter com motivo, reversão recusada com o stock consumido), requisição (submeter e auto-aprovação recusada) e isolamento do tenant B.
 **Não verificado / limites:** o E2E correu por script local; **aprovar e converter uma requisição não foram exercidos no browser** (só há administradores de demonstração e quem pede não aprova; o fluxo está coberto por testes funcionais e de componente); sem pedidos de cotação, três vias, contas a pagar nem devoluções ao fornecedor (4.8); custo e taxa são manuais por linha; unidade de compra = unidade base; os testes de concorrência usam o servidor de testes num só processo; em desenvolvimento é preciso `modules:sync`, `iam:sync`, um plano com o módulo `procurement` e as sequências `PURCHASE_REQUISITION`, `PURCHASE_ORDER` e `GOODS_RECEIPT` por organização.
 
 ### 2d.8 Fatia 5.1 — tesouraria, contas a receber e a pagar (M09; concluída, ver D-054)
+
 **Mapa.** Backend (módulo `finance`, migration 30): `treasury_accounts`, `receivables`, `payables`, `credit_applications`, `payments` + `payment_allocations`, `treasury_entries`, `supplier_invoices` + `supplier_invoice_lines`, `credit_reservations` (movimentos e créditos só-de-acrescentar; obrigações, pagamentos e facturas validadas imutáveis por trigger); permissões `treasury.*`, `receivable.read`, `payable.read`, `payment.*` e `supplier_invoice.*`; funcionalidades `finance.treasury|obligations|payments|supplier_invoices`; rotas `/treasury-accounts` (+ `/entries`), `/receivables`, `/payables`, `/customers/:id/credit`, `/payments` (+ `/submit`, `/confirm`, `/fail`, `/reverse`) e `/supplier-invoices` (+ `/lines`, `/validate`, `/void`); ligações por `registerInvoiceEffects` (recebível e crédito aplicado), `registerConfirmationCheck` e `registerOrderEffects` (limite e reserva de crédito) registadas em `start/modules.ts`. Núcleo `core/decimal`. Frontend: página «Tesouraria» (`finance/treasury`: Contas, A receber, A pagar, Pagamentos, Facturas de fornecedor), na capacidade `finance.cash-banks`; as capacidades «Contas a receber/pagar» e «Pagamentos e orçamento» levam a essa página.
 **Aceitação (spec M09, o que esta fatia cobre).** Pagamento parcial mantém o saldo; duas confirmações concorrentes não ultrapassam a dívida; a reversão reabre o saldo e a conta correctos; um cliente bloqueado continua a poder pagar; uma nota de crédito abate o recebível uma só vez. **Parcial:** «webhook repetido não liquida duas vezes» — há `Idempotency-Key` e confirmação idempotente, mas nenhum webhook (fornecedor de pagamento por decidir).
 **Verificação (fatia 5.1).** Backend: lint, format, typecheck, build e `npm test` (ver `PROGRESS.md` para a contagem da última corrida; +14 unitários do domínio, +15 funcionais em `finance.spec.ts` — contas, saldo derivado, pagar a mais, moeda/entidade, idempotência, reversão, concorrência, notas de crédito, vistas e permissões, limite de crédito, três vias e excepção —, a matriz de isolamento e a paridade do OpenAPI estendidas; migration 30 subida e descida). Frontend: lint, format, check:generic, `ng test` e build. E2E em browser real (`e2e49.mjs`, script local na pasta temporária; 24 verificações): conta, recebível criado pela factura, pagar a mais recusado pelo servidor, recebimento parcial e saldo 74, reversão com motivo e saldos repostos, factura de fornecedor → pagável → pagamento (conta a −228), redirecionamento da capacidade, limite de crédito e isolamento do tenant B.
 **Não verificado / limites:** o E2E correu por script local; a conferência a três vias e a excepção só estão cobertas por testes funcionais e de componente (não no browser); sem conciliação (5.2), webhooks, multi-moeda, prestações, notas de fornecedor nem devolução de excedente; em desenvolvimento é preciso `modules:sync`, `iam:sync`, um plano com o módulo `finance` e, para o recebível, as sequências de facturação por organização.
 
 ### 2d.9 Fatia 4.8 — transferências, contagens e devoluções (M08; concluída, ver D-055)
+
 **Mapa.** Backend (módulo `inventory`, migration 31): `stock_transfers` + `transfer_lines`, `transfer_receipts` + `transfer_receipt_lines`, `stock_counts` + `count_lines`, `goods_returns` + `return_lines` (e `warehouses.technical`, `locations.frozen_by_count_id`); domínio `domain/logistics.ts`; casos de uso `transfer|count|return_use_cases`; `infrastructure/lucid_logistics.ts`; `presentation/logistics_controller.ts`; permissões `transfer.*`, `count.*`, `return.*`; funcionalidades `inventory.transfers|counts|returns`; rotas `/stock-transfers` (+ `/lines`, `/dispatch`, `/receive`, `/cancel`), `/stock-counts` (+ `/open`, `/counts`, `/lines`, `/review`, `/reopen`, `/post`, `/cancel`) e `/goods-returns` (+ `/source-lines`, `/lines`, `/approve`, `/post`). Frontend: separadores «Transferências», «Contagens» e «Devoluções» na página de inventário (`inventory/logistics`), cada um visível pela sua permissão de leitura; as capacidades `inventory.movements` e `inventory.stocktaking` continuam provisórias no catálogo de capacidades.
 **Aceitação (spec M08).** Recepção parcial deixa saldo em trânsito; contagem lançada duas vezes não repete o ajuste; devolução superior ao vendido/recebido falha.
 **Verificação (fatia 4.8).** Backend: lint, format, typecheck, build e `npm test` (ver `PROGRESS.md` para a contagem; +16 funcionais em `stock_logistics.spec.ts` — validação do rascunho, trânsito sem duplicar stock, recepção parcial e repetida, custo, sem stock, imutabilidade por SQL, congelamento, contagem cega, lançar duas vezes e em simultâneo, devolução de cliente e a fornecedor, armazéns técnicos, devolvível sob concorrência, permissões distintas —, unitários do domínio, a matriz de isolamento e a paridade do OpenAPI estendidas; 702 testes no total; migration 31 subida e descida). Frontend: lint, format, check:generic, `ng test` (1057) e build; `logistics-tabs.spec.ts` cobre os três separadores e a visibilidade por permissão. E2E em browser real (`e2e50.mjs`, script local na pasta temporária; 33 verificações, zero erros de página): transferência (armazéns técnicos não se oferecem, expedir sem stock recusado sem mover nada, expedição, recepção a mais recusada, recepção parcial com 4 em trânsito), contagem cega (esperado escondido, local congelado recusa movimentos, revisão com diferença −1, lançar e descongelar), devolução a fornecedor (devolvível 10, 11 recusado, lançar baixa o stock) e isolamento do tenant B (404). O E2E encontrou um erro que os testes de componente não apanhavam — apagar o rascunho aberto deixava o recurso de detalhe em erro e partia a página — corrigido e coberto por teste.
 **Não verificado / limites:** ver D-055 (sem cancelar depois de expedida, reservas não congeladas, devolução sem nota de crédito, sem transferência entre organizações); em desenvolvimento é preciso `modules:sync`, `iam:sync`, um plano com as funcionalidades novas de `inventory` e as sequências `STOCK_TRANSFER`, `STOCK_COUNT` e `GOODS_RETURN`.
 
 ### 2d.10 Fatia 5.2 — conciliação bancária (M09; concluída, ver D-056)
+
 **Mapa.** Backend (módulo `finance`, migration 32): `bank_statement_batches`, `bank_statement_lines`, `reconciliation_matches` (linhas imutáveis; correspondências só se desfazem); domínio `domain/reconciliation.ts`; casos de uso `application/reconciliation_use_cases.ts`; `infrastructure/lucid_reconciliation.ts`; permissões `reconciliation.read|manage|confirm`; funcionalidade `finance.reconciliation`; rotas `/reconciliations/imports`, `/batches` (+ `DELETE /:id`), `/lines` (+ `/:id`, `/:id/suggestions`), `/entries`, `/summary`, `/matches` (+ `/:id/undo`). Frontend: separador «Conciliação» na página «Tesouraria» (`finance/treasury/reconciliation-tab.ts`, `reconciliation.api.ts`, `reconciliation-model.ts` com o leitor de CSV).
 **Aceitação (spec M09, o que esta fatia cobre).** «Conciliação liga extrato ao movimento existente» (cenário de fluxo da especificação) e «compara extracto e movimentos com sugestões confirmáveis»; o saldo do livro nunca muda ao importar ou conciliar.
 **Verificação (fatia 5.2).** Backend: lint, format, typecheck, build e `npm test` (ver `PROGRESS.md` para a contagem; +13 funcionais em `reconciliation.spec.ts` — importação idempotente e validações, livro intacto, sugestões, parciais, contas e sentidos, desfazer, imutabilidade por SQL, concorrência (mesma linha e mesmo movimento), lotes, permissões e auditoria —, +8 unitários do domínio, a matriz de isolamento e a paridade do OpenAPI estendidas; migration 32 subida e descida). Frontend: lint, format, check:generic, `ng test` e build; `reconciliation.spec.ts` cobre o leitor de CSV, o separador e a visibilidade por permissão.
 **Não verificado / limites:** ver D-056 (só CSV, sem OFX/MT940, sem saldos de abertura/fecho, sem movimentos a partir de linhas por conciliar, sem conciliação automática); em desenvolvimento é preciso `modules:sync`, `iam:sync`, e um plano com a funcionalidade `finance.reconciliation`.
 
+### 2d.11 Fatia 6.1 — prospecção e CRM (M02; concluída, ver D-057)
+
+**Mapa.** Núcleo: `LucidTenantDatabase.run` junta-se à transacção do mesmo tenant e actor em curso. Backend (módulo `prospecting`, migration 33): `pipeline_stages`, `leads`, `opportunities`, `opportunity_stage_history` (só de acrescentar), `opportunity_activities`, `campaigns`, `campaign_members`, `marketing_exclusions`; domínio `domain/prospecting.ts`; casos de uso `application/prospecting_use_cases.ts`; `infrastructure/lucid_prospecting.ts`; permissões `crm.read|manage` e `campaign.send`; funcionalidades `prospecting.leads|opportunities|campaigns`; rotas `/leads` (+ `/qualify`, `/disqualify`, `/convert`), `/pipeline-stages`, `/opportunities` (+ `/metrics`, `/move`, `/history`, `/activities`), `/opportunity-activities/:id/complete`, `/campaigns` (+ `/status`, `/members`, `/respond`, `/opt-out`, `/send`) e `/marketing-exclusions`. Frontend: página «Leads e oportunidades» (`crm/prospecting`: Leads, Pipeline em quadro e lista, Campanhas com lista de exclusão), na capacidade `crm.pipeline`; a capacidade `crm.campaigns` leva a essa página.
+**Aceitação (spec M02).** Conversão repetida devolve os mesmos identificadores; mover sem permissão falha; opt-out impede novos envios promocionais.
+**Verificação (fatia 6.1).** Backend: lint, format, typecheck, build e `npm test` (751 testes: +17 funcionais em `prospecting.spec.ts` — conversão idempotente e concorrente, reversão total numa falha a meio, resolução da Party, permissões de converter, etapas por omissão e configuráveis, mover com motivo e evidência, histórico imutável por SQL, métricas por datas, actividades, campanhas, consentimento, exclusão e opt-out —, +8 unitários do domínio, +3 da transacção partilhada, a matriz de isolamento e a paridade do OpenAPI estendidas; migration 33 subida e descida). Frontend: lint, format, check:generic, `ng test` (1093) e build; `prospecting.spec.ts` cobre os três separadores, o quadro e as permissões. E2E em browser real (`e2e52.mjs`, script local na pasta temporária; 40 verificações, zero erros de página): lead → qualificar → converter pela UI (organização obrigatória), repetir a conversão pela API devolve os mesmos identificadores e um só cliente, mover no quadro (Proposta, Perdida com motivo, Ganha com evidência), oportunidade fechada sem «Mover», métricas iguais às da API, histórico e actividades, campanha (data inválida recusada, rascunho não se envia), envio com 1 contactado, 1 recusa e 1 sem consentimento, reenvio sem contactar ninguém, recusa que entra na lista de exclusão e isolamento do tenant B (404).
+**Não verificado / limites:** ver D-057 (sem entrega real das campanhas até haver o serviço de notificações, sem ligação a propostas, só o pipeline `DEFAULT`); em desenvolvimento é preciso `modules:sync`, `iam:sync` e um plano com o módulo `prospecting` (o plano de demonstração não o inclui: `node ace plan:create … --modules=…,prospecting --publish` e `subscription:change`).
+
 ### 2e.1 Fatia 1.10 — interfaces em falta da Fase 1 (concluída; ver D-049)
+
 **Mapa.** `features/tenant/permissions` (`roles-manager`, `policies-manager` + `policy-condition`, `access-simulator`; página com separadores), `users/member-access-panel` (atribuições e âmbitos), `organization/{cost-centers-panel,team-panel}`, `party/{parties-page,party-detail,party.api,party-model}`, `profile/{profile-page,profile.api,profile-model}`; rotas `parties` e `profile`, item de menu «Pessoas e entidades», «A minha conta» no menu do utilizador; `detailedErrorMessage`.
 **Verificação.** `ng lint`, `format:check`, `check:generic`, `ng test` (946 testes) e `ng build` (produção e desenvolvimento) limpos. E2E em browser real (`e2e110.mjs`, script local na pasta temporária da sessão; 22/22): criar perfil e política (rascunho), simular, atribuir/revogar perfil e âmbito, centro de custo e equipa, Party (criar, contacto, morada, editar, duplicado por contacto), sessões (terminar outra), validação local e erro do servidor na palavra-passe.
 **Não verificado / limites:** a alteração de palavra-passe com sucesso não foi exercida no E2E (alteraria a conta de demonstração; coberta só por testes unitários com API simulada); ocultação de campos sensíveis testada só com respostas simuladas; sem teste de ponta a ponta de activação de política; sem UI para a organização por omissão nem fusão de duplicados.
 
 ## 3. Regras para todas as fases
+
 - Antes de codificar: mapa de ficheiros, entidades, contratos e testes de aceitação.
 - Cada fase termina com lint, typecheck, testes, build e migrations numa base limpa; resultados registados aqui.
 - Actualizar `docs/architecture.md` (estado real), `docs/decisions.md` e o OpenAPI.

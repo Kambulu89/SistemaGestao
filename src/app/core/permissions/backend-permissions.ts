@@ -63,6 +63,10 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'payment.read': ['finance.read', 'finance.payments-budget.read'],
   'supplier_invoice.read': ['finance.read'],
   'reconciliation.read': ['finance.read'],
+  // Prospecção (M02): a página usa os códigos do servidor; o alias abre a capacidade «Campanhas», que leva à mesma página.
+  'crm.read': ['crm.pipeline.read', 'crm.campaigns.read'],
+  'crm.manage': ['crm.pipeline.read', 'crm.pipeline.manage', 'crm.campaigns.read'],
+  'campaign.send': ['crm.pipeline.read', 'crm.campaigns.read'],
   // Catálogo e preços (M03): as páginas usam o código do servidor; ler preços é independente de ler produtos.
   // Regras de validação (C12).
   'rule.read': ['configuration.rules.read'],

@@ -6393,6 +6393,726 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /leads:
+    get:
+      summary: Lista leads (crm.read; funcionalidade prospecting.leads)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [NEW, QUALIFIED, DISQUALIFIED, CONVERTED] },
+          }
+        - {
+            name: ownerMembershipId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: consentStatus,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [UNKNOWN, OPT_IN, OPT_OUT] },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Leads, da mais recente; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma lead (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, source]
+              properties:
+                name: { type: string, maxLength: 160 }
+                source: { type: string, maxLength: 60 }
+                companyName: { type: string, nullable: true }
+                email: { type: string, nullable: true }
+                phone: { type: string, nullable: true }
+                consentStatus: { type: string, enum: [UNKNOWN, OPT_IN, OPT_OUT] }
+                ownerMembershipId: { type: string, format: uuid }
+      responses:
+        '201': { description: 'Lead criada (responsável por omissão: quem cria).' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /leads/{id}:
+    get:
+      summary: Lead (crm.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Lead. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera uma lead (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                name: { type: string }
+                source: { type: string }
+                companyName: { type: string, nullable: true }
+                email: { type: string, nullable: true }
+                phone: { type: string, nullable: true }
+                consentStatus: { type: string }
+                ownerMembershipId: { type: string, format: uuid }
+      responses:
+        '200':
+          { description: 'Lead alterada; o consentimento pode mudar mesmo depois de convertida.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /leads/{id}/qualify:
+    post:
+      summary: Qualifica uma lead (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Lead qualificada; repetir não faz nada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /leads/{id}/disqualify:
+    post:
+      summary: Desqualifica uma lead, com motivo (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '200': { description: 'Lead desqualificada; repetir não faz nada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /leads/{id}/convert:
+    post:
+      summary: Converte uma lead em Party, cliente e oportunidade (crm.manage + customer.create + party.create)
+      description: |
+        Atómica e idempotente: resolve a Party (a indicada, a já ligada, uma com o mesmo email ou uma nova), reutiliza o cliente
+        que a Party já tenha na organização e cria a oportunidade na primeira etapa activa. Qualquer falha reverte tudo.
+        Repetir devolve os mesmos identificadores, também em simultâneo.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organizationId]
+              properties:
+                organizationId: { type: string, format: uuid }
+                partyId: { type: string, format: uuid }
+                customerCode: { type: string }
+                opportunity:
+                  {
+                    type: object,
+                    properties:
+                      {
+                        name: { type: string },
+                        stageId: { type: string, format: uuid },
+                        expectedValue: { type: string },
+                        currency: { type: string },
+                        expectedCloseDate: { type: string, format: date, nullable: true },
+                      },
+                  }
+      responses:
+        '201': { description: 'Convertida: `partyId`, `customerId`, `opportunityId`.' }
+        '200':
+          { description: 'Já estava convertida: os mesmos identificadores (`alreadyConverted`).' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /pipeline-stages:
+    get:
+      summary: Etapas do pipeline (crm.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: pipelineCode, in: query, required: false, schema: { type: string } }
+        - { name: activeOnly, in: query, required: false, schema: { type: boolean } }
+      responses:
+        '200': { description: 'Etapas por posição; um tenant sem etapas recebe as por omissão.' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma etapa (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name, position, probability]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                position: { type: integer }
+                probability: { type: string }
+                outcome: { type: string, enum: [WON, LOST], nullable: true }
+                requiresEvidence: { type: boolean }
+      responses:
+        '201': { description: Etapa criada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /pipeline-stages/{id}:
+    patch:
+      summary: Altera uma etapa (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                name: { type: string }
+                position: { type: integer }
+                probability: { type: string }
+                requiresEvidence: { type: boolean }
+                active: { type: boolean }
+      responses:
+        '200':
+          {
+            description: 'Etapa alterada; o desfecho não muda; não se desactiva uma etapa terminal nem com oportunidades.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /opportunities:
+    get:
+      summary: Lista oportunidades (crm.read; funcionalidade prospecting.opportunities)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: stageId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: ownerMembershipId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - { name: customerId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: leadId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [open, won, lost] },
+          }
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Oportunidades com a etapa; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma oportunidade (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                customerId: { type: string, format: uuid }
+                leadId: { type: string, format: uuid }
+                organizationId: { type: string, format: uuid }
+                stageId: { type: string, format: uuid }
+                expectedValue: { type: string }
+                currency: { type: string }
+                expectedCloseDate: { type: string, format: date, nullable: true }
+                ownerMembershipId: { type: string, format: uuid }
+      responses:
+        '201':
+          {
+            description: 'Criada na primeira etapa activa (ou na indicada), com a transição inicial no histórico.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /opportunities/metrics:
+    get:
+      summary: Métricas de conversão pelas datas das transições (crm.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+      responses:
+        '200':
+          {
+            description: 'Entradas por etapa, ganhas, perdidas, taxa de ganho, valores por moeda e dias médios até ganhar.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /opportunities/{id}:
+    get:
+      summary: Oportunidade com histórico e actividades (crm.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Oportunidade. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera nome, valor esperado e data prevista (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                name: { type: string }
+                expectedValue: { type: string }
+                expectedCloseDate: { type: string, format: date, nullable: true }
+      responses:
+        '200': { description: Alterada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /opportunities/{id}/move:
+    post:
+      summary: Move a oportunidade de etapa (crm.manage)
+      description: |
+        Regista a transição com data no histórico. Uma oportunidade ganha ou perdida já não se move (409 `OPPORTUNITY_CLOSED`);
+        perder exige motivo e ganhar exige a evidência quando a etapa o configura. Ganhar não cria recebimento nem factura.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stageId]
+              properties:
+                stageId: { type: string, format: uuid }
+                expectedVersion: { type: integer, minimum: 1 }
+                lossReason: { type: string, nullable: true }
+                winEvidence: { type: string, nullable: true }
+      responses:
+        '200': { description: 'Movida; repetir para a etapa actual não faz nada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /opportunities/{id}/history:
+    get:
+      summary: Histórico de transições da oportunidade (crm.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Transições imutáveis, por data.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /opportunities/{id}/activities:
+    get:
+      summary: Actividades da oportunidade (crm.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Actividades. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Regista uma actividade (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, subject]
+              properties:
+                kind: { type: string, enum: [CALL, EMAIL, MEETING, TASK, NOTE] }
+                subject: { type: string }
+                notes: { type: string, nullable: true }
+                dueAt: { type: string, format: date-time, nullable: true }
+      responses:
+        '201': { description: Actividade criada. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /opportunity-activities/{id}/complete:
+    post:
+      summary: Conclui uma actividade (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Concluída; repetir não faz nada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /campaigns:
+    get:
+      summary: Lista campanhas com o resumo do público (crm.read; funcionalidade prospecting.campaigns)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, ACTIVE, PAUSED, COMPLETED] },
+          }
+        - { name: channel, in: query, required: false, schema: { type: string } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Campanhas; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma campanha (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, channel, startsAt]
+              properties:
+                name: { type: string }
+                channel: { type: string, enum: [EMAIL, SMS, WHATSAPP, CALL, EVENT, OTHER] }
+                startsAt: { type: string, format: date-time }
+                endsAt: { type: string, format: date-time, nullable: true }
+                budget: { type: string }
+                currency: { type: string }
+                organizationId: { type: string, format: uuid }
+      responses:
+        '201': { description: 'Campanha em rascunho.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /campaigns/{id}:
+    get:
+      summary: Campanha com público, contactados e respostas (crm.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Campanha. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera uma campanha (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                name: { type: string }
+                startsAt: { type: string }
+                endsAt: { type: string, nullable: true }
+                budget: { type: string }
+      responses:
+        '200':
+          { description: 'Alterada; o canal e a moeda não mudam; uma concluída não se altera.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /campaigns/{id}/status:
+    post:
+      summary: Muda o estado da campanha (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [DRAFT, ACTIVE, PAUSED, COMPLETED] }
+      responses:
+        '200':
+          {
+            description: 'Rascunho → activa ⇄ pausada → concluída; repetir o estado actual não faz nada.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /campaigns/{id}/members:
+    get:
+      summary: Destinatários da campanha (crm.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [TARGETED, CONTACTED, RESPONDED, OPTED_OUT] },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Destinatários; `meta.total`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Acrescenta destinatários, Party ou lead (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                partyIds: { type: array, items: { type: string, format: uuid }, maxItems: 500 }
+                leadIds: { type: array, items: { type: string, format: uuid }, maxItems: 500 }
+      responses:
+        '201':
+          { description: '`added` e `duplicates` (cada destinatário só uma vez por campanha).' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /campaigns/{id}/members/{memberId}:
+    delete:
+      summary: Retira um destinatário ainda por contactar (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: memberId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Retirado. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /campaigns/{id}/members/{memberId}/respond:
+    post:
+      summary: Regista a resposta de um destinatário contactado (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: memberId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Respondeu; repetir não faz nada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /campaigns/{id}/members/{memberId}/opt-out:
+    post:
+      summary: O destinatário recusa comunicações (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: memberId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          {
+            description: 'OPTED_OUT; a lead passa a OPT_OUT e o email e telefone entram na lista de exclusão.',
+          }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /campaigns/{id}/send:
+    post:
+      summary: Envia a campanha (campaign.send)
+      description: |
+        Só uma campanha activa, dentro do seu período. Nunca contacta quem recusou (consentimento da lead ou lista de exclusão) nem
+        uma lead sem consentimento expresso. Cada contacto é um evento `crm.campaign.contact_requested` no outbox para o serviço de
+        notificações; só os destinatários por contactar são tocados, por isso repetir não volta a contactar ninguém.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '`sent`, `optedOut`, `noConsent` e `noDestination`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /marketing-exclusions:
+    get:
+      summary: Lista de exclusão (crm.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Emails e telefones a quem nunca se envia comunicação promocional.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Acrescenta à lista de exclusão (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, value]
+              properties:
+                kind: { type: string, enum: [EMAIL, PHONE] }
+                value: { type: string }
+                reason: { type: string, nullable: true }
+      responses:
+        '201': { description: Acrescentado. }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /marketing-exclusions/{id}:
+    delete:
+      summary: Retira da lista de exclusão (crm.manage)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Retirado. }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /treasury-accounts:
     get:
       summary: Contas de tesouraria com saldo derivado (treasury.read; funcionalidade finance.treasury)

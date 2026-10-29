@@ -118,8 +118,8 @@ describe('HttpTenantGateway', () => {
     const promise = firstValueFrom(gateway.loadContext('t1'));
     http.expectOne(`${API}/context`).flush(
       contextDto({
-        // `crm.customers` vive no módulo `customers` do servidor (backendModule); `crm.pipeline`/`crm.campaigns` no `crm`.
-        modules: ['crm', 'customers'],
+        // `crm.customers` vive no módulo `customers` do servidor (backendModule); `crm.pipeline`/`crm.campaigns` no `prospecting`.
+        modules: ['prospecting', 'customers'],
         features: ['customers.accounts'],
       }),
     );
@@ -137,9 +137,9 @@ describe('HttpTenantGateway', () => {
     expect(context.modules.some((m) => !m.moduleId.startsWith('mod_crm_'))).toBe(false);
   });
 
-  it('does not activate crm.customers when only the crm module is enabled (it belongs to the customers module)', async () => {
+  it('does not activate crm.customers when only the prospecting module is enabled (it belongs to the customers module)', async () => {
     const promise = firstValueFrom(gateway.loadContext('t1'));
-    http.expectOne(`${API}/context`).flush(contextDto({ modules: ['crm'], features: [] }));
+    http.expectOne(`${API}/context`).flush(contextDto({ modules: ['prospecting'], features: [] }));
     const context = await promise;
     expect(context.modules.some((m) => m.moduleId === 'mod_crm_customers')).toBe(false);
     expect(context.modules.some((m) => m.moduleId === 'mod_crm_pipeline')).toBe(true);

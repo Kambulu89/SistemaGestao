@@ -41,6 +41,22 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     ],
   },
   {
+    code: 'prospecting',
+    name: 'Prospecção e CRM',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [
+      { code: 'core', constraint: '*', optional: false },
+      { code: 'customers', constraint: '*', optional: false },
+    ],
+    features: [
+      { code: 'prospecting.leads', name: 'Leads', defaultEnabled: true },
+      { code: 'prospecting.opportunities', name: 'Pipeline e oportunidades', defaultEnabled: true },
+      { code: 'prospecting.campaigns', name: 'Campanhas', defaultEnabled: true },
+    ],
+  },
+  {
     code: 'orders',
     name: 'Propostas e encomendas',
     kind: 'MODULE',

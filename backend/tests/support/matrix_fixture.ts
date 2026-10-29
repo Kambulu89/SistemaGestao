@@ -102,6 +102,14 @@ export interface World {
     returnLine: string
     returnSourceLine: string
     bankAccount: string
+    stage: string
+    wonStage: string
+    lead: string
+    opportunity: string
+    activity: string
+    campaign: string
+    campaignMember: string
+    exclusion: string
     statementBatch: string
     statementLine: string
     matchedLine: string
@@ -156,7 +164,17 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await syncTestRegistry()
   await license(
     t,
-    ['crm', 'catalog', 'customers', 'orders', 'inventory', 'invoicing', 'procurement', 'finance'],
+    [
+      'crm',
+      'catalog',
+      'customers',
+      'prospecting',
+      'orders',
+      'inventory',
+      'invoicing',
+      'procurement',
+      'finance',
+    ],
     ['crm.scoring']
   )
   await must(await http.post('/api/v1/tenant/modules/crm/enable', {}), 200)
@@ -167,6 +185,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await must(await http.post('/api/v1/tenant/modules/invoicing/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/procurement/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/finance/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/prospecting/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -900,6 +919,61 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     200
   )
   const payable = payables.find((r) => r.sourceId === validatedInvoice.id) as { id: string }
+  // M02: uma lead, uma oportunidade (com actividade e histórico), uma campanha com a lead como destinatária e uma
+  // exclusão de marketing, nos dois tenants.
+  const stages = await must<{ id: string; terminal: boolean; outcome: string | null }[]>(
+    await http.get('/api/v1/pipeline-stages'),
+    200
+  )
+  const openStage = stages.find((x) => !x.terminal) as { id: string }
+  const wonStage = stages.find((x) => x.outcome === 'WON') as { id: string }
+  const lead = await must<{ id: string }>(
+    await http.post('/api/v1/leads', {
+      name: 'Maria Silva',
+      source: 'web',
+      email: 'maria@exemplo.invalid',
+      consentStatus: 'OPT_IN',
+    }),
+    201
+  )
+  const opportunity = await must<{ id: string }>(
+    await http.post('/api/v1/opportunities', {
+      name: 'Oportunidade comum',
+      customerId: customer.id,
+      expectedValue: '100',
+    }),
+    201
+  )
+  const activity = await must<{ id: string }>(
+    await http.post(`/api/v1/opportunities/${opportunity.id}/activities`, {
+      kind: 'CALL',
+      subject: 'Chamada inicial',
+    }),
+    201
+  )
+  const campaign = await must<{ id: string }>(
+    await http.post('/api/v1/campaigns', {
+      name: 'Campanha comum',
+      channel: 'EMAIL',
+      startsAt: '2026-01-01T00:00:00Z',
+    }),
+    201
+  )
+  await must(
+    await http.post(`/api/v1/campaigns/${campaign.id}/members`, { leadIds: [lead.id] }),
+    201
+  )
+  const campaignMembers = await must<{ id: string }[]>(
+    await http.get(`/api/v1/campaigns/${campaign.id}/members`),
+    200
+  )
+  const exclusion = await must<{ id: string }>(
+    await http.post('/api/v1/marketing-exclusions', {
+      kind: 'EMAIL',
+      value: 'nunca@exemplo.invalid',
+    }),
+    201
+  )
   // Conciliação: uma conta bancária com um recebimento confirmado (1), um extracto de duas linhas (+1 e -3) e a primeira
   // linha já conciliada com o movimento; a segunda fica por conciliar.
   const bankAccount = await must<{ id: string }>(
@@ -1137,6 +1211,14 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       returnLine: (goodsReturn.lines[0] as { id: string }).id,
       returnSourceLine: (sourceLines[0] as { sourceLineId: string }).sourceLineId,
       bankAccount: bankAccount.id,
+      stage: openStage.id,
+      wonStage: wonStage.id,
+      lead: lead.id,
+      opportunity: opportunity.id,
+      activity: activity.id,
+      campaign: campaign.id,
+      campaignMember: (campaignMembers[0] as { id: string }).id,
+      exclusion: exclusion.id,
       statementBatch: imported.batch.id,
       statementLine: openLine.id,
       matchedLine: matchedLine.id,

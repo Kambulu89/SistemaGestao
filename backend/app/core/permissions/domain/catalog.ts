@@ -412,6 +412,22 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Confirmar e desfazer correspondências entre o extracto e os movimentos.',
   },
   {
+    code: 'crm.read',
+    moduleCode: 'prospecting',
+    description: 'Ver leads, pipeline, oportunidades, actividades e campanhas.',
+  },
+  {
+    code: 'crm.manage',
+    moduleCode: 'prospecting',
+    description:
+      'Criar e alterar leads, converter leads, gerir etapas, mover oportunidades e gerir campanhas e a lista de exclusão.',
+  },
+  {
+    code: 'campaign.send',
+    moduleCode: 'prospecting',
+    description: 'Enviar uma campanha (pedir o contacto aos destinatários que o permitem).',
+  },
+  {
     code: 'receivable.read',
     moduleCode: 'finance',
     description: 'Ver contas a receber e a exposição de crédito dos clientes.',

@@ -2,8 +2,8 @@
 
 Extensão do **Core Dinâmico** (ver `README.md`, secção «Core Dinâmico») para dois casos:
 
-- **A — Campos personalizados** que um tenant acrescenta a uma entidade nativa (ex.: *Cliente*).
-- **B — Entidades dinâmicas** que um tenant cria só com metadados (ex.: *Equipamento*).
+- **A — Campos personalizados** que um tenant acrescenta a uma entidade nativa (ex.: _Cliente_).
+- **B — Entidades dinâmicas** que um tenant cria só com metadados (ex.: _Equipamento_).
 
 Não há um segundo motor de formulários, um segundo Entity Registry nem um sistema de permissões
 paralelo. Tudo reutiliza `EntityDefinition`, `FieldDefinition`, o motor de validação, o
@@ -16,17 +16,17 @@ Nenhuma entidade criada por um tenant tem componentes Angular próprios.
 
 ## 1. Modelo
 
-| Contrato do pedido | Onde está | Nota |
-| --- | --- | --- |
-| `FieldDefinition` (união discriminada, 22 tipos) | `core/dynamic/models/field-definition.model.ts` | `origin: 'core' \| 'custom'`, `sensitivity` |
-| `CustomEntityDefinition` | `custom-definition.model.ts` | alias de `EntityDefinition` com `scope: 'tenant'` |
-| `CustomFieldDefinition` | `custom-definition.model.ts` | `{ id, tenantId, entity: EntityRef, field, displayOrder, showInList, state, version, audit }` |
-| `CustomEntityRecord`, `CustomFieldValue` | `custom-definition.model.ts` | os mesmos `EntityRecord`/`FieldValue` de qualquer entidade |
-| `EntityReferenceDefinition` | `EntityReferenceField` | `entityKey` (+ existência validada no servidor, mesmo tenant) |
-| `FormulaDefinition` / `LookupDefinition` / `AutoNumberDefinition` | `field-definition.model.ts` | ver §3 |
-| `FieldOptionDefinition` | `FieldOption` | `{ value, label, active? }`: o `value` é estável |
-| `FieldValidationDefinition` | `ValidationRule` | `required, minLength, maxLength, min, max, pattern, email, unique, compare` |
-| `FieldTypeDefinition` | `core/dynamic/engine/field-types.ts` | catálogo com capacidades por tipo |
+| Contrato do pedido                                                | Onde está                                       | Nota                                                                                          |
+| ----------------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `FieldDefinition` (união discriminada, 22 tipos)                  | `core/dynamic/models/field-definition.model.ts` | `origin: 'core' \| 'custom'`, `sensitivity`                                                   |
+| `CustomEntityDefinition`                                          | `custom-definition.model.ts`                    | alias de `EntityDefinition` com `scope: 'tenant'`                                             |
+| `CustomFieldDefinition`                                           | `custom-definition.model.ts`                    | `{ id, tenantId, entity: EntityRef, field, displayOrder, showInList, state, version, audit }` |
+| `CustomEntityRecord`, `CustomFieldValue`                          | `custom-definition.model.ts`                    | os mesmos `EntityRecord`/`FieldValue` de qualquer entidade                                    |
+| `EntityReferenceDefinition`                                       | `EntityReferenceField`                          | `entityKey` (+ existência validada no servidor, mesmo tenant)                                 |
+| `FormulaDefinition` / `LookupDefinition` / `AutoNumberDefinition` | `field-definition.model.ts`                     | ver §3                                                                                        |
+| `FieldOptionDefinition`                                           | `FieldOption`                                   | `{ value, label, active? }`: o `value` é estável                                              |
+| `FieldValidationDefinition`                                       | `ValidationRule`                                | `required, minLength, maxLength, min, max, pattern, email, unique, compare`                   |
+| `FieldTypeDefinition`                                             | `core/dynamic/engine/field-types.ts`            | catálogo com capacidades por tipo                                                             |
 
 `EntityRef = { kind: 'core' \| 'custom', key }` identifica a entidade de forma estável (independente
 do nome visível). O código (`key`) de uma entidade ou campo **nunca muda** depois de publicado e nunca
@@ -50,24 +50,25 @@ normal e não sabem o que é personalizado.
 
 Capacidades em `FIELD_TYPE_CATALOG` (o designer, a integridade e o servidor consultam-nas):
 
-| Tipo | Escrito pelo utilizador | Pesquisa | Filtro | Ordenar | Único | Regras específicas |
-| --- | :-: | :-: | :-: | :-: | :-: | --- |
-| text, textarea | ✔ | ✔ | — | text ✔ | text ✔ | min/max comprimento, padrão |
-| number | ✔ | — | ✔ | ✔ | ✔ | inteiro; min/max |
-| decimal, currency | ✔ | — | — | ✔ | — | `scale` (decimal 0–10, moeda 0–6); sem aritmética de vírgula flutuante |
-| boolean, checkbox | ✔ | — | ✔ | — | — | checkbox obrigatória = tem de estar marcada |
-| date, datetime | ✔ | — | — | ✔ | — | |
-| email, phone, url | ✔ | ✔ | — | email ✔ | email/phone ✔ | url só `http(s)` |
-| select, radio | ✔ | — | ✔ | ✔ | — | opções `{value, label, active}` |
-| multiselect | ✔ | — | — | — | — | opções |
-| file, image | ✔ | — | — | — | — | MIME (`image/*`), tamanho máx. (≤ 50 MB), «um ficheiro» — validado no servidor. O mock guarda metadados (nome, tamanho, tipo); o conteúdo binário é do backend/DMS |
-| entity-reference | ✔ | — | — | — | — | a entidade existe; o registo existe **no mesmo tenant** |
-| user-reference | ✔ | — | — | — | — | só membros do tenant; o directório devolve apenas id e nome |
-| **formula** | ✘ (servidor) | — | — | ✔ | — | ver abaixo |
-| **lookup** | ✔ (servidor, fatia 3.5; ver D-039) | — | — | — | — | ver abaixo |
-| **auto-number** | ✘ (servidor) | ✔ | — | ✔ | — | ver abaixo |
+| Tipo              |      Escrito pelo utilizador       | Pesquisa | Filtro | Ordenar |     Único     | Regras específicas                                                                                                                                                 |
+| ----------------- | :--------------------------------: | :------: | :----: | :-----: | :-----------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| text, textarea    |                 ✔                  |    ✔     |   —    | text ✔  |    text ✔     | min/max comprimento, padrão                                                                                                                                        |
+| number            |                 ✔                  |    —     |   ✔    |    ✔    |       ✔       | inteiro; min/max                                                                                                                                                   |
+| decimal, currency |                 ✔                  |    —     |   —    |    ✔    |       —       | `scale` (decimal 0–10, moeda 0–6); sem aritmética de vírgula flutuante                                                                                             |
+| boolean, checkbox |                 ✔                  |    —     |   ✔    |    —    |       —       | checkbox obrigatória = tem de estar marcada                                                                                                                        |
+| date, datetime    |                 ✔                  |    —     |   —    |    ✔    |       —       |                                                                                                                                                                    |
+| email, phone, url |                 ✔                  |    ✔     |   —    | email ✔ | email/phone ✔ | url só `http(s)`                                                                                                                                                   |
+| select, radio     |                 ✔                  |    —     |   ✔    |    ✔    |       —       | opções `{value, label, active}`                                                                                                                                    |
+| multiselect       |                 ✔                  |    —     |   —    |    —    |       —       | opções                                                                                                                                                             |
+| file, image       |                 ✔                  |    —     |   —    |    —    |       —       | MIME (`image/*`), tamanho máx. (≤ 50 MB), «um ficheiro» — validado no servidor. O mock guarda metadados (nome, tamanho, tipo); o conteúdo binário é do backend/DMS |
+| entity-reference  |                 ✔                  |    —     |   —    |    —    |       —       | a entidade existe; o registo existe **no mesmo tenant**                                                                                                            |
+| user-reference    |                 ✔                  |    —     |   —    |    —    |       —       | só membros do tenant; o directório devolve apenas id e nome                                                                                                        |
+| **formula**       |            ✘ (servidor)            |    —     |   —    |    ✔    |       —       | ver abaixo                                                                                                                                                         |
+| **lookup**        | ✔ (servidor, fatia 3.5; ver D-039) |    —     |   —    |    —    |       —       | ver abaixo                                                                                                                                                         |
+| **auto-number**   |            ✘ (servidor)            |    ✔     |   —    |    ✔    |       —       | ver abaixo                                                                                                                                                         |
 
 ### Fórmulas (`core/dynamic/engine/formula.ts`)
+
 Texto numa gramática restrita, **nunca JavaScript**: `+ - * /`, parênteses, `round(x, n)`, `min`, `max`,
 `abs` e referências a campos. Aritmética **BigInt de ponto fixo** (12 casas internas, arredondamento
 «meio afastado de zero»): `0,1 + 0,2 = 0,3` e `2,675 → 2,68`. Valor em falta ou divisão por zero ⇒
@@ -78,6 +79,7 @@ sensível com a **mesma permissão de leitura** (o resultado não revela o que o
 servidor calcula na escrita e recalcula na leitura (reflecte a definição em vigor).
 
 ### Valores relacionados (`lookup`)
+
 `{ relationField, sourceField, onMissing }`: lê um campo do registo apontado por um campo
 `entity-reference` da mesma entidade. O servidor só devolve o valor se o utilizador puder ler a
 entidade alvo (RBAC **e** políticas ABAC sobre esse registo), o módulo estiver disponível e o campo de
@@ -86,6 +88,7 @@ mesma permissão. A origem não pode ser outro lookup (sem cadeias). `onMissing:
 um registo cuja relação aponta para o vazio.
 
 ### Numeração automática (`auto-number`)
+
 `{ prefix, padding, start, reset: 'never' \| 'yearly' \| 'monthly' }`. Atribuída **pelo servidor** na
 criação, sequência **por tenant + entidade + campo (+ período)**, sem reutilizar números (nem após
 apagar), imutável e nunca aceite do cliente. Ex.: `EQ-2026-0007`.
@@ -101,7 +104,7 @@ Configuração → Core Dinâmico (permissão `configuration.forms.read`):
   `DynamicField` dos formulários reais e valida localmente (o servidor volta a validar). Sem drag-and-drop.
 - **Nova entidade / Editar** (`novo`, `:entityKey/editar`): identificação, campos (adicionar, editar,
   subir/descer, remover; os já publicados **arquivam-se**), pré-visualização do formulário gerado,
-  *Guardar rascunho*, *Publicar*, *Descartar rascunho*. Reutiliza o `CustomFieldDesigner` em modo
+  _Guardar rascunho_, _Publicar_, _Descartar rascunho_. Reutiliza o `CustomFieldDesigner` em modo
   `owned`. A listagem, pesquisa, filtros, permissões `entities.<chave>.*`, auditoria e menu «Dados»
   são gerados.
 
@@ -124,16 +127,16 @@ arquivar). O servidor exige a permissão certa em cada operação.
 
 ## 6. Segurança (aplicada no servidor)
 
-| Risco | Controlo |
-| --- | --- |
-| Ver campos de outro tenant | tenant pelo contexto do pedido; o cliente ainda filtra por `tenantId` (defesa em profundidade); ids de outro tenant respondem 404 |
-| Campo sensível | exige `permissions.read/write` explícitas (`entities.<entidade>.sensitive.*`); sem leitura o valor **nunca** é devolvido (listas, detalhe, resultado de create/update) |
-| Contornar campos escondidos | o servidor rejeita escrita sem permissão de escrita (422) e **filtros, pesquisa e ordenação por campos ilegíveis** (403/ignorados) |
-| Fórmula/lookup a vazar dados | exigem a mesma protecção do campo de origem (integridade) e o lookup verifica RBAC+ABAC do alvo em cada leitura |
-| Valores atribuídos pelo servidor | fórmulas, lookups e numeração são recusados se vierem do cliente |
-| Tipos desconhecidos | tratados como só de leitura e sem capacidades; a integridade assinala-os; o servidor recusa criá-los |
-| Concorrência | `expectedVersion` (campos/entidades) e `expectedRowVersion` (registos) → 409 |
-| Auditoria | quem/quando em campos e entidades (`audit`), diferenças por campo nos registos (incluindo valores calculados) |
+| Risco                            | Controlo                                                                                                                                                               |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ver campos de outro tenant       | tenant pelo contexto do pedido; o cliente ainda filtra por `tenantId` (defesa em profundidade); ids de outro tenant respondem 404                                      |
+| Campo sensível                   | exige `permissions.read/write` explícitas (`entities.<entidade>.sensitive.*`); sem leitura o valor **nunca** é devolvido (listas, detalhe, resultado de create/update) |
+| Contornar campos escondidos      | o servidor rejeita escrita sem permissão de escrita (422) e **filtros, pesquisa e ordenação por campos ilegíveis** (403/ignorados)                                     |
+| Fórmula/lookup a vazar dados     | exigem a mesma protecção do campo de origem (integridade) e o lookup verifica RBAC+ABAC do alvo em cada leitura                                                        |
+| Valores atribuídos pelo servidor | fórmulas, lookups e numeração são recusados se vierem do cliente                                                                                                       |
+| Tipos desconhecidos              | tratados como só de leitura e sem capacidades; a integridade assinala-os; o servidor recusa criá-los                                                                   |
+| Concorrência                     | `expectedVersion` (campos/entidades) e `expectedRowVersion` (registos) → 409                                                                                           |
+| Auditoria                        | quem/quando em campos e entidades (`audit`), diferenças por campo nos registos (incluindo valores calculados)                                                          |
 
 ## 7. Contratos de API propostos
 
@@ -241,16 +244,16 @@ objectos).
 
 ## 9. Casos de teste
 
-| Caso | Onde está coberto |
-| --- | --- |
-| **A** — Cliente: cada tenant vê só os seus campos personalizados | `custom-field-registry.service.spec.ts`, `dynamic-form-field-types.spec.ts` |
-| **B** — Nova entidade Viatura por metadados (formulário, listagem e validações gerados) | `mock-entity-lifecycle.spec.ts` («Casos B e C»), `entity-designer-page.spec.ts` |
-| **C** — Acrescentar `numeroChassis` depois: nova versão sem perder registos | `mock-entity-lifecycle.spec.ts` («Casos B e C»), `mock-entity-records.gateway.spec.ts` |
-| **D** — Equipamento (código, designação, data, valor, responsável, estado) sem componentes novos | `mock-entity-lifecycle.spec.ts`, `entity-designer-page.spec.ts` |
-| Obrigatório, único, sensível, opções, tipo imutável, arquivar preserva dados | `mock-custom-field.gateway.spec.ts`, `custom-fields.spec.ts`, `validation-types.spec.ts` |
-| Segurança entre tenants e permissões (sensíveis, fórmulas, lookups, filtros ilegíveis) | `custom-field-registry.service.spec.ts`, `mock-lookup.gateway.spec.ts`, `mock-entity-lifecycle.spec.ts` |
-| Fórmulas, ciclos, aritmética exacta | `formula.spec.ts`, `formula-integrity.spec.ts` |
-| Numeração automática | `auto-number.spec.ts`, `mock-entity-lifecycle.spec.ts` |
+| Caso                                                                                             | Onde está coberto                                                                                       |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **A** — Cliente: cada tenant vê só os seus campos personalizados                                 | `custom-field-registry.service.spec.ts`, `dynamic-form-field-types.spec.ts`                             |
+| **B** — Nova entidade Viatura por metadados (formulário, listagem e validações gerados)          | `mock-entity-lifecycle.spec.ts` («Casos B e C»), `entity-designer-page.spec.ts`                         |
+| **C** — Acrescentar `numeroChassis` depois: nova versão sem perder registos                      | `mock-entity-lifecycle.spec.ts` («Casos B e C»), `mock-entity-records.gateway.spec.ts`                  |
+| **D** — Equipamento (código, designação, data, valor, responsável, estado) sem componentes novos | `mock-entity-lifecycle.spec.ts`, `entity-designer-page.spec.ts`                                         |
+| Obrigatório, único, sensível, opções, tipo imutável, arquivar preserva dados                     | `mock-custom-field.gateway.spec.ts`, `custom-fields.spec.ts`, `validation-types.spec.ts`                |
+| Segurança entre tenants e permissões (sensíveis, fórmulas, lookups, filtros ilegíveis)           | `custom-field-registry.service.spec.ts`, `mock-lookup.gateway.spec.ts`, `mock-entity-lifecycle.spec.ts` |
+| Fórmulas, ciclos, aritmética exacta                                                              | `formula.spec.ts`, `formula-integrity.spec.ts`                                                          |
+| Numeração automática                                                                             | `auto-number.spec.ts`, `mock-entity-lifecycle.spec.ts`                                                  |
 
 ## 10. Limitações conhecidas
 
