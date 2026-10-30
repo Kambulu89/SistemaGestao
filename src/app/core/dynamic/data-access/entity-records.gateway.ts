@@ -4,9 +4,11 @@ import type {
   AuditEntry,
   CreateRecordInput,
   EntityRecord,
+  RecordActions,
   RecordQuery,
   ReferenceLookupQuery,
   ReferenceOption,
+  TransitionOptions,
   UpdateRecordInput,
 } from '../models/entity-record.model';
 
@@ -30,7 +32,13 @@ export abstract class EntityRecordsGateway {
     entityKey: string,
     id: string,
     transitionKey: string,
+    options?: TransitionOptions,
   ): Observable<EntityRecord>;
+  /**
+   * As transições que o utilizador pode executar agora, decididas pelo servidor (permissões, guardas e estado).
+   * `null`: o registo não tem máquina de estados no servidor (a interface usa o workflow local, se existir).
+   */
+  abstract availableActions(entityKey: string, id: string): Observable<RecordActions | null>;
   abstract audit(entityKey: string, id: string): Observable<readonly AuditEntry[]>;
   /** Opções para campos `reference`: registos da entidade alvo que correspondem à pesquisa ou aos ids. */
   abstract lookup(

@@ -1,6 +1,8 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { DESIGNER_FIELD_TYPES } from '../../../core/dynamic/designer-field-types';
+import { SERVER_FIELD_TYPES } from '../../../core/dynamic/http/dynamic-mapper';
 import { CustomFieldRegistryService } from '../../../core/dynamic/custom-field-registry.service';
 import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
 import { TenantContextService } from '../../../core/tenant-context/tenant-context.service';
@@ -137,6 +139,26 @@ describe('Campos personalizados: página e designer', () => {
     await settle(fixture);
     expect(el.textContent).not.toContain('Moeda (ISO 4217)');
     expect(el.textContent).not.toContain('Entra na pesquisa'); // booleano não é pesquisável
+  });
+
+  it('offers only the types the server stores; the others show as not yet available', async () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: DESIGNER_FIELD_TYPES, useValue: SERVER_FIELD_TYPES }],
+    });
+    const { fixture, el } = await open('escola@demo.pt', 'escola-horizonte');
+    button(el, 'Novo campo')!.click();
+    await settle(fixture);
+    const types = [...el.querySelectorAll('select')[0]!.querySelectorAll('option')].map((o) =>
+      o.textContent?.trim(),
+    );
+    expect(types).toEqual(
+      expect.arrayContaining(['Texto', 'Decimal', 'Fórmula', 'Referência a utilizador']),
+    );
+    for (const missing of ['Moeda', 'Imagem', 'Numeração automática'])
+      expect(types).not.toContain(missing);
+    const notice = el.querySelector('[data-testid=preview-types]');
+    expect(notice?.textContent).not.toContain('Fórmula');
+    expect(notice?.textContent).toContain('Moeda');
   });
 
   it('configures advanced types: formula, lookup, auto-number and user reference', async () => {

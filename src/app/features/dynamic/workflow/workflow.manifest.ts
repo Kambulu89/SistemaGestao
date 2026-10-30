@@ -8,6 +8,14 @@ export const WORKFLOW_MODULES = [
     group: 'workflow',
     icon: 'bolt',
     lifecycle: 'beta',
+    routes: [
+      {
+        path: '',
+        title: 'Fluxos e aprovações',
+        loadComponent: () =>
+          import('../../../shared/routing/capability-redirect').then((m) => m.CapabilityRedirect),
+      },
+    ],
     features: [
       {
         id: 'multi-level-approvals',
@@ -24,5 +32,13 @@ export const WORKFLOW_MODULES = [
     icon: 'bolt',
     dependencies: ['workflow.flows'],
     featureFlag: 'workflow.automations',
+    routes: [
+      {
+        path: '',
+        title: 'Regras e automações',
+        loadComponent: () =>
+          import('../../../shared/routing/capability-redirect').then((m) => m.CapabilityRedirect),
+      },
+    ],
   }),
 ] as const;

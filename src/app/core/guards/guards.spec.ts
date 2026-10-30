@@ -6,7 +6,8 @@ import {
   type RouterStateSnapshot,
   type UrlTree,
 } from '@angular/router';
-import { firstValueFrom, isObservable, type Observable } from 'rxjs';
+import { firstValueFrom, isObservable, type Observable, throwError } from 'rxjs';
+import { TenantGateway } from '../tenant-context/tenant.gateway';
 import { TenantContextService } from '../tenant-context/tenant-context.service';
 import { moduleId } from '../modules/define-module';
 import { loginAs, setupMockBackend } from '../testing/test-backend';
@@ -54,6 +55,18 @@ describe('guards', () => {
     await firstValueFrom(ctx.activate('escola-horizonte'));
     expect(await run(platformGuard)).toBe(true);
     expect(ctx.active()).toBeNull();
+  });
+
+  it('tenantGuard sends the user to no-access when the server refuses the tenant (e.g. suspended)', async () => {
+    await loginAs('multi@demo.pt');
+    vi.spyOn(TestBed.inject(TenantGateway), 'loadContext').mockReturnValue(
+      throwError(() => ({
+        status: 403,
+        code: 'TENANT_NOT_ACTIVE',
+        message: 'O tenant não está activo.',
+      })),
+    );
+    expect(await run(tenantGuard, { tenantSlug: 'escola-horizonte' })).toBe('/auth/no-access');
   });
 
   it('tenantGuard only admits members of the tenant in the URL', async () => {

@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TenantContextService } from '../../../core/tenant-context/tenant-context.service';
 import { PermissionService } from '../../../core/permissions/permission.service';
 import { EntityAccessService } from '../../../core/dynamic/entity-access.service';
 import { DynamicEntityRegistryService } from '../../../core/dynamic/entity-registry.service';
@@ -95,9 +96,37 @@ const yesNo = (value: boolean): string => (value ? 'Sim' : 'Não');
               >Campos personalizados</a
             >
           }
+          @if (canReadStates()) {
+            <a
+              routerLink="estados"
+              class="text-sm text-brand-700 hover:underline dark:text-brand-300"
+              >Estados</a
+            >
+          }
+          @if (canReadWorkflows()) {
+            <a
+              routerLink="fluxos"
+              class="text-sm text-brand-700 hover:underline dark:text-brand-300"
+              >Aprovações</a
+            >
+          }
+          @if (canReadForms()) {
+            <a
+              routerLink="formularios"
+              class="text-sm text-brand-700 hover:underline dark:text-brand-300"
+              >Formulários</a
+            >
+          }
+          @if (canReadRules()) {
+            <a
+              routerLink="regras"
+              class="text-sm text-brand-700 hover:underline dark:text-brand-300"
+              >Regras</a
+            >
+          }
           @if (canOpenRecords()) {
             <a
-              [routerLink]="['../../data', entity.key]"
+              [routerLink]="dataLink(entity.key)"
               class="text-sm text-brand-700 hover:underline dark:text-brand-300"
               >Ver registos</a
             >
@@ -279,7 +308,28 @@ export class EntityAdminDetailPage {
   private readonly registry = inject(DynamicEntityRegistryService);
   private readonly access = inject(EntityAccessService);
   private readonly permissions = inject(PermissionService);
+  private readonly tenant = inject(TenantContextService).tenant;
+
+  /** Os registos de uma entidade (caminho absoluto: não depende de onde esta página está montada). */
+  protected dataLink(key: string): string[] {
+    return ['/t', this.tenant()?.slug ?? '', 'data', key];
+  }
   protected readonly canManage = computed(() => this.permissions.can('configuration.forms.manage'));
+  protected readonly canReadStates = computed(
+    () =>
+      this.entity()?.scope === 'tenant' &&
+      this.permissions.can('configuration.state-machines.read'),
+  );
+  protected readonly canReadWorkflows = computed(
+    () => this.entity()?.scope === 'tenant' && this.permissions.can('configuration.workflows.read'),
+  );
+  protected readonly canReadForms = computed(
+    () =>
+      this.entity()?.scope === 'tenant' && this.permissions.can('configuration.form-layouts.read'),
+  );
+  protected readonly canReadRules = computed(
+    () => this.entity()?.scope === 'tenant' && this.permissions.can('configuration.rules.read'),
+  );
   protected readonly fieldAccess = this.access.fieldAccess;
 
   /** Parâmetro de rota `:entityKey`. */

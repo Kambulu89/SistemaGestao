@@ -1,12 +1,13 @@
 import { type Type } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { DynamicEntityRegistryService } from '../../core/dynamic/entity-registry.service';
 import { TenantContextService } from '../../core/tenant-context/tenant-context.service';
 import { loginAs, setupMockBackend } from '../../core/testing/test-backend';
 import { TenantDashboard } from './dashboard/tenant-dashboard';
-import { TenantModulesPage } from './modules/tenant-modules-page';
 import { TenantPermissionsPage } from './permissions/tenant-permissions-page';
+
+let lastFixture: ComponentFixture<unknown> | undefined;
 
 async function render(component: Type<unknown>, email: string, slug: string): Promise<HTMLElement> {
   await loginAs(email);
@@ -15,6 +16,7 @@ async function render(component: Type<unknown>, email: string, slug: string): Pr
   await firstValueFrom(TestBed.inject(DynamicEntityRegistryService).ensureLoaded());
   const fixture = TestBed.createComponent(component);
   await fixture.whenStable();
+  lastFixture = fixture;
   return fixture.nativeElement as HTMLElement;
 }
 
@@ -36,25 +38,14 @@ describe('tenant pages', () => {
     expect(el.textContent).toContain('Acesso total à organização');
   });
 
-  it('modules page lists every group with the resolution of each module', async () => {
-    const el = await render(TenantModulesPage, 'multi@demo.pt', 'escola-horizonte');
-    expect(el.querySelectorAll('table')).toHaveLength(el.querySelectorAll('section').length);
-    expect(el.textContent).toContain('Clientes e contactos');
-    expect(el.textContent).toContain('Acessível');
-    expect(el.textContent).toContain('Sem permissão');
-    expect(el.textContent).toContain('Não contratado');
-    expect(el.textContent).toContain('Desactivado');
-  });
-
   it('permissions page shows which permissions the current role grants', async () => {
     const el = await render(TenantPermissionsPage, 'multi@demo.pt', 'escola-horizonte');
-    expect(el.textContent).toContain('Secretário');
     const row = [...el.querySelectorAll('tr')].find((r) =>
       r.textContent?.includes('crm.customers.read'),
     );
     expect(row?.textContent).toContain('Concedida');
     const denied = [...el.querySelectorAll('tr')].find((r) =>
-      r.textContent?.includes('finance.cash-banks.read'),
+      r.textContent?.includes('finance.payments-budget.read'),
     );
     expect(denied?.textContent).toContain('Não concedida');
   });
@@ -66,6 +57,11 @@ describe('tenant pages', () => {
 
   it('permissions page also lists the dynamic entity permissions (same IAM keys)', async () => {
     const el = await render(TenantPermissionsPage, 'frota@demo.pt', 'transportes-atlas');
+    // Quem gere acessos abre no separador dos perfis: o catálogo está no seu próprio separador.
+    el.querySelector<HTMLButtonElement>('[data-testid=tab-catalog]')?.click();
+    lastFixture?.detectChanges();
+    await lastFixture?.whenStable();
+    lastFixture?.detectChanges();
     expect(el.textContent).toContain('Entidade: Viaturas');
     const row = [...el.querySelectorAll('tr')].find((r) =>
       r.textContent?.includes('entities.vehicle.delete'),

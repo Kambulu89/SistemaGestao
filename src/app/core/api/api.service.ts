@@ -1,52 +1,95 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { Observable } from 'rxjs';
+import { map, type Observable } from 'rxjs';
 import { APP_ENVIRONMENT } from '../config/app-environment';
 import type { PageRequest } from './pagination.model';
 
 type QueryParams = Record<string, string | number | boolean>;
 
+/** Envelope de sucesso da API: `{ data, meta: { correlationId } }`. */
+interface Envelope<T> {
+  readonly data: T;
+  readonly meta?: Readonly<Record<string, unknown>>;
+}
+
+/** Resposta com os metadados do envelope (ex.: `total` de uma listagem). */
+export interface WithMeta<T> {
+  readonly data: T;
+  readonly meta: Readonly<Record<string, unknown>>;
+}
+
+export interface RequestOptions {
+  /** Cabeçalhos extra (ex.: o selector de tenant de um tenant ainda não activo). */
+  readonly headers?: Record<string, string>;
+  readonly params?: QueryParams;
+}
+
 /**
- * Cliente HTTP base. Os adapters HTTP de cada domínio (futuros) devem depender
- * deste serviço e não de `HttpClient`. Os caminhos são relativos a `apiUrl`.
+ * Cliente HTTP base. Os adapters HTTP de cada domínio dependem deste serviço e não de `HttpClient`.
+ * Os caminhos são relativos a `apiUrl`; as respostas de sucesso vêm no envelope da API e este serviço
+ * entrega só o `data` (as respostas 204 entregam `undefined`).
  */
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(APP_ENVIRONMENT).apiUrl;
 
-  get<T>(path: string, params?: QueryParams): Observable<T> {
-    return this.http.get<T>(this.url(path), { params: this.toParams(params) });
+  get<T>(path: string, options?: RequestOptions): Observable<T> {
+    return this.http
+      .get<Envelope<T> | null>(this.url(path), this.init(options))
+      .pipe(map(unwrap<T>));
+  }
+
+  /** Como `get`, mas entrega também o `meta` do envelope (totais de listagens). */
+  getWithMeta<T>(path: string, options?: RequestOptions): Observable<WithMeta<T>> {
+    return this.http
+      .get<Envelope<T>>(this.url(path), this.init(options))
+      .pipe(map((body) => ({ data: body.data, meta: body.meta ?? {} })));
   }
 
   /** Listagem paginada. O formato dos parâmetros é provisório até existir contrato do backend. */
   list<T>(path: string, request: PageRequest): Observable<T> {
-    return this.get<T>(path, pageRequestToParams(request));
+    return this.get<T>(path, { params: pageRequestToParams(request) });
   }
 
-  post<T>(path: string, body: unknown): Observable<T> {
-    return this.http.post<T>(this.url(path), body);
+  post<T>(path: string, body: unknown, options?: RequestOptions): Observable<T> {
+    return this.http
+      .post<Envelope<T> | null>(this.url(path), body, this.init(options))
+      .pipe(map(unwrap<T>));
   }
 
-  put<T>(path: string, body: unknown): Observable<T> {
-    return this.http.put<T>(this.url(path), body);
+  put<T>(path: string, body: unknown, options?: RequestOptions): Observable<T> {
+    return this.http
+      .put<Envelope<T> | null>(this.url(path), body, this.init(options))
+      .pipe(map(unwrap<T>));
   }
 
-  patch<T>(path: string, body: unknown): Observable<T> {
-    return this.http.patch<T>(this.url(path), body);
+  patch<T>(path: string, body: unknown, options?: RequestOptions): Observable<T> {
+    return this.http
+      .patch<Envelope<T> | null>(this.url(path), body, this.init(options))
+      .pipe(map(unwrap<T>));
   }
 
-  delete<T>(path: string): Observable<T> {
-    return this.http.delete<T>(this.url(path));
+  delete<T>(path: string, options?: RequestOptions): Observable<T> {
+    return this.http
+      .delete<Envelope<T> | null>(this.url(path), this.init(options))
+      .pipe(map(unwrap<T>));
   }
 
   private url(path: string): string {
     return `${this.baseUrl}/${path.replace(/^\/+/, '')}`;
   }
 
-  private toParams(params?: QueryParams): HttpParams | undefined {
-    return params ? new HttpParams({ fromObject: params }) : undefined;
+  private init(options?: RequestOptions) {
+    return {
+      headers: options?.headers,
+      params: options?.params ? new HttpParams({ fromObject: options.params }) : undefined,
+    };
   }
+}
+
+function unwrap<T>(body: Envelope<T> | null): T {
+  return (body === null ? undefined : body.data) as T;
 }
 
 export function pageRequestToParams(request: PageRequest): QueryParams {

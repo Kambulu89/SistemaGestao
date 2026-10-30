@@ -16,6 +16,8 @@ export const tenantGuard: CanActivateFn = (route) => {
   return inject(TenantContextService)
     .activate(slug)
     .pipe(
+      // Sem acesso, tenant suspenso ou contexto indisponível: o servidor recusou, a navegação também.
+      catchError(() => of(null)),
       switchMap((context) =>
         context
           ? registry.ensureLoaded().pipe(

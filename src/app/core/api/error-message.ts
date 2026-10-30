@@ -14,3 +14,16 @@ export function errorMessage(error: unknown, fallback = FALLBACK): string {
   if (hasMessage(error)) return error.message;
   return fallback;
 }
+
+/**
+ * Como `errorMessage`, mas um erro de validação diz **que campo** falhou: junta as mensagens por campo do servidor
+ * («Verifique os campos indicados.» sozinho não ajuda a corrigir nada).
+ */
+export function detailedErrorMessage(error: unknown, fallback = FALLBACK): string {
+  const source = error instanceof Error && hasMessage(error.cause) ? error.cause : error;
+  const fields = (source as { fieldErrors?: readonly { message?: unknown }[] } | null)?.fieldErrors;
+  const messages = (fields ?? [])
+    .map((f) => f.message)
+    .filter((m): m is string => typeof m === 'string' && m.length > 0);
+  return messages.length > 0 ? messages.join(' ') : errorMessage(error, fallback);
+}

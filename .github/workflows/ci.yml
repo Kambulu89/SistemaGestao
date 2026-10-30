@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend (Angular)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run check:generic
+      - run: npm test -- --watch=false
+      - run: npm run build
+
+  backend:
+    name: Backend (AdonisJS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-admin-password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      # Valores só de CI (base descartável). Nunca reutilizar fora do pipeline.
+      NODE_ENV: test
+      HOST: 127.0.0.1
+      PORT: 3334
+      LOG_LEVEL: silent
+      APP_KEY: ci-only-app-key-0123456789abcdef0123456789abcdef
+      CORS_ORIGINS: http://localhost:4200
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_DATABASE: sistema_gestao_test
+      DB_USER: sg_runtime
+      DB_PASSWORD: ci-runtime-password
+      DB_OWNER_USER: sg_owner
+      DB_OWNER_PASSWORD: ci-owner-password
+      WEB_BASE_URL: http://localhost:4200
+      MAIL_DRIVER: dev-redis
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Preparar contas e bases (a mesma rotina do Docker de desenvolvimento)
+        working-directory: .
+        env:
+          PGHOST: localhost
+          PGPASSWORD: ci-admin-password
+          POSTGRES_USER: postgres
+          SG_OWNER_PASSWORD: ci-owner-password
+          SG_RUNTIME_PASSWORD: ci-runtime-password
+        run: bash docker/postgres/init/01-roles.sh
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - name: Migrations numa base limpa (conta owner)
+        run: npm run migrate && npm run migrate:status
+      - run: npm run test
+      - run: npm run build

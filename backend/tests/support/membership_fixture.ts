@@ -1,0 +1,220 @@
+import db from '@adonisjs/lucid/services/db'
+import { serviceTenantContext, LucidTenantDatabase } from '#core/tenancy/index'
+import { AddMember, LucidMembershipStore, type Membership } from '#core/membership/index'
+import {
+  ChangeTenantStatus,
+  CreateTenant,
+  LucidTenantStore,
+  type Tenant,
+} from '#platform/tenants/index'
+
+const store = new LucidTenantStore()
+let counter = 0
+
+export const tenantCode = () => `mt_${process.pid}_${Date.now()}_${counter++}`
+
+/** Cria um tenant já activo. */
+export async function createActiveTenant(code = tenantCode()): Promise<Tenant> {
+  const tenant = await new CreateTenant(store).execute({ code, name: `Tenant ${code}` })
+  return new ChangeTenantStatus(store).execute(tenant.code, 'ACTIVE')
+}
+
+export async function addMember(
+  tenant: Tenant,
+  userId: string,
+  status: 'ACTIVE' | 'INVITED' = 'ACTIVE'
+): Promise<Membership> {
+  return new AddMember(new LucidTenantDatabase(), new LucidMembershipStore()).execute(
+    serviceTenantContext(tenant.id, 'teste'),
+    { userId, status }
+  )
+}
+
+/**
+ * Remove memberships e tenants de teste. A RLS é forçada também para a conta dona, por isso as
+ * memberships apagam-se dentro de uma transacção com o tenant definido.
+ */
+export async function deleteTestTenants() {
+  const owner = db.connection('owner')
+  const tenants = await owner.from('tenants').where('code', 'like', 'mt\\_%').select('id')
+  for (const { id } of tenants) {
+    await owner.transaction(async (trx) => {
+      await trx.rawQuery(
+        `select set_config('app.tenant_id', ?, true),
+                set_config('app.audit_purge', 'on', true),
+                set_config('app.audit_disabled', 'on', true)`,
+        [id]
+      )
+      // A auditoria é imutável: só a conta dona, com o interruptor de retenção, a pode apagar.
+      await trx.from('audit_logs').where('tenant_id', id).delete()
+      await trx.from('tenant_memberships').where('tenant_id', id).update({ person_id: null })
+      // Unidades derivadas primeiro (a FK para a base é RESTRICT).
+      await trx
+        .from('units_of_measure')
+        .where('tenant_id', id)
+        .whereNotNull('base_unit_id')
+        .delete()
+      // Os locais congelados por uma contagem têm de ser libertados antes de a apagar.
+      await trx.from('stock_locations').where('tenant_id', id).update({ frozen_by_count_id: null })
+      // A lead convertida aponta para a oportunidade criada: desfaz-se a ligação antes de apagar uma e outra.
+      await trx.from('leads').where('tenant_id', id).update({ opportunity_id: null })
+      // O documento aponta para a sua versão corrente: desfaz-se a ligação antes de apagar uma e outra.
+      await trx.from('documents').where('tenant_id', id).update({ current_version_id: null })
+      for (const table of [
+        'resource_bookings',
+        'event_participants',
+        'calendar_event_exceptions',
+        'calendar_events',
+        'calendars',
+        'resources',
+        'business_calendars',
+        'search_documents',
+        'export_jobs',
+        'dashboard_widgets',
+        'dashboards',
+        'report_definitions',
+        'resource_attachments',
+        'document_versions',
+        'documents',
+        'attachments',
+        'template_versions',
+        'templates',
+        'notifications',
+        'notification_deliveries',
+        'notification_requests',
+        'notification_preferences',
+        'campaign_members',
+        'marketing_exclusions',
+        'campaigns',
+        'opportunity_activities',
+        'opportunity_stage_history',
+        'opportunities',
+        'leads',
+        'pipeline_stages',
+        'return_lines',
+        'goods_returns',
+        'count_lines',
+        'stock_counts',
+        'transfer_receipt_lines',
+        'transfer_receipts',
+        'transfer_lines',
+        'stock_transfers',
+        'credit_reservations',
+        'reconciliation_matches',
+        'bank_statement_lines',
+        'bank_statement_batches',
+        'treasury_entries',
+        'payment_allocations',
+        'payments',
+        'credit_applications',
+        'receivables',
+        'payables',
+        'supplier_invoice_lines',
+        'supplier_invoices',
+        'treasury_accounts',
+        'goods_receipt_lines',
+        'goods_receipts',
+        'purchase_lines',
+        'purchase_orders',
+        'requisition_lines',
+        'purchase_requisitions',
+        'suppliers',
+        'credit_note_lines',
+        'credit_notes',
+        'invoice_lines',
+        'invoices',
+        'contracts',
+        'shipment_lines',
+        'shipments',
+        'stock_reservations',
+        'stock_movements',
+        'stock_balances',
+        'stock_costs',
+        'lots',
+        'stock_locations',
+        'warehouses',
+        'sales_lines',
+        'sales_orders',
+        'sales_quotes',
+        'interactions',
+        'customers',
+        'customer_segments',
+        'price_list_items',
+        'price_lists',
+        'product_variants',
+        'products',
+        'product_categories',
+        'outbox_deliveries',
+        'automation_runs',
+        'automations',
+        'approval_delegations',
+        'workflow_tasks',
+        'workflow_instances',
+        'workflow_definitions',
+        'outbox_events',
+        'state_history',
+        'record_states',
+        'state_machines',
+        'form_definitions',
+        'rule_evaluations',
+        'rule_definitions',
+        'dynamic_unique_values',
+        'dynamic_records',
+        'field_definitions',
+        'entity_schema_versions',
+        'entity_definitions',
+        'sequences',
+        'tax_rates',
+        'units_of_measure',
+        'setting_values',
+        'tenant_features',
+        'tenant_modules',
+        'party_relationships',
+        'addresses',
+        'contacts',
+        'people',
+        'organization_parties',
+        'parties',
+        'invitations',
+        'user_preferences',
+        'role_assignments',
+        'role_permissions',
+        'roles',
+        'access_policies',
+        'membership_scopes',
+        'team_members',
+        'cost_centers',
+        'organization_units',
+        'organizations',
+      ]) {
+        await trx.from(table).where('tenant_id', id).delete()
+      }
+      await trx.from('tenant_memberships').where('tenant_id', id).delete()
+    })
+  }
+  await deleteTenantRows('mt\\_%')
+}
+
+/**
+ * Apaga tenants de teste e o que lhes é próprio (domínios, auditoria). A auditoria é imutável: só a
+ * conta dona, com os interruptores de retenção/desactivação, a apaga.
+ */
+export async function deleteTenantRows(codePattern: string) {
+  const owner = db.connection('owner')
+  const tenants = await owner.from('tenants').where('code', 'like', codePattern).select('id')
+  for (const { id } of tenants) {
+    await owner.transaction(async (trx) => {
+      await trx.rawQuery(
+        `select set_config('app.tenant_id', ?, true), set_config('app.audit_purge', 'on', true),
+                set_config('app.audit_disabled', 'on', true)`,
+        [id]
+      )
+      await trx.from('subscription_changes').where('tenant_id', id).delete()
+      await trx.from('subscriptions').where('tenant_id', id).delete()
+      await trx.from('tenant_domains').where('tenant_id', id).delete()
+      await trx.from('audit_logs').where('tenant_id', id).delete()
+      await trx.from('security_events').where('tenant_id', id).delete()
+      await trx.from('tenants').where('id', id).delete()
+    })
+  }
+}

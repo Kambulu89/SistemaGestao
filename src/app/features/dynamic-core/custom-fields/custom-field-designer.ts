@@ -29,6 +29,7 @@ import {
   draftOf,
   type FieldDraft,
 } from '../../../core/dynamic/engine/field-draft';
+import { DESIGNER_FIELD_TYPES } from '../../../core/dynamic/designer-field-types';
 import { FIELD_TYPE_CATALOG, fieldCapabilities } from '../../../core/dynamic/engine/field-types';
 import {
   type CustomFieldDefinition,
@@ -53,12 +54,6 @@ import { Checkbox } from '../../../shared/ui/checkbox/checkbox';
 import { Input } from '../../../shared/ui/input/input';
 import { Select, type SelectOption } from '../../../shared/ui/select/select';
 import { Textarea } from '../../../shared/ui/textarea/textarea';
-
-const READY_TYPES: readonly SelectOption[] = FIELD_TYPE_CATALOG.filter(
-  (t) => t.status === 'ready',
-).map((t) => ({ value: t.type, label: t.label }));
-
-const PREVIEW_TYPES = FIELD_TYPE_CATALOG.filter((t) => t.status === 'preview');
 
 const optionGroup = (value = '', label = '', active = true) =>
   new FormGroup({
@@ -374,7 +369,16 @@ export class CustomFieldDesigner {
   readonly saved = output<CustomFieldDefinition>();
   readonly cancelled = output<void>();
 
-  protected readonly previewTypes = PREVIEW_TYPES;
+  private readonly availableTypes = inject(DESIGNER_FIELD_TYPES);
+  private readonly readyTypes = computed<readonly SelectOption[]>(() =>
+    FIELD_TYPE_CATALOG.filter(
+      (t) => t.status === 'ready' && (this.availableTypes?.has(t.type) ?? true),
+    ).map((t) => ({ value: t.type, label: t.label })),
+  );
+  /** Tipos ainda sem suporte (no catálogo ou no servidor): mostrados, mas não escolhíveis. */
+  protected readonly previewTypes = FIELD_TYPE_CATALOG.filter(
+    (t) => t.status === 'preview' || !(this.availableTypes?.has(t.type) ?? true),
+  );
   /** Campos numéricos que uma fórmula pode referir (nativos e personalizados, sem o próprio). */
   protected readonly formulaFields = computed(() => {
     const own = this.baseField()?.key;
@@ -492,12 +496,13 @@ export class CustomFieldDesigner {
     () => this.canManage() && this.permissions.can('configuration.forms.publish'),
   );
   protected readonly typeOptions = computed(() => {
+    const ready = this.readyTypes();
     const base = this.baseField();
-    if (!base) return READY_TYPES;
+    if (!base) return ready;
     // Um campo já existente mantém o seu tipo visível mesmo que o tipo ainda esteja em preparação.
-    return READY_TYPES.some((o) => o.value === base.type)
-      ? READY_TYPES
-      : [...READY_TYPES, { value: base.type, label: base.type }];
+    return ready.some((o) => o.value === base.type)
+      ? ready
+      : [...ready, { value: base.type, label: base.type }];
   });
 
   protected readonly isNumeric = computed(() =>

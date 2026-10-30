@@ -3,7 +3,8 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { PermissionService } from '../permissions/permission.service';
 import { loginAs, setupMockBackend } from '../testing/test-backend';
-import { TenantContextService } from './tenant-context.service';
+import { TENANT_SCOPE_RESETTERS, TenantContextService } from './tenant-context.service';
+import { TenantGateway } from './tenant.gateway';
 
 describe('TenantContextService', () => {
   beforeEach(async () => {
@@ -42,5 +43,54 @@ describe('TenantContextService', () => {
     TestBed.tick();
     expect(ctx.active()).toBeNull();
     expect(ctx.memberships()).toEqual([]);
+  });
+});
+
+describe('TenantContextService tenant switch', () => {
+  it('runs the registered resetters when the tenant changes and when the session ends', async () => {
+    const reset = vi.fn();
+    setupMockBackend();
+    TestBed.configureTestingModule({
+      providers: [{ provide: TENANT_SCOPE_RESETTERS, useValue: [reset] }],
+    });
+    await loginAs('multi@demo.pt');
+    const ctx = TestBed.inject(TenantContextService);
+
+    await firstValueFrom(ctx.activate('escola-horizonte'));
+    expect(reset).not.toHaveBeenCalled(); // primeira activação: nada a limpar
+
+    await firstValueFrom(ctx.activate('clinica-vida'));
+    expect(reset).toHaveBeenCalledTimes(1);
+
+    TestBed.inject(AuthService).logout();
+    TestBed.tick();
+    expect(reset).toHaveBeenCalledTimes(2);
+  });
+
+  it('emits switched$ on a switch, not when re-activating the same tenant', async () => {
+    setupMockBackend();
+    await loginAs('multi@demo.pt');
+    const ctx = TestBed.inject(TenantContextService);
+    const emitted = vi.fn();
+    ctx.switched$.subscribe(emitted);
+
+    await firstValueFrom(ctx.activate('escola-horizonte'));
+    await firstValueFrom(ctx.activate('escola-horizonte'));
+    expect(emitted).not.toHaveBeenCalled();
+
+    await firstValueFrom(ctx.activate('clinica-vida'));
+    expect(emitted).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshMemberships asks the server again', async () => {
+    setupMockBackend();
+    await loginAs('multi@demo.pt');
+    const ctx = TestBed.inject(TenantContextService);
+    await firstValueFrom(ctx.loadMemberships());
+    const spy = vi.spyOn(TestBed.inject(TenantGateway), 'listMemberships');
+    await firstValueFrom(ctx.loadMemberships());
+    expect(spy).not.toHaveBeenCalled(); // em cache
+    await firstValueFrom(ctx.refreshMemberships());
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

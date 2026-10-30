@@ -19,9 +19,9 @@ describe('NavigationService', () => {
 
   it('builds the Secretário menu from accessible modules only', async () => {
     await loginAs('multi@demo.pt');
+    // Sem permissão de ler os módulos nem o plano, essas entradas não aparecem.
     expect(labels(await nav('escola-horizonte'))).toEqual([
       'Painel',
-      'Módulos',
       'Organização',
       'Configurações',
       'Clientes',
@@ -38,10 +38,17 @@ describe('NavigationService', () => {
     expect(labels(await nav('clinica-vida'))).toEqual([
       'Painel',
       'Módulos',
+      'Plano',
       'Organização',
+      'Pessoas e entidades',
       'Utilizadores',
       'Permissões',
       'Configurações',
+      'Aprovações',
+      'Automações',
+      'Notificações',
+      'Pesquisa',
+      'Entidades',
       'Clientes',
       'Clientes e contactos',
       'Leads e oportunidades',
@@ -102,7 +109,6 @@ describe('NavigationService', () => {
       'Catálogo de módulos',
       'Planos',
       'Subscrições',
-      'Configurações',
     ]);
   });
 });

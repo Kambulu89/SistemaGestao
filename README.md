@@ -1,10 +1,66 @@
-# Plataforma de Gestão Empresarial (frontend)
+# Plataforma de Gestão Empresarial
 
-Fundação frontend de uma plataforma SaaS **multi-tenant, modular e configurável**.
-Angular 22 · Tailwind CSS 4 · TypeScript estrito · Signals · RxJS · Reactive Forms · Vitest.
+Plataforma SaaS **multi-tenant, modular e configurável**. Este repositório tem duas partes:
 
-> **Segurança:** isolamento de dados e verificação efectiva de permissões são responsabilidade do backend.
+| Parte | Pasta | Estado |
+| --- | --- | --- |
+| Frontend (Angular 22 · Tailwind 4) | raiz (`src/`) | ligado à API para identidade, tenants, membros, convites, organização, perfis, papéis, políticas e simulador, âmbitos, Party, conta, armazéns e stock, administração da plataforma, plano, módulos e configurações; o core dinâmico (C10–C15) ainda sobre **dados mock** |
+| Backend (AdonisJS 6 · PostgreSQL 16 · Redis) | [`backend/`](backend/) | **Fase 0, Fase 1 (fatias 1.1–1.9), Fase 2 fatias 2.1–2.5 (backend) e Fase 3 fatias 3.1–3.11 e Fase 4 fatias 4.1–4.8, 5.1, 5.2 e 6.1 (catálogo M03, clientes M01, prospecção e CRM M02, propostas/encomendas/expedições M04, inventário M07, transferências/contagens/devoluções M08, contratos/facturas/notas de crédito M05, compras M06 e tesouraria/contas a receber e a pagar/conciliação bancária M09) e as fatias 6.2 (notificações e comunicação S02), 6.3 (documentos, anexos e modelos S01), 6.4 (relatórios, painéis, exportações e pesquisa S04) e 6.5 (calendário, recursos e reservas S03) (C10, C11, C12, C13, C14 e C15 no servidor, valores relacionados, editor de regras, Form Builder, designer de estados e caixa de aprovações/designer de workflows e automações no frontend)**: tenants, autenticação, membros e convites, autorização RBAC+ABAC, organização, Party, matriz de isolamento, auditoria mínima, planos e assinaturas, registo de módulos, configurações/sequências, administração da plataforma e metadados/entidades dinâmicas, o catálogo e preços, os clientes e as propostas e encomendas (primeiros módulos de negócio). Sem os restantes módulos de negócio |
+
+Contrato funcional: [`docs/especificacao-v2.docx`](docs/especificacao-v2.docx). Regras permanentes: [`CLAUDE.md`](CLAUDE.md).
+Arquitectura: [`docs/architecture.md`](docs/architecture.md) · decisões: [`docs/decisions.md`](docs/decisions.md) ·
+plano e estado das fases: [`docs/implementation-plan.md`](docs/implementation-plan.md).
+
+> **Segurança:** isolamento de dados e verificação efectiva de permissões são responsabilidade do **backend**.
 > Guards, menus filtrados e elementos ocultos no frontend servem apenas para navegação e experiência de utilização.
+
+## Executar o backend (desenvolvimento)
+
+Requisitos: Node ≥ 22.22, PostgreSQL 16, Redis 7 (ou Docker).
+
+**Opção A — Docker Compose** (PostgreSQL, Redis, MinIO, API e frontend):
+
+```bash
+cp .env.compose.example .env        # preencher os valores (openssl rand -hex 16; APP_KEY: openssl rand -hex 32)
+docker compose up --build
+docker compose exec api npm run migrate
+curl localhost:3333/api/v1/ready
+```
+
+**Opção B — serviços locais:**
+
+```bash
+# 1) Contas e bases (uma vez). Define as palavras-passe que vai pôr no .env do backend.
+SG_OWNER_PASSWORD=... SG_RUNTIME_PASSWORD=... POSTGRES_USER=postgres bash docker/postgres/init/01-roles.sh
+# 2) API
+cd backend
+cp .env.example .env                 # preencher APP_KEY (node ace generate:key) e as palavras-passe
+npm ci
+npm run migrate                      # conta sg_owner
+npm run dev                          # http://localhost:3333/api/v1/health
+```
+
+Validar (backend): `npm run lint && npm run format:check && npm run typecheck && npm test && npm run build`.
+Os testes usam a base `sistema_gestao_test` (`cp .env.test.example .env.test` e preencher).
+Endpoints actuais: `health`, `ready`, `auth/*` (login, logout, recuperação, verificação de email) e `me/*` (utilizador,
+sessões, palavra-passe, tenants), `context`, `roles`, `role-assignments`, `access-policies`, `permissions`, `authorization/simulate`, `organizations`, `organization-units`, `cost-centers`, `membership-scopes`, `memberships`, `invitations`, `me/preferences`, `parties`, `people` e `organization-parties` — contrato em `backend/openapi/openapi.yaml`.
+
+Gestão da plataforma (sem API HTTP ainda): `node ace tenant:create|tenant:status|tenant:domain:add|tenant:domain:verify`
+`USER_PASSWORD=… node ace user:create <email> <nome> --verified` e `node ace membership:add|membership:status <tenant> <email> [estado]` e, para planos (D-030), `node ace plan:create|plan:publish|plan:retire|plan:list` e `subscription:assign|subscription:change|subscription:status <tenant> …` e `modules:sync` (registo de módulos, D-031) e `platform:grant|platform:revoke|platform:list` (permissões de plataforma, D-033) e `node ace iam:sync` / `iam:bootstrap <tenant> <email>`
+(catálogo de permissões e papel `tenant_admin`; correr `iam:sync` em cada ambiente depois de migrar).
+Os pedidos de tenant (`GET /context`) indicam o tenant em `X-Tenant-Id` ou `X-Tenant-Code`. Dados de demonstração (dois tenants, só fora de
+produção): `DEMO_USER_PASSWORD=… npm run seed`. Em desenvolvimento use `MAIL_DRIVER=dev-redis` (as mensagens com tokens
+ficam na lista Redis `dev:mailbox`); não há fornecedor de email real.
+
+---
+
+# Frontend
+
+> Em desenvolvimento o frontend (`ng serve`, `:4200`) fala com a API em `http://localhost:3333/api/v1` (ver
+> `src/environments/environment.development.ts`); a API tem de ter `CORS_ORIGINS=http://localhost:4200` (a sessão é um cookie
+> `HttpOnly`, enviado com `withCredentials`). Contas de demonstração: ver o seeder do backend (`DEMO_USER_PASSWORD`).
+
+Angular 22 · Tailwind CSS 4 · TypeScript estrito · Signals · RxJS · Reactive Forms · Vitest.
 
 ## Requisitos
 
