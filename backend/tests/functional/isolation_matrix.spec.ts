@@ -140,7 +140,11 @@ async function snapshot(world: World) {
     report: await get(`/api/v1/reports/${world.ids.report}`),
     dashboards: await get('/api/v1/dashboards'),
     dashboard: await get(`/api/v1/dashboards/${world.ids.dashboard}`),
-    dashboardData: await get(`/api/v1/dashboards/${world.ids.dashboard}/data`),
+    // `asOf` é o instante da leitura em tempo real: muda sempre e não é estado.
+    dashboardData: JSON.parse(
+      JSON.stringify(await get(`/api/v1/dashboards/${world.ids.dashboard}/data`)),
+      (key, value) => (key === 'asOf' ? undefined : value)
+    ),
     exportsList: await get('/api/v1/exports'),
     exportJob: await get(`/api/v1/exports/${world.ids.exportJob}`),
     searchStatus: await get('/api/v1/search/status'),
@@ -392,7 +396,7 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     [
       'patch',
       `/reports/${o.report}`,
-      { version: 1, name: 'x', datasetCode: 'sales_documents', query: {} },
+      { version: 1, name: 'x', datasetCode: 'sales_documents', query: { select: ['number'] } },
     ],
     ['post', `/reports/${o.report}/publish`, {}],
     ['post', `/reports/${o.report}/duplicate`, { code: 'copia' }],
