@@ -9715,3 +9715,601 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /calendars:
+    get:
+      summary: 'Calendários visíveis (calendar.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria um calendário (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [name, timezone],
+                additionalProperties: true,
+                properties:
+                  {
+                    name: { type: string },
+                    timezone: { type: string, description: 'IANA' },
+                    visibility: { type: string, enum: [PRIVATE, UNIT, TENANT] },
+                    unitId: { type: string, format: uuid },
+                    version: { type: integer },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /calendars/{id}:
+    get:
+      summary: 'Um calendário visível (calendar.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: 'Altera um calendário; exige `version` (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [name, timezone],
+                additionalProperties: true,
+                properties:
+                  {
+                    name: { type: string },
+                    timezone: { type: string, description: 'IANA' },
+                    visibility: { type: string, enum: [PRIVATE, UNIT, TENANT] },
+                    unitId: { type: string, format: uuid },
+                    version: { type: integer },
+                  },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: 'Apaga um calendário vazio (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /calendar-events:
+    get:
+      summary: 'Ocorrências no intervalo [from, to) (calendar.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - {
+            name: to,
+            in: query,
+            required: true,
+            schema: { type: string, format: date-time },
+            description: 'No máximo 366 dias depois de from.',
+          }
+        - { name: calendarId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria um evento, simples ou em série (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [calendarId, title, startsAt, endsAt],
+                additionalProperties: true,
+                properties:
+                  {
+                    calendarId: { type: string, format: uuid },
+                    title: { type: string },
+                    description: { type: string },
+                    startsAt: { type: string, format: date-time },
+                    endsAt: { type: string, format: date-time },
+                    timezone: { type: string },
+                    allDay: { type: boolean },
+                    recurrenceRule:
+                      {
+                        type: string,
+                        maxLength: 500,
+                        description: 'FREQ, INTERVAL, COUNT ou UNTIL, BYDAY',
+                      },
+                    status: { type: string, enum: [TENTATIVE, CONFIRMED] },
+                    sourceType: { type: string },
+                    sourceId: { type: string },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /calendar-events/{id}:
+    get:
+      summary: 'Evento com excepções, participantes e reservas (calendar.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: 'Edita o evento, esta ocorrência ou esta e as seguintes; exige `version` (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [version],
+                additionalProperties: true,
+                properties:
+                  {
+                    version: { type: integer },
+                    scope: { type: string, enum: [ALL, THIS, FUTURE] },
+                    occurrenceStart: { type: string, format: date-time },
+                    title: { type: string },
+                    description: { type: string },
+                    startsAt: { type: string, format: date-time },
+                    endsAt: { type: string, format: date-time },
+                    timezone: { type: string },
+                    allDay: { type: boolean },
+                    recurrenceRule: { type: string, nullable: true },
+                    status: { type: string, enum: [TENTATIVE, CONFIRMED] },
+                  },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /calendar-events/{id}/cancel:
+    post:
+      summary: 'Cancela o evento, a ocorrência ou as seguintes; liberta as reservas e avisa participantes (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                additionalProperties: true,
+                properties:
+                  {
+                    scope: { type: string, enum: [ALL, THIS, FUTURE] },
+                    occurrenceStart: { type: string, format: date-time },
+                  },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /calendar-events/{id}/participants:
+    post:
+      summary: 'Acrescenta um participante, respeitando a capacidade (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                additionalProperties: true,
+                properties:
+                  {
+                    membershipId: { type: string, format: uuid },
+                    partyId: { type: string, format: uuid },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /calendar-events/{id}/participants/{participantId}:
+    delete:
+      summary: 'Remove um participante (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: participantId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /calendar-events/{id}/respond:
+    post:
+      summary: 'Responde por si ao convite (calendar.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [response],
+                additionalProperties: true,
+                properties: { response: { type: string, enum: [ACCEPTED, DECLINED] } },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /resources:
+    get:
+      summary: 'Salas e equipamentos visíveis (resource.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria um recurso (resource.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [name, type],
+                additionalProperties: true,
+                properties:
+                  {
+                    organizationId: { type: string, format: uuid },
+                    code: { type: string },
+                    name: { type: string },
+                    type: { type: string, enum: [ROOM, EQUIPMENT, VEHICLE, OTHER] },
+                    capacity: { type: integer, minimum: 1 },
+                    unitId: { type: string, format: uuid },
+                    active: { type: boolean },
+                    version: { type: integer },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /resources/{id}:
+    get:
+      summary: 'Um recurso (resource.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: 'Altera um recurso; exige `version` (resource.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [name, type],
+                additionalProperties: true,
+                properties:
+                  {
+                    organizationId: { type: string, format: uuid },
+                    code: { type: string },
+                    name: { type: string },
+                    type: { type: string, enum: [ROOM, EQUIPMENT, VEHICLE, OTHER] },
+                    capacity: { type: integer, minimum: 1 },
+                    unitId: { type: string, format: uuid },
+                    active: { type: boolean },
+                    version: { type: integer },
+                  },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: 'Apaga um recurso sem reservas (resource.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /resources/{id}/availability:
+    get:
+      summary: 'Intervalos ocupados do recurso, sem revelar o que se faz neles (resource.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - {
+            name: to,
+            in: query,
+            required: true,
+            schema: { type: string, format: date-time },
+            description: 'No máximo 366 dias depois de from.',
+          }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /resource-bookings:
+    get:
+      summary: 'Reservas activas no intervalo (resource.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - {
+            name: to,
+            in: query,
+            required: true,
+            schema: { type: string, format: date-time },
+            description: 'No máximo 366 dias depois de from.',
+          }
+        - { name: resourceId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: eventId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Reserva um recurso para um evento (ou para as ocorrências de uma série); só uma reserva passa por horário (resource.book)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [eventId, resourceId],
+                additionalProperties: true,
+                properties:
+                  {
+                    eventId: { type: string, format: uuid },
+                    resourceId: { type: string, format: uuid },
+                    occurrenceStart: { type: string, format: date-time },
+                    horizonDays: { type: integer, minimum: 1, maximum: 366 },
+                    hold: { type: boolean },
+                    holdMinutes: { type: integer, minimum: 1, maximum: 1440 },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /resource-bookings/{id}/confirm:
+    post:
+      summary: 'Confirma uma reserva provisória que ainda não venceu (resource.book)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /resource-bookings/{id}/cancel:
+    post:
+      summary: 'Cancela a reserva: liberta o horário, preserva o evento e avisa os participantes (resource.book)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /business-calendars:
+    get:
+      summary: 'Horários úteis (calendar.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria um horário útil com feriados (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [name, timezone],
+                additionalProperties: true,
+                properties:
+                  {
+                    organizationId: { type: string, format: uuid },
+                    name: { type: string },
+                    timezone: { type: string },
+                    weeklyWorkingHours: { type: object },
+                    holidays: { type: array, items: { type: object } },
+                    version: { type: integer },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /business-calendars/{id}:
+    get:
+      summary: 'Um horário útil (calendar.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: 'Altera um horário útil; exige `version` (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [name, timezone],
+                additionalProperties: true,
+                properties:
+                  {
+                    organizationId: { type: string, format: uuid },
+                    name: { type: string },
+                    timezone: { type: string },
+                    weeklyWorkingHours: { type: object },
+                    holidays: { type: array, items: { type: object } },
+                    version: { type: integer },
+                  },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: 'Apaga um horário útil (calendar.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /business-calendars/{id}/working-time:
+    get:
+      summary: 'Minutos úteis entre dois instantes (calendar.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - {
+            name: to,
+            in: query,
+            required: true,
+            schema: { type: string, format: date-time },
+            description: 'No máximo 366 dias depois de from.',
+          }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }

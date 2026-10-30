@@ -8,6 +8,7 @@
 */
 
 import { registerDocumentResources } from '#modules/documents/index'
+import { registerCalendar } from '#modules/calendar/index'
 import { registerReporting } from '#modules/reporting/index'
 import { registerFinance } from '#modules/finance/index'
 import { registerInventory } from '#modules/inventory/index'
@@ -18,3 +19,4 @@ registerFinance()
 registerProspecting()
 registerDocumentResources()
 registerReporting()
+registerCalendar()

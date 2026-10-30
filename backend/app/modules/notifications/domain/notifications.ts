@@ -80,6 +80,28 @@ export const NOTIFICATION_TYPES: readonly NotificationType[] = [
     description: 'Avisa o responsável de uma lead quando ela é convertida.',
   },
   {
+    code: 'calendar.event.cancelled',
+    templateVersion: '1',
+    classification: 'OPERATIONAL',
+    channels: ['IN_APP'],
+    title: 'Evento cancelado',
+    body: 'O evento «{{title}}» ({{startsAt}}) foi cancelado.',
+    manual: false,
+    description:
+      'Avisa os participantes quando um evento, uma ocorrência ou uma série é cancelada.',
+  },
+  {
+    code: 'calendar.booking.cancelled',
+    templateVersion: '1',
+    classification: 'OPERATIONAL',
+    channels: ['IN_APP'],
+    title: 'Reserva cancelada',
+    body: 'A reserva de {{resourceName}} para «{{title}}» ({{startsAt}}) foi cancelada; o evento mantém-se.',
+    manual: false,
+    description:
+      'Avisa os participantes quando a reserva de um recurso é cancelada e o evento continua.',
+  },
+  {
     code: 'crm.campaign.message',
     templateVersion: '1',
     classification: 'PROMOTIONAL',

@@ -118,6 +118,12 @@ export interface World {
     dashboard: string
     widget: string
     exportJob: string
+    calendar: string
+    resource: string
+    calendarEvent: string
+    booking: string
+    participant: string
+    businessCalendar: string
     attachment: string
     resourceAttachment: string
     template: string
@@ -184,6 +190,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       'notifications',
       'documents',
       'reporting',
+      'calendar',
       'orders',
       'inventory',
       'invoicing',
@@ -204,6 +211,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await must(await http.post('/api/v1/tenant/modules/notifications/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/documents/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/reporting/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/calendar/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -1106,6 +1114,75 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     202
   )
   await must(await http.post('/api/v1/search/reindex', {}), 200)
+  // S03: um calendário, uma sala, um evento com participante e reserva, e um horário útil.
+  const calendar = await must<{ id: string }>(
+    await http.post('/api/v1/calendars', {
+      name: 'Agenda comum',
+      timezone: 'Europe/Lisbon',
+      visibility: 'TENANT',
+    }),
+    201
+  )
+  const room = await must<{ id: string }>(
+    await http.post('/api/v1/resources', {
+      organizationId: organization.id,
+      code: 'SALA-COMUM',
+      name: 'Sala comum',
+      type: 'ROOM',
+      capacity: 6,
+    }),
+    201
+  )
+  const calendarEvent = await must<{ id: string }>(
+    await http.post('/api/v1/calendar-events', {
+      calendarId: calendar.id,
+      title: 'Reunião comum',
+      startsAt: '2030-01-15T10:00:00Z',
+      endsAt: '2030-01-15T11:00:00Z',
+    }),
+    201
+  )
+  const participant = await must<{ id: string }>(
+    await http.post(`/api/v1/calendar-events/${calendarEvent.id}/participants`, {
+      membershipId: admin.membershipId,
+    }),
+    201
+  )
+  const booked = await must<{ bookings: { id: string }[] }>(
+    await http.post('/api/v1/resource-bookings', {
+      eventId: calendarEvent.id,
+      resourceId: room.id,
+    }),
+    201
+  )
+  // Uma série com uma ocorrência cancelada (uma excepção).
+  const series = await must<{ id: string }>(
+    await http.post('/api/v1/calendar-events', {
+      calendarId: calendar.id,
+      title: 'Série comum',
+      startsAt: '2030-01-20T10:00:00Z',
+      endsAt: '2030-01-20T11:00:00Z',
+      recurrenceRule: 'FREQ=DAILY;COUNT=3',
+    }),
+    201
+  )
+  await must(
+    await http.post(`/api/v1/calendar-events/${series.id}/cancel`, {
+      scope: 'THIS',
+      occurrenceStart: '2030-01-21T10:00:00Z',
+    }),
+    200
+  )
+  const businessCalendar = await must<{ id: string }>(
+    await http.post('/api/v1/business-calendars', {
+      organizationId: organization.id,
+      name: 'Horário comum',
+      timezone: 'Europe/Lisbon',
+      weeklyWorkingHours: { mon: [['09:00', '17:00']] },
+      holidays: [{ date: '2030-12-25', name: 'Natal' }],
+    }),
+    201
+  )
   // Conciliação: uma conta bancária com um recebimento confirmado (1), um extracto de duas linhas (+1 e -3) e a primeira
   // linha já conciliada com o movimento; a segunda fica por conciliar.
   const bankAccount = await must<{ id: string }>(
@@ -1356,6 +1433,12 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       dashboard: dashboard.id,
       widget: widget.id,
       exportJob: exportJob.id,
+      calendar: calendar.id,
+      resource: room.id,
+      calendarEvent: calendarEvent.id,
+      booking: (booked.bookings[0] as { id: string }).id,
+      participant: participant.id,
+      businessCalendar: businessCalendar.id,
       attachment: prepared.id,
       resourceAttachment: resourceAttachment.id,
       template: template.id,

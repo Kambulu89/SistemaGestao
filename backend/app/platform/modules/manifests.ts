@@ -41,6 +41,23 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     ],
   },
   {
+    code: 'calendar',
+    name: 'Calendário, recursos e reservas',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [{ code: 'core', constraint: '*', optional: false }],
+    features: [
+      {
+        code: 'calendar.events',
+        name: 'Calendários, eventos e participantes',
+        defaultEnabled: true,
+      },
+      { code: 'calendar.resources', name: 'Recursos e reservas', defaultEnabled: true },
+      { code: 'calendar.business_hours', name: 'Horário útil e feriados', defaultEnabled: true },
+    ],
+  },
+  {
     code: 'reporting',
     name: 'Relatórios, painéis e pesquisa',
     kind: 'MODULE',

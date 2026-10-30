@@ -461,6 +461,32 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Publicar uma versão de um modelo (passa a imutável).',
   },
   {
+    code: 'calendar.read',
+    moduleCode: 'calendar',
+    description: 'Ver calendários, eventos e horários úteis a que tem acesso.',
+  },
+  {
+    code: 'calendar.manage',
+    moduleCode: 'calendar',
+    description:
+      'Criar e alterar calendários, eventos (séries e excepções), participantes e horários úteis.',
+  },
+  {
+    code: 'resource.read',
+    moduleCode: 'calendar',
+    description: 'Ver salas e equipamentos, a sua ocupação e as reservas.',
+  },
+  {
+    code: 'resource.manage',
+    moduleCode: 'calendar',
+    description: 'Criar, alterar e desactivar salas e equipamentos.',
+  },
+  {
+    code: 'resource.book',
+    moduleCode: 'calendar',
+    description: 'Reservar, confirmar e cancelar reservas de recursos.',
+  },
+  {
     code: 'report.read',
     moduleCode: 'reporting',
     description: 'Ver e correr relatórios publicados e painéis a que tem acesso.',

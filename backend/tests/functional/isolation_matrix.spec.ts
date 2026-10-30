@@ -62,6 +62,11 @@ async function worlds(client: any): Promise<{ a: World; b: World }> {
   return cached
 }
 
+const noClock = (value: unknown) =>
+  JSON.parse(JSON.stringify(value), (key, inner) => (key === 'asOf' ? undefined : inner))
+
+const WINDOW = 'from=2029-12-01T00:00:00Z&to=2030-02-01T00:00:00Z'
+
 async function snapshot(world: World) {
   const get = async (url: string) => (await world.http.get(url)).body().data
   return {
@@ -141,9 +146,21 @@ async function snapshot(world: World) {
     dashboards: await get('/api/v1/dashboards'),
     dashboard: await get(`/api/v1/dashboards/${world.ids.dashboard}`),
     // `asOf` é o instante da leitura em tempo real: muda sempre e não é estado.
-    dashboardData: JSON.parse(
-      JSON.stringify(await get(`/api/v1/dashboards/${world.ids.dashboard}/data`)),
-      (key, value) => (key === 'asOf' ? undefined : value)
+    dashboardData: noClock(await get(`/api/v1/dashboards/${world.ids.dashboard}/data`)),
+    calendars: await get('/api/v1/calendars'),
+    calendar: await get(`/api/v1/calendars/${world.ids.calendar}`),
+    calendarEvents: noClock(await get(`/api/v1/calendar-events?${WINDOW}`)),
+    calendarEvent: await get(`/api/v1/calendar-events/${world.ids.calendarEvent}`),
+    resources: await get('/api/v1/resources'),
+    resource: await get(`/api/v1/resources/${world.ids.resource}`),
+    availability: noClock(
+      await get(`/api/v1/resources/${world.ids.resource}/availability?${WINDOW}`)
+    ),
+    bookings: noClock(await get(`/api/v1/resource-bookings?${WINDOW}`)),
+    businessCalendars: await get('/api/v1/business-calendars'),
+    businessCalendar: await get(`/api/v1/business-calendars/${world.ids.businessCalendar}`),
+    workingTime: noClock(
+      await get(`/api/v1/business-calendars/${world.ids.businessCalendar}/working-time?${WINDOW}`)
     ),
     exportsList: await get('/api/v1/exports'),
     exportJob: await get(`/api/v1/exports/${world.ids.exportJob}`),
@@ -416,6 +433,29 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
       { version: 1, title: 'x', type: 'KPI', reportId: me.ids.report },
     ],
     ['delete', `/dashboards/${o.dashboard}/widgets/${o.widget}`],
+    ['get', `/calendars/${o.calendar}`],
+    ['patch', `/calendars/${o.calendar}`, { version: 1, name: 'x', timezone: 'UTC' }],
+    ['delete', `/calendars/${o.calendar}`],
+    ['get', `/calendar-events/${o.calendarEvent}`],
+    ['patch', `/calendar-events/${o.calendarEvent}`, { version: 1, title: 'x' }],
+    ['post', `/calendar-events/${o.calendarEvent}/cancel`, {}],
+    ['post', `/calendar-events/${o.calendarEvent}/respond`, { response: 'ACCEPTED' }],
+    ['post', `/calendar-events/${o.calendarEvent}/participants`, { partyId: me.ids.personParty }],
+    ['delete', `/calendar-events/${o.calendarEvent}/participants/${o.participant}`],
+    ['get', `/resources/${o.resource}`],
+    ['patch', `/resources/${o.resource}`, { version: 1, name: 'x', type: 'ROOM', capacity: 1 }],
+    ['delete', `/resources/${o.resource}`],
+    ['get', `/resources/${o.resource}/availability?${WINDOW}`],
+    ['post', `/resource-bookings/${o.booking}/confirm`, {}],
+    ['post', `/resource-bookings/${o.booking}/cancel`, {}],
+    ['get', `/business-calendars/${o.businessCalendar}`],
+    ['get', `/business-calendars/${o.businessCalendar}/working-time?${WINDOW}`],
+    [
+      'patch',
+      `/business-calendars/${o.businessCalendar}`,
+      { version: 1, name: 'x', timezone: 'UTC' },
+    ],
+    ['delete', `/business-calendars/${o.businessCalendar}`],
     ['get', `/exports/${o.exportJob}`],
     ['get', `/exports/${o.exportJob}/download`],
     ['post', '/exports', { reportId: o.report }],
@@ -719,6 +759,9 @@ test.group('matriz de isolamento', (group) => {
       'templates',
       'reports',
       'dashboards',
+      'calendars',
+      'resources',
+      'businessCalendars',
       'reconLines',
       'reconEntries',
       'reconBatches',
@@ -1035,6 +1078,46 @@ test.group('matriz de isolamento', (group) => {
         '/reconciliations/imports',
         { accountId: bi.bankAccount, lines: [{ occurredOn: '2026-01-01', amount: '1' }] },
         404,
+      ],
+      [
+        'evento num calendário de B',
+        'post',
+        '/calendar-events',
+        {
+          calendarId: bi.calendar,
+          title: 'x',
+          startsAt: '2030-02-01T10:00:00Z',
+          endsAt: '2030-02-01T11:00:00Z',
+        },
+        404,
+      ],
+      [
+        'reserva de um recurso de B',
+        'post',
+        '/resource-bookings',
+        { eventId: a.ids.calendarEvent, resourceId: bi.resource },
+        404,
+      ],
+      [
+        'reserva de um evento de B',
+        'post',
+        '/resource-bookings',
+        { eventId: bi.calendarEvent, resourceId: a.ids.resource },
+        404,
+      ],
+      [
+        'participante de B',
+        'post',
+        `/calendar-events/${a.ids.calendarEvent}/participants`,
+        { membershipId: b.admin.membershipId },
+        422,
+      ],
+      [
+        'recurso com a organização de B',
+        'post',
+        '/resources',
+        { organizationId: bi.organization, code: 'X', name: 'x', type: 'ROOM' },
+        422,
       ],
       [
         'widget com um relatório de B',

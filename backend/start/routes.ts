@@ -34,6 +34,7 @@ const ProcurementController = () =>
 const FinanceController = () => import('#modules/finance/presentation/finance_controller')
 const NotificationsController = () =>
   import('#modules/notifications/presentation/notifications_controller')
+const CalendarController = () => import('#modules/calendar/presentation/calendar_controller')
 const ReportingController = () => import('#modules/reporting/presentation/reporting_controller')
 const DocumentsController = () => import('#modules/documents/presentation/documents_controller')
 const ProspectingController = () =>
@@ -1094,6 +1095,92 @@ router
           .use(middleware.can({ permission: 'report.design' }))
       })
       .use(middleware.feature({ code: 'reporting.search' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Calendário, recursos e reservas (S03): módulo `calendar` do registo. Funcionalidades `calendar.events` (calendários,
+ * eventos com séries e excepções, participantes), `calendar.resources` (recursos e reservas; a colisão impede-se na
+ * base de dados) e `calendar.business_hours` (horário útil e feriados). Permissões `calendar.read|manage` e
+ * `resource.read|manage|book`.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/calendars', [CalendarController, 'listCalendars'])
+            router.get('/calendars/:id', [CalendarController, 'showCalendar'])
+            router.get('/calendar-events', [CalendarController, 'listEvents'])
+            router.get('/calendar-events/:id', [CalendarController, 'showEvent'])
+            router.post('/calendar-events/:id/respond', [CalendarController, 'respond'])
+          })
+          .use(middleware.can({ permission: 'calendar.read' }))
+        router
+          .group(() => {
+            router.post('/calendars', [CalendarController, 'createCalendar'])
+            router.patch('/calendars/:id', [CalendarController, 'updateCalendar'])
+            router.delete('/calendars/:id', [CalendarController, 'removeCalendar'])
+            router.post('/calendar-events', [CalendarController, 'createEvent'])
+            router.patch('/calendar-events/:id', [CalendarController, 'updateEvent'])
+            router.post('/calendar-events/:id/cancel', [CalendarController, 'cancelEvent'])
+            router.post('/calendar-events/:id/participants', [CalendarController, 'addParticipant'])
+            router.delete('/calendar-events/:id/participants/:participantId', [
+              CalendarController,
+              'removeParticipant',
+            ])
+          })
+          .use(middleware.can({ permission: 'calendar.manage' }))
+      })
+      .use(middleware.feature({ code: 'calendar.events' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/resources', [CalendarController, 'listResources'])
+            router.get('/resources/:id', [CalendarController, 'showResource'])
+            router.get('/resources/:id/availability', [CalendarController, 'availability'])
+            router.get('/resource-bookings', [CalendarController, 'listBookings'])
+          })
+          .use(middleware.can({ permission: 'resource.read' }))
+        router
+          .group(() => {
+            router.post('/resources', [CalendarController, 'createResource'])
+            router.patch('/resources/:id', [CalendarController, 'updateResource'])
+            router.delete('/resources/:id', [CalendarController, 'removeResource'])
+          })
+          .use(middleware.can({ permission: 'resource.manage' }))
+        router
+          .group(() => {
+            router.post('/resource-bookings', [CalendarController, 'createBooking'])
+            router.post('/resource-bookings/:id/confirm', [CalendarController, 'confirmBooking'])
+            router.post('/resource-bookings/:id/cancel', [CalendarController, 'cancelBooking'])
+          })
+          .use(middleware.can({ permission: 'resource.book' }))
+      })
+      .use(middleware.feature({ code: 'calendar.resources' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/business-calendars', [CalendarController, 'listBusiness'])
+            router.get('/business-calendars/:id', [CalendarController, 'showBusiness'])
+            router.get('/business-calendars/:id/working-time', [CalendarController, 'workingTime'])
+          })
+          .use(middleware.can({ permission: 'calendar.read' }))
+        router
+          .group(() => {
+            router.post('/business-calendars', [CalendarController, 'createBusiness'])
+            router.patch('/business-calendars/:id', [CalendarController, 'updateBusiness'])
+            router.delete('/business-calendars/:id', [CalendarController, 'removeBusiness'])
+          })
+          .use(middleware.can({ permission: 'calendar.manage' }))
+      })
+      .use(middleware.feature({ code: 'calendar.business_hours' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])
