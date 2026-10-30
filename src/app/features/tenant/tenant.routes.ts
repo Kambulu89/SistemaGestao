@@ -103,6 +103,15 @@ export const TENANT_ROUTES: Routes = [
     loadComponent: () =>
       import('../dynamic-core/automations/automations-page').then((m) => m.AutomationsPage),
   },
+  // Pesquisa global (S04): resultados revalidados no servidor com o acesso de quem pesquisa.
+  {
+    path: 'search',
+    pathMatch: 'full',
+    title: 'Pesquisa',
+    data: { breadcrumb: 'Pesquisa' },
+    canActivate: [requirePermission(TENANT_PERMISSIONS.searchRead)],
+    loadComponent: () => import('../dynamic/reporting/search-page').then((m) => m.SearchPage),
+  },
   // Centro de notificações (S02): caixa pessoal, preferências e, para quem gere, entregas.
   {
     path: 'notifications',

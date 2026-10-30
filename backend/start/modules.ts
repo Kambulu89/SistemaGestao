@@ -8,6 +8,7 @@
 */
 
 import { registerDocumentResources } from '#modules/documents/index'
+import { registerReporting } from '#modules/reporting/index'
 import { registerFinance } from '#modules/finance/index'
 import { registerInventory } from '#modules/inventory/index'
 import { registerProspecting } from '#modules/prospecting/index'
@@ -16,3 +17,4 @@ registerInventory()
 registerFinance()
 registerProspecting()
 registerDocumentResources()
+registerReporting()

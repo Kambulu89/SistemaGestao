@@ -136,6 +136,15 @@ async function snapshot(world: World) {
     campaign: await get(`/api/v1/campaigns/${world.ids.campaign}`),
     campaignMembers: await get(`/api/v1/campaigns/${world.ids.campaign}/members`),
     exclusions: await get('/api/v1/marketing-exclusions'),
+    reports: await get('/api/v1/reports'),
+    report: await get(`/api/v1/reports/${world.ids.report}`),
+    dashboards: await get('/api/v1/dashboards'),
+    dashboard: await get(`/api/v1/dashboards/${world.ids.dashboard}`),
+    dashboardData: await get(`/api/v1/dashboards/${world.ids.dashboard}/data`),
+    exportsList: await get('/api/v1/exports'),
+    exportJob: await get(`/api/v1/exports/${world.ids.exportJob}`),
+    searchStatus: await get('/api/v1/search/status'),
+    search: await get('/api/v1/search?q=comum'),
     documents: await get('/api/v1/documents'),
     document: await get(`/api/v1/documents/${world.ids.document}`),
     attachment: await get(`/api/v1/attachments/${world.ids.attachment}`),
@@ -378,6 +387,34 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
       '/reconciliations/imports',
       { accountId: o.bankAccount, lines: [{ occurredOn: '2026-01-01', amount: '1' }] },
     ],
+    ['get', `/reports/${o.report}`],
+    ['post', `/reports/${o.report}/run`, {}],
+    [
+      'patch',
+      `/reports/${o.report}`,
+      { version: 1, name: 'x', datasetCode: 'sales_documents', query: {} },
+    ],
+    ['post', `/reports/${o.report}/publish`, {}],
+    ['post', `/reports/${o.report}/duplicate`, { code: 'copia' }],
+    ['delete', `/reports/${o.report}`],
+    ['get', `/dashboards/${o.dashboard}`],
+    ['get', `/dashboards/${o.dashboard}/data`],
+    ['patch', `/dashboards/${o.dashboard}`, { version: 1, name: 'x' }],
+    ['delete', `/dashboards/${o.dashboard}`],
+    [
+      'post',
+      `/dashboards/${o.dashboard}/widgets`,
+      { title: 'x', type: 'KPI', reportId: me.ids.report },
+    ],
+    [
+      'patch',
+      `/dashboards/${o.dashboard}/widgets/${o.widget}`,
+      { version: 1, title: 'x', type: 'KPI', reportId: me.ids.report },
+    ],
+    ['delete', `/dashboards/${o.dashboard}/widgets/${o.widget}`],
+    ['get', `/exports/${o.exportJob}`],
+    ['get', `/exports/${o.exportJob}/download`],
+    ['post', '/exports', { reportId: o.report }],
     ['get', `/documents/${o.document}`],
     ['patch', `/documents/${o.document}`, { ...stale, version: 1, title: 'x' }],
     ['delete', `/documents/${o.document}`],
@@ -676,6 +713,8 @@ test.group('matriz de isolamento', (group) => {
       'notificationDeliveries',
       'documents',
       'templates',
+      'reports',
+      'dashboards',
       'reconLines',
       'reconEntries',
       'reconBatches',
@@ -992,6 +1031,13 @@ test.group('matriz de isolamento', (group) => {
         '/reconciliations/imports',
         { accountId: bi.bankAccount, lines: [{ occurredOn: '2026-01-01', amount: '1' }] },
         404,
+      ],
+      [
+        'widget com um relatório de B',
+        'post',
+        `/dashboards/${a.ids.dashboard}/widgets`,
+        { title: 'x', type: 'KPI', reportId: bi.report },
+        422,
       ],
       [
         'documento a partir de um anexo de B',
@@ -1625,11 +1671,12 @@ test.group('matriz de isolamento', (group) => {
         'credit_note_lines',
         'document_versions',
         'template_versions',
+        'report_definitions',
       ].includes(table)
       assert.match(
         moved.message,
         immutable
-          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY|STATEMENT_LINE_IMMUTABLE|MATCH_IMMUTABLE|CRM_APPEND_ONLY|DOCUMENT_VERSION_IMMUTABLE|TEMPLATE_VERSION_IMMUTABLE/
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY|STATEMENT_LINE_IMMUTABLE|MATCH_IMMUTABLE|CRM_APPEND_ONLY|DOCUMENT_VERSION_IMMUTABLE|TEMPLATE_VERSION_IMMUTABLE|REPORT_PUBLISHED_IMMUTABLE/
           : /row-level security/,
         `${table}: mover linhas para B`
       )

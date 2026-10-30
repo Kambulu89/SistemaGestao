@@ -126,6 +126,12 @@ export class NavigationService {
             permission: TENANT_PERMISSIONS.notificationsRead,
           },
           {
+            label: 'Pesquisa',
+            path: `${base}/search`,
+            icon: 'search',
+            permission: TENANT_PERMISSIONS.searchRead,
+          },
+          {
             label: 'Entidades',
             path: `${base}/entities`,
             icon: 'cube',

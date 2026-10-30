@@ -243,6 +243,88 @@ export class AttachmentUseCases {
     return { url: `/api/v1/files/${token}`, expiresAt: new Date(expiresAt * 1000).toISOString() }
   }
 
+  /**
+   * Guarda um ficheiro gerado por outro módulo (por exemplo, uma exportação) como anexo disponível de quem o pediu.
+   * Conta para a quota do tenant. Quem o gerou é o único que o abre por aqui; o resto é decisão do módulo que o gerou.
+   */
+  async storeGenerated(
+    context: TenantContext,
+    file: { fileName: string; mimeType: string; data: Buffer }
+  ): Promise<{ id: string }> {
+    membershipOf(context)
+    const now = this.clock.now()
+    if (file.data.length < 1 || file.data.length > this.limits.maxFileBytes) {
+      throw failure('file', 'FILE_TOO_LARGE', 'O ficheiro gerado excede o tamanho máximo.')
+    }
+    const key = `${context.tenantId}/${now.getUTCFullYear()}/${randomUUID()}`
+    const stored = await this.storage.putBuffer(key, file.data)
+    try {
+      return await this.uow.run(async (scope) => {
+        const used = await this.attachments.lockedUsage(scope, now)
+        if (used + file.data.length > this.limits.tenantQuotaBytes) {
+          throw failure('file', 'QUOTA_EXCEEDED', 'O espaço de armazenamento do tenant não chega.')
+        }
+        const created = await this.attachments.insert(scope, {
+          storageKey: key,
+          originalName: file.fileName.slice(0, 255),
+          mimeType: file.mimeType,
+          sizeBytes: file.data.length,
+          checksum: stored.sha256,
+          status: 'AVAILABLE',
+          source: 'GENERATED',
+          uploadExpiresAt: null,
+          scannedAt: now,
+        })
+        return { id: created.id }
+      }, context)
+    } catch (error) {
+      await this.storage.remove(key)
+      throw error
+    }
+  }
+
+  /** Abre um ficheiro gerado para quem o gerou (o módulo chamador já revalidou os direitos que lhe cabem). */
+  async openGenerated(
+    context: TenantContext,
+    id: string
+  ): Promise<{ fileName: string; mimeType: string; sizeBytes: number; stream: Readable }> {
+    const membershipId = membershipOf(context)
+    const found = await this.uow.run(async (scope) => this.attachments.find(scope, id), context)
+    if (
+      !found ||
+      found.source !== 'GENERATED' ||
+      found.uploadedByMembershipId !== membershipId ||
+      found.status !== 'AVAILABLE'
+    ) {
+      throw ApiError.notFound()
+    }
+    return {
+      fileName: found.originalName,
+      mimeType: found.mimeType,
+      sizeBytes: found.sizeBytes,
+      stream: this.storage.open(found.storageKey),
+    }
+  }
+
+  /** Apaga um ficheiro gerado de quem o gerou (por exemplo, uma exportação expirada). */
+  async removeGenerated(context: TenantContext, id: string): Promise<void> {
+    const membershipId = membershipOf(context)
+    const key = await this.uow.run(async (scope) => {
+      const found = await this.attachments.lock(scope, id)
+      if (
+        !found ||
+        found.source !== 'GENERATED' ||
+        found.uploadedByMembershipId !== membershipId ||
+        found.status === 'DELETED'
+      ) {
+        return null
+      }
+      await this.attachments.setStatus(scope, id, 'DELETED', {})
+      return found.storageKey
+    }, context)
+    if (key) await this.storage.remove(key)
+  }
+
   /** Descarga (autenticada por sessão e tenant, ou pelo token depois de revalidar o acesso). */
   async open(
     context: TenantContext,

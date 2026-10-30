@@ -461,6 +461,27 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Publicar uma versão de um modelo (passa a imutável).',
   },
   {
+    code: 'report.read',
+    moduleCode: 'reporting',
+    description: 'Ver e correr relatórios publicados e painéis a que tem acesso.',
+  },
+  {
+    code: 'report.design',
+    moduleCode: 'reporting',
+    description:
+      'Desenhar, publicar e duplicar relatórios e painéis e reconstruir o índice de pesquisa.',
+  },
+  {
+    code: 'report.export',
+    moduleCode: 'reporting',
+    description: 'Pedir exportações de relatórios (CSV) e descarregar as suas.',
+  },
+  {
+    code: 'search.read',
+    moduleCode: 'reporting',
+    description: 'Usar a pesquisa global (cada resultado volta a ser autorizado no seu módulo).',
+  },
+  {
     code: 'receivable.read',
     moduleCode: 'finance',
     description: 'Ver contas a receber e a exposição de crédito dos clientes.',

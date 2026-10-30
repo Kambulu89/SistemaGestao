@@ -61,6 +61,11 @@ export async function deleteTestTenants() {
       // O documento aponta para a sua versão corrente: desfaz-se a ligação antes de apagar uma e outra.
       await trx.from('documents').where('tenant_id', id).update({ current_version_id: null })
       for (const table of [
+        'search_documents',
+        'export_jobs',
+        'dashboard_widgets',
+        'dashboards',
+        'report_definitions',
         'resource_attachments',
         'document_versions',
         'documents',

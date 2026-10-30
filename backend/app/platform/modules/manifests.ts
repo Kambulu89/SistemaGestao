@@ -41,6 +41,20 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     ],
   },
   {
+    code: 'reporting',
+    name: 'Relatórios, painéis e pesquisa',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [{ code: 'core', constraint: '*', optional: false }],
+    features: [
+      { code: 'reporting.reports', name: 'Relatórios sobre datasets', defaultEnabled: true },
+      { code: 'reporting.dashboards', name: 'Painéis com widgets', defaultEnabled: true },
+      { code: 'reporting.exports', name: 'Exportações assíncronas (CSV)', defaultEnabled: true },
+      { code: 'reporting.search', name: 'Pesquisa global', defaultEnabled: true },
+    ],
+  },
+  {
     code: 'documents',
     name: 'Documentos, anexos e modelos',
     kind: 'MODULE',

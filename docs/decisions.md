@@ -997,6 +997,48 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
   visibilidade por unidade, ligação automática das facturas ao PDF (as facturas continuam sem PDF fiscal), limpeza em lote dos
   pendentes expirados, limites por plano.
 
+## D-060 Relatórios, painéis, exportações e pesquisa (S04): consultas declarativas sobre datasets do código, autorização antes de agregar (aceite — fatia 6.4)
+
+- **Contexto.** A especificação (S04) pede dashboards e relatórios cujos totais coincidem com as listagens sob os mesmos filtros,
+  exportações em que um campo escondido nunca aparece e em que a revogação do acesso invalida o descarregamento pendente, e pesquisa.
+  Até aqui o painel do tenant não mostrava dados de negócio reais.
+- **Módulo `reporting`** (funcionalidades `reporting.reports|dashboards|exports|search`; permissões `report.read|design|export` e
+  `search.read`). Migration 37 (5 tabelas de tenant, RLS, auditadas): `report_definitions`, `dashboards`, `dashboard_widgets`,
+  `export_jobs`, `search_documents`. A auditoria não guarda em claro os textos pesquisáveis.
+- **Consultas declarativas, nunca SQL do tenant.** Um relatório é um objecto JSON (`select`, `filters`, `groupBy`, `measures`, `sort`)
+  sobre um **dataset** definido no código (`DatasetDefinition`: fragmento `from` fixo com o tenant como ligação nomeada, expressões por
+  campo, permissão do dataset e, se for o caso, do campo, e linhas de documentação). `validateQuery` recusa campos desconhecidos ou
+  escondidos (`FIELD_NOT_ALLOWED`), operadores incompatíveis com o tipo e agrupamentos incoerentes; `buildQuery` produz SQL
+  parametrizado (valores sempre por ligação, `cast(… as …)` em vez de `::` por causa das ligações nomeadas). Decimais e datas saem como
+  texto. Datasets: `sales_documents` (facturas emitidas ou creditadas e notas de crédito emitidas, estas com valor negativo;
+  `invoice.read`), `sales_orders` (`order.read`; o campo de reserva de crédito exige `customer.credit_manage`) e `payments_received`
+  (recebimentos confirmados; `payment.read`).
+- **Autorização antes de agregar.** `QueryService.hiddenFields` = campos escondidos pela decisão ABAC da permissão do dataset ∪
+  campos cuja permissão própria falta. Seleccionar, filtrar, agrupar ou medir por um campo escondido é recusado (senão um total
+  revelaria o que o campo guarda); sem a permissão do dataset corre-se nada (403). Os totais dos cartões usam o mesmo motor e os
+  mesmos filtros que as listagens (testado: total do relatório = total da listagem, notas de crédito incluídas).
+- **Relatórios.** `DRAFT` edita-se; **publicar** torna-o imutável (trigger `REPORT_PUBLISHED_IMMUTABLE`); para rever, duplica-se.
+  Visibilidade `PRIVATE`/`TENANT`; só relatórios publicados entram em painéis e exportações; apagar recusa se estiver num painel.
+- **Painéis.** Widgets `KPI|TABLE|BAR|LINE|PIE` com actualização ≥ 30 s; um painel da organização só aceita relatórios da organização.
+  Filtros globais aplicam-se só aos relatórios cujo dataset tem o campo; os outros voltam em `ignoredFilters` e o ecrã di-lo. Cada widget
+  falha isoladamente (o erro aparece no próprio widget) e traz o descritor de detalhe (`drill`). Os dados são lidos em tempo real
+  (sem cache de resultados); o instante da leitura (`asOf`) é mostrado.
+- **Exportações.** Só **CSV** e assíncronas (`XLSX`/`PDF` → 422 `FORMAT_NOT_SUPPORTED`). O trabalhador `node ace exports:work`
+  (`--once`) reserva o pedido, **revalida os direitos de quem pediu** (resolve a membership no tenant) e a autorização em cada página;
+  CSV com BOM UTF-8 e neutralização de fórmulas (`=`, `+`, `-`, `@`, tab, CR); guardado pelo módulo de documentos (`storeGenerated`);
+  expira ao fim de 24 h. **Descarregar** volta a decidir: `report.export`, o dataset, a visibilidade do relatório e que as colunas
+  exportadas não passaram a estar escondidas — senão 403 `EXPORT_ACCESS_REVOKED`. `sweep` expira ficheiros e repõe na fila os
+  `RUNNING` abandonados. Concorrência: dois trabalhadores nunca correm o mesmo pedido.
+- **Pesquisa.** Um índice derivado (`search_documents`, descartável) reconstruído por `node ace search:reindex <tenant>` ou
+  `POST /search/reindex`: idempotente, versionado e com remoção do que desapareceu. Fontes: clientes, facturas e documentos, registadas por
+  `registerReporting()`. Cada resultado é **revalidado** com as regras de leitura do módulo dono (`canRead`) para quem pesquisa; o que não
+  pode ler não aparece, nem o título.
+- **Isolamento.** Todas as tabelas e rotas na matriz de isolamento (consultas, exportações e índice por tenant; ID alheio → 404);
+  a injecção de SQL por valores é inerte (testado).
+- **Fora desta fatia / limites.** Exportação XLSX/PDF; indexação incremental por eventos (o índice só se reconstrói a pedido); cache de
+  resultados e actualização por push; datasets de stock, compras e RH (só os três acima); envio agendado de relatórios; o painel
+  inicial do tenant continua sem os novos indicadores; pesquisa só por termos (sem relevância por tipo nem correcção ortográfica).
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

@@ -39,6 +39,8 @@ export const TENANT_PERMISSIONS = {
   automationsRead: 'automation.read',
   /** Centro de notificações (S02): o código do servidor, tal e qual. */
   notificationsRead: 'notification.read',
+  /** Pesquisa global (S04): o código do servidor, tal e qual. */
+  searchRead: 'search.read',
   /** Pessoas e entidades (C08): o código do servidor, tal e qual. */
   partiesRead: 'party.read',
 } as const;

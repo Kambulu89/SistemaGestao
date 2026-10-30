@@ -34,6 +34,7 @@ const ProcurementController = () =>
 const FinanceController = () => import('#modules/finance/presentation/finance_controller')
 const NotificationsController = () =>
   import('#modules/notifications/presentation/notifications_controller')
+const ReportingController = () => import('#modules/reporting/presentation/reporting_controller')
 const DocumentsController = () => import('#modules/documents/presentation/documents_controller')
 const ProspectingController = () =>
   import('#modules/prospecting/presentation/prospecting_controller')
@@ -1007,6 +1008,92 @@ router
           .use(middleware.can({ permission: 'communication.manage' }))
       })
       .use(middleware.feature({ code: 'notifications.delivery' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Relatórios, painéis, exportações e pesquisa (S04): módulo `reporting` do registo. Funcionalidades `reporting.reports`,
+ * `reporting.dashboards`, `reporting.exports` e `reporting.search`; permissões `report.read|design|export` e `search.read`.
+ * As consultas são declarativas sobre datasets registados em código (nunca SQL livre); a autorização vem antes de agregar.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/datasets', [ReportingController, 'datasets'])
+            router.get('/reports', [ReportingController, 'listReports'])
+            router.get('/reports/:id', [ReportingController, 'showReport'])
+            router.post('/reports/:id/run', [ReportingController, 'runReport'])
+          })
+          .use(middleware.can({ permission: 'report.read' }))
+        router
+          .group(() => {
+            router.post('/reports/preview', [ReportingController, 'previewReport'])
+            router.post('/reports', [ReportingController, 'createReport'])
+            router.patch('/reports/:id', [ReportingController, 'updateReport'])
+            router.post('/reports/:id/publish', [ReportingController, 'publishReport'])
+            router.post('/reports/:id/duplicate', [ReportingController, 'duplicateReport'])
+            router.delete('/reports/:id', [ReportingController, 'removeReport'])
+          })
+          .use(middleware.can({ permission: 'report.design' }))
+      })
+      .use(middleware.feature({ code: 'reporting.reports' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/dashboards', [ReportingController, 'listDashboards'])
+            router.get('/dashboards/:id', [ReportingController, 'showDashboard'])
+            router.get('/dashboards/:id/data', [ReportingController, 'dashboardData'])
+          })
+          .use(middleware.can({ permission: 'report.read' }))
+        router
+          .group(() => {
+            router.post('/dashboards', [ReportingController, 'createDashboard'])
+            router.patch('/dashboards/:id', [ReportingController, 'updateDashboard'])
+            router.delete('/dashboards/:id', [ReportingController, 'removeDashboard'])
+            router.post('/dashboards/:id/widgets', [ReportingController, 'addWidget'])
+            router.patch('/dashboards/:id/widgets/:widgetId', [ReportingController, 'updateWidget'])
+            router.delete('/dashboards/:id/widgets/:widgetId', [
+              ReportingController,
+              'removeWidget',
+            ])
+          })
+          .use(middleware.can({ permission: 'report.design' }))
+      })
+      .use(middleware.feature({ code: 'reporting.dashboards' }))
+
+    router
+      .group(() => {
+        router.post('/exports', [ReportingController, 'requestExport'])
+        router.get('/exports', [ReportingController, 'listExports'])
+        router.get('/exports/:id', [ReportingController, 'showExport'])
+        router.get('/exports/:id/download', [ReportingController, 'downloadExport'])
+      })
+      .use([
+        middleware.feature({ code: 'reporting.exports' }),
+        middleware.can({ permission: 'report.export' }),
+      ])
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/search', [ReportingController, 'search'])
+            router.get('/search/status', [ReportingController, 'searchStatus'])
+          })
+          .use(middleware.can({ permission: 'search.read' }))
+        router
+          .group(() => {
+            router.post('/search/reindex', [ReportingController, 'reindex'])
+          })
+          .use(middleware.can({ permission: 'report.design' }))
+      })
+      .use(middleware.feature({ code: 'reporting.search' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

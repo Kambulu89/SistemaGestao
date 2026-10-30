@@ -37,6 +37,7 @@ export const TEST_MANIFESTS: ModuleManifest[] = [
   CODE_MANIFESTS.find((m) => m.code === 'prospecting') as ModuleManifest,
   CODE_MANIFESTS.find((m) => m.code === 'notifications') as ModuleManifest,
   CODE_MANIFESTS.find((m) => m.code === 'documents') as ModuleManifest,
+  CODE_MANIFESTS.find((m) => m.code === 'reporting') as ModuleManifest,
   CODE_MANIFESTS.find((m) => m.code === 'orders') as ModuleManifest,
   CODE_MANIFESTS.find((m) => m.code === 'finance') as ModuleManifest,
   mod(

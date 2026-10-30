@@ -114,6 +114,10 @@ export interface World {
     notification: string
     delivery: string
     document: string
+    report: string
+    dashboard: string
+    widget: string
+    exportJob: string
     attachment: string
     resourceAttachment: string
     template: string
@@ -179,6 +183,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       'prospecting',
       'notifications',
       'documents',
+      'reporting',
       'orders',
       'inventory',
       'invoicing',
@@ -198,6 +203,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await must(await http.post('/api/v1/tenant/modules/prospecting/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/notifications/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/documents/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/reporting/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -1068,6 +1074,38 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     await http.post(`/api/v1/templates/${template.id}/versions/${templateVersion.id}/publish`, {}),
     200
   )
+  // S04: um relatório publicado, um painel com um widget, uma exportação em fila e o índice de pesquisa.
+  const report = await must<{ id: string }>(
+    await http.post('/api/v1/reports', {
+      code: 'vendas_comum',
+      name: 'Vendas por moeda',
+      datasetCode: 'sales_documents',
+      visibility: 'TENANT',
+      query: {
+        groupBy: ['currency'],
+        measures: [{ fn: 'sum', field: 'amount', alias: 'total' }],
+      },
+    }),
+    201
+  )
+  await must(await http.post(`/api/v1/reports/${report.id}/publish`, {}), 200)
+  const dashboard = await must<{ id: string }>(
+    await http.post('/api/v1/dashboards', { name: 'Painel comum', visibility: 'TENANT' }),
+    201
+  )
+  const widget = await must<{ id: string }>(
+    await http.post(`/api/v1/dashboards/${dashboard.id}/widgets`, {
+      title: 'Vendas',
+      type: 'KPI',
+      reportId: report.id,
+    }),
+    201
+  )
+  const exportJob = await must<{ id: string }>(
+    await http.post('/api/v1/exports', { reportId: report.id, format: 'CSV' }),
+    202
+  )
+  await must(await http.post('/api/v1/search/reindex', {}), 200)
   // Conciliação: uma conta bancária com um recebimento confirmado (1), um extracto de duas linhas (+1 e -3) e a primeira
   // linha já conciliada com o movimento; a segunda fica por conciliar.
   const bankAccount = await must<{ id: string }>(
@@ -1314,6 +1352,10 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       campaignMember: (campaignMembers[0] as { id: string }).id,
       exclusion: exclusion.id,
       document: document.id,
+      report: report.id,
+      dashboard: dashboard.id,
+      widget: widget.id,
+      exportJob: exportJob.id,
       attachment: prepared.id,
       resourceAttachment: resourceAttachment.id,
       template: template.id,

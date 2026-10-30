@@ -70,6 +70,10 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'template.read': ['documents.dms.read', 'documents.versioning.read'],
   'template.manage': ['documents.dms.read', 'documents.versioning.read'],
   'template.publish': ['documents.dms.read', 'documents.versioning.read'],
+  // Relatórios e painéis (S04): as páginas usam os códigos do servidor; o alias só abre a rota do módulo.
+  'report.read': ['reporting.dashboards.read', 'reporting.reports.read'],
+  'report.design': ['reporting.dashboards.read', 'reporting.reports.read'],
+  'report.export': ['reporting.dashboards.read', 'reporting.reports.read'],
   'crm.read': ['crm.pipeline.read', 'crm.campaigns.read'],
   'crm.manage': ['crm.pipeline.read', 'crm.pipeline.manage', 'crm.campaigns.read'],
   'campaign.send': ['crm.pipeline.read', 'crm.campaigns.read'],

@@ -6566,6 +6566,460 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /datasets:
+    get:
+      summary: 'Datasets legíveis e os campos visíveis para quem pede (report.read; funcionalidade reporting.reports)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+  /reports:
+    get:
+      summary: 'Relatórios visíveis: os seus e os publicados da organização (report.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria um relatório em rascunho sobre um dataset; só consultas declarativas (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [code, name, datasetCode, query],
+                additionalProperties: true,
+                properties:
+                  {
+                    code: { type: string },
+                    name: { type: string },
+                    datasetCode: { type: string },
+                    visibility: { type: string, enum: [PRIVATE, TENANT] },
+                    query: { type: object },
+                  },
+              }
+      responses:
+        '201': { description: 'Relatório criado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reports/preview:
+    post:
+      summary: 'Pré-visualiza uma consulta ainda por guardar (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                additionalProperties: true,
+                properties:
+                  {
+                    query:
+                      {
+                        type: object,
+                        properties:
+                          {
+                            select: { type: array, items: { type: string } },
+                            filters: { type: array, items: { type: object } },
+                            groupBy: { type: array, items: { type: string } },
+                            measures: { type: array, items: { type: object } },
+                            sort: { type: array, items: { type: object } },
+                          },
+                      },
+                  },
+              }
+      responses:
+        '200': { description: 'Resultado com colunas, linhas, total, campos omitidos e `asOf`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reports/{id}:
+    get:
+      summary: 'Um relatório (report.read; 404 se não for visível)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: 'Altera um rascunho do dono (report.design; version obrigatória)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [version],
+                additionalProperties: true,
+                properties: { version: { type: integer } },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: 'Apaga um rascunho que não esteja num painel (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /reports/{id}/run:
+    post:
+      summary: 'Corre o relatório com filtros extra; autorização antes de agregar e campos ocultos omitidos (report.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                properties:
+                  {
+                    filters: { type: array, items: { type: object } },
+                    limit: { type: integer, minimum: 1, maximum: 500 },
+                    offset: { type: integer, minimum: 0 },
+                  },
+              }
+      responses:
+        '200': { description: 'Resultado com colunas, linhas, total, `omittedFields` e `asOf`.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reports/{id}/publish:
+    post:
+      summary: 'Publica o rascunho: passa a imutável (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /reports/{id}/duplicate:
+    post:
+      summary: 'Duplica o relatório num rascunho novo (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [code], properties: { code: { type: string } } }
+      responses:
+        '201': { description: 'Cópia criada.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /dashboards:
+    get:
+      summary: 'Painéis visíveis (report.read; funcionalidade reporting.dashboards)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria um painel (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [name],
+                additionalProperties: true,
+                properties:
+                  {
+                    name: { type: string },
+                    visibility: { type: string, enum: [PRIVATE, TENANT] },
+                    filters: { type: array, items: { type: object } },
+                  },
+              }
+      responses:
+        '201': { description: 'Painel criado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /dashboards/{id}:
+    get:
+      summary: 'Um painel com os widgets (report.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: 'Altera nome, visibilidade e filtros globais (report.design; version obrigatória)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [version],
+                additionalProperties: true,
+                properties: { version: { type: integer } },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: 'Apaga o painel e os widgets (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Apagado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /dashboards/{id}/data:
+    get:
+      summary: 'Dados de cada widget com filtros globais; cada widget corre com os direitos de quem vê e falha à parte (report.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: filters,
+            in: query,
+            required: false,
+            schema: { type: string },
+            description: 'Filtros globais em JSON.',
+          }
+      responses:
+        '200':
+          { description: 'Widgets com resultado, erro, filtros ignorados e drill-down; `asOf`.' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /dashboards/{id}/widgets:
+    post:
+      summary: 'Acrescenta um widget que aponta para um relatório publicado (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [title, type, reportId],
+                additionalProperties: true,
+                properties:
+                  {
+                    title: { type: string },
+                    type: { type: string, enum: [KPI, TABLE, BAR, LINE, PIE] },
+                    reportId: { type: string, format: uuid },
+                    layout: { type: object },
+                    filters: { type: array, items: { type: object } },
+                    refreshSeconds: { type: integer, minimum: 30 },
+                  },
+              }
+      responses:
+        '201': { description: 'Widget criado.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /dashboards/{id}/widgets/{widgetId}:
+    patch:
+      summary: 'Altera um widget (report.design; version obrigatória)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: widgetId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [version],
+                additionalProperties: true,
+                properties: { version: { type: integer } },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: 'Remove um widget (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: widgetId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Removido.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /exports:
+    get:
+      summary: 'Exportações de quem pede (report.export; funcionalidade reporting.exports)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Pede uma exportação assíncrona (só CSV); o trabalhador revalida os direitos ao executar (report.export)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [reportId],
+                properties:
+                  {
+                    reportId: { type: string, format: uuid },
+                    format: { type: string, enum: [CSV] },
+                    filters: { type: array, items: { type: object } },
+                  },
+              }
+      responses:
+        '202': { description: 'Trabalho em fila.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /exports/{id}:
+    get:
+      summary: 'Estado e progresso de uma exportação própria (report.export)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /exports/{id}/download:
+    get:
+      summary: 'Descarrega o CSV depois de revalidar os direitos agora (report.export)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'O ficheiro, sempre como anexo.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /search:
+    get:
+      summary: 'Pesquisa global agrupada por tipo; cada resultado é revalidado no módulo dono (search.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 1 } }
+        - { name: types, in: query, required: false, schema: { type: string } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 20 },
+          }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /search/status:
+    get:
+      summary: 'Documentos indexados e frescura por tipo (search.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+  /search/reindex:
+    post:
+      summary: 'Reconstrói o índice do tenant (idempotente) (report.design)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
   /documents:
     get:
       summary: Lista a biblioteca de documentos visíveis para quem pede (document.read; funcionalidade documents.library)

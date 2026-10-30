@@ -18,6 +18,7 @@ export const CAPABILITY_TARGETS: Readonly<Record<string, string>> = {
   [moduleId('configuration.localization')]: 'settings',
   [moduleId('crm.campaigns')]: 'crm/pipeline',
   [moduleId('documents.versioning')]: 'documents/dms',
+  [moduleId('reporting.reports')]: 'reporting/dashboards',
   [moduleId('finance.receivables-payables')]: 'finance/cash-banks',
   [moduleId('finance.payments-budget')]: 'finance/cash-banks',
 };
