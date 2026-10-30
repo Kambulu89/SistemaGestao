@@ -221,8 +221,8 @@ export function ruleFromForm(form: RepeatForm): string | null {
   const parts = [`FREQ=${form.repeat}`];
   if (form.interval > 1) parts.push(`INTERVAL=${form.interval}`);
   if (form.repeat === 'WEEKLY' && form.days.length > 0) parts.push(`BYDAY=${form.days.join(',')}`);
-  if (/^\d+$/.test(form.count.trim()) && Number(form.count) > 0)
-    parts.push(`COUNT=${Number(form.count)}`);
+  const count = String(form.count).trim();
+  if (/^\d+$/.test(count) && Number(count) > 0) parts.push(`COUNT=${Number(count)}`);
   return parts.join(';');
 }
 

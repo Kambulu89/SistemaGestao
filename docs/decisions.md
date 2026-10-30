@@ -1039,6 +1039,56 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
   resultados e actualização por push; datasets de stock, compras e RH (só os três acima); envio agendado de relatórios; o painel
   inicial do tenant continua sem os novos indicadores; pesquisa só por termos (sem relevância por tipo nem correcção ortográfica).
 
+## D-061 Calendário, recursos e reservas (S03): reservas que nunca se sobrepõem por restrição da base de dados, séries com excepções e fusos IANA (aceite — fatia 6.5)
+
+- **Contexto.** A especificação (S03) pede eventos com repetição e fusos horários, participantes, salas e equipamentos com capacidade,
+  reservas sem sobreposição garantidas **por uma restrição de exclusão do PostgreSQL** (intervalo `[início, fim)`), cancelamento que
+  liberta a reserva, preserva o evento e avisa os participantes, e um horário útil com feriados. Os módulos verticais passam a poder
+  criar eventos com origem em vez de manterem calendários paralelos.
+- **Módulo `calendar`** (funcionalidades `calendar.events|resources|business_hours`; permissões `calendar.read|manage` e
+  `resource.read|manage|book`). Migration 38 (7 tabelas de tenant, RLS, auditadas): `calendars`, `resources`, `calendar_events`,
+  `calendar_event_exceptions`, `resource_bookings`, `event_participants`, `business_calendars`. Exige a extensão `btree_gist`
+  (confiável a partir do PostgreSQL 13) para a igualdade de UUID dentro do índice GiST.
+- **Colisão de reservas.** `resource_bookings` tem `EXCLUDE USING gist (resource_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&)
+  WHERE (status IN ('HELD','CONFIRMED'))`. Duas reservas concorrentes do mesmo horário deixam passar uma só (testado com oito pedidos em
+  paralelo e por SQL directo, sem passar pela aplicação); reservas adjacentes não colidem. O caso de uso verifica antes para dar uma mensagem
+  útil (`RESOURCE_UNAVAILABLE` com o intervalo ocupado) e trata o erro `23P01` da restrição como a mesma resposta 409. A reserva de uma série
+  é atómica: ou todas as ocorrências ou nenhuma.
+- **Reservas provisórias.** `HELD` com `expires_at` ocupa o horário até vencer; ao reservar o mesmo recurso, as vencidas passam a
+  `CANCELLED/EXPIRED` na mesma transacção e libertam o horário. Confirmar uma vencida dá 409 `HOLD_EXPIRED`. Não há tarefa de limpeza: o estado
+  efectivo deriva sempre da hora (as listagens ignoram as vencidas).
+- **Capacidade e âmbito.** O número de participantes não pode exceder a capacidade do recurso, ao reservar nem ao acrescentar pessoas a um
+  evento já reservado (vale a menor capacidade entre os recursos). Um recurso com unidade só é visível a quem tem a unidade no seu âmbito.
+  A disponibilidade de um recurso mostra intervalos ocupados e se são «seus», nunca o evento; o título de uma reserva só aparece a quem vê o
+  calendário do evento.
+- **Séries e fusos.** O fuso IANA é validado e guardado; os eventos guardam instantes. Uma regra de repetição é um subconjunto de RRULE
+  (`FREQ` DAILY|WEEKLY|MONTHLY|YEARLY, `INTERVAL`, `COUNT` ou `UNTIL`, `BYDAY` na semanal); o resto é recusado, não ignorado. As ocorrências
+  geram-se num intervalo pedido (no máximo 366 dias) **na hora local do fuso do evento**: uma reunião às 10:00 continua às 10:00 quando o
+  relógio muda e a duração decorrida mantém-se (uma hora é sempre uma hora, também depois de converter o fuso); uma hora que não existe
+  avança; num dia 31 os meses mais curtos saltam, como na norma; «dia inteiro» conta em dias. Cada ocorrência identifica-se pelo seu início
+  original.
+- **Excepções.** Cancelar uma ocorrência grava uma excepção `CANCELLED` que persiste (nunca reaparece, mesmo que se edite a série); mover uma
+  grava `MODIFIED` com os novos instantes e aparece onde foi posta. Editar ou cancelar pergunta o âmbito: `THIS` (esta ocorrência), `FUTURE`
+  (a série divide-se: a parte antiga acaba um segundo antes e a nova herda participantes, excepções e reservas) ou `ALL`. Para não desfazer
+  em silêncio o que já existe, mudar horário ou repetição numa série com reservas ou excepções posteriores é recusado
+  (`SERIES_HAS_BOOKINGS`/`SERIES_HAS_EXCEPTIONS`); mudar só o título ou a descrição é sempre possível.
+- **Cancelamentos e avisos.** Cancelar um evento (todo, uma ocorrência ou desta em diante) liberta as reservas e avisa os participantes que
+  são membros (menos quem cancelou e quem recusou); cancelar uma reserva preserva o evento e avisa da mesma forma. Os avisos usam o outbox
+  e as regras de notificação (S02), com tipos próprios (`calendar.event.cancelled`, `calendar.booking.cancelled`) e uma ligação que abre o
+  evento só a quem ainda o vê. Participantes externos (Party) ficam registados mas **não recebem** aviso (não há canal para eles nesta fatia).
+- **Visibilidade.** `PRIVATE` (só o dono; para os outros o calendário e os eventos nem existem), `UNIT` (quem tem a unidade no âmbito) e
+  `TENANT`. Criar, editar e cancelar eventos exige `calendar.manage`; cada pessoa responde só por si ao convite.
+- **Origem.** `sourceType`/`sourceId` identificam o registo de outro módulo; `calendarServices().events.upsertSourced|cancelSourced` criam,
+  actualizam e cancelam o evento da origem sem o duplicar (testado).
+- **Horário útil.** `business_calendars` guarda o fuso, o horário semanal (até 6 períodos por dia, sem sobreposição) e os feriados; `working-time`
+  devolve os minutos úteis entre dois instantes, sem feriados e em tempo decorrido, como base para prazos e SLA que respeitem o trabalho.
+- **Interface.** Página «Calendário e agendamentos» com Agenda (dia, semana e mês; filtro por calendário; detalhe com participantes, reservas e
+  operações), Recursos e reservas (ocupação por recurso) e Horário útil. As horas escrevem-se no fuso do evento sem passar pelo do browser.
+- **Fora desta fatia / limites.** Participantes externos sem aviso; sem convites por email nem ficheiros `.ics`; sem exceções por série com
+  horário próprio (só esta ocorrência); a repetição não suporta `BYMONTHDAY`, `BYSETPOS` nem datas de exclusão; as reservas de uma série cobrem
+  um horizonte limitado (90 dias por omissão, 366 no máximo, até 120 ocorrências de cada vez); não há tempo real nem push na agenda; a agenda
+  mostra as horas no fuso do browser.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

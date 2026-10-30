@@ -73,7 +73,7 @@ const MAX_PER_CELL = 3;
           >›</app-button
         >
       </div>
-      <h2 class="min-w-40 text-lg font-semibold capitalize" data-testid="agenda-title">
+      <h2 class="min-w-40 text-lg font-semibold first-letter:uppercase" data-testid="agenda-title">
         {{ title() }}
       </h2>
       <div class="flex gap-1" role="group" aria-label="Vista">

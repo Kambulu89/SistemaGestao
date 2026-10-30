@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Alert } from '../../../shared/ui/alert/alert';
@@ -149,7 +150,7 @@ const dayOf = (local: string) => local.slice(0, 10);
                   type="number"
                   min="1"
                   [ngModel]="count()"
-                  (ngModelChange)="count.set($event ?? '')"
+                  (ngModelChange)="setCount($event)"
                 />
               </div>
               @if (repeat() === 'WEEKLY') {
@@ -230,13 +231,14 @@ export class EventEditor {
 
   constructor() {
     effect(() => {
-      if (this.open()) this.reset();
+      // `reset` lê e escreve sinais do formulário: sem `untracked` cada letra escrita voltaria a repô-lo.
+      if (this.open()) untracked(() => this.reset());
     });
     // Mudar o âmbito reescreve as horas: «toda a série» usa o início da série, os outros a ocorrência clicada.
     effect(() => {
       const scope = this.scope();
       const event = this.event();
-      if (event && this.open()) this.fillTimes(event, scope);
+      if (event && this.open()) untracked(() => this.fillTimes(event, scope));
     });
   }
 
@@ -304,6 +306,11 @@ export class EventEditor {
     this.calendarId.set(id);
     const calendar = this.calendars().find((c) => c.id === id);
     if (calendar && !this.event()) this.timezone.set(calendar.timezone);
+  }
+
+  /** O campo numérico entrega um número (ou nulo): o formulário guarda texto. */
+  protected setCount(value: string | number | null): void {
+    this.count.set(value === null ? '' : String(value));
   }
 
   protected toggleDay(code: string): void {

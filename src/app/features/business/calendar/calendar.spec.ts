@@ -27,6 +27,7 @@ import {
   shift,
   toZonedInput,
 } from './calendar-model';
+import { EventEditor } from './event-editor';
 import { ResourcesTab } from './resources-tab';
 
 describe('calendar model', () => {
@@ -458,6 +459,90 @@ describe('BusinessHoursTab', () => {
     );
     expect(document.body.querySelector('[data-testid="working-result"]')?.textContent).toContain(
       '7 h',
+    );
+  });
+});
+
+describe('EventEditor', () => {
+  it('keeps what was typed when another field changes (it only resets when opened)', async () => {
+    setup(['calendar.read', 'calendar.manage']);
+    const fixture = TestBed.createComponent(EventEditor);
+    fixture.componentRef.setInput('calendars', [
+      {
+        id: 'c1',
+        name: 'Equipa',
+        ownerMembershipId: 'm0',
+        unitId: null,
+        timezone: 'Europe/Lisbon',
+        visibility: 'TENANT',
+        version: 1,
+      },
+    ]);
+    fixture.componentRef.setInput('open', true);
+    await settle(fixture);
+    const field = (label: string) =>
+      [...document.body.querySelectorAll('label')]
+        .find((l) => l.textContent?.trim().startsWith(label))
+        ?.parentElement?.querySelector('input,textarea') as HTMLInputElement;
+    const title = field('Título');
+    title.value = 'Reunião de direcção';
+    title.dispatchEvent(new Event('input'));
+    await settle(fixture);
+    const zone = field('Fuso horário');
+    zone.value = 'America/New_York';
+    zone.dispatchEvent(new Event('input'));
+    await settle(fixture);
+    expect(field('Título').value).toBe('Reunião de direcção');
+    expect(field('Fuso horário').value).toBe('America/New_York');
+  });
+
+  it('creates a weekly series from the form (the repeat count comes from a number field)', async () => {
+    const api = setup(['calendar.read', 'calendar.manage']);
+    const created = vi.fn(() => of(detail()));
+    (api as unknown as Record<string, unknown>)['createEvent'] = created;
+    const fixture = TestBed.createComponent(EventEditor);
+    fixture.componentRef.setInput('calendars', [
+      {
+        id: 'c1',
+        name: 'Equipa',
+        ownerMembershipId: 'm0',
+        unitId: null,
+        timezone: 'Europe/Lisbon',
+        visibility: 'TENANT',
+        version: 1,
+      },
+    ]);
+    fixture.componentRef.setInput('open', true);
+    await settle(fixture);
+    const field = (label: string) =>
+      [...document.body.querySelectorAll('label')]
+        .find((l) => l.textContent?.trim().startsWith(label))
+        ?.parentElement?.querySelector('input,textarea,select') as HTMLInputElement;
+    const type = async (label: string, value: string, event = 'input') => {
+      const el = field(label);
+      el.value = value;
+      el.dispatchEvent(new Event(event));
+      await settle(fixture);
+    };
+    await type('Título', 'Aula semanal');
+    await type('Início', '2031-07-15T10:00');
+    await type('Fim', '2031-07-15T11:00');
+    await type('Repetir', 'WEEKLY', 'change');
+    await type('Número de vezes', '3');
+    [...document.body.querySelectorAll('button')]
+      .find((b) => b.textContent?.trim() === 'Guardar')
+      ?.click();
+    await settle(fixture);
+    expect(created).toHaveBeenCalledWith(
+      expect.objectContaining({
+        calendarId: 'c1',
+        title: 'Aula semanal',
+        timezone: 'Europe/Lisbon',
+        // 10:00 em Lisboa no verão são 09:00 UTC; uma hora de duração.
+        startsAt: '2031-07-15T09:00:00.000Z',
+        endsAt: '2031-07-15T10:00:00.000Z',
+        recurrenceRule: 'FREQ=WEEKLY;COUNT=3',
+      }),
     );
   });
 });
