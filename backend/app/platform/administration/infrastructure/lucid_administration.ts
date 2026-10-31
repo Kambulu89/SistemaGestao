@@ -97,7 +97,12 @@ export class LucidProvisioningGateway implements ProvisioningGateway {
     return tenant ? { id: tenant.id, code: tenant.code, status: tenant.status } : null
   }
 
-  async createTenant(input: { code: string; name: string }) {
+  async createTenant(input: {
+    code: string
+    name: string
+    countryCode?: string
+    defaultCurrency?: string
+  }) {
     try {
       await new CreateTenant(this.tenants).execute(input)
       return true
@@ -178,6 +183,10 @@ export class LucidProvisioningGateway implements ProvisioningGateway {
       code: tenant.code,
       name: tenant.name,
       status: tenant.status,
+      countryCode: tenant.countryCode,
+      defaultCurrency: tenant.defaultCurrency,
+      activatedAt: tenant.activatedAt,
+      suspendedAt: tenant.suspendedAt,
       plan: plan ? { code: plan.planCode, revision: plan.revision, status: plan.status } : null,
     }
   }

@@ -7,6 +7,12 @@ export interface Tenant {
   status: TenantStatus
   defaultLocale: string
   timezone: string
+  /** País (ISO 3166-1 alfa-2) e moeda por omissão (ISO 4217) do cliente; cada empresa tem os seus. */
+  countryCode: string
+  defaultCurrency: string
+  activatedAt: Date | null
+  /** Última suspensão; `null` quando o tenant não está suspenso. */
+  suspendedAt: Date | null
   version: number
 }
 
@@ -50,3 +56,6 @@ export function isValidHostname(hostname: string): boolean {
   const labels = hostname.split('.')
   return labels.length >= 2 && labels.every((label) => LABEL.test(label))
 }
+
+export const isCountryCode = (value: string) => /^[A-Z]{2}$/.test(value)
+export const isCurrencyCode = (value: string) => /^[A-Z]{3}$/.test(value)

@@ -11,6 +11,10 @@ interface TenantRow {
   status: TenantStatus
   default_locale: string
   timezone: string
+  country_code: string
+  default_currency: string
+  activated_at: Date | null
+  suspended_at: Date | null
   version: number
 }
 
@@ -30,6 +34,10 @@ const toTenant = (row: TenantRow): Tenant => ({
   status: row.status,
   defaultLocale: row.default_locale,
   timezone: row.timezone,
+  countryCode: row.country_code,
+  defaultCurrency: row.default_currency,
+  activatedAt: row.activated_at,
+  suspendedAt: row.suspended_at,
   version: row.version,
 })
 
@@ -43,10 +51,17 @@ const toDomain = (row: DomainRow): TenantDomain & { verificationTokenHash: strin
 })
 
 export class LucidTenantStore implements TenantStore {
-  async insert(input: { code: string; name: string; defaultLocale?: string; timezone?: string }) {
+  async insert(input: {
+    code: string
+    name: string
+    defaultLocale?: string
+    timezone?: string
+    countryCode?: string
+    defaultCurrency?: string
+  }) {
     const result = await conn().rawQuery(
-      `insert into tenants (code, name, default_locale, timezone)
-       values (?, ?, coalesce(?, 'pt-AO'), coalesce(?, 'Africa/Luanda'))
+      `insert into tenants (code, name, default_locale, timezone, country_code, default_currency)
+       values (?, ?, coalesce(?, 'pt-AO'), coalesce(?, 'Africa/Luanda'), coalesce(?, 'AO'), coalesce(?, 'AOA'))
        on conflict (code) do nothing
        returning *`,
       [
@@ -54,6 +69,8 @@ export class LucidTenantStore implements TenantStore {
         input.name,
         (input.defaultLocale ?? null) as string,
         (input.timezone ?? null) as string,
+        (input.countryCode ?? null) as string,
+        (input.defaultCurrency ?? null) as string,
       ]
     )
     const [row] = result.rows as TenantRow[]
@@ -85,10 +102,11 @@ export class LucidTenantStore implements TenantStore {
     const result = await conn().rawQuery(
       `update tenants
           set status = ?, version = version + 1, updated_at = ?,
-              activated_at = case when ? = 'ACTIVE' then coalesce(activated_at, ?) else activated_at end
+              activated_at = case when ? = 'ACTIVE' then coalesce(activated_at, ?) else activated_at end,
+              suspended_at = case when ? = 'SUSPENDED' then ? when ? = 'ACTIVE' then null else suspended_at end
         where id = ? and version = ?
         returning *`,
-      [status, now, status, now, id, expectedVersion]
+      [status, now, status, now, status, now, status, id, expectedVersion]
     )
     const [row] = result.rows as TenantRow[]
     return row ? toTenant(row) : null

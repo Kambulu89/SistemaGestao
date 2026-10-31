@@ -120,6 +120,8 @@ export interface ProvisionInput {
   planCode: string
   planRevision?: number
   trialDays?: number
+  countryCode?: string
+  defaultCurrency?: string
 }
 
 export interface ProvisionResult extends ProvisioningState {
@@ -151,7 +153,12 @@ export class ProvisionTenant {
     let tenant = await this.gateway.findTenant(code)
     let created = false
     if (!tenant) {
-      created = await this.gateway.createTenant({ code, name: input.name.trim() })
+      created = await this.gateway.createTenant({
+        code,
+        name: input.name.trim(),
+        countryCode: input.countryCode,
+        defaultCurrency: input.defaultCurrency,
+      })
       tenant = await this.gateway.findTenant(code)
     }
     if (!tenant) throw new Error('Tenant não encontrado após a criação')

@@ -29,6 +29,42 @@ test.group('tenants | plano de controlo', (group) => {
     assert.strictEqual(tenant.version, 1)
   })
 
+  test('país e moeda por omissão (AO, AOA), validados quando indicados', async ({ assert }) => {
+    const defaults = await new CreateTenant(store).execute({ code: code(), name: 'A' })
+    assert.strictEqual(defaults.countryCode, 'AO')
+    assert.strictEqual(defaults.defaultCurrency, 'AOA')
+    assert.isNull(defaults.suspendedAt)
+    const pt = await new CreateTenant(store).execute({
+      code: code(),
+      name: 'B',
+      countryCode: 'pt',
+      defaultCurrency: 'eur',
+    })
+    assert.strictEqual(pt.countryCode, 'PT')
+    assert.strictEqual(pt.defaultCurrency, 'EUR')
+    const badCountry = (await capture(() =>
+      new CreateTenant(store).execute({ code: code(), name: 'C', countryCode: 'ANG' })
+    )) as ApiError
+    assert.strictEqual(badCountry.status, 422)
+    const badCurrency = (await capture(() =>
+      new CreateTenant(store).execute({ code: code(), name: 'D', defaultCurrency: 'KZ' })
+    )) as ApiError
+    assert.strictEqual(badCurrency.status, 422)
+  })
+
+  test('suspender regista a data; retomar limpa-a e mantém a da activação', async ({ assert }) => {
+    const c = code()
+    await new CreateTenant(store).execute({ code: c, name: 'A' })
+    const change = new ChangeTenantStatus(store)
+    const active = await change.execute(c, 'ACTIVE')
+    assert.isNotNull(active.activatedAt)
+    const suspended = await change.execute(c, 'SUSPENDED')
+    assert.isNotNull(suspended.suspendedAt)
+    const resumed = await change.execute(c, 'ACTIVE')
+    assert.isNull(resumed.suspendedAt)
+    assert.strictEqual(resumed.activatedAt?.toISOString(), active.activatedAt?.toISOString())
+  })
+
   test('código repetido devolve 409 e código inválido 422', async ({ assert }) => {
     const c = code()
     await new CreateTenant(store).execute({ code: c, name: 'A' })

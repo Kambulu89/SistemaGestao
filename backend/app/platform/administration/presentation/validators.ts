@@ -8,6 +8,8 @@ export const provisionValidator = vine.compile(
     planCode: vine.string().trim().maxLength(60),
     planRevision: vine.number().withoutDecimals().min(1).optional(),
     trialDays: vine.number().withoutDecimals().optional(),
+    countryCode: vine.string().trim().fixedLength(2).optional(),
+    defaultCurrency: vine.string().trim().fixedLength(3).optional(),
   })
 )
 

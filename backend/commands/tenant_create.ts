@@ -15,11 +15,22 @@ export default class TenantCreate extends BaseCommand {
   @flags.boolean({ description: 'Activa o tenant logo a seguir à criação' })
   declare activate: boolean
 
+  @flags.string({ description: 'País (ISO 3166-1 alfa-2; por omissão AO)' })
+  declare country?: string
+
+  @flags.string({ description: 'Moeda por omissão (ISO 4217; por omissão AOA)' })
+  declare currency?: string
+
   async run() {
     const { ChangeTenantStatus, CreateTenant, LucidTenantStore } =
       await import('#platform/tenants/index')
     const store = new LucidTenantStore()
-    const tenant = await new CreateTenant(store).execute({ code: this.code, name: this.name })
+    const tenant = await new CreateTenant(store).execute({
+      code: this.code,
+      name: this.name,
+      countryCode: this.country,
+      defaultCurrency: this.currency,
+    })
     if (this.activate) await new ChangeTenantStatus(store).execute(tenant.code, 'ACTIVE')
     this.logger.success(`Tenant ${tenant.code} criado (${tenant.id}).`)
   }

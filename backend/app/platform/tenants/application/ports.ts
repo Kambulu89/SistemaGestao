@@ -7,6 +7,8 @@ export interface TenantStore {
     name: string
     defaultLocale?: string
     timezone?: string
+    countryCode?: string
+    defaultCurrency?: string
   }): Promise<Tenant | null>
   findByCode(code: string): Promise<Tenant | null>
   findById(id: string): Promise<Tenant | null>

@@ -736,6 +736,8 @@ paths:
                 planCode: { type: string }
                 planRevision: { type: integer }
                 trialDays: { type: integer }
+                countryCode: { type: string, description: 'ISO 3166-1 alfa-2; por omissão AO.' }
+                defaultCurrency: { type: string, description: 'ISO 4217; por omissão AOA.' }
       responses:
         '200': { description: Tenant já existia; estado do provisionamento. }
         '201': { description: Tenant criado e provisionado. }

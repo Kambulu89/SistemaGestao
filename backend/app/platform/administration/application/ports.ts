@@ -22,6 +22,10 @@ export interface TenantSummary {
   code: string
   name: string
   status: string
+  countryCode: string
+  defaultCurrency: string
+  activatedAt: Date | null
+  suspendedAt: Date | null
   plan: { code: string; revision: number; status: string } | null
 }
 
@@ -37,7 +41,12 @@ export interface ProvisioningState {
 export interface ProvisioningGateway {
   findTenant(code: string): Promise<{ id: string; code: string; status: string } | null>
   /** `false` se o código já existia (criação concorrente). */
-  createTenant(input: { code: string; name: string }): Promise<boolean>
+  createTenant(input: {
+    code: string
+    name: string
+    countryCode?: string
+    defaultCurrency?: string
+  }): Promise<boolean>
   assignPlan(input: {
     tenantId: string
     planCode: string

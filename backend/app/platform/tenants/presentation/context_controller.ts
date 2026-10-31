@@ -24,8 +24,14 @@ export default class ContextController {
         code: tenant.code,
         name: tenant.name,
         status: tenant.status,
+        // O slug do URL é o código (a-z, 0-9, _): não há outro identificador público.
+        slug: tenant.code,
         defaultLocale: tenant.defaultLocale,
         timezone: tenant.timezone,
+        countryCode: tenant.countryCode,
+        defaultCurrency: tenant.defaultCurrency,
+        activatedAt: tenant.activatedAt,
+        suspendedAt: tenant.suspendedAt,
       },
       membership: { id: membership.id, status: membership.status, joinedAt: membership.joinedAt },
       user: {

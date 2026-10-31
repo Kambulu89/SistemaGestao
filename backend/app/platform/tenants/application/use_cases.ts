@@ -2,6 +2,8 @@ import { ApiError } from '#core/http/api_error'
 import { generateOpaqueToken, hashToken, safeEqual } from '#core/auth/index'
 import {
   canTransition,
+  isCountryCode,
+  isCurrencyCode,
   isValidHostname,
   isValidTenantCode,
   normalizeHostname,
@@ -17,7 +19,12 @@ const invalid = (path: string, code: string, message: string) =>
 export class CreateTenant {
   constructor(private readonly store: TenantStore) {}
 
-  async execute(input: { code: string; name: string }): Promise<Tenant> {
+  async execute(input: {
+    code: string
+    name: string
+    countryCode?: string
+    defaultCurrency?: string
+  }): Promise<Tenant> {
     const code = input.code.trim().toLowerCase()
     if (!isValidTenantCode(code)) {
       throw invalid('code', 'INVALID_CODE', 'O código usa 2–50 caracteres: a-z, 0-9 e _.')
@@ -25,7 +32,28 @@ export class CreateTenant {
     if (!input.name.trim() || input.name.length > 160) {
       throw invalid('name', 'INVALID_NAME', 'O nome é obrigatório (máx. 160).')
     }
-    const tenant = await this.store.insert({ code, name: input.name.trim() })
+    const countryCode = input.countryCode?.trim().toUpperCase()
+    if (countryCode !== undefined && !isCountryCode(countryCode)) {
+      throw invalid(
+        'countryCode',
+        'INVALID_COUNTRY',
+        'O país usa o código ISO de 2 letras (ex.: AO).'
+      )
+    }
+    const defaultCurrency = input.defaultCurrency?.trim().toUpperCase()
+    if (defaultCurrency !== undefined && !isCurrencyCode(defaultCurrency)) {
+      throw invalid(
+        'defaultCurrency',
+        'INVALID_CURRENCY',
+        'A moeda usa o código ISO de 3 letras (ex.: AOA).'
+      )
+    }
+    const tenant = await this.store.insert({
+      code,
+      name: input.name.trim(),
+      countryCode,
+      defaultCurrency,
+    })
     if (!tenant)
       throw ApiError.conflict('TENANT_CODE_TAKEN', 'Já existe um tenant com este código.')
     return tenant
