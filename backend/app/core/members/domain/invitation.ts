@@ -9,6 +9,7 @@ export interface Invitation {
   id: string
   email: string
   invitedByMembershipId: string | null
+  createdAt: Date
   expiresAt: Date
   acceptedAt: Date | null
   status: InvitationStatus

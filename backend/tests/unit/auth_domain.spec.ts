@@ -19,6 +19,8 @@ const user = (over: Partial<User> = {}): User => ({
   emailVerifiedAt: new Date(),
   status: 'ACTIVE',
   locale: null,
+  authenticationProvider: 'PASSWORD',
+  lastLoginAt: null,
   ...over,
 })
 

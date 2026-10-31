@@ -56,6 +56,7 @@ interface RoleRow extends TenantRow {
   name: string
   description: string | null
   is_system: boolean
+  status: 'ACTIVE' | 'INACTIVE'
 }
 interface AssignmentRow extends TenantRow {
   membership_id: string
@@ -119,7 +120,7 @@ export class LucidIamStore implements IamStore {
       `select p.code as permission_code, r.id as role_id, r.code as role_code,
               a.id as assignment_id, a.organization_unit_id as unit_id
          from role_assignments a
-         join roles r on r.tenant_id = a.tenant_id and r.id = a.role_id
+         join roles r on r.tenant_id = a.tenant_id and r.id = a.role_id and r.status = 'ACTIVE'
          join role_permissions rp on rp.tenant_id = a.tenant_id and rp.role_id = r.id
          join permissions p on p.id = rp.permission_id
         where a.tenant_id = ? and a.membership_id = ?
@@ -186,6 +187,7 @@ export class LucidIamStore implements IamStore {
       name: r.name,
       description: r.description,
       isSystem: r.is_system,
+      status: r.status,
       version: r.version,
       permissionCodes: (byRole.get(r.id) ?? []).sort(),
     }))
@@ -248,7 +250,7 @@ export class LucidIamStore implements IamStore {
     scope: TenantScope,
     id: string,
     expectedVersion: number,
-    values: { name?: string; description?: string | null }
+    values: { name?: string; description?: string | null; status?: 'ACTIVE' | 'INACTIVE' }
   ) {
     await this.roles.update(scope, id, expectedVersion, values)
     return (await this.findRole(scope, id)) as RoleView

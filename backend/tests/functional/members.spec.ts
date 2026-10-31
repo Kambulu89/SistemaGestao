@@ -204,6 +204,40 @@ test.group('membros | convites', (group) => {
     assert.strictEqual(again.body().error.code, 'INVALID_OR_EXPIRED_TOKEN')
   })
 
+  test('ciclo de vida da membership: convidado por/em, activada em, desactivada e reactivada', async ({
+    client,
+    assert,
+  }) => {
+    const { admin, http } = await setup(client)
+    const guest = await invitee(client)
+    const { token } = await invite(http, guest.email)
+    const accepted = await accept(client, guest, token)
+    accepted.assertStatus(200)
+    const id = accepted.body().data.membershipId
+    const find = async () =>
+      ((await http.get('/api/v1/memberships')).body().data as any[]).find((m) => m.id === id)
+    const joined = await find()
+    assert.strictEqual(joined.invitedByMembershipId, admin.membershipId)
+    assert.isNotNull(joined.invitedAt)
+    assert.isNotNull(joined.activatedAt)
+    assert.isNull(joined.deactivatedAt)
+    const suspended = await http.patch(`/api/v1/memberships/${id}`, {
+      status: 'SUSPENDED',
+      expectedVersion: joined.version,
+    })
+    suspended.assertStatus(200)
+    const after = await find()
+    assert.isNotNull(after.deactivatedAt)
+    assert.strictEqual(after.activatedAt, joined.activatedAt, 'a activação original mantém-se')
+    ;(
+      await http.patch(`/api/v1/memberships/${id}`, {
+        status: 'ACTIVE',
+        expectedVersion: after.version,
+      })
+    ).assertStatus(200)
+    assert.isNull((await find()).deactivatedAt)
+  })
+
   test('só quem tem o email do convite, com sessão e CSRF, e um token íntegro, aceita', async ({
     client,
     assert,
@@ -518,9 +552,10 @@ test.group('membros | gestão e último administrador', (group) => {
     left.assertStatus(200)
 
     const asSecond = api(client, tenant, second)
+    // Retirar a última permissão de administração (sem acrescentar nenhuma: acrescentar o que não tem seria escalada).
     const stripPermission = await asSecond.patch(`/api/v1/roles/${custom.id}`, {
       expectedVersion: custom.version,
-      permissionCodes: ['iam.read'],
+      permissionCodes: [],
     })
     stripPermission.assertStatus(409)
     assert.strictEqual(stripPermission.body().error.code, 'LAST_ADMIN')

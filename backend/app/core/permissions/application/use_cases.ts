@@ -208,6 +208,41 @@ export class AdminGuard {
     }
     return result
   }
+
+  /**
+   * Ninguém delega o que não tem: quem cria ou altera um papel, ou o atribui, tem de possuir cada uma das permissões
+   * desse papel — de forma geral, ou na unidade da atribuição. Impede um gestor de acessos de criar um papel com
+   * permissões que não tem e de o atribuir a si próprio (ou a outro). Actores de serviço (provisionamento, sementes)
+   * não têm membership e não passam por aqui.
+   */
+  async ensureCanDelegate(
+    scope: TenantScope,
+    context: TenantContext,
+    permissionCodes: readonly string[],
+    unitId: string | null = null,
+    path = 'permissionCodes'
+  ): Promise<void> {
+    if (!context.membershipId) return
+    const grants = await this.store.effectiveGrants(scope, context.membershipId, this.clock.now())
+    const held = new Set(
+      grants
+        .filter((g) => g.unitId === null || (unitId !== null && g.unitId === unitId))
+        .map((g) => g.permissionCode)
+    )
+    const missing = [...new Set(permissionCodes)].filter((code) => !held.has(code))
+    if (missing.length > 0) {
+      throw new ApiError(
+        403,
+        'PRIVILEGE_ESCALATION',
+        'Não pode conceder permissões que não tem.',
+        missing.map((code) => ({
+          path,
+          code: 'PERMISSION_NOT_HELD',
+          message: `Não tem a permissão ${code}.`,
+        }))
+      )
+    }
+  }
 }
 
 // --- papéis --------------------------------------------------------------------------------------
@@ -263,6 +298,7 @@ export class RoleUseCases {
     checkPermissionCodes(input.permissionCodes)
 
     return this.uow.run(async (scope) => {
+      await this.guard.ensureCanDelegate(scope, context, input.permissionCodes)
       const role = await this.store.insertRole(scope, {
         code: input.code,
         name: input.name.trim(),
@@ -284,6 +320,7 @@ export class RoleUseCases {
       name?: string
       description?: string | null
       permissionCodes?: string[]
+      status?: 'ACTIVE' | 'INACTIVE'
     }
   ): Promise<RoleView> {
     if (input.permissionCodes) checkPermissionCodes(input.permissionCodes)
@@ -296,12 +333,30 @@ export class RoleUseCases {
           'Os papéis de sistema não podem ser alterados.'
         )
       }
+      const statusChanged = input.status !== undefined && input.status !== role.status
+      // Reactivar um papel volta a conceder as suas permissões: quem o faz tem de as ter.
+      if (statusChanged && input.status === 'ACTIVE') {
+        await this.guard.ensureCanDelegate(scope, context, role.permissionCodes)
+      }
       const updated = await this.store.updateRole(scope, id, input.expectedVersion, {
         ...(input.name !== undefined ? { name: input.name.trim() } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
       })
+      if (statusChanged) {
+        // Desactivar retira permissões a quem o tem (e não pode deixar o tenant sem administrador).
+        await this.guard.run(scope, async () => {
+          await this.store.updateRole(scope, id, updated.version, { status: input.status })
+          await this.memberships.bumpAuthorization(
+            scope,
+            await this.store.membershipsWithRole(scope, id)
+          )
+        })
+      }
       if (input.permissionCodes) {
         const codes = [...new Set(input.permissionCodes)]
+        // Só as permissões acrescentadas contam: retirar permissões que o próprio não tem é permitido.
+        const added = codes.filter((code) => !role.permissionCodes.includes(code))
+        await this.guard.ensureCanDelegate(scope, context, added)
         await this.guard.run(scope, async () => {
           await this.store.setRolePermissions(scope, id, codes)
           await this.memberships.bumpAuthorization(
@@ -371,12 +426,18 @@ export class AssignmentUseCases {
       if (!(await this.memberships.findById(scope, input.membershipId))) {
         throw ApiError.notFound('Membership não encontrada.')
       }
-      if (!(await this.store.findRole(scope, input.roleId))) {
-        throw ApiError.notFound('Papel não encontrado.')
-      }
+      const role = await this.store.findRole(scope, input.roleId)
+      if (!role) throw ApiError.notFound('Papel não encontrado.')
       if (input.organizationUnitId && !(await this.unitExists(scope, input.organizationUnitId))) {
         throw ApiError.notFound('Unidade não encontrada.')
       }
+      await this.guard.ensureCanDelegate(
+        scope,
+        context,
+        role.permissionCodes,
+        input.organizationUnitId ?? null,
+        'roleId'
+      )
       const assignment = await this.store.insertAssignment(scope, {
         membershipId: input.membershipId,
         roleId: input.roleId,

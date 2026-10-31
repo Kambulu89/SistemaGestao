@@ -255,6 +255,12 @@ export class AcceptInvitation {
         membership = await this.memberships.changeStatus(scope, existing, 'ACTIVE')
       }
 
+      await this.memberships.recordInvitation(
+        scope,
+        membership.id,
+        invitation.invitedByMembershipId,
+        invitation.createdAt
+      )
       // Papéis e unidades indicados no convite; o que entretanto deixou de existir é ignorado.
       for (const roleId of invitation.roleIds) {
         if (!(await this.iam.findRole(scope, roleId))) continue
@@ -292,6 +298,10 @@ export interface MemberView {
   displayName: string | null
   status: MembershipStatus
   joinedAt: Date | null
+  invitedByMembershipId: string | null
+  invitedAt: Date | null
+  activatedAt: Date | null
+  deactivatedAt: Date | null
   defaultOrganizationId: string | null
   personId: string | null
   authorizationVersion: number
@@ -393,6 +403,10 @@ export class MemberUseCases {
       displayName: userById.get(m.userId)?.displayName ?? null,
       status: m.status,
       joinedAt: m.joinedAt,
+      invitedByMembershipId: m.invitedByMembershipId,
+      invitedAt: m.invitedAt,
+      activatedAt: m.activatedAt,
+      deactivatedAt: m.deactivatedAt,
       defaultOrganizationId: m.defaultOrganizationId,
       personId: m.personId,
       authorizationVersion: m.authorizationVersion,

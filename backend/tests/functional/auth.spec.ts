@@ -58,11 +58,17 @@ test.group('auth | início e fim de sessão', (group) => {
     assert.match(cookie, /Path=\//)
     assert.isAbove(cookieValue(response).length, 40)
     assert.deepEqual(Object.keys(response.body().data.user).sort(), [
+      'authenticationProvider',
       'displayName',
       'email',
       'id',
+      'lastLoginAt',
       'locale',
     ])
+    assert.strictEqual(response.body().data.user.authenticationProvider, 'PASSWORD')
+    assert.isNull(response.body().data.user.lastLoginAt, 'primeiro acesso')
+    const again = await login(client, email)
+    assert.isNotNull(again.body().data.user.lastLoginAt, 'o acesso anterior fica registado')
     assert.notInclude(JSON.stringify(response.body()), 'password')
     assert.notInclude(JSON.stringify(response.body()), cookieValue(response))
   })

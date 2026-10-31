@@ -21,6 +21,7 @@ export const updateRoleValidator = vine.compile(
     name: vine.string().trim().maxLength(120).optional(),
     description: vine.string().trim().maxLength(300).nullable().optional(),
     permissionCodes: vine.array(vine.string().maxLength(100)).maxLength(200).optional(),
+    status: vine.enum(['ACTIVE', 'INACTIVE'] as const).optional(),
   })
 )
 

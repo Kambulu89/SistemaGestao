@@ -25,6 +25,8 @@ export interface RoleView {
   name: string
   description: string | null
   isSystem: boolean
+  /** Um papel inactivo não concede permissões; as atribuições mantêm-se. */
+  status: 'ACTIVE' | 'INACTIVE'
   version: number
   permissionCodes: string[]
 }
@@ -80,7 +82,7 @@ export interface IamStore {
     scope: TenantScope,
     id: string,
     expectedVersion: number,
-    values: { name?: string; description?: string | null }
+    values: { name?: string; description?: string | null; status?: 'ACTIVE' | 'INACTIVE' }
   ): Promise<RoleView>
   setRolePermissions(scope: TenantScope, roleId: string, permissionCodes: string[]): Promise<void>
   /** `IN_USE` se ainda houver atribuições. */

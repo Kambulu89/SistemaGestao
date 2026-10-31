@@ -174,6 +174,126 @@ test.group('autorização | RBAC no servidor', (group) => {
     ;(await http.delete(`/api/v1/roles/${role.id}`)).assertStatus(204)
   })
 
+  test('escalada de privilégios: um gestor de acessos não concede o que não tem, nem a si próprio', async ({
+    client,
+    assert,
+  }) => {
+    const tenant = await createActiveTenant()
+    const admin = await newActor(client, tenant, true)
+    const manager = await newActor(client, tenant)
+    const http = api(client, tenant, admin)
+    const asManager = api(client, tenant, manager)
+    const managerRole = (
+      await http.post('/api/v1/roles', {
+        code: 'gestor_acessos',
+        name: 'Gestor de acessos',
+        permissionCodes: ['iam.read', 'iam.manage'],
+      })
+    ).body().data
+    ;(
+      await http.post('/api/v1/role-assignments', {
+        membershipId: manager.membershipId,
+        roleId: managerRole.id,
+      })
+    ).assertStatus(201)
+
+    // Criar um papel com uma permissão que não tem: 403, com a permissão em falta.
+    const escalate = await asManager.post('/api/v1/roles', {
+      code: 'auditor_x',
+      name: 'Auditor',
+      permissionCodes: ['iam.read', 'audit.read'],
+    })
+    escalate.assertStatus(403)
+    assert.strictEqual(escalate.body().error.code, 'PRIVILEGE_ESCALATION')
+    assert.deepEqual(
+      escalate.body().error.details.map((d: any) => d.message),
+      ['Não tem a permissão audit.read.']
+    )
+    // Com o que tem, pode.
+    const reader = await asManager.post('/api/v1/roles', {
+      code: 'leitor_x',
+      name: 'Leitor',
+      permissionCodes: ['iam.read'],
+    })
+    reader.assertStatus(201)
+    // Acrescentar a um papel uma permissão que não tem: 403; retirar é permitido.
+    const widen = await asManager.patch(`/api/v1/roles/${reader.body().data.id}`, {
+      expectedVersion: reader.body().data.version,
+      permissionCodes: ['iam.read', 'audit.read'],
+    })
+    widen.assertStatus(403)
+    assert.strictEqual(widen.body().error.code, 'PRIVILEGE_ESCALATION')
+
+    // Atribuir a si próprio o papel de administrador (que tem mais do que ele): 403.
+    const adminRole = (await http.get('/api/v1/roles'))
+      .body()
+      .data.find((r: any) => r.code === TENANT_ADMIN_ROLE)
+    const self = await asManager.post('/api/v1/role-assignments', {
+      membershipId: manager.membershipId,
+      roleId: adminRole.id,
+    })
+    self.assertStatus(403)
+    assert.strictEqual(self.body().error.code, 'PRIVILEGE_ESCALATION')
+    // O papel de leitor (contido no que tem) pode atribuí-lo.
+    ;(
+      await asManager.post('/api/v1/role-assignments', {
+        membershipId: admin.membershipId,
+        roleId: reader.body().data.id,
+      })
+    ).assertStatus(201)
+  })
+
+  test('um papel inactivo deixa de conceder; reactivar volta a conceder', async ({
+    client,
+    assert,
+  }) => {
+    const tenant = await createActiveTenant()
+    const admin = await newActor(client, tenant, true)
+    const operator = await newActor(client, tenant)
+    const http = api(client, tenant, admin)
+    const asOperator = api(client, tenant, operator)
+    const role = (
+      await http.post('/api/v1/roles', {
+        code: 'leitor_y',
+        name: 'Leitor',
+        permissionCodes: ['iam.read'],
+      })
+    ).body().data
+    assert.strictEqual(role.status, 'ACTIVE')
+    ;(
+      await http.post('/api/v1/role-assignments', {
+        membershipId: operator.membershipId,
+        roleId: role.id,
+      })
+    ).assertStatus(201)
+    ;(await asOperator.get('/api/v1/roles')).assertStatus(200)
+    const before = await authzVersion(client, tenant, operator)
+    const inactive = await http.patch(`/api/v1/roles/${role.id}`, {
+      expectedVersion: role.version,
+      status: 'INACTIVE',
+    })
+    inactive.assertStatus(200)
+    assert.strictEqual(inactive.body().data.status, 'INACTIVE')
+    assert.strictEqual(await authzVersion(client, tenant, operator), before + 1)
+    ;(await asOperator.get('/api/v1/roles')).assertStatus(403)
+    const active = await http.patch(`/api/v1/roles/${role.id}`, {
+      expectedVersion: inactive.body().data.version,
+      status: 'ACTIVE',
+    })
+    active.assertStatus(200)
+    ;(await asOperator.get('/api/v1/roles')).assertStatus(200)
+    // O papel de administrador é de sistema: não se desactiva.
+    const adminRole = (await http.get('/api/v1/roles'))
+      .body()
+      .data.find((r: any) => r.code === TENANT_ADMIN_ROLE)
+    const lockOut = await http.patch(`/api/v1/roles/${adminRole.id}`, {
+      expectedVersion: adminRole.version,
+      status: 'INACTIVE',
+    })
+    lockOut.assertStatus(409)
+    assert.strictEqual(lockOut.body().error.code, 'SYSTEM_ROLE_IMMUTABLE')
+  })
+
   test('a janela de validade da atribuição é respeitada', async ({ client }) => {
     const tenant = await createActiveTenant()
     const admin = await newActor(client, tenant, true)

@@ -17,6 +17,9 @@ export const userView = (user: User) => ({
   email: user.email,
   displayName: user.displayName,
   locale: user.locale,
+  authenticationProvider: user.authenticationProvider,
+  // No login, é o acesso anterior (o utilizador vê quando entrou pela última vez antes deste).
+  lastLoginAt: user.lastLoginAt,
 })
 
 /** Transporte apenas: valida, chama o caso de uso e formata a resposta. */

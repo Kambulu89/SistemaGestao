@@ -20,6 +20,8 @@ interface UserRow {
   email_verified_at: Date | null
   status: User['status']
   locale: string | null
+  authentication_provider: string
+  last_login_at: Date | null
 }
 
 interface SessionRow {
@@ -41,6 +43,8 @@ const toUser = (row: UserRow): User => ({
   emailVerifiedAt: row.email_verified_at,
   status: row.status,
   locale: row.locale,
+  authenticationProvider: row.authentication_provider,
+  lastLoginAt: row.last_login_at,
 })
 
 const toSession = (row: SessionRow): AuthSession => ({
@@ -102,7 +106,9 @@ export class LucidUserRepository implements UserRepository {
 }
 
 export class LucidSessionRepository implements SessionRepository {
+  /** Uma sessão nova é um login: actualiza também o último login do utilizador. */
   async insert(session: NewSession) {
+    await conn().from('users').where('id', session.userId).update({ last_login_at: session.now })
     const [row] = await conn()
       .table('auth_sessions')
       .insert({

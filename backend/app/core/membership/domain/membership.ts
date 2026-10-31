@@ -11,6 +11,11 @@ export interface Membership {
   personId: string | null
   /** Incrementa sempre que os acessos mudam; faz parte do `TenantContext.permissionsVersion`. */
   authorizationVersion: number
+  /** Ciclo de vida (mantido por trigger na base): quem convidou e quando, activação e desactivação. */
+  invitedByMembershipId: string | null
+  invitedAt: Date | null
+  activatedAt: Date | null
+  deactivatedAt: Date | null
   version: number
 }
 

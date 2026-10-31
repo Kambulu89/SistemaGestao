@@ -26,6 +26,7 @@ const toInvitation = (r: InvitationRow): Invitation => ({
   id: r.id,
   email: r.email,
   invitedByMembershipId: r.invited_by_membership_id,
+  createdAt: r.created_at,
   expiresAt: r.expires_at,
   acceptedAt: r.accepted_at,
   status: r.status,

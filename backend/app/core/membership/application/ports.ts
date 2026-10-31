@@ -17,6 +17,13 @@ export interface MembershipStore {
     scope: TenantScope,
     input: { userId: string; status: MembershipStatus }
   ): Promise<Membership | null>
+  /** Regista quem convidou e quando (ao aceitar um convite). */
+  recordInvitation(
+    scope: TenantScope,
+    membershipId: string,
+    invitedByMembershipId: string | null,
+    invitedAt: Date
+  ): Promise<void>
   findByUser(scope: TenantScope, userId: string): Promise<Membership | null>
   findById(scope: TenantScope, membershipId: string): Promise<Membership | null>
   list(scope: TenantScope): Promise<Membership[]>

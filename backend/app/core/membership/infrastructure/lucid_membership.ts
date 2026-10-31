@@ -16,6 +16,10 @@ interface MembershipRow extends TenantRow {
   status: MembershipStatus
   joined_at: Date | null
   authorization_version: number
+  invited_by_membership_id: string | null
+  invited_at: Date | null
+  activated_at: Date | null
+  deactivated_at: Date | null
 }
 
 const toMembership = (row: MembershipRow): Membership => ({
@@ -27,6 +31,10 @@ const toMembership = (row: MembershipRow): Membership => ({
   defaultOrganizationId: row.default_organization_id,
   personId: row.person_id,
   authorizationVersion: row.authorization_version,
+  invitedByMembershipId: row.invited_by_membership_id,
+  invitedAt: row.invited_at,
+  activatedAt: row.activated_at,
+  deactivatedAt: row.deactivated_at,
   version: row.version,
 })
 
@@ -88,6 +96,19 @@ export class LucidMembershipStore implements MembershipStore {
     )
     const [row] = result.rows as MembershipRow[]
     return row ? toMembership(row) : null
+  }
+
+  async recordInvitation(
+    scope: TenantScope,
+    membershipId: string,
+    invitedByMembershipId: string | null,
+    invitedAt: Date
+  ) {
+    const { trx, context } = scope as LucidTenantScope
+    await trx
+      .from('tenant_memberships')
+      .where({ tenant_id: context.tenantId, id: membershipId })
+      .update({ invited_by_membership_id: invitedByMembershipId, invited_at: invitedAt })
   }
 
   async findByUser(scope: TenantScope, userId: string) {

@@ -1076,7 +1076,7 @@ paths:
         '200': { description: Papel. }
         '404': { description: Inexistente ou de outro tenant. }
     patch:
-      summary: Altera um papel com expectedVersion (iam.manage)
+      summary: Altera um papel com expectedVersion (iam.manage); não se concede o que não se tem (403 PRIVILEGE_ESCALATION)
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -1094,6 +1094,12 @@ paths:
                 name: { type: string }
                 description: { type: string, nullable: true }
                 permissionCodes: { type: array, items: { type: string } }
+                status:
+                  {
+                    type: string,
+                    enum: [ACTIVE, INACTIVE],
+                    description: 'Inactivo não concede permissões. Acrescentar permissões ou reactivar exige tê-las (403 PRIVILEGE_ESCALATION).',
+                  }
       responses:
         '200': { description: Actualizado; invalida a authorizationVersion de quem tem o papel. }
         '409': { description: VERSION_CONFLICT ou SYSTEM_ROLE_IMMUTABLE. }

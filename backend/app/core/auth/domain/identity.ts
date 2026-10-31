@@ -9,6 +9,9 @@ export interface User {
   emailVerifiedAt: Date | null
   status: UserStatus
   locale: string | null
+  /** Hoje só `PASSWORD`; outros fornecedores (SSO) entram com decisão própria. */
+  authenticationProvider: string
+  lastLoginAt: Date | null
 }
 
 /** Só uma conta activa (email verificado) com palavra-passe pode iniciar sessão. */
