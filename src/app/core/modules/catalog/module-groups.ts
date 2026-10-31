@@ -53,6 +53,13 @@ export const MODULE_GROUPS: readonly ModuleGroup[] = [
     'archive',
     'Armazéns, stock, movimentações e inventários físicos.',
   ),
+  group(
+    85,
+    'accounting',
+    'Contabilidade',
+    'document',
+    'Plano de contas, exercícios, lançamentos, razão e balancete.',
+  ),
   group(80, 'finance', 'Financeiro', 'card', 'Caixa, bancos, contas a pagar e receber, orçamento.'),
   group(
     90,

@@ -34,6 +34,7 @@ const ProcurementController = () =>
 const FinanceController = () => import('#modules/finance/presentation/finance_controller')
 const NotificationsController = () =>
   import('#modules/notifications/presentation/notifications_controller')
+const AccountingController = () => import('#modules/accounting/presentation/accounting_controller')
 const CalendarController = () => import('#modules/calendar/presentation/calendar_controller')
 const ReportingController = () => import('#modules/reporting/presentation/reporting_controller')
 const DocumentsController = () => import('#modules/documents/presentation/documents_controller')
@@ -1095,6 +1096,79 @@ router
           .use(middleware.can({ permission: 'report.design' }))
       })
       .use(middleware.feature({ code: 'reporting.search' }))
+  })
+  .prefix('/api/v1')
+  .use([middleware.origin(), middleware.auth(), middleware.tenant()])
+
+/**
+ * Contabilidade geral (ERP E1, D-062): módulo `accounting` do registo. Funcionalidades `accounting.ledger` (plano de
+ * contas, exercícios e períodos, diários, lançamentos, razão e balancete) e `accounting.posting_rules` (regras de
+ * contabilização). Permissões `accounting.read|manage`, `journal.post|reverse` e `period.close`. Partidas dobradas e
+ * imutabilidade garantidas também na base de dados.
+ */
+router
+  .group(() => {
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/ledger-accounts', [AccountingController, 'listAccounts'])
+            router.get('/fiscal-years', [AccountingController, 'listFiscalYears'])
+            router.get('/journals', [AccountingController, 'listJournals'])
+            router.get('/journal-entries', [AccountingController, 'listEntries'])
+            router.get('/journal-entries/:id', [AccountingController, 'showEntry'])
+            router.get('/ledger', [AccountingController, 'ledger'])
+            router.get('/trial-balance', [AccountingController, 'trialBalance'])
+          })
+          .use(middleware.can({ permission: 'accounting.read' }))
+        router
+          .group(() => {
+            router.post('/ledger-accounts', [AccountingController, 'createAccount'])
+            router.patch('/ledger-accounts/:id', [AccountingController, 'updateAccount'])
+            router.delete('/ledger-accounts/:id', [AccountingController, 'removeAccount'])
+            router.post('/ledger-accounts/apply-template', [AccountingController, 'applyTemplate'])
+            router.post('/fiscal-years', [AccountingController, 'createFiscalYear'])
+            router.post('/journals', [AccountingController, 'createJournal'])
+            router.patch('/journals/:id', [AccountingController, 'updateJournal'])
+          })
+          .use(middleware.can({ permission: 'accounting.manage' }))
+        router
+          .group(() => {
+            router.post('/fiscal-years/:id/close', [AccountingController, 'closeFiscalYear'])
+            router.post('/fiscal-periods/:id/close', [AccountingController, 'closePeriod'])
+            router.post('/fiscal-periods/:id/reopen', [AccountingController, 'reopenPeriod'])
+          })
+          .use(middleware.can({ permission: 'period.close' }))
+        router
+          .group(() => {
+            router.post('/journal-entries', [AccountingController, 'createEntry'])
+            router.patch('/journal-entries/:id', [AccountingController, 'updateEntry'])
+            router.delete('/journal-entries/:id', [AccountingController, 'removeEntry'])
+            router.post('/journal-entries/:id/post', [AccountingController, 'postEntry'])
+          })
+          .use(middleware.can({ permission: 'journal.post' }))
+        router
+          .post('/journal-entries/:id/reverse', [AccountingController, 'reverseEntry'])
+          .use(middleware.can({ permission: 'journal.reverse' }))
+      })
+      .use(middleware.feature({ code: 'accounting.ledger' }))
+
+    router
+      .group(() => {
+        router
+          .group(() => {
+            router.get('/posting-events', [AccountingController, 'postingEvents'])
+            router.get('/posting-rules', [AccountingController, 'listRules'])
+          })
+          .use(middleware.can({ permission: 'accounting.read' }))
+        router
+          .group(() => {
+            router.put('/posting-rules', [AccountingController, 'upsertRule'])
+            router.delete('/posting-rules/:id', [AccountingController, 'removeRule'])
+          })
+          .use(middleware.can({ permission: 'accounting.manage' }))
+      })
+      .use(middleware.feature({ code: 'accounting.posting_rules' }))
   })
   .prefix('/api/v1')
   .use([middleware.origin(), middleware.auth(), middleware.tenant()])

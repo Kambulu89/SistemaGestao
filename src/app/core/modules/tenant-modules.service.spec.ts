@@ -21,7 +21,7 @@ describe('TenantModulesService', () => {
 
   it('resolves only contractable modules, never foundation capabilities', async () => {
     const statuses = await statusesFor('multi@demo.pt', 'escola-horizonte');
-    expect(Object.keys(statuses)).toHaveLength(35);
+    expect(Object.keys(statuses)).toHaveLength(36);
     expect(statuses['iam.users']).toBeUndefined();
   });
 

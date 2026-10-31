@@ -124,6 +124,12 @@ export interface World {
     booking: string
     participant: string
     businessCalendar: string
+    ledgerAccount: string
+    fiscalYear: string
+    fiscalPeriod: string
+    journal: string
+    journalEntry: string
+    postingRule: string
     attachment: string
     resourceAttachment: string
     template: string
@@ -191,6 +197,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       'documents',
       'reporting',
       'calendar',
+      'accounting',
       'orders',
       'inventory',
       'invoicing',
@@ -212,6 +219,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
   await must(await http.post('/api/v1/tenant/modules/documents/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/reporting/enable', {}), 200)
   await must(await http.post('/api/v1/tenant/modules/calendar/enable', {}), 200)
+  await must(await http.post('/api/v1/tenant/modules/accounting/enable', {}), 200)
   await must(
     await http.put('/api/v1/tenant/features/crm.scoring', {
       override: true,
@@ -1183,6 +1191,85 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     }),
     201
   )
+  // ERP E1: modelo de partida, duas contas de movimento, um exercício, um lançamento lançado, um rascunho e uma regra.
+  await must(
+    await http.post('/api/v1/ledger-accounts/apply-template', { organizationId: organization.id }),
+    200
+  )
+  const accounts = await must<{ id: string; code: string }[]>(
+    await http.get(`/api/v1/ledger-accounts?organizationId=${organization.id}`),
+    200
+  )
+  const classOf = (code: string) => (accounts.find((a) => a.code === code) as { id: string }).id
+  const clients = await must<{ id: string }>(
+    await http.post('/api/v1/ledger-accounts', {
+      organizationId: organization.id,
+      code: '31.1',
+      name: 'Clientes comum',
+      nature: 'DEBIT',
+      parentId: classOf('3'),
+    }),
+    201
+  )
+  const sales = await must<{ id: string }>(
+    await http.post('/api/v1/ledger-accounts', {
+      organizationId: organization.id,
+      code: '61.1',
+      name: 'Vendas comum',
+      nature: 'CREDIT',
+      parentId: classOf('6'),
+    }),
+    201
+  )
+  const fiscalYear = await must<{ id: string; periods: { id: string }[] }>(
+    await http.post('/api/v1/fiscal-years', {
+      organizationId: organization.id,
+      code: '2030',
+      startsOn: '2030-01-01',
+      endsOn: '2030-12-31',
+    }),
+    201
+  )
+  const journals = await must<{ id: string; code: string }[]>(
+    await http.get(`/api/v1/journals?organizationId=${organization.id}`),
+    200
+  )
+  const general = (journals.find((j) => j.code === 'GER') as { id: string }).id
+  const entryLines = [
+    { accountId: clients.id, debit: '100.0000' },
+    { accountId: sales.id, credit: '100.0000' },
+  ]
+  const journalEntry = await must<{ id: string }>(
+    await http.post('/api/v1/journal-entries', {
+      organizationId: organization.id,
+      journalId: general,
+      entryDate: '2030-01-15',
+      description: 'Lançamento comum',
+      lines: entryLines,
+    }),
+    201
+  )
+  await must(await http.post(`/api/v1/journal-entries/${journalEntry.id}/post`, {}), 200)
+  await must(
+    await http.post('/api/v1/journal-entries', {
+      organizationId: organization.id,
+      journalId: general,
+      entryDate: '2030-01-16',
+      description: 'Rascunho comum',
+      lines: entryLines,
+    }),
+    201
+  )
+  const postingRule = await must<{ id: string }>(
+    await http.put('/api/v1/posting-rules', {
+      organizationId: organization.id,
+      eventType: 'invoice.issued',
+      role: 'receivable',
+      accountId: clients.id,
+      journalId: general,
+    }),
+    200
+  )
   // Conciliação: uma conta bancária com um recebimento confirmado (1), um extracto de duas linhas (+1 e -3) e a primeira
   // linha já conciliada com o movimento; a segunda fica por conciliar.
   const bankAccount = await must<{ id: string }>(
@@ -1439,6 +1526,12 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       booking: (booked.bookings[0] as { id: string }).id,
       participant: participant.id,
       businessCalendar: businessCalendar.id,
+      ledgerAccount: clients.id,
+      fiscalYear: fiscalYear.id,
+      fiscalPeriod: (fiscalYear.periods[0] as { id: string }).id,
+      journal: general,
+      journalEntry: journalEntry.id,
+      postingRule: postingRule.id,
       attachment: prepared.id,
       resourceAttachment: resourceAttachment.id,
       template: template.id,

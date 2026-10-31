@@ -461,6 +461,31 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
     description: 'Publicar uma versão de um modelo (passa a imutável).',
   },
   {
+    code: 'accounting.read',
+    moduleCode: 'accounting',
+    description: 'Consultar plano de contas, exercícios, diários, lançamentos, razão e balancete.',
+  },
+  {
+    code: 'accounting.manage',
+    moduleCode: 'accounting',
+    description: 'Gerir plano de contas, exercícios, diários e regras de contabilização.',
+  },
+  {
+    code: 'journal.post',
+    moduleCode: 'accounting',
+    description: 'Criar rascunhos de lançamentos e lançá-los (passam a imutáveis).',
+  },
+  {
+    code: 'journal.reverse',
+    moduleCode: 'accounting',
+    description: 'Reverter lançamentos lançados por um lançamento inverso.',
+  },
+  {
+    code: 'period.close',
+    moduleCode: 'accounting',
+    description: 'Fechar e reabrir períodos e encerrar exercícios.',
+  },
+  {
     code: 'calendar.read',
     moduleCode: 'calendar',
     description: 'Ver calendários, eventos e horários úteis a que tem acesso.',

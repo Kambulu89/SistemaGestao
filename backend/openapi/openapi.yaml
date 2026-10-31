@@ -10313,3 +10313,537 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /ledger-accounts:
+    get:
+      summary: 'Plano de contas (accounting.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria uma conta (accounting.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [organizationId, code, name, nature],
+                additionalProperties: true,
+                properties:
+                  {
+                    organizationId: { type: string, format: uuid },
+                    code: { type: string, pattern: '^[1-9][0-9]*(\\.[0-9]+)*$' },
+                    name: { type: string },
+                    nature: { type: string, enum: [DEBIT, CREDIT] },
+                    kind: { type: string, enum: [HEADER, POSTING] },
+                    parentId: { type: string, format: uuid },
+                    requiresCostCenter: { type: boolean },
+                    requiresParty: { type: boolean },
+                    active: { type: boolean },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /ledger-accounts/{id}:
+    patch:
+      summary: 'Altera nome, dimensões obrigatórias ou estado; exige `version` (accounting.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [version],
+                additionalProperties: true,
+                properties:
+                  {
+                    version: { type: integer },
+                    name: { type: string },
+                    requiresCostCenter: { type: boolean },
+                    requiresParty: { type: boolean },
+                    active: { type: boolean },
+                  },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: 'Apaga uma conta nunca usada (accounting.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /ledger-accounts/apply-template:
+    post:
+      summary: 'Aplica o modelo de partida (classes do PGC e diários), idempotente (accounting.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [organizationId],
+                additionalProperties: true,
+                properties: { organizationId: { type: string, format: uuid } },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /fiscal-years:
+    get:
+      summary: 'Exercícios com os seus períodos (accounting.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria um exercício e os períodos mensais; não se sobrepõe a outro (accounting.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [organizationId, code, startsOn, endsOn],
+                additionalProperties: true,
+                properties:
+                  {
+                    organizationId: { type: string, format: uuid },
+                    code: { type: string },
+                    startsOn: { type: string, format: date },
+                    endsOn: { type: string, format: date },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /fiscal-years/{id}/close:
+    post:
+      summary: 'Encerra o exercício com todos os períodos fechados (period.close)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /fiscal-periods/{id}/close:
+    post:
+      summary: 'Fecha um período: deixa de aceitar lançamentos (period.close)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /fiscal-periods/{id}/reopen:
+    post:
+      summary: 'Reabre um período de um exercício aberto (period.close)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /journals:
+    get:
+      summary: 'Diários (accounting.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria um diário (accounting.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [organizationId, code, name],
+                additionalProperties: true,
+                properties:
+                  {
+                    organizationId: { type: string, format: uuid },
+                    code: { type: string },
+                    name: { type: string },
+                    type:
+                      {
+                        type: string,
+                        enum: [GENERAL, SALES, PURCHASES, TREASURY, PAYROLL, OPENING, CLOSING],
+                      },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /journals/{id}:
+    patch:
+      summary: 'Altera nome ou estado; exige `version` (accounting.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [version],
+                additionalProperties: true,
+                properties:
+                  { version: { type: integer }, name: { type: string }, active: { type: boolean } },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /journal-entries:
+    get:
+      summary: 'Lançamentos com filtros e paginação (accounting.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - { name: journalId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [DRAFT, POSTED, REVERSED] },
+          }
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    post:
+      summary: 'Cria um rascunho de lançamento (journal.post)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [organizationId, journalId, entryDate, description, lines],
+                additionalProperties: true,
+                properties:
+                  {
+                    organizationId: { type: string, format: uuid },
+                    journalId: { type: string, format: uuid },
+                    entryDate: { type: string, format: date },
+                    description: { type: string },
+                    lines:
+                      {
+                        type: array,
+                        items:
+                          {
+                            type: object,
+                            properties:
+                              {
+                                accountId: { type: string, format: uuid },
+                                debit: { type: string, description: 'decimal em texto' },
+                                credit: { type: string },
+                                description: { type: string },
+                                costCenterId: { type: string, format: uuid },
+                                partyId: { type: string, format: uuid },
+                              },
+                          },
+                      },
+                  },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /journal-entries/{id}:
+    get:
+      summary: 'Lançamento com linhas (accounting.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: 'Altera um rascunho; exige `version` (journal.post)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [version],
+                additionalProperties: true,
+                properties:
+                  {
+                    version: { type: integer },
+                    journalId: { type: string, format: uuid },
+                    entryDate: { type: string, format: date },
+                    description: { type: string },
+                    lines: { type: array, items: { type: object } },
+                  },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      summary: 'Apaga um rascunho (journal.post)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /journal-entries/{id}/post:
+    post:
+      summary: 'Lança: partidas dobradas, período aberto, numeração por diário e exercício (journal.post)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /journal-entries/{id}/reverse:
+    post:
+      summary: 'Reverte por lançamento inverso, uma só vez (journal.reverse)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                additionalProperties: true,
+                properties:
+                  { entryDate: { type: string, format: date }, description: { type: string } },
+              }
+      responses:
+        '201': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /ledger:
+    get:
+      summary: 'Razão de uma conta com saldo acumulado (accounting.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: accountId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /trial-balance:
+    get:
+      summary: 'Balancete da empresa no intervalo (accounting.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /posting-events:
+    get:
+      summary: 'Eventos e papéis das regras de contabilização (accounting.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+  /posting-rules:
+    get:
+      summary: 'Regras de contabilização (accounting.read)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - {
+            name: organizationId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+    put:
+      summary: 'Cria ou substitui a regra de um papel (accounting.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                type: object,
+                required: [organizationId, eventType, role, accountId, journalId],
+                additionalProperties: true,
+                properties:
+                  {
+                    organizationId: { type: string, format: uuid },
+                    eventType: { type: string },
+                    role: { type: string },
+                    accountId: { type: string, format: uuid },
+                    journalId: { type: string, format: uuid },
+                  },
+              }
+      responses:
+        '200': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /posting-rules/{id}:
+    delete:
+      summary: 'Apaga uma regra (accounting.manage)'
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: 'Ok' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }

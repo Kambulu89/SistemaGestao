@@ -147,6 +147,20 @@ async function snapshot(world: World) {
     dashboard: await get(`/api/v1/dashboards/${world.ids.dashboard}`),
     // `asOf` é o instante da leitura em tempo real: muda sempre e não é estado.
     dashboardData: noClock(await get(`/api/v1/dashboards/${world.ids.dashboard}/data`)),
+    ledgerAccounts: await get('/api/v1/ledger-accounts'),
+    fiscalYears: await get('/api/v1/fiscal-years'),
+    journals: await get('/api/v1/journals'),
+    journalEntries: await get('/api/v1/journal-entries'),
+    journalEntry: await get(`/api/v1/journal-entries/${world.ids.journalEntry}`),
+    ledger: await get(
+      `/api/v1/ledger?accountId=${world.ids.ledgerAccount}&from=2030-01-01&to=2030-12-31`
+    ),
+    trialBalance: noClock(
+      await get(
+        `/api/v1/trial-balance?organizationId=${world.ids.organization}&from=2030-01-01&to=2030-12-31`
+      )
+    ),
+    postingRules: await get('/api/v1/posting-rules'),
     calendars: await get('/api/v1/calendars'),
     calendar: await get(`/api/v1/calendars/${world.ids.calendar}`),
     calendarEvents: noClock(await get(`/api/v1/calendar-events?${WINDOW}`)),
@@ -433,6 +447,23 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
       { version: 1, title: 'x', type: 'KPI', reportId: me.ids.report },
     ],
     ['delete', `/dashboards/${o.dashboard}/widgets/${o.widget}`],
+    ['patch', `/ledger-accounts/${o.ledgerAccount}`, { version: 1, name: 'x' }],
+    ['delete', `/ledger-accounts/${o.ledgerAccount}`],
+    ['post', `/fiscal-years/${o.fiscalYear}/close`, {}],
+    ['post', `/fiscal-periods/${o.fiscalPeriod}/close`, {}],
+    ['post', `/fiscal-periods/${o.fiscalPeriod}/reopen`, {}],
+    ['patch', `/journals/${o.journal}`, { version: 1, name: 'x' }],
+    ['get', `/journal-entries/${o.journalEntry}`],
+    [
+      'patch',
+      `/journal-entries/${o.journalEntry}`,
+      { version: 1, journalId: o.journal, entryDate: '2030-01-15', description: 'x', lines: [] },
+    ],
+    ['delete', `/journal-entries/${o.journalEntry}`],
+    ['post', `/journal-entries/${o.journalEntry}/post`, {}],
+    ['post', `/journal-entries/${o.journalEntry}/reverse`, {}],
+    ['get', `/ledger?accountId=${o.ledgerAccount}&from=2030-01-01&to=2030-12-31`],
+    ['delete', `/posting-rules/${o.postingRule}`],
     ['get', `/calendars/${o.calendar}`],
     ['patch', `/calendars/${o.calendar}`, { version: 1, name: 'x', timezone: 'UTC' }],
     ['delete', `/calendars/${o.calendar}`],
@@ -762,6 +793,10 @@ test.group('matriz de isolamento', (group) => {
       'calendars',
       'resources',
       'businessCalendars',
+      'ledgerAccounts',
+      'fiscalYears',
+      'journals',
+      'postingRules',
       'reconLines',
       'reconEntries',
       'reconBatches',
@@ -1078,6 +1113,55 @@ test.group('matriz de isolamento', (group) => {
         '/reconciliations/imports',
         { accountId: bi.bankAccount, lines: [{ occurredOn: '2026-01-01', amount: '1' }] },
         404,
+      ],
+      [
+        'lançamento com uma conta de B',
+        'post',
+        '/journal-entries',
+        {
+          organizationId: a.ids.organization,
+          journalId: a.ids.journal,
+          entryDate: '2030-02-01',
+          description: 'x',
+          lines: [
+            { accountId: bi.ledgerAccount, debit: '1' },
+            { accountId: a.ids.ledgerAccount, credit: '1' },
+          ],
+        },
+        422,
+      ],
+      [
+        'lançamento num diário de B',
+        'post',
+        '/journal-entries',
+        {
+          organizationId: a.ids.organization,
+          journalId: bi.journal,
+          entryDate: '2030-02-01',
+          description: 'x',
+          lines: [],
+        },
+        422,
+      ],
+      [
+        'conta numa empresa de B',
+        'post',
+        '/ledger-accounts',
+        { organizationId: bi.organization, code: '39', name: 'x', nature: 'DEBIT' },
+        422,
+      ],
+      [
+        'regra com uma conta de B',
+        'put',
+        '/posting-rules',
+        {
+          organizationId: a.ids.organization,
+          eventType: 'invoice.issued',
+          role: 'revenue',
+          accountId: bi.ledgerAccount,
+          journalId: a.ids.journal,
+        },
+        422,
       ],
       [
         'evento num calendário de B',
@@ -1759,11 +1843,13 @@ test.group('matriz de isolamento', (group) => {
         'document_versions',
         'template_versions',
         'report_definitions',
+        'journal_entries',
+        'journal_lines',
       ].includes(table)
       assert.match(
         moved.message,
         immutable
-          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY|STATEMENT_LINE_IMMUTABLE|MATCH_IMMUTABLE|CRM_APPEND_ONLY|DOCUMENT_VERSION_IMMUTABLE|TEMPLATE_VERSION_IMMUTABLE|REPORT_PUBLISHED_IMMUTABLE/
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY|STATEMENT_LINE_IMMUTABLE|MATCH_IMMUTABLE|CRM_APPEND_ONLY|DOCUMENT_VERSION_IMMUTABLE|TEMPLATE_VERSION_IMMUTABLE|REPORT_PUBLISHED_IMMUTABLE|JOURNAL_ENTRY_IMMUTABLE|JOURNAL_LINES_IMMUTABLE/
           : /row-level security/,
         `${table}: mover linhas para B`
       )

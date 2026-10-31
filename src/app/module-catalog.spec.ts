@@ -12,14 +12,14 @@ const contractable = ALL_MODULE_MANIFESTS.filter((m) => m.kind === 'module');
 const ids = new Set(ALL_MODULE_MANIFESTS.map((m) => m.id));
 
 describe('official module catalog', () => {
-  it('registers the 46 capabilities: 11 foundation + 35 contractable modules', () => {
-    expect(ALL_MODULE_MANIFESTS).toHaveLength(46);
+  it('registers the 47 capabilities: 11 foundation + 36 contractable modules', () => {
+    expect(ALL_MODULE_MANIFESTS).toHaveLength(47);
     expect(ALL_MODULE_MANIFESTS.filter((m) => m.kind === 'foundation')).toHaveLength(11);
-    expect(contractable).toHaveLength(35);
+    expect(contractable).toHaveLength(36);
   });
 
-  it('covers the 19 functional groups, none empty', () => {
-    expect(MODULE_GROUPS).toHaveLength(19);
+  it('covers the 20 functional groups, none empty', () => {
+    expect(MODULE_GROUPS).toHaveLength(20);
     for (const group of MODULE_GROUPS) {
       expect(
         ALL_MODULE_MANIFESTS.some((m) => m.groupId === group.id),
@@ -73,8 +73,8 @@ describe('module routes', () => {
   it('generates one lazy, guarded route per contractable tenant module', () => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
     const routes = buildModuleRoutes(ALL_MODULE_MANIFESTS);
-    expect(routes).toHaveLength(35);
-    expect(new Set(routes.map((r) => r.path)).size).toBe(35);
+    expect(routes).toHaveLength(36);
+    expect(new Set(routes.map((r) => r.path)).size).toBe(36);
     for (const route of routes) {
       expect(route.canActivate).toHaveLength(1);
       expect(route.data?.['moduleId']).toBeTruthy();

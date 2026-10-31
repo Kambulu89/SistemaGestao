@@ -159,11 +159,11 @@ describe('platform pages', () => {
     f.detectChanges();
   }
 
-  it('catalog lists all 46 capabilities in 19 groups (code manifests, no API)', async () => {
+  it('catalog lists all 47 capabilities in 20 groups (code manifests, no API)', async () => {
     const el = (await render(ModuleCatalogPage)).nativeElement as HTMLElement;
-    expect(el.querySelectorAll('table')).toHaveLength(19);
-    expect(el.querySelectorAll('tbody tr')).toHaveLength(46);
-    expect(el.textContent).toContain('46 capacidades em 19 grupos');
+    expect(el.querySelectorAll('table')).toHaveLength(20);
+    expect(el.querySelectorAll('tbody tr')).toHaveLength(47);
+    expect(el.textContent).toContain('47 capacidades em 20 grupos');
   });
 
   describe('dashboard', () => {
@@ -174,7 +174,7 @@ describe('platform pages', () => {
       expect(t).toContain('Tenants activos');
       expect(t).toContain('2 no total');
       expect(t).toContain('Suspensos');
-      expect(t).toContain('46'); // catálogo do código
+      expect(t).toContain('47'); // catálogo do código
       expect(t).not.toContain('demonstração');
     });
 

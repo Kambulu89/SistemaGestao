@@ -41,6 +41,26 @@ export const CODE_MANIFESTS: readonly ModuleManifest[] = [
     ],
   },
   {
+    code: 'accounting',
+    name: 'Contabilidade geral',
+    kind: 'MODULE',
+    releaseVersion: '0.1.0',
+    minCoreVersion: '0.3.0',
+    dependencies: [{ code: 'core', constraint: '*', optional: false }],
+    features: [
+      {
+        code: 'accounting.ledger',
+        name: 'Plano de contas, exercícios, diários e lançamentos',
+        defaultEnabled: true,
+      },
+      {
+        code: 'accounting.posting_rules',
+        name: 'Regras de contabilização automática',
+        defaultEnabled: true,
+      },
+    ],
+  },
+  {
     code: 'calendar',
     name: 'Calendário, recursos e reservas',
     kind: 'MODULE',

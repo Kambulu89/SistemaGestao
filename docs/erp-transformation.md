@@ -270,7 +270,7 @@ o projecto compilável e todos os testes verdes no fim de cada fatia. As fases E
 ### E0 — Diagnóstico e plano (esta entrega) — **concluída**
 Este documento e a decisão D-062.
 
-### E1 — Fundação contabilística (inicia nesta entrega)
+### E1 — Fundação contabilística (concluída; ver D-063)
 1. **Objectivos**: dar ao ERP um núcleo contabilístico de partidas dobradas, multiempresa, idempotente e auditável, pronto a
    receber lançamentos automáticos dos outros módulos.
 2. **Funcionalidades**: plano de contas em árvore com modelo de classes do PGC; exercícios com períodos mensais, fecho e

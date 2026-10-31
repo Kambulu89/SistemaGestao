@@ -70,6 +70,12 @@ const ALIASES: Readonly<Record<string, readonly Permission[]>> = {
   'template.read': ['documents.dms.read', 'documents.versioning.read'],
   'template.manage': ['documents.dms.read', 'documents.versioning.read'],
   'template.publish': ['documents.dms.read', 'documents.versioning.read'],
+  // Contabilidade (ERP E1): as páginas usam os códigos do servidor; o alias só abre a rota do módulo.
+  'accounting.read': ['accounting.general-ledger.read'],
+  'accounting.manage': ['accounting.general-ledger.read', 'accounting.general-ledger.manage'],
+  'journal.post': ['accounting.general-ledger.read'],
+  'journal.reverse': ['accounting.general-ledger.read'],
+  'period.close': ['accounting.general-ledger.read'],
   // Calendário (S03): as páginas usam os códigos do servidor; o alias só abre a rota do módulo.
   'calendar.read': ['calendar.scheduling.read'],
   'calendar.manage': ['calendar.scheduling.read', 'calendar.scheduling.manage'],

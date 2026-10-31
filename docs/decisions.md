@@ -1103,6 +1103,35 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
 - **Consequências.** Novo módulo `accounting` (fase E1 nesta entrega) e, a pedido, `hr`, `attendance`, `payroll`, `performance` e
   `budgeting`. Nenhuma conformidade fiscal angolana (SAF-T AO, certificação AGT) é declarada antes de verificada externamente.
 
+## D-063 Contabilidade geral (E1): partidas dobradas garantidas pela base de dados, numeração sem lacunas e motor idempotente (aceite — fase E1)
+
+- **Contexto.** Fase E1 de [`erp-transformation.md`](erp-transformation.md) (D-062): o ERP precisa de um núcleo contabilístico em que
+  um lançamento desequilibrado ou alterado depois de lançado seja impossível, e não apenas recusado pela API.
+- **Decisão.**
+  - Módulo `app/modules/accounting` (migration 39, 7 tabelas de tenant por organização: `ledger_accounts`, `fiscal_years`,
+    `fiscal_periods`, `journals`, `journal_entries`, `journal_lines`, `posting_rules`), todas auditadas e com FKs compostas.
+  - **Equilíbrio na base de dados**: trigger de restrição `journal_entries_balanced` `DEFERRABLE INITIALLY DEFERRED` que recusa um
+    lançamento `POSTED` cujos débitos ≠ créditos ou com menos de duas linhas. **Imutabilidade**: `journal_entries_guard` recusa
+    alterar um lançado (só a passagem a `REVERSED` é permitida) e recusa lançar num período fechado ou fora do período;
+    `journal_lines_guard` recusa mexer nas linhas de um lançamento não-rascunho. Ambos funcionam também contra SQL directo.
+  - **Numeração** por (diário, exercício), atribuída só ao lançar, sob bloqueio da linha do diário — sem lacunas nem duplicados.
+  - **Reversão** = lançamento inverso lançado; índice único em `reversal_of_id` impede reverter duas vezes.
+  - **Motor de lançamentos** `accountingServices().posting.post({ sourceKey, event, organizationId, date, lines por papel })`:
+    idempotente por `source_key` (único) sob `pg_advisory_xact_lock`; resolve cada papel pela regra (evento + papel → conta,
+    diário); sem regra devolve `409 POSTING_RULE_MISSING` e não lança nada.
+  - **Modelo PGC**: aplicar o modelo cria só as 8 classes (contas-cabeçalho 1–8) e os diários GER/VEN/COM/TES/SAL/ABE/APU; as
+    contas de movimento são criadas pela empresa (natureza e conta-mãe sugeridas pela classe).
+  - **Achado técnico**: a transacção gerida do Lucid desfaz silenciosamente quando o `COMMIT` falha por uma restrição diferida
+    (não lança erro). Por isso `markPosted` executa `set constraints journal_entries_balanced immediate`, o que faz o erro surgir
+    na própria instrução; o teste verifica que o lançamento fica em rascunho.
+  - Permissões `accounting.read|manage`, `journal.post`, `journal.reverse`, `period.close`; funcionalidades
+    `accounting.ledger` e `accounting.posting_rules`; 26 rotas. Frontend: página «Contabilidade» (`accounting/general-ledger`)
+    com Lançamentos (editor com totais e diferença em tempo real, aritmética exacta em BigInt), Plano de contas, Razão,
+    Balancete, Exercícios e períodos e Regras de contabilização.
+- **Limites (não feito nesta fase).** Nenhum módulo produz ainda lançamentos automáticos (E2); sem activos fixos, apuramento,
+  encerramento de exercício nem demonstrações financeiras (E7); o modelo de plano de contas tem só as classes e **não** foi
+  validado por um contabilista angolano; nenhuma conformidade fiscal (SAF-T AO, certificação AGT) é declarada.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de
