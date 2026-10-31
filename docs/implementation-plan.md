@@ -694,6 +694,7 @@ A especificação (F4) pede M01 a M08 e S01 «em fatias: catálogo/clientes, pro
 | 6.3   | S01 documentos, anexos e modelos: upload verificado, URL assinada, versões imutáveis, PDF emitido                                              | **Concluída** (ver 2d.13 e D-059) |
 | 6.4   | S04 relatórios, painéis, exportações em CSV e pesquisa: consultas declarativas sobre datasets autorizados                                      | **Concluída** (ver 2d.14 e D-060) |
 | 6.5   | S03 calendário, recursos e reservas: eventos com séries, excepções e fusos; reservas que nunca se sobrepõem; horário útil                       | **Concluída** (ver 2d.15 e D-061) |
+| E1    | ERP: fundação contabilística (plano de contas, exercícios e períodos, diários, lançamentos de partidas dobradas, razão, balancete, regras) — ver `erp-transformation.md` | Em curso (ver D-062) |
 
 ### 2d.1 Fatia 4.1 — catálogo (M03; concluída, ver D-046)
 

@@ -1089,6 +1089,20 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
   um horizonte limitado (90 dias por omissão, 366 no máximo, até 120 ocorrências de cada vez); não há tempo real nem push na agenda; a agenda
   mostra as horas no fuso do browser.
 
+## D-062 Transformação em ERP: contabilidade geral e processamento salarial como módulos adicionais (aceite — pedido de 31/10/2026)
+
+- **Contexto.** O pedido «Transformação do sistema existente num ERP empresarial integrado» exige Contabilidade, RH, Inventário,
+  Compras, Facturação, Finanças, Assiduidade e Avaliação de desempenho com processos integrados. A especificação v2 exclui a
+  contabilidade estatutária da M10 («módulo adicional com especificação própria») e deixa o processamento salarial desactivado na M12
+  «até especificação própria validada».
+- **Decisão.** Aceita-se a extensão de âmbito pedida pelo dono do produto, sem alterar a especificação v2: a **especificação própria**
+  da contabilidade e do processamento salarial é [`erp-transformation.md`](erp-transformation.md) (secção 8, fases E1–E7). A tesouraria
+  continua a ser a fonte do dinheiro e passa a originar lançamentos; a contabilidade consome factos por regras de contabilização
+  configuradas por empresa e nunca escreve nas tabelas dos outros módulos. O processamento salarial nasce como funcionalidade
+  `hr.payroll` desligada por omissão até as regras angolanas (IRT, INSS) serem confirmadas por quem tem competência.
+- **Consequências.** Novo módulo `accounting` (fase E1 nesta entrega) e, a pedido, `hr`, `attendance`, `payroll`, `performance` e
+  `budgeting`. Nenhuma conformidade fiscal angolana (SAF-T AO, certificação AGT) é declarada antes de verificada externamente.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de
