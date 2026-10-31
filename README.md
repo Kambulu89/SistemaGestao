@@ -18,12 +18,13 @@ plano e estado das fases: [`docs/implementation-plan.md`](docs/implementation-pl
 
 Requisitos: Node ≥ 22.22, PostgreSQL 16, Redis 7 (ou Docker).
 
-**Opção A — Docker Compose** (PostgreSQL, Redis, MinIO, API e frontend):
+**Opção A — Docker Compose** (PostgreSQL, Redis, API e frontend; trabalhadores opcionais):
 
 ```bash
 cp .env.compose.example .env        # preencher os valores (openssl rand -hex 16; APP_KEY: openssl rand -hex 32)
 docker compose up --build
-docker compose exec api npm run migrate
+docker compose exec -e DEMO_USER_PASSWORD=... api npm run setup   # ou só: npm run migrate
+# trabalhadores (automações, notificações, exportações): docker compose --profile workers up
 curl localhost:3333/api/v1/ready
 ```
 
@@ -37,6 +38,8 @@ cd backend
 cp .env.example .env                 # preencher APP_KEY (node ace generate:key) e as palavras-passe
 npm ci
 npm run migrate                      # conta sg_owner
+# ou, de uma vez (migrações, catálogo de permissões, registo de módulos e dados de demonstração; idempotente):
+DEMO_USER_PASSWORD=... npm run setup
 npm run dev                          # http://localhost:3333/api/v1/health
 ```
 

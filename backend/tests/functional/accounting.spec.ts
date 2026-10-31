@@ -3,6 +3,7 @@ import db from '@adonisjs/lucid/services/db'
 import { iamServices } from '#core/permissions/index'
 import { tenantServices } from '#platform/tenants/index'
 import { accountingServices } from '#modules/accounting/index'
+import { LucidTenantDatabase, LucidTenantScope, serviceTenantContext } from '#core/tenancy/index'
 import { deleteTestUsers, resetAuthState } from '#tests/support/auth_fixture'
 import { deleteTestTenants } from '#tests/support/membership_fixture'
 import { api, newActor } from '#tests/support/api_fixture'
@@ -415,6 +416,38 @@ test.group('contabilidade | lançamentos e partidas dobradas', (group) => {
     const early = await a.http.post(`/api/v1/fiscal-years/${c.year.id}/close`, {})
     assert.equal(early.status(), 409)
     assert.equal(early.body().error.code, 'PERIODS_OPEN')
+  })
+
+  test('uma restrição diferida que falha no fim da unidade de trabalho rejeita o run (R-01)', async ({
+    client,
+    assert,
+  }) => {
+    const { a } = await worlds(client)
+    const c = await company(a.http)
+    const entry = await must<any>(await draft(a.http, c), 201)
+    const uow = new LucidTenantDatabase()
+    let returned: string | undefined
+    // Sem `set constraints … immediate`: a falha só aparece no COMMIT e tem de chegar ao chamador.
+    await assert.rejects(async () => {
+      returned = await uow.run(
+        async (scope) => {
+          const trx = (scope as LucidTenantScope).trx
+          await trx.rawQuery(
+            'update journal_lines set credit = 1 where entry_id = ? and credit > 0',
+            [entry.id]
+          )
+          await trx.rawQuery(
+            "update journal_entries set status = 'POSTED', number = 997, posted_at = now() where id = ?",
+            [entry.id]
+          )
+          return 'ok'
+        },
+        serviceTenantContext(a.tenant.id, 'teste-r01')
+      )
+    }, /JOURNAL_ENTRY_UNBALANCED/)
+    assert.isUndefined(returned)
+    const after = await owner<any>(`select status from journal_entries where id = '${entry.id}'`, a)
+    assert.equal(after[0].status, 'DRAFT')
   })
 
   test('reverter cria o inverso, uma só vez, e o saldo volta a zero', async ({

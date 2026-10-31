@@ -10,6 +10,7 @@ import { LucidMembershipDirectory } from '#core/membership/index'
 import { serviceTenantContext } from '#core/tenancy/index'
 import { administrationServices } from '#platform/administration/index'
 import { billingServices } from '#platform/billing/index'
+import { CODE_MANIFESTS, moduleServices } from '#platform/modules/index'
 import {
   ChangeTenantStatus,
   CreateTenant,
@@ -25,10 +26,35 @@ const DEMO = [
   { code: 'demo_b', name: 'Demo B', host: 'demo-b.exemplo.test', admin: 'admin@demo-b.invalid' },
 ] as const
 
+/** Módulos de negócio do registo (os do núcleo estão sempre activos e não se contratam). */
+const BUSINESS_MODULES = CODE_MANIFESTS.filter((m) => m.kind !== 'FOUNDATION')
+/** O plano básico cobre o ciclo comercial; o profissional cobre todos os módulos do registo. */
+const BASIC_MODULES = [
+  'catalog',
+  'customers',
+  'orders',
+  'invoicing',
+  'documents',
+  'notifications',
+  'calendar',
+]
+
 /** Planos de demonstração (revisão 1, publicados) e o que cada tenant demo contrata. */
 const DEMO_PLANS = [
-  { code: 'demo_basic', name: 'Demo Básico', price: '49.9000', members: 10 as number | null },
-  { code: 'demo_pro', name: 'Demo Profissional', price: '149.9000', members: null },
+  {
+    code: 'demo_basic',
+    name: 'Demo Básico',
+    price: '49.9000',
+    members: 10 as number | null,
+    modules: BASIC_MODULES,
+  },
+  {
+    code: 'demo_pro',
+    name: 'Demo Profissional',
+    price: '149.9000',
+    members: null,
+    modules: BUSINESS_MODULES.map((m) => m.code),
+  },
 ] as const
 const DEMO_PLAN_OF: Record<string, string> = { demo_a: 'demo_basic', demo_b: 'demo_pro' }
 
@@ -61,6 +87,8 @@ export default class DemoSeeder extends BaseSeeder {
     }
 
     const store = new LucidTenantStore()
+    // Os planos referem módulos do registo: sincronizá-lo primeiro torna a semente independente da ordem dos comandos.
+    await moduleServices().syncRegistry.execute(CODE_MANIFESTS)
     await this.seedPlans()
     for (const demo of DEMO) {
       await ignoreConflict(async () => {
@@ -82,11 +110,16 @@ export default class DemoSeeder extends BaseSeeder {
         })
       })
       await ignoreConflict(() => addMemberByEmail(demo.code, demo.admin))
-      await billingServices().assignSubscription.execute({
-        tenantId: (await store.findByCode(demo.code))!.id,
-        planCode: DEMO_PLAN_OF[demo.code],
-      })
+      // Já com assinatura noutro plano (base antiga): mantém-se; a mudança de plano é uma operação explícita.
+      const tenantId = (await store.findByCode(demo.code))!.id
+      await ignoreConflict(() =>
+        billingServices().assignSubscription.execute({
+          tenantId,
+          planCode: DEMO_PLAN_OF[demo.code],
+        })
+      )
       await bootstrapTenantAdmin(demo.code, demo.admin)
+      await this.enableModules(store, demo.code)
     }
 
     await this.seedPlatformAdmin(password)
@@ -103,6 +136,20 @@ export default class DemoSeeder extends BaseSeeder {
       await ignoreConflict(() => addMemberByEmail(demo.code, MULTI_TENANT_USER))
       await this.seedOrganization(store, demo)
       await this.seedParties(store, demo)
+    }
+  }
+
+  /** Activa no tenant todos os módulos que o plano contrata (com as dependências); repetir é seguro. */
+  private async enableModules(store: LucidTenantStore, code: string) {
+    const tenant = await store.findByCode(code)
+    if (!tenant) return
+    const plan = DEMO_PLANS.find((p) => p.code === DEMO_PLAN_OF[code])
+    const context = serviceTenantContext(tenant.id, `seed-modules-${code}`, tenant.defaultLocale)
+    for (const module of plan?.modules ?? []) {
+      // Numa base antiga o plano pode não incluir o módulo (409): a semente segue sem ele.
+      await ignoreConflict(() =>
+        moduleServices().enableModule.execute(context, module, { withDependencies: true })
+      )
     }
   }
 
@@ -141,6 +188,12 @@ export default class DemoSeeder extends BaseSeeder {
         price: plan.price,
         billingInterval: 'MONTH',
         limits: { members: plan.members },
+        entitlements: {
+          modules: [...plan.modules],
+          features: BUSINESS_MODULES.filter((m) => plan.modules.includes(m.code)).flatMap((m) =>
+            m.features.map((f) => f.code)
+          ),
+        },
       })
       await publishPlan.execute(draft.planCode, draft.revision)
     }

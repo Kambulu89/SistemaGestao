@@ -20,6 +20,7 @@
     "migrate:status": "node ace migration:status --connection=owner",
     "migrate:rollback": "node ace migration:rollback --connection=owner",
     "seed": "node ace db:seed --connection=owner",
+    "setup": "npm run migrate && node ace iam:sync && node ace modules:sync && npm run seed",
     "check": "npm run lint && npm run format:check && npm run typecheck && npm test"
   },
   "imports": {

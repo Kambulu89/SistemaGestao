@@ -17,6 +17,9 @@ export class LucidTenantScope implements TenantScope {
   ) {}
 }
 
+/** SQLSTATE de uma transacção abortada por um erro anterior (o COMMIT dela é um ROLLBACK). */
+const IN_FAILED_SQL_TRANSACTION = '25P02'
+
 /** A transacção aberta por um `run` em curso nesta cadeia assíncrona, para os `run` aninhados a juntarem. */
 const activeScope = new AsyncLocalStorage<{ connection: string; scope: LucidTenantScope }>()
 
@@ -71,7 +74,17 @@ export class LucidTenantDatabase implements TenantUnitOfWork {
         ]
       )
       const scope = new LucidTenantScope(resolved, trx)
-      return activeScope.run({ connection: this.connection, scope }, () => fn(scope))
+      const result = await activeScope.run({ connection: this.connection, scope }, () => fn(scope))
+      // As restrições diferidas verificam-se aqui, ainda dentro do callback: se uma falhar, o erro chega ao chamador
+      // e a transacção reverte. Deixá-las para o COMMIT faria a transacção gerida do Lucid desfazer em silêncio (R-01).
+      // Excepção: uma transacção já abortada (25P02) — um caso de uso tratou um erro dentro dela (p. ex. a violação de
+      // unicidade convertida em 409) — não verifica nada e o COMMIT reverte, como sempre.
+      try {
+        await trx.rawQuery('set constraints all immediate')
+      } catch (error) {
+        if ((error as { code?: string }).code !== IN_FAILED_SQL_TRANSACTION) throw error
+      }
+      return result
     })
   }
 }

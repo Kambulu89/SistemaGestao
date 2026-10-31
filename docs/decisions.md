@@ -1132,6 +1132,24 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
   encerramento de exercício nem demonstrações financeiras (E7); o modelo de plano de contas tem só as classes e **não** foi
   validado por um contabilista angolano; nenhuma conformidade fiscal (SAF-T AO, certificação AGT) é declarada.
 
+## D-064 Fundação ERP (Prompt 03, bloco 3.1): restrições diferidas verificadas antes do COMMIT, preparação local num só comando (aceite)
+
+- **Contexto.** A auditoria de 31/10/2026 (R-01) suspeitou que a transacção gerida do Lucid desfaz em silêncio quando o
+  `COMMIT` falha numa restrição diferida. Um teste com a restrição real `journal_entries_balanced` **reproduziu**: o `run`
+  resolvia sem erro e o lançamento ficava em rascunho. A preparação local exigia vários comandos, o seed não activava módulos
+  e falhava na segunda execução, o Docker Compose arrancava um MinIO que nenhum código usa e `dump.rdb` estava no Git.
+- **Decisão.**
+  - `LucidTenantDatabase.run` executa `set constraints all immediate` no fim do trabalho, ainda dentro da transacção: uma
+    restrição diferida que falhe chega ao chamador e tudo reverte. Uma transacção já abortada (SQLSTATE `25P02`, quando o
+    caso de uso converteu um erro em 409 dentro dela) não verifica nada e o `COMMIT` reverte, como antes.
+  - `npm run setup` (backend) = migrações + `iam:sync` + `modules:sync` + seed. O seed sincroniza o registo, cria planos com
+    módulos (básico: ciclo comercial; profissional: todos os do registo), activa-os nos dois tenants de demonstração e é
+    idempotente (segunda execução sem erros).
+  - Docker Compose: sem MinIO (os documentos ficam no volume `documents`), trabalhadores no perfil `workers`.
+  - `dump.rdb` deixa de ser rastreado (só continha uma chave de limite de tentativas).
+- **Consequências.** Teste de regressão em `tests/functional/accounting.spec.ts` («restrição diferida … (R-01)»).
+  Numa base antiga, o seed não muda o plano de quem já tem assinatura (a mudança de plano é explícita).
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

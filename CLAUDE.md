@@ -30,7 +30,7 @@ Frontend (raiz, npm; lockfile `package-lock.json`):
 (o Angular CLI exige Node ≥ 22.22.3 ou 24.15; se o `node` do ambiente for mais antigo, use um Node 24 no `PATH`)
 
 Backend (`cd backend`, npm; lockfile `backend/package-lock.json`):
-`npm ci` · `cp .env.example .env` (preencher; ver README) · `npm run migrate` · `npm run lint` · `npm run format:check` ·
+`npm ci` · `cp .env.example .env` (preencher; ver README) · `npm run migrate` · `DEMO_USER_PASSWORD=… npm run setup` (migrações + catálogos + dados de demonstração, idempotente) · `npm run lint` · `npm run format:check` ·
 `npm run typecheck` · `npm test` · `npm run build` · `npm run dev` · `node ace automation:work` (trabalhador das automações; `--once` faz uma só volta) · `node ace notifications:work` (trabalhador das notificações; `--once`) · `node ace exports:work` (trabalhador das exportações; `--once`) · `node ace search:reindex <tenant>`
 
 Nunca fazer commit de `.env`, `.env.*` (excepto `*.example`) nem de qualquer segredo. Não colar valores de segredos em

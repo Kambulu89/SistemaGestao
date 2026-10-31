@@ -47,3 +47,6 @@ Thumbs.db
 /.env
 /.env.*
 !/.env.compose.example
+
+# Snapshots locais do Redis
+dump.rdb
