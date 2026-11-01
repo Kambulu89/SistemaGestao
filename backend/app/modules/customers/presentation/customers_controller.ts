@@ -76,7 +76,7 @@ export default class CustomersController {
     )
   }
 
-  /** Detalhe: o cliente e os contactos da Party (só a quem pode ler a Party; sem `party.read` vêm vazios). */
+  /** Detalhe: o cliente, os contactos e as moradas da Party (só a quem pode ler a Party; sem `party.read` vêm vazios). */
   async showCustomer(ctx: HttpContext) {
     const customer = await customerServices().customers.get(ctx.tenantContext, uuidParam(ctx, 'id'))
     const partyDecision = await iamServices().authorize.decision(ctx.tenantContext, 'party.read')
@@ -84,7 +84,12 @@ export default class CustomersController {
       ? await partyServices().parties.get(ctx.tenantContext, customer.partyId)
       : null
     const contacts = party ? party.detail.contacts : []
-    return envelope(ctx, { ...present(customer, await canSeeCredit(ctx)), contacts })
+    const addresses = party ? party.detail.addresses : []
+    return envelope(ctx, {
+      ...present(customer, await canSeeCredit(ctx)),
+      contacts,
+      addresses,
+    })
   }
 
   async createCustomer(ctx: HttpContext) {

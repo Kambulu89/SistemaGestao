@@ -23,6 +23,12 @@ const customer = (over: Partial<CustomerDto> = {}): CustomerDto => ({
   partyKind: 'ORGANIZATION',
   taxId: '5000012345',
   segmentName: null,
+  billingAddressId: null,
+  shippingAddressId: null,
+  billingContactId: null,
+  preferredPaymentMethod: null,
+  taxRegime: 'GENERAL',
+  taxExemptionReason: null,
   ...over,
 });
 
@@ -265,5 +271,70 @@ describe('Clientes', () => {
     await type('Código', 'CLI-5');
     await click('Guardar');
     expect(el.textContent).toContain('já é cliente desta organização');
+  });
+});
+
+describe('Clientes | perfil de facturação (10.1)', () => {
+  const detail = {
+    ...customer(),
+    contacts: [
+      { id: 'ct1', type: 'EMAIL', value: 'facturas@acme.invalid', label: null, isPrimary: false },
+      { id: 'ct2', type: 'PHONE', value: '+244923000000', label: null, isPrimary: true },
+    ],
+    addresses: [
+      {
+        id: 'a1',
+        type: 'BILLING',
+        line1: 'Rua Direita 1',
+        line2: null,
+        city: 'Luanda',
+        countryCode: 'AO',
+        isPrimary: true,
+      },
+    ],
+  };
+
+  it('oferece só os emails da Party, exige motivo na isenção e grava o perfil', async () => {
+    const updateCustomer = vi.fn(() =>
+      of(customer({ version: 2, taxRegime: 'EXEMPT', taxExemptionReason: 'Entidade isenta' })),
+    );
+    const { el, click, type, field } = await render({
+      customer: () => of(detail),
+      updateCustomer,
+    } as Partial<CustomersApi>);
+    await click('Abrir');
+    expect(el.querySelector('[data-testid=billing-profile]')).not.toBeNull();
+    const emails = [...(field('Email de facturação') as HTMLSelectElement).options].map(
+      (o) => o.text,
+    );
+    expect(emails).toContain('facturas@acme.invalid');
+    expect(emails).not.toContain('+244923000000');
+    await type('Morada de facturação', 'a1');
+    await type('Email de facturação', 'ct1');
+    await type('Meio de pagamento preferido', 'BANK_TRANSFER');
+    await type('Regime fiscal', 'EXEMPT');
+    await click('Guardar perfil de facturação');
+    expect(text(el)).toContain('Indique o motivo da isenção');
+    expect(updateCustomer).not.toHaveBeenCalled();
+    await type('Motivo da isenção', 'Entidade isenta');
+    await click('Guardar perfil de facturação');
+    expect(updateCustomer).toHaveBeenCalledWith('c1', 1, {
+      billingAddressId: 'a1',
+      shippingAddressId: null,
+      billingContactId: 'ct1',
+      preferredPaymentMethod: 'BANK_TRANSFER',
+      taxRegime: 'EXEMPT',
+      taxExemptionReason: 'Entidade isenta',
+    });
+    expect(text(el)).toContain('Perfil de facturação guardado');
+  });
+
+  it('sem customer.update não oferece gravar', async () => {
+    const { el, click } = await render({ customer: () => of(detail) } as Partial<CustomersApi>, [
+      'customer.read',
+    ]);
+    await click('Abrir');
+    const labels = [...el.querySelectorAll('button')].map((b) => b.textContent?.trim());
+    expect(labels).not.toContain('Guardar perfil de facturação');
   });
 });

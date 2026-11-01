@@ -63,6 +63,10 @@ export interface CustomerSnapshot {
     postalCode: string | null
     countryCode: string
   } | null
+  /** Desde 10.1 (ausentes nas facturas emitidas antes): email de facturação e regime fiscal do cliente. */
+  billingEmail?: string | null
+  taxRegime?: string
+  taxExemptionReason?: string | null
 }
 
 export interface Invoice extends Audited {
@@ -208,6 +212,11 @@ export interface CustomerRef {
   paymentTermDays: number
   partyName: string
   taxId: string | null
+  /** Perfil de facturação do cliente (10.1): morada e contacto escolhidos, regime fiscal. */
+  billingAddressId: string | null
+  billingContactId: string | null
+  taxRegime: string
+  taxExemptionReason: string | null
 }
 
 export interface OrderLineRef {

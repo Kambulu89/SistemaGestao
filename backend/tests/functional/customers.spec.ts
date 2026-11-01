@@ -648,3 +648,122 @@ test.group('clientes | interacções', (group) => {
     assert.lengthOf(await rowsOf(ctx.tenant, 'select 1 from customers'), 1)
   })
 })
+
+const errorCode = (r: any) => r.body().error.details?.[0]?.code ?? r.body().error.code
+
+test.group('clientes | perfil de facturação (10.1)', (group) => {
+  group.setup(async () => {
+    await iamServices().syncCatalog.execute()
+  })
+  group.each.setup(async () => {
+    await resetAuthState()
+    return async () => {
+      await deleteTestTenants()
+      await deleteTestUsers()
+    }
+  })
+
+  test('moradas e contacto têm de ser da Party; isento exige motivo; apagar a morada limpa a escolha', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const customer = await must<any>(
+      await ctx.http.post('/api/v1/customers', {
+        partyId: ctx.acme.id,
+        organizationId: ctx.org.id,
+        code: 'CLI-1',
+      }),
+      201
+    )
+    assert.deepInclude(customer, {
+      taxRegime: 'GENERAL',
+      taxExemptionReason: null,
+      billingAddressId: null,
+      preferredPaymentMethod: null,
+    })
+    const address = await must<any>(
+      await ctx.http.post(`/api/v1/parties/${ctx.acme.id}/addresses`, {
+        type: 'DELIVERY',
+        line1: 'Armazém 3',
+        city: 'Viana',
+        countryCode: 'AO',
+      }),
+      201
+    )
+    const phone = await must<any>(
+      await ctx.http.post(`/api/v1/parties/${ctx.acme.id}/contacts`, {
+        type: 'PHONE',
+        value: '+244923000000',
+      }),
+      201
+    )
+    const mariaEmail = ctx.maria.contacts[0].id
+
+    const wrong = await ctx.http.patch(`/api/v1/customers/${customer.id}`, {
+      expectedVersion: customer.version,
+      billingContactId: phone.id,
+      shippingAddressId: address.id,
+    })
+    wrong.assertStatus(422)
+    assert.deepEqual(
+      wrong.body().error.details.map((d: any) => d.code),
+      ['UNKNOWN_CONTACT']
+    )
+    const foreign = await ctx.http.patch(`/api/v1/customers/${customer.id}`, {
+      expectedVersion: customer.version,
+      billingContactId: mariaEmail,
+    })
+    foreign.assertStatus(422)
+    assert.equal(errorCode(foreign), 'UNKNOWN_CONTACT')
+
+    const noReason = await ctx.http.patch(`/api/v1/customers/${customer.id}`, {
+      expectedVersion: customer.version,
+      taxRegime: 'EXEMPT',
+    })
+    noReason.assertStatus(422)
+    assert.equal(errorCode(noReason), 'EXEMPTION_REASON_REQUIRED')
+    const badMethod = await ctx.http.patch(`/api/v1/customers/${customer.id}`, {
+      expectedVersion: customer.version,
+      preferredPaymentMethod: 'BITCOIN',
+    })
+    badMethod.assertStatus(422)
+
+    const saved = await must<any>(
+      await ctx.http.patch(`/api/v1/customers/${customer.id}`, {
+        expectedVersion: customer.version,
+        shippingAddressId: address.id,
+        preferredPaymentMethod: 'BANK_TRANSFER',
+        taxRegime: 'EXEMPT',
+        taxExemptionReason: 'Entidade isenta',
+      }),
+      200
+    )
+    assert.deepInclude(saved, {
+      shippingAddressId: address.id,
+      preferredPaymentMethod: 'BANK_TRANSFER',
+      taxRegime: 'EXEMPT',
+      taxExemptionReason: 'Entidade isenta',
+    })
+    // Voltar ao regime geral limpa o motivo.
+    const general = await must<any>(
+      await ctx.http.patch(`/api/v1/customers/${customer.id}`, {
+        expectedVersion: saved.version,
+        taxRegime: 'GENERAL',
+      }),
+      200
+    )
+    assert.isNull(general.taxExemptionReason)
+
+    // A morada é da Party: apagá-la lá limpa só a escolha do cliente.
+    const detail = await must<any>(await ctx.http.get(`/api/v1/customers/${customer.id}`), 200)
+    assert.include(
+      detail.addresses.map((a: any) => a.id),
+      address.id
+    )
+    const removed = await ctx.http.delete(`/api/v1/addresses/${address.id}`)
+    assert.oneOf(removed.status(), [200, 204])
+    const after = await must<any>(await ctx.http.get(`/api/v1/customers/${customer.id}`), 200)
+    assert.isNull(after.shippingAddressId)
+  })
+})

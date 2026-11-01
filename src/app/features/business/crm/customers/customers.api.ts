@@ -22,7 +22,30 @@ export interface ContactDto {
   readonly isPrimary: boolean;
 }
 
-export interface CustomerDto {
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE' | 'DIRECT_DEBIT' | 'OTHER';
+export type TaxRegime = 'GENERAL' | 'SIMPLIFIED' | 'EXEMPT';
+
+export interface AddressDto {
+  readonly id: string;
+  readonly type: string;
+  readonly line1: string;
+  readonly line2: string | null;
+  readonly city: string;
+  readonly countryCode: string;
+  readonly isPrimary: boolean;
+}
+
+/** Perfil de facturação (10.1): que moradas e email da Party usar, meio de pagamento e regime fiscal. */
+export interface BillingProfileDto {
+  readonly billingAddressId: string | null;
+  readonly shippingAddressId: string | null;
+  readonly billingContactId: string | null;
+  readonly preferredPaymentMethod: PaymentMethod | null;
+  readonly taxRegime: TaxRegime;
+  readonly taxExemptionReason: string | null;
+}
+
+export interface CustomerDto extends BillingProfileDto {
   readonly id: string;
   readonly partyId: string;
   readonly organizationId: string;
@@ -42,6 +65,8 @@ export interface CustomerDto {
   readonly segmentName: string | null;
   /** Só no detalhe, e só a quem pode ler a Party. */
   readonly contacts?: readonly ContactDto[];
+  /** Só no detalhe, e só a quem pode ler a Party. */
+  readonly addresses?: readonly AddressDto[];
 }
 
 export interface CustomerFilter {
@@ -75,6 +100,12 @@ export interface CustomerPatch {
   readonly creditLimit?: string;
   readonly currency?: string;
   readonly status?: 'ACTIVE' | 'INACTIVE';
+  readonly billingAddressId?: string | null;
+  readonly shippingAddressId?: string | null;
+  readonly billingContactId?: string | null;
+  readonly preferredPaymentMethod?: PaymentMethod | null;
+  readonly taxRegime?: TaxRegime;
+  readonly taxExemptionReason?: string | null;
 }
 
 export interface InteractionDto {

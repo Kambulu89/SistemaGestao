@@ -1236,6 +1236,37 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
   avaliação, documentos obrigatórios por categoria e renovação automática ficam para 9.2/9.11. A validade compara com a data do
   servidor de base de dados (UTC).
 
+## D-068 Facturação (Prompt 10): evoluir clientes, vendas e facturação existentes; perfil de facturação do cliente (aceite — bloco 10.1)
+
+- **Contexto.** O Prompt 10 pede facturação, gestão comercial, documentos fiscais e cobranças. Já existe: clientes sobre a Party
+  (M04: segmentos, gestor de conta, prazo, limite de crédito protegido, bloqueio, interacções), propostas e encomendas com linhas
+  em instantâneo e preços resolvidos por tabela, expedições, facturas e notas de crédito imutáveis depois de emitidas, com
+  instantâneo do cliente e numeração sob bloqueio, contratos, recebíveis criados na emissão, pagamentos e conciliação (`finance`).
+- **Matriz de compatibilidade (resumo).**
+
+  | Funcionalidade | Estado | Acção |
+  |---|---|---|
+  | Cliente sobre a Party, segmentos, crédito, bloqueio, interacções | Existe | MANTER |
+  | Perfil de facturação (moradas, email, regime fiscal, meio de pagamento) | Não existia | DESENVOLVER (10.1, feito) |
+  | Propostas, encomendas, expedições | Existe | MANTER; conversões e aprovações comerciais a rever (10.2–10.4) |
+  | Facturas, notas de crédito, contratos, numeração, imutabilidade | Existe | MANTER; recibos, facturas-recibo, notas de débito e séries por tipo (10.5–10.7) |
+  | Impostos por regime e isenção por cliente no cálculo | Isenção existe por linha | DESENVOLVER (10.8; o regime do cliente já segue no instantâneo) |
+  | Recebíveis, pagamentos, conciliação | Existe em `finance` | MANTER; cobranças, antiguidade e lembretes (10.9–10.11) |
+  | Comunicação electrónica à AGT | Não existe | Só adaptador de demonstração identificado como tal (10.12); nunca declarar certificação |
+  | Contabilização das vendas | Motor E1 sem produtores | DESENVOLVER com E2 (idempotente por `source_key`) |
+
+- **Decisão (10.1).** Migração 45 estende `customers` com `billing_address_id`, `shipping_address_id`, `billing_contact_id`
+  (FKs compostas para `addresses`/`contacts` da Party, `ON DELETE SET NULL (coluna)` para que apagar na Party limpe só a escolha),
+  `preferred_payment_method`, `tax_regime` (GENERAL/SIMPLIFIED/EXEMPT) e `tax_exemption_reason` (obrigatório e só aceite em
+  EXEMPT, por CHECK e no domínio). As moradas e o email têm de ser da Party do cliente (o contacto de facturação é um email);
+  ids de outra Party ou de outro tenant dão 422. O instantâneo da factura passa a usar a morada escolhida (senão a de facturação
+  principal) e a levar `billingEmail`, `taxRegime` e `taxExemptionReason`; as facturas já emitidas não mudam (campos ausentes).
+- **Permissões.** Sem códigos novos: o perfil altera-se com `customer.update`; o detalhe só mostra moradas e contactos a quem
+  tem `party.read`. Os códigos são `modulo.accao` (dois segmentos), por isso a família `billing.*` do prompt mapeia para os
+  existentes `customer.*`, `invoice.*`, `credit_note.*`, `receivable.*`, `payment.*`.
+- **Limites.** O regime fiscal ainda **não altera o cálculo do imposto** (a isenção continua a ser por linha); o meio de
+  pagamento preferido é informativo; a morada de entrega ainda não segue para as expedições.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

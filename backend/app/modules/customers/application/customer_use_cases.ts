@@ -8,6 +8,7 @@ import {
   saleBlocker,
   touchesCredit,
   type CustomerInput,
+  type CustomerValues,
   type InteractionInput,
   type Issue,
   type SegmentInput,
@@ -125,9 +126,39 @@ export class CustomerUseCases {
   private async checkReferences(
     context: TenantContext,
     scope: Parameters<References['membershipActive']>[0],
-    values: { segmentId: string | null; accountManagerMembershipId: string | null },
+    values: Pick<
+      CustomerValues,
+      | 'segmentId'
+      | 'accountManagerMembershipId'
+      | 'partyId'
+      | 'billingAddressId'
+      | 'shippingAddressId'
+      | 'billingContactId'
+    >,
     issues: Issue[]
   ): Promise<void> {
+    // As moradas e o contacto escolhidos têm de ser da Party do cliente (o contacto de facturação é um email).
+    if (values.billingAddressId || values.shippingAddressId || values.billingContactId) {
+      const book = await this.references.partyBook(context, values.partyId)
+      for (const key of ['billingAddressId', 'shippingAddressId'] as const) {
+        const id = values[key]
+        if (id && !book.addresses.some((a) => a.id === id)) {
+          issues.push({
+            path: key,
+            code: 'UNKNOWN_ADDRESS',
+            message: 'A morada não existe nesta pessoa ou organização.',
+          })
+        }
+      }
+      const contact = values.billingContactId
+      if (contact && !book.contacts.some((c) => c.id === contact && c.type === 'EMAIL')) {
+        issues.push({
+          path: 'billingContactId',
+          code: 'UNKNOWN_CONTACT',
+          message: 'O contacto de facturação tem de ser um email desta pessoa ou organização.',
+        })
+      }
+    }
     if (values.segmentId) {
       const segment = await this.segments.find(scope, values.segmentId)
       if (!segment || !segment.active) {
@@ -146,7 +177,6 @@ export class CustomerUseCases {
         message: 'O gestor de conta tem de ser um membro activo do tenant.',
       })
     }
-    void context
   }
 
   async create(context: TenantContext, input: CustomerInput, caller: Caller): Promise<Customer> {

@@ -54,11 +54,12 @@ Estados: Não iniciado · Parcialmente implementado · Implementado sem validaç
 | 2026-10-31 | Auditoria (Prompt 02, documentos fora do repositório) e Prompt 03 bloco 3.1: R-01 reproduzido e corrigido no núcleo (`set constraints all immediate` antes do COMMIT), `npm run setup`, seed com módulos activos e idempotente, Compose sem MinIO e com trabalhadores, `dump.rdb` fora do Git (D-064) | Backend 908/908 |
 | 2026-11-01 | Prompt 03 blocos 3.2–3.4 (D-065): tenant com país/moeda/suspensão (migração 40); anti-escalada de privilégios, estado do papel, último login e ciclo de vida da membership (migração 41); cargos e funções com API, matriz e painel (migração 42) | Backend 916/916, frontend 1166/1166; commits 551abe4, 806bfc2, 2601c0e |
 | 2026-11-01 | Prompt 08 bloco 8.1 (D-066): marcas, finalidade do artigo, dados logísticos, validade e política FIFO/FEFO no catálogo existente (migração 43), separador «Marcas» e campos no formulário de produto | Backend 919/919, frontend 1170/1170 |
-| 2026-11-01 | Prompt 09 bloco 9.1 (D-067): categorias de fornecedores, classificação (tipo, crítico, avaliação, prazo), homologação com estados, validade derivada, condições, segregação de funções, histórico só-de-acrescentar e outbox (migração 44); bloqueio de encomendas por homologação; separador «Categorias» e painel de homologação | ver commit |
+| 2026-11-01 | Prompt 09 bloco 9.1 (D-067): categorias de fornecedores, classificação (tipo, crítico, avaliação, prazo), homologação com estados, validade derivada, condições, segregação de funções, histórico só-de-acrescentar e outbox (migração 44); bloqueio de encomendas por homologação; separador «Categorias» e painel de homologação | Backend 929/929, frontend 1177/1177; commit daf0af2 |
+| 2026-11-01 | Prompt 10 bloco 10.1 (D-068): perfil de facturação do cliente (moradas e email da Party, regime fiscal com motivo de isenção, meio de pagamento preferido; migração 45) que segue no instantâneo da factura; painel «Perfil de facturação» no cliente | ver commit |
 
 ## Como retomar
 
 1. Ambiente: `pg_ctlcluster 16 main start`, `redis-server --daemonize yes`, Node 24 no `PATH`.
 2. Backend: `cd backend && npm run migrate && npm test`. Frontend: `npm ci && npx ng test --watch=false`.
 3. Seguir a «Fila de execução» pela ordem; cada item termina com lint, format, typecheck, testes, build, migrations up/down, E2E em browser quando há UI, actualização destes três documentos e um commit.
-4. Decisões de desenho ficam em `docs/decisions.md` (próxima: D-068).
+4. Decisões de desenho ficam em `docs/decisions.md` (próxima: D-069).

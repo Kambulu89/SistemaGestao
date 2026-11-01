@@ -68,7 +68,31 @@ export function normalizeSegment(
 
 // --- clientes ---------------------------------------------------------------------------------------
 
-export interface CustomerValues {
+/** Meio de pagamento preferido (informativo: propõe-se ao registar recebimentos; não restringe). */
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE' | 'DIRECT_DEBIT' | 'OTHER'
+export const PAYMENT_METHODS: readonly PaymentMethod[] = [
+  'CASH',
+  'BANK_TRANSFER',
+  'CARD',
+  'CHEQUE',
+  'DIRECT_DEBIT',
+  'OTHER',
+]
+/** Regime fiscal do cliente; isento exige o motivo, que segue no instantâneo da factura. */
+export type TaxRegime = 'GENERAL' | 'SIMPLIFIED' | 'EXEMPT'
+export const TAX_REGIMES: readonly TaxRegime[] = ['GENERAL', 'SIMPLIFIED', 'EXEMPT']
+
+/** O perfil de facturação: que moradas e contacto da Party usar, meio de pagamento e regime fiscal. */
+export interface BillingProfile {
+  billingAddressId: string | null
+  shippingAddressId: string | null
+  billingContactId: string | null
+  preferredPaymentMethod: PaymentMethod | null
+  taxRegime: TaxRegime
+  taxExemptionReason: string | null
+}
+
+export interface CustomerValues extends BillingProfile {
   partyId: string
   organizationId: string
   code: string
@@ -91,6 +115,12 @@ export interface CustomerInput {
   creditLimit?: unknown
   currency?: unknown
   status?: unknown
+  billingAddressId?: unknown
+  shippingAddressId?: unknown
+  billingContactId?: unknown
+  preferredPaymentMethod?: unknown
+  taxRegime?: unknown
+  taxExemptionReason?: unknown
 }
 
 /** O que só quem pode gerir crédito altera: o limite e a moeda em que se mede. */
@@ -149,7 +179,47 @@ export function normalizeCustomer(
   } else if (base?.status === 'BLOCKED' && status !== 'BLOCKED') {
     issues.push(issue('status', 'USE_UNBLOCK', 'Para desbloquear use a operação de desbloqueio.'))
   }
-  for (const key of ['segmentId', 'accountManagerMembershipId'] as const) {
+  const pick = <K extends keyof BillingProfile>(key: K): unknown =>
+    input[key] === undefined ? (base?.[key] ?? null) : input[key]
+  const payment = pick('preferredPaymentMethod')
+  if (payment !== null && !PAYMENT_METHODS.includes(payment as PaymentMethod)) {
+    issues.push(
+      issue(
+        'preferredPaymentMethod',
+        'INVALID_PAYMENT_METHOD',
+        `Meio: ${PAYMENT_METHODS.join(', ')}.`
+      )
+    )
+  }
+  const regime = (input.taxRegime ?? base?.taxRegime ?? 'GENERAL') as TaxRegime
+  if (!TAX_REGIMES.includes(regime)) {
+    issues.push(issue('taxRegime', 'INVALID_TAX_REGIME', `Regime: ${TAX_REGIMES.join(', ')}.`))
+  }
+  let exemption: string | null = null
+  if (regime === 'EXEMPT') {
+    const given = pick('taxExemptionReason')
+    exemption = typeof given === 'string' && given.trim() ? given.trim() : null
+    if (!exemption || exemption.length > 200) {
+      issues.push(
+        issue(
+          'taxExemptionReason',
+          'EXEMPTION_REASON_REQUIRED',
+          'Indique o motivo da isenção (até 200 caracteres).'
+        )
+      )
+    }
+  } else if (input.taxExemptionReason !== undefined && input.taxExemptionReason !== null) {
+    issues.push(
+      issue('taxExemptionReason', 'NOT_ALLOWED', 'Só o regime isento leva motivo de isenção.')
+    )
+  }
+  for (const key of [
+    'segmentId',
+    'accountManagerMembershipId',
+    'billingAddressId',
+    'shippingAddressId',
+    'billingContactId',
+  ] as const) {
     const value = input[key]
     if (value !== undefined && value !== null && typeof value !== 'string') {
       issues.push(issue(key, 'INVALID_ID', 'Identificador inválido.'))
@@ -172,6 +242,12 @@ export function normalizeCustomer(
     currency,
     status,
     statusReason: base?.statusReason ?? null,
+    billingAddressId: pick('billingAddressId') as string | null,
+    shippingAddressId: pick('shippingAddressId') as string | null,
+    billingContactId: pick('billingContactId') as string | null,
+    preferredPaymentMethod: payment as PaymentMethod | null,
+    taxRegime: regime,
+    taxExemptionReason: exemption,
   }
 }
 

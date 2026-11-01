@@ -1,4 +1,4 @@
-import type { Channel, CustomerStatus } from './customers.api';
+import type { Channel, CustomerStatus, PaymentMethod, TaxRegime } from './customers.api';
 
 /** Dinheiro: texto não negativo com até 4 casas (o mesmo formato que o servidor exige; nunca `number`). */
 const MONEY = /^\d{1,15}(\.\d{1,4})?$/;
@@ -15,6 +15,21 @@ export const CHANNEL_LABEL: Readonly<Record<Channel, string>> = {
   EMAIL: 'Email',
   MEETING: 'Reunião',
   NOTE: 'Nota',
+};
+
+export const PAYMENT_METHOD_LABEL: Readonly<Record<PaymentMethod, string>> = {
+  CASH: 'Numerário',
+  BANK_TRANSFER: 'Transferência bancária',
+  CARD: 'Cartão',
+  CHEQUE: 'Cheque',
+  DIRECT_DEBIT: 'Débito directo',
+  OTHER: 'Outro',
+};
+
+export const TAX_REGIME_LABEL: Readonly<Record<TaxRegime, string>> = {
+  GENERAL: 'Regime geral',
+  SIMPLIFIED: 'Regime simplificado',
+  EXEMPT: 'Isento',
 };
 
 export const ERROR_TEXT: Readonly<Record<string, string>> = {

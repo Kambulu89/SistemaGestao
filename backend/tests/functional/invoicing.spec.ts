@@ -237,6 +237,51 @@ const common = (g: any) => {
 test.group('facturas | rascunho e emissão', (g) => {
   common(g)
 
+  test('o instantâneo segue o perfil de facturação do cliente (morada, email, regime isento) — 10.1', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const partyId = ctx.customer.partyId
+    const other = await must<any>(
+      await ctx.http.post(`/api/v1/parties/${partyId}/addresses`, {
+        type: 'BILLING',
+        line1: 'Avenida 4 de Fevereiro 100',
+        city: 'Luanda',
+        countryCode: 'AO',
+      }),
+      201
+    )
+    const email = await must<any>(
+      await ctx.http.post(`/api/v1/parties/${partyId}/contacts`, {
+        type: 'EMAIL',
+        value: 'facturas@acme.invalid',
+      }),
+      201
+    )
+    await must(
+      await ctx.http.patch(`/api/v1/customers/${ctx.customer.id}`, {
+        expectedVersion: ctx.customer.version,
+        billingAddressId: other.id,
+        billingContactId: email.id,
+        taxRegime: 'EXEMPT',
+        taxExemptionReason: 'Isento ao abrigo do artigo 12.º',
+      }),
+      200
+    )
+    const draft = await must<any>(await manualInvoice(ctx), 201)
+    const issued = await must<any>(
+      await ctx.http.post(`/api/v1/invoices/${draft.id}/issue`, {}),
+      200
+    )
+    assert.deepInclude(issued.invoice.customerSnapshot, {
+      billingEmail: 'facturas@acme.invalid',
+      taxRegime: 'EXEMPT',
+      taxExemptionReason: 'Isento ao abrigo do artigo 12.º',
+    })
+    assert.equal(issued.invoice.customerSnapshot.billingAddress.line1, 'Avenida 4 de Fevereiro 100')
+  })
+
   test('uma factura livre calcula os totais exactos e emite com número, vencimento e instantâneo do cliente', async ({
     client,
     assert,

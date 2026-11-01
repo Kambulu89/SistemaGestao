@@ -3,6 +3,16 @@ import vine from '@vinejs/vine'
 const version = () => vine.number().withoutDecimals().min(1)
 const uuid = () => vine.string().trim().uuid()
 
+/** Perfil de facturação: moradas e contacto da Party, meio de pagamento e regime fiscal (validados pelo domínio). */
+const billingProfile = {
+  billingAddressId: uuid().nullable().optional(),
+  shippingAddressId: uuid().nullable().optional(),
+  billingContactId: uuid().nullable().optional(),
+  preferredPaymentMethod: vine.string().trim().maxLength(20).nullable().optional(),
+  taxRegime: vine.string().trim().maxLength(20).optional(),
+  taxExemptionReason: vine.string().maxLength(300).nullable().optional(),
+}
+
 /** O conteúdo (códigos, dinheiro, regras) é validado pelo domínio; aqui só o transporte. */
 export const createSegmentValidator = vine.compile(
   vine.object({
@@ -45,6 +55,7 @@ export const createCustomerValidator = vine.compile(
     creditLimit: vine.string().trim().maxLength(30).optional(),
     currency: vine.string().trim().maxLength(3).optional(),
     status: vine.string().trim().optional(),
+    ...billingProfile,
   })
 )
 
@@ -57,6 +68,7 @@ export const updateCustomerValidator = vine.compile(
     creditLimit: vine.string().trim().maxLength(30).optional(),
     currency: vine.string().trim().maxLength(3).optional(),
     status: vine.string().trim().optional(),
+    ...billingProfile,
     // Presentes só para o domínio os recusar com uma mensagem clara (imutáveis).
     partyId: vine.string().trim().optional(),
     organizationId: vine.string().trim().optional(),

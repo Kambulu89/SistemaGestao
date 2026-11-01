@@ -24,6 +24,7 @@ import {
   type NewCustomer,
   type PartyDto,
 } from './customers.api';
+import { BillingProfilePanel } from './billing-profile-panel';
 import { CHANNEL_LABEL, customerError, isMoney, localToIso, STATUS_LABEL } from './customers-model';
 
 const COLUMNS: readonly TableColumn[] = [
@@ -66,6 +67,7 @@ const PARTY_MODES: readonly SelectOption[] = [
     LoadingState,
     Select,
     Table,
+    BillingProfilePanel,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -342,6 +344,15 @@ const PARTY_MODES: readonly SelectOption[] = [
           </app-card>
         }
 
+        @if (profile(); as current) {
+          <app-billing-profile-panel
+            [customer]="current"
+            [addresses]="addresses()"
+            [contacts]="contacts()"
+            (saved)="profileSaved($event)"
+          />
+        }
+
         <h3 class="mb-3 mt-8 text-base font-semibold">Interacções</h3>
         <app-card [flush]="true">
           @if (interactions().length === 0) {
@@ -513,6 +524,9 @@ export class CustomersTab {
   protected readonly status = signal<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   protected readonly blockReason = signal('');
   protected readonly contacts = signal<NonNullable<CustomerDto['contacts']>>([]);
+  protected readonly addresses = signal<NonNullable<CustomerDto['addresses']>>([]);
+  /** O cliente aberto, para o perfil de facturação (`null` ao criar). */
+  protected readonly profile = signal<CustomerDto | null>(null);
   protected readonly interactions = signal<readonly InteractionDto[]>([]);
   protected readonly channel = signal<Channel>('CALL');
   protected readonly subject = signal('');
@@ -599,6 +613,8 @@ export class CustomersTab {
     this.creditLimit.set('');
     this.currency.set('');
     this.contacts.set([]);
+    this.addresses.set([]);
+    this.profile.set(null);
     this.interactions.set([]);
     this.editing.set({
       id: null,
@@ -621,6 +637,11 @@ export class CustomersTab {
     });
   }
 
+  protected profileSaved(saved: CustomerDto): void {
+    this.show({ ...saved, contacts: this.contacts() });
+    this.notice.set('Perfil de facturação guardado.');
+  }
+
   private show(customer: CustomerDto): void {
     this.partyName.set(customer.partyName);
     this.code.set(customer.code);
@@ -631,6 +652,8 @@ export class CustomersTab {
     this.currency.set(customer.currency);
     this.status.set(customer.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE');
     this.contacts.set(customer.contacts ?? []);
+    this.addresses.set(customer.addresses ?? this.addresses());
+    this.profile.set(customer);
     this.editing.set({
       id: customer.id,
       partyId: customer.partyId,

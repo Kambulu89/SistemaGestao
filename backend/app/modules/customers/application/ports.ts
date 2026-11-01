@@ -91,4 +91,12 @@ export interface References {
   organizationCurrency(context: TenantContext, organizationId: string): Promise<string | null>
   /** Membership activa do tenant (gestor de conta, responsável de interacção). */
   membershipActive(scope: TenantScope, membershipId: string): Promise<boolean>
+  /** Moradas e contactos da Party (só leitura), para validar as escolhas do perfil de facturação. */
+  partyBook(
+    context: TenantContext,
+    partyId: string
+  ): Promise<{
+    addresses: readonly { id: string; type: string }[]
+    contacts: readonly { id: string; type: string }[]
+  }>
 }

@@ -1,6 +1,8 @@
 import { ApiError } from '#core/http/api_error'
 import { LucidTenantScope, type TenantScope } from '#core/tenancy/index'
 import type {
+  PaymentMethod,
+  TaxRegime,
   CustomerStatus,
   CustomerValues,
   InteractionChannel,
@@ -124,6 +126,12 @@ interface CustomerRow {
   currency: string
   status: CustomerStatus
   status_reason: string | null
+  billing_address_id: string | null
+  shipping_address_id: string | null
+  billing_contact_id: string | null
+  preferred_payment_method: PaymentMethod | null
+  tax_regime: TaxRegime
+  tax_exemption_reason: string | null
   version: number
   created_at: Date
   updated_at: Date
@@ -137,7 +145,8 @@ interface CustomerRow {
 const CUSTOMER_SELECT = `
   select c.id, c.party_id, c.organization_id, c.code, c.segment_id, c.account_manager_membership_id,
          c.payment_term_days, c.credit_limit::text as credit_limit, c.currency, c.status, c.status_reason,
-         c.version, c.created_at, c.updated_at,
+         c.billing_address_id, c.shipping_address_id, c.billing_contact_id, c.preferred_payment_method,
+         c.tax_regime, c.tax_exemption_reason, c.version, c.created_at, c.updated_at,
          p.display_name as party_name, p.kind as party_kind, op.tax_id, s.name as segment_name
     from customers c
     join parties p on p.tenant_id = c.tenant_id and p.id = c.party_id
@@ -156,6 +165,12 @@ const toCustomer = (r: CustomerRow): Customer => ({
   currency: r.currency,
   status: r.status,
   statusReason: r.status_reason,
+  billingAddressId: r.billing_address_id,
+  shippingAddressId: r.shipping_address_id,
+  billingContactId: r.billing_contact_id,
+  preferredPaymentMethod: r.preferred_payment_method,
+  taxRegime: r.tax_regime,
+  taxExemptionReason: r.tax_exemption_reason,
   version: r.version,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -222,8 +237,10 @@ export class LucidCustomerStore implements CustomerStore {
     try {
       const result = await trxOf(scope).rawQuery(
         `insert into customers (tenant_id, party_id, organization_id, code, segment_id, account_manager_membership_id,
-           payment_term_days, credit_limit, currency, status, status_reason, created_by_membership_id, updated_by_membership_id)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
+           payment_term_days, credit_limit, currency, status, status_reason, billing_address_id, shipping_address_id,
+           billing_contact_id, preferred_payment_method, tax_regime, tax_exemption_reason, created_by_membership_id,
+           updated_by_membership_id)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
         [
           tenantOf(scope),
           v.partyId,
@@ -236,6 +253,12 @@ export class LucidCustomerStore implements CustomerStore {
           v.currency,
           v.status,
           v.statusReason,
+          v.billingAddressId,
+          v.shippingAddressId,
+          v.billingContactId,
+          v.preferredPaymentMethod,
+          v.taxRegime,
+          v.taxExemptionReason,
           actorOf(scope),
           actorOf(scope),
         ] as never[]
@@ -253,7 +276,9 @@ export class LucidCustomerStore implements CustomerStore {
     const result = await trxOf(scope).rawQuery(
       `update customers
           set segment_id = ?, account_manager_membership_id = ?, payment_term_days = ?, credit_limit = ?, currency = ?,
-              status = ?, status_reason = ?, updated_at = now(), updated_by_membership_id = ?, version = version + 1
+              status = ?, status_reason = ?, billing_address_id = ?, shipping_address_id = ?, billing_contact_id = ?,
+              preferred_payment_method = ?, tax_regime = ?, tax_exemption_reason = ?, updated_at = now(),
+              updated_by_membership_id = ?, version = version + 1
         where tenant_id = ? and id = ? and version = ? returning id`,
       [
         v.segmentId,
@@ -263,6 +288,12 @@ export class LucidCustomerStore implements CustomerStore {
         v.currency,
         v.status,
         v.statusReason,
+        v.billingAddressId,
+        v.shippingAddressId,
+        v.billingContactId,
+        v.preferredPaymentMethod,
+        v.taxRegime,
+        v.taxExemptionReason,
         actorOf(scope),
         tenantOf(scope),
         id,

@@ -4266,6 +4266,34 @@ paths:
                 creditLimit: { type: string }
                 currency: { type: string }
                 status: { type: string, enum: [ACTIVE, INACTIVE] }
+                billingAddressId:
+                  {
+                    type: string,
+                    format: uuid,
+                    nullable: true,
+                    description: 'Morada da Party usada nas facturas.',
+                  }
+                shippingAddressId: { type: string, format: uuid, nullable: true }
+                billingContactId:
+                  {
+                    type: string,
+                    format: uuid,
+                    nullable: true,
+                    description: 'Email da Party para facturação.',
+                  }
+                preferredPaymentMethod:
+                  {
+                    type: string,
+                    nullable: true,
+                    enum: [CASH, BANK_TRANSFER, CARD, CHEQUE, DIRECT_DEBIT, OTHER],
+                  }
+                taxRegime: { type: string, enum: [GENERAL, SIMPLIFIED, EXEMPT] }
+                taxExemptionReason:
+                  {
+                    type: string,
+                    nullable: true,
+                    description: 'Obrigatório (e só aceite) no regime EXEMPT.',
+                  }
       responses:
         '201': { description: Cliente criado. }
         '403': { $ref: '#/components/responses/Error' }
@@ -4307,6 +4335,34 @@ paths:
                 creditLimit: { type: string }
                 currency: { type: string }
                 status: { type: string, enum: [ACTIVE, INACTIVE] }
+                billingAddressId:
+                  {
+                    type: string,
+                    format: uuid,
+                    nullable: true,
+                    description: 'Morada da Party usada nas facturas.',
+                  }
+                shippingAddressId: { type: string, format: uuid, nullable: true }
+                billingContactId:
+                  {
+                    type: string,
+                    format: uuid,
+                    nullable: true,
+                    description: 'Email da Party para facturação.',
+                  }
+                preferredPaymentMethod:
+                  {
+                    type: string,
+                    nullable: true,
+                    enum: [CASH, BANK_TRANSFER, CARD, CHEQUE, DIRECT_DEBIT, OTHER],
+                  }
+                taxRegime: { type: string, enum: [GENERAL, SIMPLIFIED, EXEMPT] }
+                taxExemptionReason:
+                  {
+                    type: string,
+                    nullable: true,
+                    description: 'Obrigatório (e só aceite) no regime EXEMPT.',
+                  }
       responses:
         '200': { description: Cliente actualizado. }
         '403': { $ref: '#/components/responses/Error' }

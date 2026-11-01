@@ -1049,6 +1049,13 @@ test.group('matriz de isolamento', (group) => {
         422,
       ],
       [
+        'cliente com a morada da Party de B',
+        'patch',
+        `/customers/${a.ids.customer}`,
+        { expectedVersion: 1, billingAddressId: bi.address },
+        422,
+      ],
+      [
         'fornecedor com a categoria de B',
         'patch',
         `/suppliers/${a.ids.supplier}`,

@@ -17,6 +17,13 @@ import {
 /** Party, organizações e membros vêm dos seus módulos, pelas APIs públicas. */
 const memberships = new LucidMembershipStore()
 const references: References = {
+  async partyBook(context, partyId) {
+    const { detail } = await partyServices().parties.get(context, partyId)
+    return {
+      addresses: detail.addresses.map((a) => ({ id: a.id, type: a.type })),
+      contacts: detail.contacts.map((c) => ({ id: c.id, type: c.type })),
+    }
+  },
   async partyExists(context, partyId) {
     try {
       await partyServices().parties.get(context, partyId)

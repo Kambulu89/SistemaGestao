@@ -49,6 +49,10 @@ const references: References = {
         paymentTermDays: customer.paymentTermDays,
         partyName: customer.partyName,
         taxId: customer.taxId,
+        billingAddressId: customer.billingAddressId,
+        billingContactId: customer.billingContactId,
+        taxRegime: customer.taxRegime,
+        taxExemptionReason: customer.taxExemptionReason,
       }
     } catch {
       return null
@@ -57,7 +61,9 @@ const references: References = {
   async customerSnapshot(context, customer) {
     const { detail } = await partyServices().parties.get(context, customer.partyId)
     const addresses = detail.addresses
+    // A morada escolhida no perfil de facturação do cliente prevalece; senão, a de facturação principal da Party.
     const billing =
+      addresses.find((a) => a.id === customer.billingAddressId) ??
       addresses.find((a) => a.type === 'BILLING' && a.isPrimary) ??
       addresses.find((a) => a.type === 'BILLING') ??
       addresses.find((a) => a.isPrimary) ??
@@ -78,6 +84,12 @@ const references: References = {
             countryCode: billing.countryCode,
           }
         : null,
+      billingEmail:
+        detail.contacts.find((c) => c.id === customer.billingContactId)?.value ??
+        detail.contacts.find((c) => c.type === 'EMAIL' && c.isPrimary)?.value ??
+        null,
+      taxRegime: customer.taxRegime,
+      taxExemptionReason: customer.taxExemptionReason,
     }
   },
   async order(context, orderId) {
