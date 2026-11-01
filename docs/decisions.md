@@ -1150,6 +1150,23 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
 - **Consequências.** Teste de regressão em `tests/functional/accounting.spec.ts` («restrição diferida … (R-01)»).
   Numa base antiga, o seed não muda o plano de quem já tem assinatura (a mudança de plano é explícita).
 
+## D-065 Fundação ERP (Prompt 03, blocos 3.2–3.4): atributos do tenant, ninguém concede o que não tem, cargos sem duplicar a estrutura (aceite)
+
+- **Tenant (3.2).** País e moeda por omissão (`AO`/`AOA`) e `suspended_at` (migração 40). O *slug* é o código (a-z, 0-9, _): não
+  se cria um segundo identificador público. Cada empresa (`organizations`) mantém o seu país e moeda; o tenant só dá o valor
+  por omissão.
+- **Identidade e RBAC (3.3).** Regra anti-escalada no servidor: criar ou alterar um papel, ou atribuí-lo (a si ou a outro), exige
+  possuir cada permissão concedida — de forma geral ou na unidade da atribuição; `403 PRIVILEGE_ESCALATION` com as permissões em
+  falta. Retirar é sempre permitido. Papéis passam a ter estado (`INACTIVE` deixa de conceder, sem apagar atribuições).
+  `users.authentication_provider`/`last_login_at` e o ciclo de vida da membership (convidado por/em, activada, desactivada)
+  mantido por trigger (migração 41), para nenhum caminho de escrita o esquecer.
+- **Organização (3.4).** O pedido do Prompt 03/05 por LegalEntity/Branch/Department **não** cria tabelas novas: entidade legal =
+  `organizations`, filial = `organization_units` tipo `BRANCH`, departamento = tipo `DEPARTMENT`/`SECTION` (já com hierarquia
+  sem ciclos e FKs compostas). O que faltava era o **cargo**: tabela `positions` (migração 42) com código imutável, departamento
+  por omissão, cargo superior sem ciclos e descrição funcional (campos do Prompt 05 §8), sem eliminação (estado `INACTIVE`).
+- **Consequências.** Testes: `iam.spec` (escalada, papel inactivo), `members.spec` (ciclo de vida), `auth.spec` (último login),
+  `tenants.spec`, `positions.spec`; matriz de isolamento estendida a `/positions`.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de
