@@ -30,6 +30,16 @@ const product = (over: Partial<ProductDto> = {}): ProductDto => ({
   trackingMode: 'NONE',
   active: true,
   taxCategory: null,
+  brandId: null,
+  shortName: null,
+  model: null,
+  itemKind: 'GENERAL',
+  purchasable: true,
+  sellable: true,
+  tracksExpiry: false,
+  pickingPolicy: 'FIFO',
+  weightKg: null,
+  leadTimeDays: null,
   version: 1,
   ...over,
 });
@@ -55,6 +65,18 @@ async function render(api: Partial<CatalogApi> = {}, can: (p: string) => boolean
         provide: CatalogApi,
         useValue: {
           categories: () => of([]),
+          brands: () =>
+            of([
+              {
+                id: 'b1',
+                code: 'ACME',
+                name: 'Acme',
+                description: null,
+                countryCode: 'PT',
+                active: true,
+                version: 1,
+              },
+            ]),
           products: () => of({ items: [product()], total: 1 }),
           product: () => of({ ...product(), variants: [variant()] }),
           priceLists: () => of([priceList()]),
@@ -187,6 +209,60 @@ describe('Catálogo', () => {
     expect(createProduct).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'SERVICE', trackStock: false, trackingMode: 'NONE' }),
     );
+  });
+
+  it('envia marca, finalidade, validade e FEFO; recusa FEFO sem validade antes do pedido', async () => {
+    const createProduct = vi.fn(() => of({ ...product({ id: 'p4' }), variants: [] }));
+    const { el, click, type } = await render({ createProduct });
+    await click('Novo produto');
+    await type('Código', 'IOG');
+    await type('Nome', 'Iogurte');
+    await type('Unidade de base', 'u1');
+    await type('Marca', 'b1');
+    await type('Finalidade', 'FINISHED_GOOD');
+    await type('Política física de expedição', 'FEFO');
+    await click('Guardar');
+    expect(createProduct).not.toHaveBeenCalled();
+    expect(el.textContent).toContain('FEFO exige controlar a validade');
+    await type('Rastreio', 'LOT');
+    const box = [...el.querySelectorAll<HTMLInputElement>('input[type=checkbox]')].find((i) =>
+      i.closest('label')?.textContent?.includes('Controlar validade'),
+    );
+    expect(box).toBeDefined();
+    box!.click();
+    await type('Peso (kg)', '0.125');
+    await click('Guardar');
+    expect(createProduct).toHaveBeenCalledWith(
+      expect.objectContaining({
+        brandId: 'b1',
+        itemKind: 'FINISHED_GOOD',
+        trackingMode: 'LOT',
+        tracksExpiry: true,
+        pickingPolicy: 'FEFO',
+        weightKg: '0.125',
+      }),
+    );
+  });
+
+  it('lista as marcas e inactiva com a versão', async () => {
+    const updateBrand = vi.fn(() =>
+      of({
+        id: 'b1',
+        code: 'ACME',
+        name: 'Acme',
+        description: null,
+        countryCode: 'PT',
+        active: false,
+        version: 2,
+      }),
+    );
+    const { el, tab, click } = await render({ updateBrand });
+    await tab('brands');
+    expect(text(el.querySelector('[data-testid=brands] tbody tr'))).toContain('Acme');
+    await click('Inactivar');
+    expect(updateBrand).toHaveBeenCalledWith(expect.objectContaining({ id: 'b1', version: 1 }), {
+      active: false,
+    });
   });
 
   it('mostra a mensagem própria do catálogo quando o SKU já existe', async () => {

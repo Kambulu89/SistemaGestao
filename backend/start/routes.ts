@@ -606,6 +606,7 @@ router
         router
           .group(() => {
             router.get('/product-categories', [CatalogController, 'listCategories'])
+            router.get('/product-brands', [CatalogController, 'listBrands'])
             router.get('/products', [CatalogController, 'listProducts'])
             router.get('/products/:id', [CatalogController, 'showProduct'])
             router.get('/products/:id/variants', [CatalogController, 'listVariants'])
@@ -615,6 +616,8 @@ router
         router
           .group(() => {
             router.post('/product-categories', [CatalogController, 'createCategory'])
+            router.post('/product-brands', [CatalogController, 'createBrand'])
+            router.patch('/product-brands/:id', [CatalogController, 'updateBrand'])
             router.patch('/product-categories/:id', [CatalogController, 'updateCategory'])
             router.post('/products', [CatalogController, 'createProduct'])
             router.patch('/products/:id', [CatalogController, 'updateProduct'])

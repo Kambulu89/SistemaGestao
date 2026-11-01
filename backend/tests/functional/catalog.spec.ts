@@ -713,3 +713,168 @@ test.group('catálogo | módulo, permissões e auditoria', (group) => {
     void serviceTenantContext
   })
 })
+
+test.group('catálogo | marcas, classificação e dados logísticos (Prompt 08, 8.1)', (group) => {
+  group.setup(async () => {
+    await iamServices().syncCatalog.execute()
+  })
+  group.each.setup(async () => {
+    await resetAuthState()
+    return async () => {
+      await deleteTestTenants()
+      await deleteTestUsers()
+    }
+  })
+
+  test('marcas: código único e imutável; inactiva deixa de poder ser usada em produtos', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const brand = await must<any>(
+      await ctx.http.post('/api/v1/product-brands', {
+        code: 'ACME',
+        name: ' Acme ',
+        countryCode: 'PT',
+      }),
+      201
+    )
+    assert.strictEqual(brand.name, 'Acme')
+    const dup = await ctx.http.post('/api/v1/product-brands', { code: 'ACME', name: 'Outra' })
+    dup.assertStatus(409)
+    assert.strictEqual(dup.body().error.code, 'BRAND_CODE_TAKEN')
+    ;(
+      await ctx.http.post('/api/v1/product-brands', { code: 'X', name: 'x', countryCode: 'pt' })
+    ).assertStatus(422)
+
+    const hammer = await must<any>(
+      await ctx.http.post('/api/v1/products', {
+        code: 'P1',
+        name: 'Martelo',
+        baseUnitId: ctx.unit.id,
+        brandId: brand.id,
+        model: 'M-200',
+      }),
+      201
+    )
+    assert.strictEqual(hammer.brandId, brand.id)
+    assert.strictEqual(hammer.itemKind, 'GENERAL')
+    await must(
+      await ctx.http.patch(`/api/v1/product-brands/${brand.id}`, {
+        expectedVersion: brand.version,
+        active: false,
+      }),
+      200
+    )
+    const inactive = await ctx.http.post('/api/v1/products', {
+      code: 'P2',
+      name: 'Serrote',
+      baseUnitId: ctx.unit.id,
+      brandId: brand.id,
+    })
+    inactive.assertStatus(422)
+    assert.strictEqual(inactive.body().error.details[0].code, 'UNKNOWN_BRAND')
+    // O produto que já a tinha mantém-na (histórico preservado).
+    const kept = await must<any>(await ctx.http.get(`/api/v1/products/${hammer.id}`), 200)
+    assert.strictEqual(kept.brandId, brand.id)
+  })
+
+  test('finalidade, validade e FEFO coerentes com o rastreio; um serviço não tem dados físicos', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const code = (r: any) => r.body().error.details.map((d: any) => d.code)
+    const expiryNoLot = await ctx.http.post('/api/v1/products', {
+      code: 'E1',
+      name: 'Iogurte',
+      baseUnitId: ctx.unit.id,
+      tracksExpiry: true,
+    })
+    expiryNoLot.assertStatus(422)
+    assert.include(code(expiryNoLot), 'EXPIRY_NEEDS_LOT')
+    const fefoNoExpiry = await ctx.http.post('/api/v1/products', {
+      code: 'E2',
+      name: 'Iogurte',
+      baseUnitId: ctx.unit.id,
+      trackingMode: 'LOT',
+      pickingPolicy: 'FEFO',
+    })
+    fefoNoExpiry.assertStatus(422)
+    assert.include(code(fefoNoExpiry), 'FEFO_NEEDS_EXPIRY')
+    const perishable = await must<any>(
+      await ctx.http.post('/api/v1/products', {
+        code: 'E3',
+        name: 'Iogurte natural',
+        baseUnitId: ctx.unit.id,
+        trackingMode: 'LOT',
+        tracksExpiry: true,
+        pickingPolicy: 'FEFO',
+        itemKind: 'FINISHED_GOOD',
+        weightKg: '0.125000',
+        leadTimeDays: 3,
+      }),
+      201
+    )
+    assert.strictEqual(perishable.pickingPolicy, 'FEFO')
+    assert.strictEqual(perishable.weightKg, '0.125000')
+    const badWeight = await ctx.http.post('/api/v1/products', {
+      code: 'E4',
+      name: 'x',
+      baseUnitId: ctx.unit.id,
+      weightKg: '-1',
+    })
+    badWeight.assertStatus(422)
+
+    const service = await must<any>(
+      await ctx.http.post('/api/v1/products', {
+        code: 'S1',
+        name: 'Instalação',
+        type: 'SERVICE',
+        baseUnitId: ctx.unit.id,
+        weightKg: '3',
+      }),
+      201
+    )
+    assert.strictEqual(service.itemKind, 'SERVICE')
+    assert.isNull(service.weightKg)
+    assert.isFalse(service.trackStock)
+    const serviceAsRaw = await ctx.http.post('/api/v1/products', {
+      code: 'S2',
+      name: 'x',
+      type: 'GOODS',
+      itemKind: 'SERVICE',
+      baseUnitId: ctx.unit.id,
+    })
+    serviceAsRaw.assertStatus(422)
+    assert.include(code(serviceAsRaw), 'INVALID_ITEM_KIND')
+  })
+
+  test('categorias com descrição e estado; marcas exigem catalog.manage para gerir', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const category = await must<any>(
+      await ctx.http.post('/api/v1/product-categories', {
+        code: 'FERR',
+        name: 'Ferramentas',
+        description: 'Ferramentas manuais',
+      }),
+      201
+    )
+    assert.strictEqual(category.description, 'Ferramentas manuais')
+    assert.isTrue(category.active)
+    const off = await must<any>(
+      await ctx.http.patch(`/api/v1/product-categories/${category.id}`, {
+        expectedVersion: category.version,
+        active: false,
+      }),
+      200
+    )
+    assert.isFalse(off.active)
+    const reader = await memberWith(ctx, ['catalog.read'])
+    ;(await reader.get('/api/v1/product-brands')).assertStatus(200)
+    ;(await reader.post('/api/v1/product-brands', { code: 'Z', name: 'z' })).assertStatus(403)
+  })
+})

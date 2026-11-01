@@ -3,12 +3,50 @@ import vine from '@vinejs/vine'
 const version = () => vine.number().withoutDecimals().min(1)
 const uuid = () => vine.string().trim().uuid()
 
+/** Campos do bloco 8.1 (classificação, logística, política física); as regras ficam no domínio. */
+const productExtras = {
+  brandId: uuid().nullable().optional(),
+  shortName: vine.string().trim().maxLength(60).nullable().optional(),
+  model: vine.string().trim().maxLength(80).nullable().optional(),
+  itemKind: vine.string().trim().optional(),
+  purchasable: vine.boolean().optional(),
+  sellable: vine.boolean().optional(),
+  tracksExpiry: vine.boolean().optional(),
+  pickingPolicy: vine.string().trim().optional(),
+  weightKg: vine.string().trim().maxLength(30).nullable().optional(),
+  lengthM: vine.string().trim().maxLength(30).nullable().optional(),
+  widthM: vine.string().trim().maxLength(30).nullable().optional(),
+  heightM: vine.string().trim().maxLength(30).nullable().optional(),
+  leadTimeDays: vine.number().withoutDecimals().nullable().optional(),
+}
+
+const brandFields = {
+  name: vine.string().trim().maxLength(160).optional(),
+  description: vine.string().trim().maxLength(1000).nullable().optional(),
+  countryCode: vine.string().trim().fixedLength(2).nullable().optional(),
+  active: vine.boolean().optional(),
+}
+
+export const createBrandValidator = vine.compile(
+  vine.object({
+    code: vine.string().trim().maxLength(50),
+    ...brandFields,
+    name: vine.string().trim().maxLength(160),
+  })
+)
+
+export const updateBrandValidator = vine.compile(
+  vine.object({ expectedVersion: version(), ...brandFields })
+)
+
 /** O conteúdo (códigos, decimais, regras) é validado pelo domínio; aqui só o transporte. */
 export const createCategoryValidator = vine.compile(
   vine.object({
     code: vine.string().trim().maxLength(50),
     name: vine.string().trim().maxLength(160),
     parentId: uuid().nullable().optional(),
+    description: vine.string().trim().maxLength(1000).nullable().optional(),
+    active: vine.boolean().optional(),
   })
 )
 
@@ -17,6 +55,8 @@ export const updateCategoryValidator = vine.compile(
     expectedVersion: version(),
     name: vine.string().trim().maxLength(160).optional(),
     parentId: uuid().nullable().optional(),
+    description: vine.string().trim().maxLength(1000).nullable().optional(),
+    active: vine.boolean().optional(),
   })
 )
 
@@ -43,6 +83,7 @@ export const createProductValidator = vine.compile(
     trackingMode: vine.string().trim().optional(),
     active: vine.boolean().optional(),
     taxCategory: vine.string().trim().maxLength(50).nullable().optional(),
+    ...productExtras,
     sku: vine.string().trim().maxLength(80).optional(),
     barcode: vine.string().trim().maxLength(80).nullable().optional(),
     attributes: vine.any().optional(),
@@ -62,6 +103,7 @@ export const updateProductValidator = vine.compile(
     trackingMode: vine.string().trim().optional(),
     active: vine.boolean().optional(),
     taxCategory: vine.string().trim().maxLength(50).nullable().optional(),
+    ...productExtras,
   })
 )
 

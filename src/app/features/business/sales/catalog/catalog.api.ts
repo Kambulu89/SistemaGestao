@@ -5,12 +5,42 @@ import { ApiService } from '../../../../core/api/api.service';
 export type ProductType = 'GOODS' | 'SERVICE';
 export type TrackingMode = 'NONE' | 'LOT' | 'SERIAL';
 export type Attributes = Readonly<Record<string, string | number | boolean>>;
+export type ItemKind =
+  'GENERAL' | 'RAW_MATERIAL' | 'FINISHED_GOOD' | 'CONSUMABLE' | 'MAINTENANCE' | 'SERVICE';
+/** Ordem física de expedição dos lotes (não é o método de valorização). */
+export type PickingPolicy = 'FIFO' | 'FEFO' | 'MANUAL';
+
+export interface BrandDto {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly countryCode: string | null;
+  readonly active: boolean;
+  readonly version: number;
+}
+
+/** Classificação, logística e política física (bloco 8.1); decimais em texto. */
+export interface ProductClassification {
+  readonly brandId?: string | null;
+  readonly shortName?: string | null;
+  readonly model?: string | null;
+  readonly itemKind?: ItemKind;
+  readonly purchasable?: boolean;
+  readonly sellable?: boolean;
+  readonly tracksExpiry?: boolean;
+  readonly pickingPolicy?: PickingPolicy;
+  readonly weightKg?: string | null;
+  readonly leadTimeDays?: number | null;
+}
 
 export interface CategoryDto {
   readonly id: string;
   readonly code: string;
   readonly name: string;
   readonly parentId: string | null;
+  readonly description?: string | null;
+  readonly active?: boolean;
   readonly version: number;
 }
 
@@ -37,11 +67,21 @@ export interface ProductDto {
   readonly trackingMode: TrackingMode;
   readonly active: boolean;
   readonly taxCategory: string | null;
+  readonly brandId: string | null;
+  readonly shortName: string | null;
+  readonly model: string | null;
+  readonly itemKind: ItemKind;
+  readonly purchasable: boolean;
+  readonly sellable: boolean;
+  readonly tracksExpiry: boolean;
+  readonly pickingPolicy: PickingPolicy;
+  readonly weightKg: string | null;
+  readonly leadTimeDays: number | null;
   readonly version: number;
   readonly variants?: readonly VariantDto[];
 }
 
-export interface ProductBody {
+export interface ProductBody extends ProductClassification {
   readonly code?: string;
   readonly name: string;
   readonly description?: string | null;
@@ -131,6 +171,29 @@ export interface ResolveQuery {
 @Injectable({ providedIn: 'root' })
 export class CatalogApi {
   private readonly api = inject(ApiService);
+
+  brands(): Observable<readonly BrandDto[]> {
+    return this.api.get('product-brands');
+  }
+
+  createBrand(body: {
+    code: string;
+    name: string;
+    countryCode?: string | null;
+    description?: string | null;
+  }): Observable<BrandDto> {
+    return this.api.post('product-brands', body);
+  }
+
+  updateBrand(
+    brand: Pick<BrandDto, 'id' | 'version'>,
+    body: { name?: string; active?: boolean; countryCode?: string | null },
+  ): Observable<BrandDto> {
+    return this.api.patch(`product-brands/${brand.id}`, {
+      expectedVersion: brand.version,
+      ...body,
+    });
+  }
 
   categories(): Observable<readonly CategoryDto[]> {
     return this.api.get('product-categories');

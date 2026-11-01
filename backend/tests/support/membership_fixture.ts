@@ -151,6 +151,7 @@ export async function deleteTestTenants() {
         'product_variants',
         'products',
         'product_categories',
+        'product_brands',
         'outbox_deliveries',
         'automation_runs',
         'automations',

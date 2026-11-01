@@ -82,3 +82,38 @@ export function catalogError(error: unknown, fallback: string): string {
   const message = (error as { message?: string } | null)?.message;
   return message && message.length > 0 ? message : fallback;
 }
+
+export const ITEM_KIND_LABEL: Readonly<Record<string, string>> = {
+  GENERAL: 'Geral',
+  RAW_MATERIAL: 'Matéria-prima',
+  FINISHED_GOOD: 'Produto acabado',
+  CONSUMABLE: 'Consumível',
+  MAINTENANCE: 'Material de manutenção',
+  SERVICE: 'Serviço',
+};
+
+export const PICKING_POLICY_LABEL: Readonly<Record<string, string>> = {
+  FIFO: 'FIFO (primeiro a entrar)',
+  FEFO: 'FEFO (primeiro a expirar)',
+  MANUAL: 'Selecção manual',
+};
+
+/**
+ * Coerência da validade e da política física com o rastreio (o servidor verifica o mesmo): a validade vive no lote e
+ * FEFO precisa da validade. Devolve a mensagem do problema ou `null`.
+ */
+export function expiryIssue(
+  trackingMode: string,
+  tracksExpiry: boolean,
+  pickingPolicy: string,
+): string | null {
+  if (tracksExpiry && trackingMode !== 'LOT')
+    return 'O controlo de validade exige rastreio por lote.';
+  if (pickingPolicy === 'FEFO' && !tracksExpiry)
+    return 'FEFO exige controlar a validade dos lotes.';
+  return null;
+}
+
+/** Peso em kg como decimal em texto (até 6 casas), ou vazio. */
+export const isWeight = (text: string): boolean =>
+  text === '' || /^\d{1,13}(\.\d{1,6})?$/.test(text);

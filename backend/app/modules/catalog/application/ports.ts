@@ -46,7 +46,7 @@ export interface CategoryStore {
     scope: TenantScope,
     id: string,
     expectedVersion: number,
-    patch: Partial<Pick<CategoryValues, 'name' | 'parentId'>>
+    patch: Partial<Pick<CategoryValues, 'name' | 'parentId' | 'description' | 'active'>>
   ): Promise<Category>
 }
 

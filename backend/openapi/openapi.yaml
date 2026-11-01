@@ -3648,6 +3648,63 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
+  /product-brands:
+    get:
+      summary: Marcas do catálogo (catalog.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: OK. }
+    post:
+      summary: Cria uma marca (catalog.manage); código único e imutável no tenant
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                countryCode: { type: string, nullable: true, description: 'ISO 3166-1 alfa-2.' }
+                active: { type: boolean }
+      responses:
+        '201': { description: Criada (cabeçalho Location). }
+        '409': { description: Código duplicado (BRAND_CODE_TAKEN). }
+        '422': { $ref: '#/components/responses/Error' }
+  /product-brands/{id}:
+    patch:
+      summary: Altera uma marca com expectedVersion (catalog.manage); inactivar em vez de eliminar
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                countryCode: { type: string, nullable: true }
+                active: { type: boolean }
+      responses:
+        '200': { description: Actualizada. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: Versão desactualizada. }
+        '422': { $ref: '#/components/responses/Error' }
   /product-categories:
     get:
       summary: Categorias de produtos em árvore plana (catalog.read)
@@ -3753,6 +3810,29 @@ paths:
                 baseUnitId: { type: string, format: uuid }
                 trackStock: { type: boolean }
                 trackingMode: { type: string, enum: [NONE, LOT, SERIAL] }
+                brandId: { type: string, format: uuid, nullable: true }
+                shortName: { type: string, nullable: true }
+                model: { type: string, nullable: true }
+                itemKind:
+                  {
+                    type: string,
+                    enum: [GENERAL, RAW_MATERIAL, FINISHED_GOOD, CONSUMABLE, MAINTENANCE, SERVICE],
+                    description: 'Finalidade; SERVICE só (e sempre) para serviços.',
+                  }
+                purchasable: { type: boolean }
+                sellable: { type: boolean }
+                tracksExpiry: { type: boolean, description: 'Exige trackingMode LOT.' }
+                pickingPolicy:
+                  {
+                    type: string,
+                    enum: [FIFO, FEFO, MANUAL],
+                    description: 'Ordem física de expedição (não é o método de valorização). FEFO exige tracksExpiry.',
+                  }
+                weightKg: { type: string, nullable: true, description: 'Decimal em texto.' }
+                lengthM: { type: string, nullable: true }
+                widthM: { type: string, nullable: true }
+                heightM: { type: string, nullable: true }
+                leadTimeDays: { type: integer, nullable: true, minimum: 0, maximum: 3650 }
                 active: { type: boolean }
                 taxCategory: { type: string, nullable: true }
                 sku: { type: string }
@@ -3799,6 +3879,29 @@ paths:
                 baseUnitId: { type: string, format: uuid }
                 trackStock: { type: boolean }
                 trackingMode: { type: string, enum: [NONE, LOT, SERIAL] }
+                brandId: { type: string, format: uuid, nullable: true }
+                shortName: { type: string, nullable: true }
+                model: { type: string, nullable: true }
+                itemKind:
+                  {
+                    type: string,
+                    enum: [GENERAL, RAW_MATERIAL, FINISHED_GOOD, CONSUMABLE, MAINTENANCE, SERVICE],
+                    description: 'Finalidade; SERVICE só (e sempre) para serviços.',
+                  }
+                purchasable: { type: boolean }
+                sellable: { type: boolean }
+                tracksExpiry: { type: boolean, description: 'Exige trackingMode LOT.' }
+                pickingPolicy:
+                  {
+                    type: string,
+                    enum: [FIFO, FEFO, MANUAL],
+                    description: 'Ordem física de expedição (não é o método de valorização). FEFO exige tracksExpiry.',
+                  }
+                weightKg: { type: string, nullable: true, description: 'Decimal em texto.' }
+                lengthM: { type: string, nullable: true }
+                widthM: { type: string, nullable: true }
+                heightM: { type: string, nullable: true }
+                leadTimeDays: { type: integer, nullable: true, minimum: 0, maximum: 3650 }
                 active: { type: boolean }
                 taxCategory: { type: string, nullable: true }
       responses:

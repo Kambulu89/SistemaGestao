@@ -4,6 +4,8 @@ import { LucidTenantDatabase } from '#core/tenancy/index'
 import { CatalogUseCases } from '#modules/catalog/application/catalog_use_cases'
 import type { References } from '#modules/catalog/application/ports'
 import { PriceUseCases } from '#modules/catalog/application/price_use_cases'
+import { BrandUseCases } from '#modules/catalog/application/brand_use_cases'
+import { LucidBrandStore } from '#modules/catalog/infrastructure/lucid_brands'
 import {
   LucidCategoryStore,
   LucidPriceStore,
@@ -33,8 +35,10 @@ function build() {
   const products = new LucidProductStore()
   const variants = new LucidVariantStore()
   const prices = new LucidPriceStore()
+  const brands = new LucidBrandStore()
   return {
-    catalog: new CatalogUseCases(uow, categories, products, variants, references),
+    catalog: new CatalogUseCases(uow, categories, products, variants, references, brands),
+    brands: new BrandUseCases(uow, brands),
     prices: new PriceUseCases(uow, prices, products, variants, references),
   }
 }

@@ -6,6 +6,19 @@ export type ProductType = 'GOODS' | 'SERVICE'
 export type TrackingMode = 'NONE' | 'LOT' | 'SERIAL'
 export const PRODUCT_TYPES: readonly ProductType[] = ['GOODS', 'SERVICE']
 export const TRACKING_MODES: readonly TrackingMode[] = ['NONE', 'LOT', 'SERIAL']
+/** Finalidade do artigo (independente do tipo físico e da categoria). Um serviço tem sempre a finalidade SERVICE. */
+export const ITEM_KINDS = [
+  'GENERAL',
+  'RAW_MATERIAL',
+  'FINISHED_GOOD',
+  'CONSUMABLE',
+  'MAINTENANCE',
+  'SERVICE',
+] as const
+export type ItemKind = (typeof ITEM_KINDS)[number]
+/** Ordem FÍSICA de expedição dos lotes; não é o método contabilístico de valorização. */
+export const PICKING_POLICIES = ['FIFO', 'FEFO', 'MANUAL'] as const
+export type PickingPolicy = (typeof PICKING_POLICIES)[number]
 
 export interface Issue {
   path: string
@@ -59,6 +72,46 @@ export interface CategoryValues {
   code: string
   name: string
   parentId: string | null
+  description: string | null
+  active: boolean
+}
+
+// --- marcas -------------------------------------------------------------------------------------------
+
+export interface BrandValues {
+  code: string
+  name: string
+  description: string | null
+  countryCode: string | null
+  active: boolean
+}
+
+export function brandIssues(
+  input: { code?: unknown; name?: unknown; countryCode?: unknown; description?: unknown },
+  creating: boolean
+): Issue[] {
+  const issues: Issue[] = []
+  if (creating && (typeof input.code !== 'string' || !CODE.test(input.code.trim()))) {
+    issues.push(issue('code', 'INVALID_CODE', 'Código: letras, números, . _ - (máx. 50).'))
+  }
+  if ((creating || input.name !== undefined) && !text(input.name, 160)) {
+    issues.push(issue('name', 'INVALID_NAME', 'O nome é obrigatório (máx. 160).'))
+  }
+  if (
+    input.countryCode !== undefined &&
+    input.countryCode !== null &&
+    !(typeof input.countryCode === 'string' && /^[A-Z]{2}$/.test(input.countryCode))
+  ) {
+    issues.push(issue('countryCode', 'INVALID_COUNTRY', 'País: código ISO de 2 letras.'))
+  }
+  if (
+    input.description !== undefined &&
+    input.description !== null &&
+    !text(input.description, 1000)
+  ) {
+    issues.push(issue('description', 'INVALID_DESCRIPTION', 'Máx. 1000 caracteres.'))
+  }
+  return issues
 }
 
 export function categoryIssues(
@@ -88,6 +141,20 @@ export interface ProductValues {
   trackingMode: TrackingMode
   active: boolean
   taxCategory: string | null
+  brandId: string | null
+  shortName: string | null
+  model: string | null
+  itemKind: ItemKind
+  purchasable: boolean
+  sellable: boolean
+  tracksExpiry: boolean
+  pickingPolicy: PickingPolicy
+  /** Dimensões e peso em texto decimal (kg e metros), nunca `number`. */
+  weightKg: string | null
+  lengthM: string | null
+  widthM: string | null
+  heightM: string | null
+  leadTimeDays: number | null
 }
 
 export interface ProductInput {
@@ -101,6 +168,49 @@ export interface ProductInput {
   trackingMode?: unknown
   active?: unknown
   taxCategory?: unknown
+  brandId?: unknown
+  shortName?: unknown
+  model?: unknown
+  itemKind?: unknown
+  purchasable?: unknown
+  sellable?: unknown
+  tracksExpiry?: unknown
+  pickingPolicy?: unknown
+  weightKg?: unknown
+  lengthM?: unknown
+  widthM?: unknown
+  heightM?: unknown
+  leadTimeDays?: unknown
+}
+
+/** Campo opcional: mantém o valor anterior quando ausente, `null` limpa. */
+function optionalText(
+  input: unknown,
+  previous: string | null | undefined,
+  max: number,
+  path: string,
+  issues: Issue[]
+): string | null {
+  if (input === undefined) return previous ?? null
+  if (input === null) return null
+  const value = text(input, max)
+  if (value === null) issues.push(issue(path, 'INVALID_TEXT', `Máx. ${max} caracteres.`))
+  return value
+}
+
+function optionalQuantity(
+  input: unknown,
+  previous: string | null | undefined,
+  path: string,
+  issues: Issue[]
+): string | null {
+  if (input === undefined) return previous ?? null
+  if (input === null) return null
+  if (typeof input !== 'string' || !QUANTITY.test(input)) {
+    issues.push(issue(path, 'INVALID_DECIMAL', 'Decimal não negativo em texto (até 6 casas).'))
+    return null
+  }
+  return input
 }
 
 /**
@@ -180,6 +290,62 @@ export function normalizeProduct(
     input.categoryId === undefined
       ? (base?.categoryId ?? null)
       : (input.categoryId as string | null)
+  const brandId =
+    input.brandId === undefined
+      ? (base?.brandId ?? null)
+      : ((input.brandId as string | null) ?? null)
+  const shortName = optionalText(input.shortName, base?.shortName, 60, 'shortName', issues)
+  const model = optionalText(input.model, base?.model, 80, 'model', issues)
+  const itemKind = (
+    type === 'SERVICE'
+      ? 'SERVICE'
+      : (input.itemKind ??
+        (base?.itemKind && base.itemKind !== 'SERVICE' ? base.itemKind : 'GENERAL'))
+  ) as ItemKind
+  if (!ITEM_KINDS.includes(itemKind) || (type === 'GOODS' && itemKind === 'SERVICE')) {
+    issues.push(
+      issue('itemKind', 'INVALID_ITEM_KIND', 'Finalidade inválida para o tipo de artigo.')
+    )
+  }
+  const flag = (value: unknown, previous: boolean | undefined, fallback: boolean, path: string) => {
+    const resolved = value === undefined ? (previous ?? fallback) : value
+    if (typeof resolved !== 'boolean')
+      issues.push(issue(path, 'INVALID_FLAG', `${path} é booleano.`))
+    return resolved as boolean
+  }
+  const purchasable = flag(input.purchasable, base?.purchasable, true, 'purchasable')
+  const sellable = flag(input.sellable, base?.sellable, true, 'sellable')
+  const tracksExpiry = flag(input.tracksExpiry, base?.tracksExpiry, false, 'tracksExpiry')
+  const pickingPolicy = (input.pickingPolicy ?? base?.pickingPolicy ?? 'FIFO') as PickingPolicy
+  if (!PICKING_POLICIES.includes(pickingPolicy)) {
+    issues.push(
+      issue('pickingPolicy', 'INVALID_POLICY', `Política: ${PICKING_POLICIES.join(', ')}.`)
+    )
+  }
+  if (tracksExpiry && trackingMode !== 'LOT') {
+    issues.push(
+      issue('tracksExpiry', 'EXPIRY_NEEDS_LOT', 'O controlo de validade exige rastreio por lote.')
+    )
+  }
+  if (pickingPolicy === 'FEFO' && !tracksExpiry) {
+    issues.push(
+      issue('pickingPolicy', 'FEFO_NEEDS_EXPIRY', 'FEFO exige controlar a validade dos lotes.')
+    )
+  }
+  const weightKg = optionalQuantity(input.weightKg, base?.weightKg, 'weightKg', issues)
+  const lengthM = optionalQuantity(input.lengthM, base?.lengthM, 'lengthM', issues)
+  const widthM = optionalQuantity(input.widthM, base?.widthM, 'widthM', issues)
+  const heightM = optionalQuantity(input.heightM, base?.heightM, 'heightM', issues)
+  const leadTimeDays =
+    input.leadTimeDays === undefined
+      ? (base?.leadTimeDays ?? null)
+      : (input.leadTimeDays as number | null)
+  if (
+    leadTimeDays !== null &&
+    !(Number.isInteger(leadTimeDays) && leadTimeDays >= 0 && leadTimeDays <= 3650)
+  ) {
+    issues.push(issue('leadTimeDays', 'INVALID_LEAD_TIME', 'Prazo de reposição: 0 a 3650 dias.'))
+  }
   if (issues.length > before) return null
   return {
     code,
@@ -192,6 +358,19 @@ export function normalizeProduct(
     trackingMode: type === 'SERVICE' ? 'NONE' : trackingMode,
     active: active as boolean,
     taxCategory,
+    brandId,
+    shortName,
+    model,
+    itemKind,
+    purchasable,
+    sellable,
+    tracksExpiry: type === 'SERVICE' ? false : tracksExpiry,
+    pickingPolicy: type === 'SERVICE' ? 'FIFO' : pickingPolicy,
+    weightKg: type === 'SERVICE' ? null : weightKg,
+    lengthM: type === 'SERVICE' ? null : lengthM,
+    widthM: type === 'SERVICE' ? null : widthM,
+    heightM: type === 'SERVICE' ? null : heightM,
+    leadTimeDays,
   }
 }
 

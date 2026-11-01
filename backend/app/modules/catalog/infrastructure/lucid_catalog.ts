@@ -5,6 +5,8 @@ import type {
   PriceCandidate,
   PriceItemValues,
   PriceListValues,
+  ItemKind,
+  PickingPolicy,
   ProductType,
   ProductValues,
   TrackingMode,
@@ -39,16 +41,21 @@ interface CategoryRow {
   parent_id: string | null
   code: string
   name: string
+  description: string | null
+  active: boolean
   version: number
   created_at: Date
   updated_at: Date
 }
-const CATEGORY_COLUMNS = 'id, parent_id, code, name, version, created_at, updated_at'
+const CATEGORY_COLUMNS =
+  'id, parent_id, code, name, description, active, version, created_at, updated_at'
 const toCategory = (r: CategoryRow): Category => ({
   id: r.id,
   parentId: r.parent_id,
   code: r.code,
   name: r.name,
+  description: r.description,
+  active: r.active,
   version: r.version,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -74,9 +81,19 @@ export class LucidCategoryStore implements CategoryStore {
 
   async insert(scope: TenantScope, v: CategoryValues) {
     const result = await trxOf(scope).rawQuery(
-      `insert into product_categories (tenant_id, parent_id, code, name, created_by_membership_id, updated_by_membership_id)
-       values (?, ?, ?, ?, ?, ?) on conflict do nothing returning id`,
-      [tenantOf(scope), v.parentId as never, v.code, v.name, actorOf(scope), actorOf(scope)]
+      `insert into product_categories
+         (tenant_id, parent_id, code, name, description, active, created_by_membership_id, updated_by_membership_id)
+       values (?, ?, ?, ?, ?, ?, ?, ?) on conflict do nothing returning id`,
+      [
+        tenantOf(scope),
+        v.parentId as never,
+        v.code,
+        v.name,
+        v.description as never,
+        v.active,
+        actorOf(scope),
+        actorOf(scope),
+      ]
     )
     const [created] = result.rows as { id: string }[]
     return created ? this.find(scope, created.id) : null
@@ -86,10 +103,18 @@ export class LucidCategoryStore implements CategoryStore {
     scope: TenantScope,
     id: string,
     expectedVersion: number,
-    patch: Partial<Pick<CategoryValues, 'name' | 'parentId'>>
+    patch: Partial<Pick<CategoryValues, 'name' | 'parentId' | 'description' | 'active'>>
   ) {
     const sets: string[] = []
     const params: unknown[] = []
+    if (patch.description !== undefined) {
+      sets.push('description = ?')
+      params.push(patch.description)
+    }
+    if (patch.active !== undefined) {
+      sets.push('active = ?')
+      params.push(patch.active)
+    }
     if (patch.name !== undefined) {
       sets.push('name = ?')
       params.push(patch.name)
@@ -125,12 +150,27 @@ interface ProductRow {
   tracking_mode: TrackingMode
   active: boolean
   tax_category: string | null
+  brand_id: string | null
+  short_name: string | null
+  model: string | null
+  item_kind: ItemKind
+  purchasable: boolean
+  sellable: boolean
+  tracks_expiry: boolean
+  picking_policy: PickingPolicy
+  weight_kg: string | null
+  length_m: string | null
+  width_m: string | null
+  height_m: string | null
+  lead_time_days: number | null
   version: number
   created_at: Date
   updated_at: Date
 }
 const PRODUCT_COLUMNS = `id, code, name, description, type, category_id, base_unit_id, track_stock, tracking_mode,
-  active, tax_category, version, created_at, updated_at`
+  active, tax_category, brand_id, short_name, model, item_kind, purchasable, sellable, tracks_expiry, picking_policy,
+  weight_kg::text as weight_kg, length_m::text as length_m, width_m::text as width_m, height_m::text as height_m,
+  lead_time_days, version, created_at, updated_at`
 const toProduct = (r: ProductRow): Product => ({
   id: r.id,
   code: r.code,
@@ -143,10 +183,41 @@ const toProduct = (r: ProductRow): Product => ({
   trackingMode: r.tracking_mode,
   active: r.active,
   taxCategory: r.tax_category,
+  brandId: r.brand_id,
+  shortName: r.short_name,
+  model: r.model,
+  itemKind: r.item_kind,
+  purchasable: r.purchasable,
+  sellable: r.sellable,
+  tracksExpiry: r.tracks_expiry,
+  pickingPolicy: r.picking_policy,
+  weightKg: r.weight_kg,
+  lengthM: r.length_m,
+  widthM: r.width_m,
+  heightM: r.height_m,
+  leadTimeDays: r.lead_time_days,
   version: r.version,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
 })
+
+/** Colunas acrescentadas no bloco 8.1, pela ordem do INSERT e do UPDATE. */
+const extraValues = (v: ProductValues): never[] =>
+  [
+    v.brandId,
+    v.shortName,
+    v.model,
+    v.itemKind,
+    v.purchasable,
+    v.sellable,
+    v.tracksExpiry,
+    v.pickingPolicy,
+    v.weightKg,
+    v.lengthM,
+    v.widthM,
+    v.heightM,
+    v.leadTimeDays,
+  ] as never[]
 
 const escapeLike = (text: string) => text.replace(/[\\%_]/g, (c) => `\\${c}`)
 
@@ -204,8 +275,8 @@ export class LucidProductStore implements ProductStore {
     const result = await trxOf(scope).rawQuery(
       `insert into products
          (tenant_id, code, name, description, type, category_id, base_unit_id, track_stock, tracking_mode, active,
-          tax_category, created_by_membership_id, updated_by_membership_id)
-       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          tax_category, brand_id, short_name, model, item_kind, purchasable, sellable, tracks_expiry, picking_policy, weight_kg, length_m, width_m, height_m, lead_time_days, created_by_membership_id, updated_by_membership_id)
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        on conflict do nothing returning id`,
       [
         tenantOf(scope),
@@ -219,6 +290,7 @@ export class LucidProductStore implements ProductStore {
         v.trackingMode,
         v.active,
         v.taxCategory as never,
+        ...extraValues(v),
         actorOf(scope),
         actorOf(scope),
       ]
@@ -231,7 +303,9 @@ export class LucidProductStore implements ProductStore {
     const result = await trxOf(scope).rawQuery(
       `update products
           set name = ?, description = ?, type = ?, category_id = ?, base_unit_id = ?, track_stock = ?,
-              tracking_mode = ?, active = ?, tax_category = ?, updated_at = now(),
+              tracking_mode = ?, active = ?, tax_category = ?, brand_id = ?, short_name = ?, model = ?,
+              item_kind = ?, purchasable = ?, sellable = ?, tracks_expiry = ?, picking_policy = ?, weight_kg = ?,
+              length_m = ?, width_m = ?, height_m = ?, lead_time_days = ?, updated_at = now(),
               updated_by_membership_id = ?, version = version + 1
         where tenant_id = ? and id = ? and version = ? returning id`,
       [
@@ -244,6 +318,7 @@ export class LucidProductStore implements ProductStore {
         v.trackingMode,
         v.active,
         v.taxCategory as never,
+        ...extraValues(v),
         actorOf(scope),
         tenantOf(scope),
         id,

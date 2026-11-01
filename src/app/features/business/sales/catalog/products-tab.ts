@@ -16,6 +16,8 @@ import { Select, type SelectOption } from '../../../../shared/ui/select/select';
 import { Table, type TableColumn } from '../../../../shared/ui/table/table';
 import {
   CatalogApi,
+  type ItemKind,
+  type PickingPolicy,
   type ProductBody,
   type ProductDto,
   type ProductType,
@@ -24,8 +26,12 @@ import {
 } from './catalog.api';
 import {
   catalogError,
+  expiryIssue,
   formatAttributes,
+  isWeight,
+  ITEM_KIND_LABEL,
   parseAttributes,
+  PICKING_POLICY_LABEL,
   stockIssue,
   TRACKING_LABEL,
 } from './catalog-model';
@@ -201,6 +207,32 @@ const TRACKING: readonly SelectOption[] = (Object.keys(TRACKING_LABEL) as Tracki
             [ngModel]="description()"
             (ngModelChange)="description.set($event ?? '')"
           />
+          <app-select
+            label="Marca"
+            placeholder="Sem marca"
+            [options]="brandOptions()"
+            [ngModel]="brandId()"
+            (ngModelChange)="brandId.set($event ?? '')"
+          />
+          <app-input label="Modelo" [ngModel]="model()" (ngModelChange)="model.set($event ?? '')" />
+          @if (productType() === 'GOODS') {
+            <app-select
+              label="Finalidade"
+              [options]="itemKindOptions"
+              [ngModel]="itemKind()"
+              (ngModelChange)="itemKind.set($event ?? 'GENERAL')"
+            />
+          }
+          <app-checkbox
+            label="Disponível para compra"
+            [ngModel]="purchasable()"
+            (ngModelChange)="purchasable.set(!!$event)"
+          />
+          <app-checkbox
+            label="Disponível para venda"
+            [ngModel]="sellable()"
+            (ngModelChange)="sellable.set(!!$event)"
+          />
           @if (productType() === 'GOODS') {
             <app-checkbox
               label="Controlar stock"
@@ -212,6 +244,28 @@ const TRACKING: readonly SelectOption[] = (Object.keys(TRACKING_LABEL) as Tracki
               [options]="trackingOptions"
               [ngModel]="trackingMode()"
               (ngModelChange)="trackingMode.set(asTracking($event))"
+            />
+            <app-checkbox
+              label="Controlar validade (por lote)"
+              [ngModel]="tracksExpiry()"
+              (ngModelChange)="tracksExpiry.set(!!$event)"
+            />
+            <app-select
+              label="Política física de expedição"
+              hint="Ordem de saída dos lotes; não é o método de valorização."
+              [options]="pickingOptions"
+              [ngModel]="pickingPolicy()"
+              (ngModelChange)="pickingPolicy.set($event ?? 'FIFO')"
+            />
+            <app-input
+              label="Peso (kg)"
+              [ngModel]="weightKg()"
+              (ngModelChange)="weightKg.set($event ?? '')"
+            />
+            <app-input
+              label="Prazo de reposição (dias)"
+              [ngModel]="leadTimeDays()"
+              (ngModelChange)="leadTimeDays.set($event ?? '')"
             />
           }
           @if (!editing()!.id) {
@@ -363,6 +417,27 @@ export class ProductsTab {
   protected readonly categoryId = signal('');
   protected readonly trackStock = signal(true);
   protected readonly trackingMode = signal<TrackingMode>('NONE');
+  protected readonly brandId = signal('');
+  protected readonly model = signal('');
+  protected readonly itemKind = signal<string>('GENERAL');
+  protected readonly purchasable = signal(true);
+  protected readonly sellable = signal(true);
+  protected readonly tracksExpiry = signal(false);
+  protected readonly pickingPolicy = signal<string>('FIFO');
+  protected readonly weightKg = signal('');
+  protected readonly leadTimeDays = signal('');
+  protected readonly itemKindOptions: readonly SelectOption[] = Object.entries(ITEM_KIND_LABEL)
+    .filter(([value]) => value !== 'SERVICE')
+    .map(([value, label]) => ({ value, label }));
+  protected readonly pickingOptions: readonly SelectOption[] = Object.entries(
+    PICKING_POLICY_LABEL,
+  ).map(([value, label]) => ({ value, label }));
+  private readonly brands = rxResource({ stream: () => this.api.brands() });
+  protected readonly brandOptions = computed<readonly SelectOption[]>(() =>
+    (this.brands.hasValue() ? this.brands.value() : [])
+      .filter((b) => b.active || b.id === this.brandId())
+      .map((b) => ({ value: b.id, label: b.name })),
+  );
   protected readonly active = signal(true);
   protected readonly sku = signal('');
   protected readonly barcode = signal('');
@@ -406,6 +481,15 @@ export class ProductsTab {
     this.categoryId.set('');
     this.trackStock.set(true);
     this.trackingMode.set('NONE');
+    this.brandId.set('');
+    this.model.set('');
+    this.itemKind.set('GENERAL');
+    this.purchasable.set(true);
+    this.sellable.set(true);
+    this.tracksExpiry.set(false);
+    this.pickingPolicy.set('FIFO');
+    this.weightKg.set('');
+    this.leadTimeDays.set('');
     this.active.set(true);
     this.sku.set('');
     this.barcode.set('');
@@ -429,6 +513,15 @@ export class ProductsTab {
     this.categoryId.set(row.categoryId ?? '');
     this.trackStock.set(row.trackStock);
     this.trackingMode.set(row.trackingMode);
+    this.brandId.set(row.brandId ?? '');
+    this.model.set(row.model ?? '');
+    this.itemKind.set(row.itemKind);
+    this.purchasable.set(row.purchasable);
+    this.sellable.set(row.sellable);
+    this.tracksExpiry.set(row.tracksExpiry);
+    this.pickingPolicy.set(row.pickingPolicy);
+    this.weightKg.set(row.weightKg ?? '');
+    this.leadTimeDays.set(row.leadTimeDays?.toString() ?? '');
     this.active.set(row.active);
     this.variants.set(row.variants ?? []);
     this.editing.set({ id: row.id, version: row.version });
@@ -460,6 +553,18 @@ export class ProductsTab {
     }
     const problem = stockIssue(this.productType(), this.trackStock(), this.trackingMode());
     if (problem) return void this.clientError.set(problem);
+    const goods = this.productType() === 'GOODS';
+    const expiry = goods
+      ? expiryIssue(this.trackingMode(), this.tracksExpiry(), this.pickingPolicy())
+      : null;
+    if (expiry) return void this.clientError.set(expiry);
+    if (goods && !isWeight(this.weightKg().trim())) {
+      return void this.clientError.set('O peso é um decimal não negativo (até 6 casas).');
+    }
+    const lead = this.leadTimeDays().trim();
+    if (goods && lead && !/^\d{1,4}$/.test(lead)) {
+      return void this.clientError.set('O prazo de reposição é um número inteiro de dias.');
+    }
 
     const body: ProductBody = {
       name: this.name().trim(),
@@ -469,6 +574,19 @@ export class ProductsTab {
       baseUnitId: this.unitId(),
       trackStock: this.trackStock(),
       trackingMode: this.trackingMode(),
+      brandId: this.brandId() || null,
+      model: this.model().trim() || null,
+      purchasable: this.purchasable(),
+      sellable: this.sellable(),
+      ...(goods
+        ? {
+            itemKind: this.itemKind() as ItemKind,
+            tracksExpiry: this.tracksExpiry(),
+            pickingPolicy: this.pickingPolicy() as PickingPolicy,
+            weightKg: this.weightKg().trim() || null,
+            leadTimeDays: lead ? Number(lead) : null,
+          }
+        : {}),
     };
     if (state.id) {
       this.run(

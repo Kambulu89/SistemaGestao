@@ -4,7 +4,9 @@ import { envelope } from '#core/http/api_response'
 import { isUuid } from '#core/tenancy/index'
 import { catalogServices } from '#modules/catalog/presentation/composition'
 import {
+  createBrandValidator,
   createCategoryValidator,
+  updateBrandValidator,
   createPriceItemValidator,
   createPriceListValidator,
   createProductValidator,
@@ -29,6 +31,25 @@ function uuidParam(ctx: HttpContext, name: string): string {
 /** Transporte apenas: valida, chama o caso de uso e formata a resposta. */
 export default class CatalogController {
   // --- categorias ----------------------------------------------------------------------------
+
+  async listBrands(ctx: HttpContext) {
+    return envelope(ctx, await catalogServices().brands.list(ctx.tenantContext))
+  }
+
+  async createBrand(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(createBrandValidator)
+    const created = await catalogServices().brands.create(ctx.tenantContext, b)
+    ctx.response.status(201).header('location', `/api/v1/product-brands/${created.id}`)
+    return envelope(ctx, created)
+  }
+
+  async updateBrand(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(updateBrandValidator)
+    return envelope(
+      ctx,
+      await catalogServices().brands.update(ctx.tenantContext, uuidParam(ctx, 'id'), b)
+    )
+  }
 
   async listCategories(ctx: HttpContext) {
     return envelope(ctx, await catalogServices().catalog.listCategories(ctx.tenantContext))

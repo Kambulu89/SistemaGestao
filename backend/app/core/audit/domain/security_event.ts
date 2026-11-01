@@ -90,6 +90,7 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   automations: 'automation.read',
   automation_runs: 'automation.read',
   product_categories: 'catalog.read',
+  product_brands: 'catalog.read',
   products: 'catalog.read',
   product_variants: 'catalog.read',
   customer_segments: 'customer.read',

@@ -1,22 +1,24 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { PermissionService } from '../../../../core/permissions/permission.service';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
+import { BrandsTab } from './brands-tab';
 import { CategoriesTab } from './categories-tab';
 import { PricesTab } from './prices-tab';
 import { ProductsTab } from './products-tab';
 
-type TabId = 'products' | 'categories' | 'prices';
+type TabId = 'products' | 'categories' | 'brands' | 'prices';
 
 const TABS: readonly { id: TabId; label: string; permission: string }[] = [
   { id: 'products', label: 'Produtos', permission: 'catalog.read' },
   { id: 'categories', label: 'Categorias', permission: 'catalog.read' },
+  { id: 'brands', label: 'Marcas', permission: 'catalog.read' },
   { id: 'prices', label: 'Tabelas de preços', permission: 'price.read' },
 ];
 
 /** Catálogo e preços (M03): produtos com variantes, categorias e tabelas de preços sobre a API real. */
 @Component({
   selector: 'app-catalog-page',
-  imports: [PageHeader, ProductsTab, CategoriesTab, PricesTab],
+  imports: [PageHeader, ProductsTab, CategoriesTab, BrandsTab, PricesTab],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header
@@ -47,6 +49,9 @@ const TABS: readonly { id: TabId; label: string; permission: string }[] = [
       }
       @case ('categories') {
         <app-catalog-categories />
+      }
+      @case ('brands') {
+        <app-catalog-brands />
       }
       @case ('prices') {
         <app-catalog-prices />

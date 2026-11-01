@@ -53,6 +53,7 @@ export interface World {
     automation: string
     run: string
     category: string
+    brand: string
     product: string
     variant: string
     priceList: string
@@ -643,6 +644,10 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     await http.post('/api/v1/product-categories', { code: 'ROUPA', name: 'Roupa' }),
     201
   )
+  const brand = await must<{ id: string }>(
+    await http.post('/api/v1/product-brands', { code: 'MARCA', name: 'Marca' }),
+    201
+  )
   const catalogProduct = await must<{ id: string; variants: { id: string }[] }>(
     await http.post('/api/v1/products', {
       code: 'CAM-001',
@@ -650,6 +655,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       type: 'GOODS',
       baseUnitId: kg.id,
       categoryId: category.id,
+      brandId: brand.id,
     }),
     201
   )
@@ -1466,6 +1472,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       automation: automation.id,
       run: run.id,
       category: category.id,
+      brand: brand.id,
       product: catalogProduct.id,
       variant: variant.id,
       priceList: priceList.id,

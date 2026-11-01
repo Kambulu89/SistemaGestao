@@ -20,6 +20,7 @@ import type {
   VariantStore,
 } from '#modules/catalog/application/ports'
 import { hasMovements } from '#modules/catalog/application/registry'
+import type { BrandStore } from '#modules/catalog/application/brand_use_cases'
 
 export const catalogValidation = (details: Issue[]) =>
   new ApiError(422, 'VALIDATION_ERROR', 'Verifique os campos indicados.', details)
@@ -37,7 +38,8 @@ export class CatalogUseCases {
     private readonly categories: CategoryStore,
     private readonly products: ProductStore,
     private readonly variants: VariantStore,
-    private readonly references: References
+    private readonly references: References,
+    private readonly brands: Pick<BrandStore, 'find'>
   ) {}
 
   // --- categorias ----------------------------------------------------------------------------
@@ -48,7 +50,13 @@ export class CatalogUseCases {
 
   async createCategory(
     context: TenantContext,
-    input: { code: string; name: string; parentId?: string | null }
+    input: {
+      code: string
+      name: string
+      parentId?: string | null
+      description?: string | null
+      active?: boolean
+    }
   ): Promise<Category> {
     const issues = categoryIssues(input, true)
     if (issues.length > 0) throw catalogValidation(issues)
@@ -67,6 +75,8 @@ export class CatalogUseCases {
         code: input.code.trim(),
         name: input.name.trim(),
         parentId,
+        description: input.description?.trim() || null,
+        active: input.active ?? true,
       })
       if (!created) {
         throw ApiError.conflict('CATEGORY_CODE_TAKEN', 'Já existe uma categoria com este código.')
@@ -78,7 +88,13 @@ export class CatalogUseCases {
   async updateCategory(
     context: TenantContext,
     id: string,
-    input: { expectedVersion: number; name?: string; parentId?: string | null }
+    input: {
+      expectedVersion: number
+      name?: string
+      parentId?: string | null
+      description?: string | null
+      active?: boolean
+    }
   ): Promise<Category> {
     const issues = categoryIssues(input, false)
     if (issues.length > 0) throw catalogValidation(issues)
@@ -108,6 +124,9 @@ export class CatalogUseCases {
       return this.categories.update(scope, id, input.expectedVersion, {
         name: input.name?.trim(),
         parentId: input.parentId,
+        description:
+          input.description === undefined ? undefined : input.description?.trim() || null,
+        active: input.active,
       })
     }, context)
   }
@@ -278,10 +297,23 @@ export class CatalogUseCases {
 
   private async checkReferences(
     context: TenantContext,
-    values: { baseUnitId: string; categoryId: string | null },
+    values: { baseUnitId: string; categoryId: string | null; brandId: string | null },
     before?: Product
   ) {
     const issues: Issue[] = []
+    if (values.brandId && values.brandId !== before?.brandId) {
+      const brand = await this.uow.run(
+        (scope: TenantScope) => this.brands.find(scope, values.brandId as string),
+        context
+      )
+      if (!brand || !brand.active) {
+        issues.push({
+          path: 'brandId',
+          code: 'UNKNOWN_BRAND',
+          message: 'A marca não existe ou está inactiva.',
+        })
+      }
+    }
     if (
       values.baseUnitId !== before?.baseUnitId &&
       !(await this.references.unitExists(context, values.baseUnitId))

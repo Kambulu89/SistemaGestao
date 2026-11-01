@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  expiryIssue,
+  isWeight,
   formatAttributes,
   formatDecimal,
   isMoney,
@@ -55,5 +57,21 @@ describe('regras de stock do produto', () => {
     expect(stockIssue('GOODS', false, 'LOT')).not.toBeNull();
     expect(stockIssue('GOODS', true, 'SERIAL')).toBeNull();
     expect(stockIssue('SERVICE', false, 'NONE')).toBeNull();
+  });
+});
+
+describe('validade e política física de expedição', () => {
+  it('a validade exige lote e FEFO exige validade', () => {
+    expect(expiryIssue('NONE', true, 'FIFO')).toContain('lote');
+    expect(expiryIssue('LOT', false, 'FEFO')).toContain('FEFO');
+    expect(expiryIssue('LOT', true, 'FEFO')).toBeNull();
+    expect(expiryIssue('SERIAL', false, 'MANUAL')).toBeNull();
+  });
+
+  it('peso em decimal não negativo com até 6 casas', () => {
+    expect(isWeight('')).toBe(true);
+    expect(isWeight('0.125')).toBe(true);
+    expect(isWeight('1.1234567')).toBe(false);
+    expect(isWeight('-1')).toBe(false);
   });
 });

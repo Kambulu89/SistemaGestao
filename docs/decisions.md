@@ -1167,6 +1167,37 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
 - **Consequências.** Testes: `iam.spec` (escalada, papel inactivo), `members.spec` (ciclo de vida), `auth.spec` (último login),
   `tenants.spec`, `positions.spec`; matriz de isolamento estendida a `/positions`.
 
+## D-066 Inventário (Prompt 08): evoluir catálogo e inventário existentes, sem segundo «produto» (aceite — bloco 8.1)
+
+- **Contexto.** O Prompt 08 pede um módulo de inventário completo. A análise do código mostra que a maior parte existe e funciona:
+  catálogo (M03: produtos GOODS/SERVICE, variantes com SKU e código de barras únicos, categorias em árvore, rastreio por lote ou
+  série), unidades com dimensão e conversão exacta (C09), inventário (M07/M08: armazéns por empresa, locais, lotes com validade,
+  livro de movimentos imutável, saldos sob bloqueio, custo médio, reservas, transferências com trânsito, contagens que congelam
+  locais, devoluções), recepções de compra e expedições de venda que movem stock por efeitos na mesma transacção.
+- **Matriz de compatibilidade (resumo).**
+
+  | Funcionalidade | Estado | Acção |
+  |---|---|---|
+  | Produtos/serviços, variantes, SKU, código de barras, unidades e conversões | Existe (catalog, settings) | MANTER |
+  | Marcas; finalidade do artigo; dados logísticos; política física FIFO/FEFO; validade | Não existia | DESENVOLVER (8.1, feito) |
+  | Categorias hierárquicas sem ciclos | Existe; faltavam descrição e estado | ADAPTAR (8.1, feito) |
+  | Armazéns, locais | Existe (sem filial, tipo, responsável; locais planos) | ADAPTAR (8.2) |
+  | Movimentos, saldos, custo médio, reservas | Existe | MANTER; disponibilidade/bloqueio a rever (8.3) |
+  | Entradas/saídas genéricas, requisições internas | Só por compra/venda/ajuste | DESENVOLVER (8.4, 8.6) |
+  | Transferências, contagens, devoluções | Existe (M08) | MANTER; aprovação de transferências e contagem cega a avaliar (8.5, 8.7) |
+  | Números de série individuais | Só o modo de rastreio | DESENVOLVER (8.8) |
+  | FIFO contabilístico, camadas de custo | Não existe | DESENVOLVER (8.9) |
+  | Contabilização das existências | Motor existe (E1); sem produtores | DESENVOLVER (8.10, com E2) |
+  | Painel, alertas, reposição, relatórios de stock | Não existe | DESENVOLVER (8.11) |
+
+- **Decisão (8.1).** Migração 43 estende `products` (marca, nome abreviado, modelo, `item_kind`, disponível para compra/venda,
+  `tracks_expiry`, `picking_policy`, peso e dimensões em `numeric(19,6)`, prazo de reposição) e `product_categories` (descrição,
+  estado) e cria `product_brands`. O tipo (bem/serviço), a finalidade e a categoria ficam separados. `picking_policy` é a ordem
+  **física** de expedição e não o método de valorização; FEFO exige validade e a validade exige lote (CHECK na base e regra no
+  domínio). As permissões continuam `catalog.read|manage`; as permissões granulares do Prompt 08 entram com os blocos que as usam.
+- **Limites.** Mínimos/máximos e ponto de reposição ficam para regras por armazém (8.11), não no produto; kits não são suportados
+  (sem estrutura de componentes); imagens de produto e importação/exportação ficam por fazer.
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de
