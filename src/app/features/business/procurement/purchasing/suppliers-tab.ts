@@ -8,17 +8,33 @@ import { Alert } from '../../../../shared/ui/alert/alert';
 import { Badge } from '../../../../shared/ui/badge/badge';
 import { Button } from '../../../../shared/ui/button/button';
 import { Card } from '../../../../shared/ui/card/card';
+import { Checkbox } from '../../../../shared/ui/checkbox/checkbox';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { Input } from '../../../../shared/ui/input/input';
 import { LoadingState } from '../../../../shared/ui/loading-state/loading-state';
 import { Select, type SelectOption } from '../../../../shared/ui/select/select';
 import { Table, type TableColumn } from '../../../../shared/ui/table/table';
-import { PurchasingApi, type PartyOption, type SupplierDto } from './purchasing.api';
-import { purchasingError, SUPPLIER_STATUS } from './purchasing-model';
+import {
+  PurchasingApi,
+  type ApprovalStatus,
+  type PartyOption,
+  type SupplierDto,
+  type SupplierRating,
+  type SupplyType,
+} from './purchasing.api';
+import {
+  APPROVAL_STATUS,
+  leadTimeValue,
+  purchasingError,
+  SUPPLIER_STATUS,
+  SUPPLY_TYPE,
+} from './purchasing-model';
+import { SupplierApprovalPanel } from './supplier-approval-panel';
 
 /**
  * Fornecedores (M06): as condições de compra sobre uma Party, por organização. Nome e NIF vêm da Party. Um fornecedor
- * bloqueado ou inactivo não recebe novas encomendas (as já confirmadas continuam a receber-se).
+ * bloqueado ou inactivo, com homologação rejeitada, suspensa ou caducada, ou crítico sem homologação em vigor, não recebe
+ * novas encomendas (as já confirmadas continuam a receber-se). Classificação e homologação: bloco 9.1.
  */
 @Component({
   selector: 'app-purchasing-suppliers',
@@ -28,10 +44,12 @@ import { purchasingError, SUPPLIER_STATUS } from './purchasing-model';
     Badge,
     Button,
     Card,
+    Checkbox,
     EmptyState,
     Input,
     LoadingState,
     Select,
+    SupplierApprovalPanel,
     Table,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -101,7 +119,24 @@ import { purchasingError, SUPPLIER_STATUS } from './purchasing-model';
             >{{ s.code }} · {{ s.currency }} · {{ s.paymentTermDays }} dias</span
           >
         </div>
-        <p class="mt-2 text-sm text-fg-muted">NIF: {{ s.taxId ?? '—' }}</p>
+        <p class="mt-2 text-sm text-fg-muted">
+          NIF: {{ s.taxId ?? '—' }} · {{ supplyLabel(s.supplyType) }}
+          @if (s.categoryName) {
+            · {{ s.categoryName }}
+          }
+          @if (s.critical) {
+            · <strong>crítico</strong>
+          }
+          @if (s.rating) {
+            · avaliação {{ s.rating }}
+          }
+          @if (s.leadTimeDays !== null) {
+            · entrega em {{ s.leadTimeDays }} dias
+          }
+        </p>
+        @if (s.notes) {
+          <p class="mt-1 text-sm">{{ s.notes }}</p>
+        }
         @if (s.statusReason) {
           <p class="mt-2 text-sm" data-testid="supplier-reason">Motivo: {{ s.statusReason }}</p>
         }
@@ -122,16 +157,71 @@ import { purchasingError, SUPPLIER_STATUS } from './purchasing-model';
               <app-button [loading]="busy()" (click)="activate()">Reactivar</app-button>
             }
           </div>
+          <div class="mt-5 border-t border-line pt-4" data-testid="supplier-classification">
+            <h3 class="mb-3 text-sm font-semibold">Classificação</h3>
+            <div class="grid gap-3 sm:grid-cols-3">
+              <app-select
+                label="Categoria"
+                placeholder="Sem categoria"
+                [options]="categoryOptions()"
+                [ngModel]="categoryId()"
+                (ngModelChange)="categoryId.set($event ?? '')"
+              />
+              <app-select
+                label="Fornece"
+                [options]="supplyOptions"
+                [ngModel]="supplyType()"
+                (ngModelChange)="supplyType.set($event ?? 'GOODS')"
+              />
+              <app-select
+                label="Avaliação"
+                placeholder="Sem avaliação"
+                [options]="ratingOptions"
+                [ngModel]="rating()"
+                (ngModelChange)="rating.set($event ?? '')"
+              />
+              <app-input
+                label="Prazo de entrega (dias)"
+                [ngModel]="leadTime()"
+                (ngModelChange)="leadTime.set($any($event ?? ''))"
+              />
+              <app-input
+                label="Observações"
+                [ngModel]="notes()"
+                (ngModelChange)="notes.set($event ?? '')"
+              />
+              <app-checkbox
+                label="Fornecedor crítico (exige homologação para encomendar)"
+                [ngModel]="critical()"
+                (ngModelChange)="critical.set(!!$event)"
+              />
+            </div>
+            <div class="mt-3">
+              <app-button variant="secondary" [loading]="busy()" (click)="classify()"
+                >Guardar classificação</app-button
+              >
+            </div>
+          </div>
         }
         @if (clientError(); as text) {
           <p class="mt-3 text-sm text-red-600" role="alert">{{ text }}</p>
         }
+        <app-supplier-approval-panel [supplier]="s" (changed)="approvalChanged($event)" />
         <div class="mt-4">
           <app-button variant="secondary" (click)="close()">Fechar</app-button>
         </div>
       </app-card>
     } @else {
-      <div class="mb-3 flex justify-end">
+      <div class="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div class="min-w-56">
+          <app-select
+            label="Homologação"
+            placeholder="Todas"
+            [options]="approvalOptions"
+            [ngModel]="approvalFilter()"
+            (ngModelChange)="approvalFilter.set($event ?? '')"
+          />
+        </div>
         @if (canManage()) {
           <app-button (click)="startNew()">Novo fornecedor</app-button>
         }
@@ -172,6 +262,15 @@ import { purchasingError, SUPPLIER_STATUS } from './purchasing-model';
                   @case ('status') {
                     <app-badge [tone]="status(row).tone">{{ status(row).label }}</app-badge>
                   }
+                  @case ('approval') {
+                    <app-badge [tone]="approval(row).tone">{{ approval(row).label }}</app-badge>
+                    @if (row.critical) {
+                      <span class="ms-1 text-xs text-fg-muted">crítico</span>
+                    }
+                  }
+                  @case ('category') {
+                    {{ row.categoryName ?? '—' }}
+                  }
                   @case ('actions') {
                     <app-button size="sm" variant="secondary" (click)="open(row)">Abrir</app-button>
                   }
@@ -194,19 +293,46 @@ export class SuppliersTab {
     { key: 'name', label: 'Fornecedor' },
     { key: 'code', label: 'Código' },
     { key: 'taxId', label: 'NIF' },
+    { key: 'category', label: 'Categoria' },
     { key: 'terms', label: 'Prazo' },
     { key: 'status', label: 'Estado' },
+    { key: 'approval', label: 'Homologação' },
     { key: 'actions', label: '', align: 'end' },
   ];
 
+  protected readonly supplyOptions: readonly SelectOption[] = (
+    Object.keys(SUPPLY_TYPE) as SupplyType[]
+  ).map((value) => ({ value, label: SUPPLY_TYPE[value] }));
+  protected readonly ratingOptions: readonly SelectOption[] = ['A', 'B', 'C', 'D'].map((v) => ({
+    value: v,
+    label: v,
+  }));
+  protected readonly approvalOptions: readonly SelectOption[] = (
+    Object.keys(APPROVAL_STATUS) as ApprovalStatus[]
+  ).map((value) => ({ value, label: APPROVAL_STATUS[value].label }));
+
   private readonly reload = signal(0);
+  protected readonly approvalFilter = signal('');
   private readonly params = () => {
     const tenant = this.tenantId();
-    return tenant ? { tenantId: tenant.id, reload: this.reload() } : undefined;
+    return tenant
+      ? { tenantId: tenant.id, reload: this.reload(), approval: this.approvalFilter() }
+      : undefined;
   };
   protected readonly suppliers = rxResource({
     params: this.params,
-    stream: () => this.api.suppliers({ limit: 100 }),
+    stream: ({ params }) =>
+      this.api.suppliers({
+        limit: 100,
+        approvalStatus: (params.approval || undefined) as ApprovalStatus | undefined,
+      }),
+  });
+  private readonly categories = rxResource({
+    params: () => {
+      const tenant = this.tenantId();
+      return tenant ? { tenantId: tenant.id } : undefined;
+    },
+    stream: () => this.api.supplierCategories(),
   });
   private readonly organizations = rxResource({
     params: () => {
@@ -225,6 +351,12 @@ export class SuppliersTab {
   protected readonly terms = signal<string | number>('0');
   protected readonly supplier = signal<SupplierDto | null>(null);
   protected readonly reason = signal('');
+  protected readonly categoryId = signal('');
+  protected readonly supplyType = signal<SupplyType>('GOODS');
+  protected readonly rating = signal('');
+  protected readonly leadTime = signal<string | number>('');
+  protected readonly notes = signal('');
+  protected readonly critical = signal(false);
   protected readonly busy = signal(false);
   protected readonly notice = signal<string | null>(null);
   protected readonly actionError = signal<string | null>(null);
@@ -240,7 +372,17 @@ export class SuppliersTab {
     this.parties().map((p) => ({ value: p.id, label: p.displayName })),
   );
 
+  /** Activas, mais a actual do fornecedor aberto (mesmo inactiva, para não a perder ao guardar). */
+  protected readonly categoryOptions = computed<readonly SelectOption[]>(() => {
+    const current = this.supplier()?.categoryId;
+    return (this.categories.hasValue() ? this.categories.value() : [])
+      .filter((c) => c.active || c.id === current)
+      .map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }));
+  });
+
   protected status = (s: SupplierDto) => SUPPLIER_STATUS[s.status];
+  protected approval = (s: SupplierDto) => APPROVAL_STATUS[s.approvalStatus];
+  protected supplyLabel = (t: SupplyType) => SUPPLY_TYPE[t];
   protected loadError = () => purchasingError(this.suppliers.error(), 'Pedido falhado.');
 
   private reset(): void {
@@ -297,7 +439,7 @@ export class SuppliersTab {
       }),
       (created) => {
         this.creating.set(false);
-        this.supplier.set(created);
+        this.show(created);
         this.notice.set('Fornecedor criado.');
         this.reload.update((n) => n + 1);
       },
@@ -306,7 +448,48 @@ export class SuppliersTab {
 
   protected open(row: SupplierDto): void {
     this.reset();
+    this.show(row);
+  }
+
+  /** Mostra o fornecedor e preenche o editor de classificação com os valores do servidor. */
+  private show(row: SupplierDto): void {
     this.supplier.set(row);
+    this.categoryId.set(row.categoryId ?? '');
+    this.supplyType.set(row.supplyType);
+    this.rating.set(row.rating ?? '');
+    this.leadTime.set(row.leadTimeDays ?? '');
+    this.notes.set(row.notes ?? '');
+    this.critical.set(row.critical);
+  }
+
+  protected classify(): void {
+    const current = this.supplier();
+    if (!current) return;
+    this.reset();
+    const leadTimeDays = leadTimeValue(this.leadTime());
+    if (leadTimeDays === undefined) {
+      return void this.clientError.set('Prazo de entrega: inteiro entre 0 e 3650 dias.');
+    }
+    this.run(
+      this.api.updateSupplier(current.id, current.version, {
+        categoryId: this.categoryId() || null,
+        supplyType: this.supplyType(),
+        rating: (this.rating() || null) as SupplierRating | null,
+        leadTimeDays,
+        notes: this.notes().trim() || null,
+        critical: this.critical(),
+      }),
+      (saved) => {
+        this.show(saved);
+        this.notice.set('Classificação guardada.');
+      },
+    );
+  }
+
+  protected approvalChanged(saved: SupplierDto): void {
+    this.reset();
+    this.show(saved);
+    this.notice.set(`Homologação: ${APPROVAL_STATUS[saved.approvalStatus].label}.`);
   }
 
   protected close(): void {
@@ -327,7 +510,7 @@ export class SuppliersTab {
         statusReason: this.reason().trim(),
       }),
       (saved) => {
-        this.supplier.set(saved);
+        this.show(saved);
         this.reason.set('');
         this.notice.set('Fornecedor bloqueado: não recebe novas encomendas.');
       },
@@ -344,7 +527,7 @@ export class SuppliersTab {
         statusReason: null,
       }),
       (saved) => {
-        this.supplier.set(saved);
+        this.show(saved);
         this.notice.set('Fornecedor reactivado.');
       },
     );

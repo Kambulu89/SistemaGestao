@@ -1198,6 +1198,44 @@ devoluções aprovadas ou lançadas` (`GET /goods-returns/source-lines`); aprova
 - **Limites.** Mínimos/máximos e ponto de reposição ficam para regras por armazém (8.11), não no produto; kits não são suportados
   (sem estrutura de componentes); imagens de produto e importação/exportação ficam por fazer.
 
+## D-067 Compras (Prompt 09): evoluir o M06 existente; homologação de fornecedores com histórico e segregação (aceite — bloco 9.1)
+
+- **Contexto.** O Prompt 09 pede um módulo de compras completo. Já existe (M06/M09): fornecedores como condições de compra sobre a
+  Party (nome, NIF e contactos ficam na Party), requisições aprovadas por outra pessoa, encomendas a fornecedor com custos exactos,
+  recepções que dão entrada de stock por efeito do inventário na mesma transacção, facturas de fornecedor com conferência a três
+  vias, contas a pagar e pagamentos no `finance` (fora das compras, por decisão), e o motor de workflows de aprovação.
+- **Matriz de compatibilidade (resumo).**
+
+  | Funcionalidade | Estado | Acção |
+  |---|---|---|
+  | Fornecedor sobre a Party, por organização, condições de pagamento, bloqueio com motivo | Existe | MANTER |
+  | Categorias, tipo de fornecimento, criticidade, avaliação, prazo de entrega | Não existia | DESENVOLVER (9.1, feito) |
+  | Homologação com estados, validade, condições e histórico | Não existia | DESENVOLVER (9.1, feito) |
+  | Documentos do fornecedor (alvarás, certidões) com validade | Módulo `documents` existe | REUTILIZAR (9.2) |
+  | Requisições com aprovação por outra pessoa | Existe | ADAPTAR (centro de custo, orçamento, workflow: 9.3) |
+  | Pedidos de cotação, comparação de propostas | Não existe | DESENVOLVER (9.4–9.5) |
+  | Encomendas, recepções com entrada de stock | Existe | MANTER; tolerâncias e devolução a fornecedor a avaliar (9.6–9.7) |
+  | Facturas de fornecedor, conferência a três vias, pagáveis, pagamentos | Existe em `finance` | MANTER (as compras não pagam) |
+  | Contratos de fornecimento, avaliação de desempenho, painel | Não existe | DESENVOLVER (9.8–9.12) |
+  | Contabilização das compras | Motor E1 existe; sem produtores | DESENVOLVER com E2 (sem lançar duas vezes: `source_key`) |
+
+- **Decisão (9.1).** Migração 44 estende `suppliers` (categoria, `supply_type`, `critical`, `rating` A–D, prazo de entrega,
+  observações, `approval_status`, validade, condições, quem pediu a análise) e cria `supplier_categories` e
+  `supplier_approval_events` (só-de-acrescentar por trigger). O estado comercial (`status`) e a homologação ficam separados.
+  `EXPIRED` **não se grava**: é a homologação em vigor cuja validade passou (derivado na leitura e nos filtros). Transições:
+  pedir análise a partir de qualquer estado excepto «em análise» (também renova); aprovar, aprovar com condições (exige condições)
+  e rejeitar (exige motivo) só a partir de «em análise»; suspender (exige motivo) só uma homologação em vigor. Quem pediu a
+  análise não aprova (409 `SEGREGATION_OF_DUTIES`, como nas requisições). Cada mudança grava o evento no histórico e no outbox
+  (`procurement.supplier.approval_changed`) na mesma transacção, com `expectedVersion`.
+- **Efeito nas encomendas.** Fornecedor rejeitado, suspenso ou com homologação caducada não recebe novas encomendas; um
+  fornecedor **crítico** só as recebe homologado (total ou com condições). Os fornecedores existentes ficam `PENDING` e não
+  críticos, por isso continuam a encomendar (migração compatível); as encomendas já confirmadas continuam a receber-se.
+- **Permissões.** Novas: `supplier.approve` (decidir a homologação) e `supplier_category.manage`; `supplier.manage` passa a
+  incluir pedir a análise. Os códigos de permissão têm dois segmentos (`modulo.accao`), por isso não se usou `procurement.*`.
+- **Limites.** A homologação não usa ainda o motor de workflows (é uma decisão de um passo com segregação); critérios de
+  avaliação, documentos obrigatórios por categoria e renovação automática ficam para 9.2/9.11. A validade compara com a data do
+  servidor de base de dados (UTC).
+
 ## Decisões de produto pendentes (spec §11.2 — não bloquear o core)
 
 Preços reais dos planos e quotas; primeiro vertical comercial; países/regimes fiscais; fornecedores de

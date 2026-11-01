@@ -13,6 +13,19 @@ export const listSuppliersValidator = vine.compile(
     q: vine.string().trim().maxLength(60).optional(),
     status: vine.enum(['ACTIVE', 'BLOCKED', 'INACTIVE']).optional(),
     organizationId: uuid().optional(),
+    categoryId: uuid().optional(),
+    approvalStatus: vine
+      .enum([
+        'PENDING',
+        'UNDER_REVIEW',
+        'APPROVED',
+        'CONDITIONALLY_APPROVED',
+        'REJECTED',
+        'SUSPENDED',
+        'EXPIRED',
+      ])
+      .optional(),
+    critical: vine.boolean().optional(),
     ...page,
   })
 )
@@ -22,7 +35,56 @@ const supplierBody = {
   currency: vine.string().trim().maxLength(3).optional(),
   status: vine.string().trim().maxLength(10).optional(),
   statusReason: vine.string().maxLength(300).nullable().optional(),
+  categoryId: uuid().nullable().optional(),
+  supplyType: vine.string().trim().maxLength(10).optional(),
+  critical: vine.boolean({ strict: true }).optional(),
+  rating: vine.string().trim().maxLength(1).nullable().optional(),
+  leadTimeDays: vine.number().nullable().optional(),
+  notes: vine.string().maxLength(1000).nullable().optional(),
 }
+
+export const listSupplierCategoriesValidator = vine.compile(
+  vine.object({
+    q: vine.string().trim().maxLength(60).optional(),
+    active: vine.boolean().optional(),
+  })
+)
+
+const categoryBody = {
+  name: vine.string().maxLength(160).optional(),
+  description: vine.string().maxLength(2000).nullable().optional(),
+  active: vine.boolean({ strict: true }).optional(),
+}
+
+export const createSupplierCategoryValidator = vine.compile(
+  vine.object({ code: vine.string().trim().maxLength(50), ...categoryBody })
+)
+
+export const updateSupplierCategoryValidator = vine.compile(
+  vine.object({
+    expectedVersion: version(),
+    // Presente só para o domínio o recusar com uma mensagem clara (imutável).
+    code: vine.string().trim().optional(),
+    ...categoryBody,
+  })
+)
+
+export const submitSupplierApprovalValidator = vine.compile(
+  vine.object({
+    expectedVersion: version(),
+    reason: vine.string().maxLength(500).nullable().optional(),
+  })
+)
+
+export const decideSupplierApprovalValidator = vine.compile(
+  vine.object({
+    expectedVersion: version(),
+    action: vine.enum(['APPROVE', 'APPROVE_CONDITIONALLY', 'REJECT', 'SUSPEND']),
+    reason: vine.string().maxLength(500).nullable().optional(),
+    conditions: vine.string().maxLength(1000).nullable().optional(),
+    validUntil: vine.string().trim().maxLength(10).nullable().optional(),
+  })
+)
 
 export const createSupplierValidator = vine.compile(
   vine.object({

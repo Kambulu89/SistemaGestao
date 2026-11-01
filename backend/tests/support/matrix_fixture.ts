@@ -75,6 +75,7 @@ export interface World {
     shipmentOrderLine: string
     contract: string
     supplier: string
+    supplierCategory: string
     requisition: string
     requisitionLine: string
     purchase: string
@@ -826,14 +827,26 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
     201
   )
   // M06: um fornecedor, uma requisição, uma encomenda em rascunho, outra confirmada e uma recepção em rascunho, nos dois tenants.
-  const supplier = await must<{ id: string }>(
+  const supplierCategory = await must<{ id: string }>(
+    await http.post('/api/v1/supplier-categories', { code: 'MAT', name: 'Materiais' }),
+    201
+  )
+  const supplier = await must<{ id: string; version: number }>(
     await http.post('/api/v1/suppliers', {
       partyId: orgParty.id,
       organizationId: organization.id,
       code: 'FOR-1',
       paymentTermDays: 30,
+      categoryId: supplierCategory.id,
     }),
     201
+  )
+  // Pedido de homologação: deixa um evento no histórico (só-de-acrescentar).
+  await must(
+    await http.post(`/api/v1/suppliers/${supplier.id}/approval/submit`, {
+      expectedVersion: supplier.version,
+    }),
+    200
   )
   const requisition = await must<{ id: string; lines: { id: string }[] }>(
     await http.post('/api/v1/purchase-requisitions', {
@@ -1473,6 +1486,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       run: run.id,
       category: category.id,
       brand: brand.id,
+      supplierCategory: supplierCategory.id,
       product: catalogProduct.id,
       variant: variant.id,
       priceList: priceList.id,

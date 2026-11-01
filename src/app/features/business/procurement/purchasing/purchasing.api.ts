@@ -4,6 +4,18 @@ import { ApiService } from '../../../../core/api/api.service';
 import type { Page } from '../../sales/orders/orders.api';
 
 export type SupplierStatus = 'ACTIVE' | 'BLOCKED' | 'INACTIVE';
+export type SupplyType = 'GOODS' | 'SERVICES' | 'BOTH';
+export type SupplierRating = 'A' | 'B' | 'C' | 'D';
+/** `EXPIRED` é derivado pelo servidor (homologação com validade passada); nunca se envia. */
+export type ApprovalStatus =
+  | 'PENDING'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'CONDITIONALLY_APPROVED'
+  | 'REJECTED'
+  | 'SUSPENDED'
+  | 'EXPIRED';
+export type ApprovalDecision = 'APPROVE' | 'APPROVE_CONDITIONALLY' | 'REJECT' | 'SUSPEND';
 export type RequisitionStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'CONVERTED';
 export type PurchaseStatus = 'DRAFT' | 'ORDERED' | 'PARTIAL' | 'RECEIVED' | 'CANCELLED';
 export type ReceiptStatus = 'DRAFT' | 'POSTED' | 'REVERSED';
@@ -25,7 +37,48 @@ export interface SupplierDto {
   readonly statusReason: string | null;
   readonly partyName: string;
   readonly taxId: string | null;
+  readonly categoryId: string | null;
+  readonly categoryName: string | null;
+  readonly supplyType: SupplyType;
+  readonly critical: boolean;
+  readonly rating: SupplierRating | null;
+  readonly leadTimeDays: number | null;
+  readonly notes: string | null;
+  readonly approvalStatus: ApprovalStatus;
+  readonly approvalValidUntil: string | null;
+  readonly approvalConditions: string | null;
+  readonly approvalRequestedByMembershipId: string | null;
   readonly version: number;
+}
+
+export interface SupplierCategoryDto {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly active: boolean;
+  readonly version: number;
+}
+
+export interface SupplierApprovalEventDto {
+  readonly id: string;
+  readonly action: 'SUBMIT' | ApprovalDecision;
+  readonly fromStatus: ApprovalStatus;
+  readonly toStatus: ApprovalStatus;
+  readonly reason: string | null;
+  readonly conditions: string | null;
+  readonly validUntil: string | null;
+  readonly occurredAt: string;
+  readonly actorMembershipId: string | null;
+}
+
+export interface SupplierClassification {
+  categoryId?: string | null;
+  supplyType?: SupplyType;
+  critical?: boolean;
+  rating?: SupplierRating | null;
+  leadTimeDays?: number | null;
+  notes?: string | null;
 }
 
 export interface RequisitionLineDto {
@@ -154,25 +207,87 @@ export class PurchasingApi {
 
   // --- fornecedores -----------------------------------------------------------------------------
 
-  suppliers(filter: { q?: string; status?: SupplierStatus; limit?: number }) {
+  suppliers(filter: {
+    q?: string;
+    status?: SupplierStatus;
+    approvalStatus?: ApprovalStatus;
+    categoryId?: string;
+    limit?: number;
+  }) {
     return this.page<SupplierDto>('suppliers', filter);
   }
 
-  createSupplier(body: {
-    partyId: string;
-    organizationId: string;
-    code: string;
-    paymentTermDays?: number;
-  }): Observable<SupplierDto> {
+  createSupplier(
+    body: {
+      partyId: string;
+      organizationId: string;
+      code: string;
+      paymentTermDays?: number;
+    } & SupplierClassification,
+  ): Observable<SupplierDto> {
     return this.api.post('suppliers', body);
   }
 
   updateSupplier(
     id: string,
     expectedVersion: number,
-    body: { status?: SupplierStatus; statusReason?: string | null; paymentTermDays?: number },
+    body: {
+      status?: SupplierStatus;
+      statusReason?: string | null;
+      paymentTermDays?: number;
+    } & SupplierClassification,
   ): Observable<SupplierDto> {
     return this.api.patch(`suppliers/${id}`, { expectedVersion, ...body });
+  }
+
+  /** Pede a análise (ou renovação) da homologação; quem pede não a pode aprovar (o servidor decide). */
+  submitSupplierApproval(
+    id: string,
+    expectedVersion: number,
+    reason: string | null,
+  ): Observable<SupplierDto> {
+    return this.api.post(`suppliers/${id}/approval/submit`, { expectedVersion, reason });
+  }
+
+  decideSupplierApproval(
+    id: string,
+    expectedVersion: number,
+    body: {
+      action: ApprovalDecision;
+      reason?: string | null;
+      conditions?: string | null;
+      validUntil?: string | null;
+    },
+  ): Observable<SupplierDto> {
+    return this.api.post(`suppliers/${id}/approval/decide`, { expectedVersion, ...body });
+  }
+
+  supplierApprovalEvents(id: string): Observable<readonly SupplierApprovalEventDto[]> {
+    return this.api.get(`suppliers/${id}/approval-events`);
+  }
+
+  supplierCategories(
+    filter: { active?: boolean } = {},
+  ): Observable<readonly SupplierCategoryDto[]> {
+    const params: Record<string, string> = {};
+    if (filter.active !== undefined) params['active'] = String(filter.active);
+    return this.api.get('supplier-categories', { params });
+  }
+
+  createSupplierCategory(body: {
+    code: string;
+    name: string;
+    description?: string | null;
+  }): Observable<SupplierCategoryDto> {
+    return this.api.post('supplier-categories', body);
+  }
+
+  updateSupplierCategory(
+    id: string,
+    expectedVersion: number,
+    body: { name?: string; description?: string | null; active?: boolean },
+  ): Observable<SupplierCategoryDto> {
+    return this.api.patch(`supplier-categories/${id}`, { expectedVersion, ...body });
   }
 
   /** Contrapartes para o fornecedor (exige `party.read`; sem ele a lista vem vazia e o formulário avisa). */

@@ -14,6 +14,7 @@ import {
   LucidPurchaseStore,
   LucidReceiptStore,
   LucidRequisitionStore,
+  LucidSupplierCategoryStore,
   LucidSupplierStore,
 } from '#modules/procurement/infrastructure/lucid_procurement'
 import type { RoundingMode } from '#modules/procurement/domain/decimal'
@@ -85,7 +86,14 @@ function build() {
   const outbox = new LucidOutboxWriter()
   const clock = { now: () => new Date() }
   return {
-    suppliers: new SupplierUseCases(uow, suppliers, references),
+    suppliers: new SupplierUseCases(
+      uow,
+      suppliers,
+      new LucidSupplierCategoryStore(),
+      references,
+      outbox,
+      clock
+    ),
     requisitions: new RequisitionUseCases(uow, requisitions, references, clock),
     purchases: new PurchaseUseCases(
       uow,

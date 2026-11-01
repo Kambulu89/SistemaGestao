@@ -8,6 +8,10 @@ import type {
   RequisitionStatus,
   SupplierStatus,
   SupplierValues,
+  ApprovalChange,
+  ApprovalState,
+  ApprovalStatus,
+  SupplierCategoryValues,
 } from '#modules/procurement/domain/procurement'
 
 interface Audited {
@@ -26,17 +30,34 @@ export interface Totals {
 // --- fornecedores -----------------------------------------------------------------------------------
 
 /** Nome e NIF vêm da Party por junção de leitura: o fornecedor nunca escreve na Party. */
-export interface Supplier extends Audited, SupplierValues {
+export interface Supplier extends Audited, SupplierValues, ApprovalState {
   partyName: string
   taxId: string | null
+  categoryName: string | null
 }
 
 export interface SupplierFilter {
   q?: string
   status?: SupplierStatus
   organizationId?: string
+  categoryId?: string
+  approvalStatus?: ApprovalStatus
+  critical?: boolean
   limit: number
   offset: number
+}
+
+export interface SupplierApprovalEvent {
+  id: string
+  supplierId: string
+  action: ApprovalChange['action']
+  fromStatus: ApprovalStatus
+  toStatus: ApprovalStatus
+  reason: string | null
+  conditions: string | null
+  validUntil: string | null
+  occurredAt: Date
+  actorMembershipId: string | null
 }
 
 export interface SupplierStore {
@@ -50,6 +71,29 @@ export interface SupplierStore {
     expectedVersion: number,
     values: SupplierValues
   ): Promise<Supplier>
+  /** Grava a mudança de homologação e o evento do histórico (na mesma transacção). */
+  changeApproval(
+    scope: TenantScope,
+    id: string,
+    expectedVersion: number,
+    change: ApprovalChange
+  ): Promise<Supplier>
+  approvalEvents(scope: TenantScope, supplierId: string): Promise<SupplierApprovalEvent[]>
+}
+
+export interface SupplierCategory extends Audited, SupplierCategoryValues {}
+
+export interface SupplierCategoryStore {
+  list(scope: TenantScope, filter: { q?: string; active?: boolean }): Promise<SupplierCategory[]>
+  find(scope: TenantScope, id: string): Promise<SupplierCategory | null>
+  /** `'CODE'` se já existir. */
+  insert(scope: TenantScope, values: SupplierCategoryValues): Promise<SupplierCategory | 'CODE'>
+  update(
+    scope: TenantScope,
+    id: string,
+    expectedVersion: number,
+    values: SupplierCategoryValues
+  ): Promise<SupplierCategory>
 }
 
 // --- requisições ------------------------------------------------------------------------------------

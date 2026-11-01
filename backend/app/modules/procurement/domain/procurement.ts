@@ -16,6 +16,37 @@ export type ReceiptStatus = 'DRAFT' | 'POSTED' | 'REVERSED'
 
 export const SUPPLIER_STATUSES: readonly SupplierStatus[] = ['ACTIVE', 'BLOCKED', 'INACTIVE']
 
+/** O que o fornecedor fornece (classificação), independente do estado comercial e da homologação. */
+export type SupplyType = 'GOODS' | 'SERVICES' | 'BOTH'
+export const SUPPLY_TYPES: readonly SupplyType[] = ['GOODS', 'SERVICES', 'BOTH']
+/** Avaliação qualitativa (A melhor, D pior); a avaliação de desempenho calculada vem num bloco posterior. */
+export type SupplierRating = 'A' | 'B' | 'C' | 'D'
+export const SUPPLIER_RATINGS: readonly SupplierRating[] = ['A', 'B', 'C', 'D']
+
+/**
+ * Homologação. `EXPIRED` nunca se grava: é a homologação (total ou condicionada) cuja validade já passou.
+ */
+export type StoredApprovalStatus =
+  'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'CONDITIONALLY_APPROVED' | 'REJECTED' | 'SUSPENDED'
+export type ApprovalStatus = StoredApprovalStatus | 'EXPIRED'
+export const APPROVAL_STATUSES: readonly ApprovalStatus[] = [
+  'PENDING',
+  'UNDER_REVIEW',
+  'APPROVED',
+  'CONDITIONALLY_APPROVED',
+  'REJECTED',
+  'SUSPENDED',
+  'EXPIRED',
+]
+export type ApprovalDecision = 'APPROVE' | 'APPROVE_CONDITIONALLY' | 'REJECT' | 'SUSPEND'
+export type ApprovalAction = 'SUBMIT' | ApprovalDecision
+export const APPROVAL_DECISIONS: readonly ApprovalDecision[] = [
+  'APPROVE',
+  'APPROVE_CONDITIONALLY',
+  'REJECT',
+  'SUSPEND',
+]
+
 export interface Issue {
   path: string
   code: string
@@ -56,6 +87,12 @@ export interface SupplierValues {
   currency: string
   status: SupplierStatus
   statusReason: string | null
+  categoryId: string | null
+  supplyType: SupplyType
+  critical: boolean
+  rating: SupplierRating | null
+  leadTimeDays: number | null
+  notes: string | null
 }
 
 export interface SupplierInput {
@@ -66,6 +103,12 @@ export interface SupplierInput {
   currency?: unknown
   status?: unknown
   statusReason?: unknown
+  categoryId?: unknown
+  supplyType?: unknown
+  critical?: unknown
+  rating?: unknown
+  leadTimeDays?: unknown
+  notes?: unknown
 }
 
 /**
@@ -123,6 +166,37 @@ export function normalizeSupplier(
       )
     }
   }
+  const categoryId = input.categoryId === undefined ? (base?.categoryId ?? null) : input.categoryId
+  if (categoryId !== null && (typeof categoryId !== 'string' || !categoryId)) {
+    issues.push(issue('categoryId', 'INVALID_CATEGORY', 'Categoria inválida.'))
+  }
+  const supplyType = (input.supplyType ?? base?.supplyType ?? 'GOODS') as SupplyType
+  if (!SUPPLY_TYPES.includes(supplyType)) {
+    issues.push(issue('supplyType', 'INVALID_SUPPLY_TYPE', 'Fornece: GOODS, SERVICES ou BOTH.'))
+  }
+  const critical = input.critical === undefined ? (base?.critical ?? false) : input.critical
+  if (typeof critical !== 'boolean') {
+    issues.push(issue('critical', 'INVALID_CRITICAL', 'Indique verdadeiro ou falso.'))
+  }
+  const rating = (
+    input.rating === undefined ? (base?.rating ?? null) : input.rating
+  ) as SupplierRating | null
+  if (rating !== null && !SUPPLIER_RATINGS.includes(rating)) {
+    issues.push(issue('rating', 'INVALID_RATING', 'Avaliação: A, B, C ou D.'))
+  }
+  const leadTime =
+    input.leadTimeDays === undefined ? (base?.leadTimeDays ?? null) : input.leadTimeDays
+  if (
+    leadTime !== null &&
+    (!Number.isInteger(leadTime) || (leadTime as number) < 0 || (leadTime as number) > 3650)
+  ) {
+    issues.push(issue('leadTimeDays', 'INVALID_LEAD_TIME', 'Prazo: inteiro entre 0 e 3650 dias.'))
+  }
+  const notesInput = input.notes === undefined ? (base?.notes ?? null) : input.notes
+  const notes = notesInput === null || notesInput === '' ? null : text(notesInput, 1000)
+  if (notesInput !== null && notesInput !== '' && notes === null) {
+    issues.push(issue('notes', 'INVALID_NOTES', 'Observações: até 1000 caracteres.'))
+  }
   if (issues.length > before) return null
   return {
     partyId: partyId as string,
@@ -132,11 +206,210 @@ export function normalizeSupplier(
     currency: currency as string,
     status,
     statusReason,
+    categoryId: categoryId as string | null,
+    supplyType,
+    critical: critical as boolean,
+    rating,
+    leadTimeDays: leadTime as number | null,
+    notes,
   }
 }
 
-/** Um fornecedor bloqueado ou inactivo não recebe novas encomendas (as já feitas continuam a receber-se). */
-export function purchaseBlocker(status: SupplierStatus): { code: string; message: string } | null {
+// --- categorias de fornecedor -------------------------------------------------------------------------
+
+export interface SupplierCategoryValues {
+  code: string
+  name: string
+  description: string | null
+  active: boolean
+}
+
+export function normalizeSupplierCategory(
+  input: { code?: unknown; name?: unknown; description?: unknown; active?: unknown },
+  base: SupplierCategoryValues | null,
+  issues: Issue[]
+): SupplierCategoryValues | null {
+  const before = issues.length
+  if (base && input.code !== undefined && input.code !== base.code) {
+    issues.push(issue('code', 'IMMUTABLE', 'O código não se altera depois de criado.'))
+  }
+  const code = base?.code ?? (typeof input.code === 'string' ? input.code.trim() : '')
+  if (!base && !CODE.test(code)) {
+    issues.push(issue('code', 'INVALID_CODE', 'Código: letras, números, . _ - (máx. 50).'))
+  }
+  const name = input.name === undefined ? (base?.name ?? null) : text(input.name, 160)
+  if (!name) issues.push(issue('name', 'REQUIRED', 'Indique a designação (até 160 caracteres).'))
+  const given = input.description === undefined ? (base?.description ?? null) : input.description
+  const description = given === null || given === '' ? null : text(given, 2000)
+  if (given !== null && given !== '' && description === null) {
+    issues.push(issue('description', 'INVALID_DESCRIPTION', 'Descrição: até 2000 caracteres.'))
+  }
+  const active = input.active === undefined ? (base?.active ?? true) : input.active
+  if (typeof active !== 'boolean') {
+    issues.push(issue('active', 'INVALID_ACTIVE', 'Indique verdadeiro ou falso.'))
+  }
+  if (issues.length > before) return null
+  return { code, name: name as string, description, active: active as boolean }
+}
+
+// --- homologação ------------------------------------------------------------------------------------
+
+export interface ApprovalState {
+  approvalStatus: ApprovalStatus
+  approvalValidUntil: string | null
+  approvalConditions: string | null
+  approvalRequestedByMembershipId: string | null
+}
+
+export interface ApprovalChange {
+  action: ApprovalAction
+  from: ApprovalStatus
+  to: StoredApprovalStatus
+  reason: string | null
+  conditions: string | null
+  validUntil: string | null
+  requestedByMembershipId: string | null
+}
+
+export type ApprovalOutcome =
+  | { ok: true; change: ApprovalChange }
+  | { ok: false; kind: 'invalid'; issues: Issue[] }
+  | { ok: false; kind: 'conflict'; code: string; message: string }
+
+const DECIDED_FROM: Record<ApprovalDecision, readonly ApprovalStatus[]> = {
+  APPROVE: ['UNDER_REVIEW'],
+  APPROVE_CONDITIONALLY: ['UNDER_REVIEW'],
+  REJECT: ['UNDER_REVIEW'],
+  SUSPEND: ['APPROVED', 'CONDITIONALLY_APPROVED'],
+}
+
+const DECIDED_TO: Record<ApprovalDecision, StoredApprovalStatus> = {
+  APPROVE: 'APPROVED',
+  APPROVE_CONDITIONALLY: 'CONDITIONALLY_APPROVED',
+  REJECT: 'REJECTED',
+  SUSPEND: 'SUSPENDED',
+}
+
+/**
+ * Regras da homologação:
+ *  - submeter (pedir análise) é possível a partir de qualquer estado excepto «em análise»; serve também para renovar;
+ *  - aprovar, aprovar com condições e rejeitar só a partir de «em análise», e quem pediu a análise não aprova
+ *    (segregação de funções); rejeitar exige motivo, aprovar com condições exige as condições;
+ *  - suspender só uma homologação em vigor, com motivo; a validade, se indicada, é posterior a hoje.
+ */
+export function approvalTransition(
+  state: ApprovalState,
+  action: ApprovalAction,
+  input: { reason?: unknown; conditions?: unknown; validUntil?: unknown },
+  actorMembershipId: string,
+  today: string
+): ApprovalOutcome {
+  const issues: Issue[] = []
+  const reasonGiven = input.reason === undefined || input.reason === null ? '' : input.reason
+  const reason = reasonGiven === '' ? null : text(reasonGiven, 500)
+  if (reasonGiven !== '' && reason === null) {
+    issues.push(issue('reason', 'INVALID_REASON', 'Motivo: até 500 caracteres.'))
+  }
+  if ((action === 'REJECT' || action === 'SUSPEND') && reason === null && issues.length === 0) {
+    issues.push(issue('reason', 'REASON_REQUIRED', 'Indique o motivo (até 500 caracteres).'))
+  }
+  let conditions: string | null = null
+  if (action === 'APPROVE_CONDITIONALLY') {
+    conditions = text(input.conditions, 1000)
+    if (!conditions) {
+      issues.push(
+        issue('conditions', 'CONDITIONS_REQUIRED', 'Indique as condições (até 1000 caracteres).')
+      )
+    }
+  } else if (input.conditions !== undefined && input.conditions !== null) {
+    issues.push(issue('conditions', 'NOT_ALLOWED', 'Só a aprovação condicionada leva condições.'))
+  }
+  let validUntil: string | null = null
+  if (action === 'APPROVE' || action === 'APPROVE_CONDITIONALLY') {
+    if (input.validUntil !== undefined && input.validUntil !== null) {
+      if (!isIsoDate(input.validUntil) || input.validUntil <= today) {
+        issues.push(
+          issue('validUntil', 'INVALID_VALIDITY', 'A validade é uma data (AAAA-MM-DD) futura.')
+        )
+      } else {
+        validUntil = input.validUntil
+      }
+    }
+  } else if (input.validUntil !== undefined && input.validUntil !== null) {
+    issues.push(issue('validUntil', 'NOT_ALLOWED', 'Só a aprovação leva validade.'))
+  }
+  if (issues.length > 0) return { ok: false, kind: 'invalid', issues }
+
+  const from = state.approvalStatus
+  if (action === 'SUBMIT') {
+    if (from === 'UNDER_REVIEW') {
+      return {
+        ok: false,
+        kind: 'conflict',
+        code: 'SUPPLIER_ALREADY_UNDER_REVIEW',
+        message: 'A homologação já está em análise.',
+      }
+    }
+    return {
+      ok: true,
+      change: {
+        action,
+        from,
+        to: 'UNDER_REVIEW',
+        reason,
+        conditions: null,
+        validUntil: null,
+        requestedByMembershipId: actorMembershipId,
+      },
+    }
+  }
+  if (!DECIDED_FROM[action].includes(from)) {
+    return {
+      ok: false,
+      kind: 'conflict',
+      code: 'SUPPLIER_APPROVAL_STATE',
+      message:
+        action === 'SUSPEND'
+          ? 'Só se suspende uma homologação em vigor.'
+          : 'Só se decide uma homologação em análise.',
+    }
+  }
+  if (
+    (action === 'APPROVE' || action === 'APPROVE_CONDITIONALLY') &&
+    state.approvalRequestedByMembershipId === actorMembershipId
+  ) {
+    return {
+      ok: false,
+      kind: 'conflict',
+      code: 'SEGREGATION_OF_DUTIES',
+      message: 'Quem pediu a análise do fornecedor não o pode homologar.',
+    }
+  }
+  return {
+    ok: true,
+    change: {
+      action,
+      from,
+      to: DECIDED_TO[action],
+      reason,
+      conditions,
+      // Suspender conserva a validade anterior (para memória); rejeitar limpa-a.
+      validUntil: action === 'SUSPEND' ? state.approvalValidUntil : validUntil,
+      requestedByMembershipId: state.approvalRequestedByMembershipId,
+    },
+  }
+}
+
+/**
+ * Um fornecedor bloqueado ou inactivo, com homologação rejeitada, suspensa ou caducada, ou crítico e sem homologação em
+ * vigor, não recebe novas encomendas (as já feitas continuam a receber-se).
+ */
+export function purchaseBlocker(supplier: {
+  status: SupplierStatus
+  approvalStatus: ApprovalStatus
+  critical: boolean
+}): { code: string; message: string } | null {
+  const { status, approvalStatus } = supplier
   if (status === 'BLOCKED') {
     return {
       code: 'SUPPLIER_BLOCKED',
@@ -147,6 +420,34 @@ export function purchaseBlocker(status: SupplierStatus): { code: string; message
     return {
       code: 'SUPPLIER_INACTIVE',
       message: 'O fornecedor está inactivo: não recebe novas encomendas.',
+    }
+  }
+  if (approvalStatus === 'REJECTED') {
+    return {
+      code: 'SUPPLIER_REJECTED',
+      message: 'A homologação do fornecedor foi rejeitada: não recebe novas encomendas.',
+    }
+  }
+  if (approvalStatus === 'SUSPENDED') {
+    return {
+      code: 'SUPPLIER_SUSPENDED',
+      message: 'A homologação do fornecedor está suspensa: não recebe novas encomendas.',
+    }
+  }
+  if (approvalStatus === 'EXPIRED') {
+    return {
+      code: 'SUPPLIER_APPROVAL_EXPIRED',
+      message: 'A homologação do fornecedor caducou: renove-a antes de encomendar.',
+    }
+  }
+  if (
+    supplier.critical &&
+    approvalStatus !== 'APPROVED' &&
+    approvalStatus !== 'CONDITIONALLY_APPROVED'
+  ) {
+    return {
+      code: 'SUPPLIER_NOT_APPROVED',
+      message: 'Um fornecedor crítico só recebe encomendas depois de homologado.',
     }
   }
   return null

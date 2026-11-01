@@ -9,6 +9,7 @@ import {
   type PurchaseDto,
   type ReceiptDto,
   type RequisitionDto,
+  type SupplierCategoryDto,
   type SupplierDto,
 } from './purchasing.api';
 import { PurchasingPage } from './purchasing-page';
@@ -16,6 +17,8 @@ import { PurchasingPage } from './purchasing-page';
 const ALL = [
   'supplier.read',
   'supplier.manage',
+  'supplier.approve',
+  'supplier_category.manage',
   'requisition.read',
   'requisition.manage',
   'requisition.approve',
@@ -38,6 +41,27 @@ const supplier = (over: Partial<SupplierDto> = {}): SupplierDto => ({
   statusReason: null,
   partyName: 'Fornecedora, SA',
   taxId: '5000099999',
+  categoryId: null,
+  categoryName: null,
+  supplyType: 'GOODS',
+  critical: false,
+  rating: null,
+  leadTimeDays: null,
+  notes: null,
+  approvalStatus: 'PENDING',
+  approvalValidUntil: null,
+  approvalConditions: null,
+  approvalRequestedByMembershipId: null,
+  version: 1,
+  ...over,
+});
+
+const category = (over: Partial<SupplierCategoryDto> = {}): SupplierCategoryDto => ({
+  id: 'c1',
+  code: 'MAT',
+  name: 'Materiais',
+  description: null,
+  active: true,
   version: 1,
   ...over,
 });
@@ -118,6 +142,10 @@ const confirmed = purchase({ number: 'OC A/2026/1', status: 'PARTIAL' });
 function configure(api: Record<string, unknown> = {}, granted: readonly string[] = ALL) {
   const full = {
     suppliers: vi.fn(() => of(page([supplier()]))),
+    supplierCategories: vi.fn(() =>
+      of([category(), category({ id: 'c2', code: 'OLD', name: 'Antiga', active: false })]),
+    ),
+    supplierApprovalEvents: vi.fn(() => of([])),
     parties: vi.fn(() => of([{ id: 'p1', displayName: 'Fornecedora, SA' }])),
     organizations: vi.fn(() => of([{ id: 'org1', code: 'EMP', legalName: 'Empresa, Lda.' }])),
     warehouses: vi.fn(() =>
@@ -242,6 +270,174 @@ describe('Fornecedores', () => {
   });
 });
 
+describe('Fornecedores | classificação e homologação', () => {
+  it('guarda a classificação com categoria activa e valida o prazo de entrega', async () => {
+    const updateSupplier = vi.fn(() =>
+      of(supplier({ categoryId: 'c1', categoryName: 'Materiais', critical: true, version: 2 })),
+    );
+    const { click, field, type, text } = await open({ updateSupplier });
+    expect(text()).toContain('Por homologar');
+    await click('Abrir');
+    const options = [...(field('Categoria') as HTMLSelectElement).options].map((o) => o.text);
+    expect(options).toContain('MAT — Materiais');
+    expect(options).not.toContain('OLD — Antiga');
+    await type(field('Categoria'), 'c1');
+    await type(field('Fornece'), 'BOTH');
+    await type(field('Avaliação'), 'A');
+    await type(field('Prazo de entrega (dias)'), '1.5');
+    await click('Guardar classificação');
+    expect(text()).toContain('Prazo de entrega: inteiro entre 0 e 3650 dias');
+    await type(field('Prazo de entrega (dias)'), '7');
+    const checkbox = document.body.querySelector<HTMLInputElement>(
+      '[data-testid=supplier-classification] input[type=checkbox]',
+    )!;
+    checkbox.click();
+    await click('Guardar classificação');
+    expect(updateSupplier).toHaveBeenCalledWith('s1', 1, {
+      categoryId: 'c1',
+      supplyType: 'BOTH',
+      rating: 'A',
+      leadTimeDays: 7,
+      notes: null,
+      critical: true,
+    });
+    expect(text()).toContain('Classificação guardada');
+    expect(text()).toContain('Materiais');
+  });
+
+  it('pede a análise; decide com motivo e condições; mostra o histórico', async () => {
+    const submitSupplierApproval = vi.fn(() =>
+      of(supplier({ approvalStatus: 'UNDER_REVIEW', version: 2 })),
+    );
+    const decideSupplierApproval = vi.fn(() =>
+      of(
+        supplier({
+          approvalStatus: 'CONDITIONALLY_APPROVED',
+          approvalConditions: 'Alvará em 90 dias',
+          approvalValidUntil: '2099-12-31',
+          version: 3,
+        }),
+      ),
+    );
+    const supplierApprovalEvents = vi.fn(() =>
+      of([
+        {
+          id: 'e1',
+          action: 'SUBMIT',
+          fromStatus: 'PENDING',
+          toStatus: 'UNDER_REVIEW',
+          reason: 'Documentos entregues',
+          conditions: null,
+          validUntil: null,
+          occurredAt: '2026-11-01T10:00:00.000Z',
+          actorMembershipId: 'm1',
+        },
+      ]),
+    );
+    const { click, field, type, text } = await open({
+      submitSupplierApproval,
+      decideSupplierApproval,
+      supplierApprovalEvents,
+    });
+    await click('Abrir');
+    expect(text()).toContain('Análise pedida');
+    expect(text()).toContain('Documentos entregues');
+    expect(document.body.textContent).not.toContain('Homologar com condições');
+    await type(field('Motivo (homologação)'), 'Documentos entregues');
+    await click('Pedir análise');
+    expect(submitSupplierApproval).toHaveBeenCalledWith('s1', 1, 'Documentos entregues');
+    expect(text()).toContain('Homologação: Em análise');
+
+    await click('Rejeitar');
+    expect(text()).toContain('Indique o motivo.');
+    await click('Homologar com condições');
+    expect(text()).toContain('Indique as condições da homologação');
+    await type(field('Condições'), 'Alvará em 90 dias');
+    await type(field('Válida até'), '2099-12-31');
+    await click('Homologar com condições');
+    expect(decideSupplierApproval).toHaveBeenCalledWith('s1', 2, {
+      action: 'APPROVE_CONDITIONALLY',
+      reason: null,
+      conditions: 'Alvará em 90 dias',
+      validUntil: '2099-12-31',
+    });
+    expect(document.body.querySelector('[data-testid=approval-conditions]')?.textContent).toContain(
+      'Alvará em 90 dias',
+    );
+    expect(text()).toContain('Suspender');
+  });
+
+  it('mostra a recusa do servidor (segregação de funções)', async () => {
+    const decideSupplierApproval = vi.fn(() =>
+      throwError(() => ({ status: 409, code: 'SEGREGATION_OF_DUTIES' })),
+    );
+    const { click, text } = await open({
+      decideSupplierApproval,
+      suppliers: vi.fn(() => of(page([supplier({ approvalStatus: 'UNDER_REVIEW' })]))),
+    });
+    await click('Abrir');
+    await click('Homologar');
+    expect(text()).toContain('Segregação de funções');
+  });
+
+  it('sem supplier.approve não decide; sem supplier.manage não pede análise', async () => {
+    const { click, buttons } = await open(
+      { suppliers: vi.fn(() => of(page([supplier({ approvalStatus: 'UNDER_REVIEW' })]))) },
+      ['supplier.read', 'supplier.manage'],
+    );
+    await click('Abrir');
+    expect(buttons('Homologar')).toHaveLength(0);
+    expect(buttons('Pedir nova análise')).toHaveLength(0);
+  });
+
+  it('filtra pela homologação', async () => {
+    const suppliers = vi.fn(() => of(page([supplier()])));
+    const { field, type } = await open({ suppliers });
+    await type(field('Homologação'), 'EXPIRED');
+    expect(suppliers).toHaveBeenLastCalledWith({ limit: 100, approvalStatus: 'EXPIRED' });
+  });
+});
+
+describe('Categorias de fornecedores', () => {
+  it('cria, altera e desactiva', async () => {
+    const createSupplierCategory = vi.fn(() => of(category({ id: 'c3', code: 'SERV' })));
+    const updateSupplierCategory = vi.fn(() => of(category({ version: 2 })));
+    const { click, field, type, text, tab } = await open({
+      createSupplierCategory,
+      updateSupplierCategory,
+    });
+    await tab('categories');
+    expect(text()).toContain('Materiais');
+    expect(text()).toContain('Inactiva');
+    await click('Criar categoria');
+    expect(text()).toContain('Indique o código');
+    await type(field('Código'), 'SERV');
+    await type(field('Designação'), 'Serviços');
+    await click('Criar categoria');
+    expect(createSupplierCategory).toHaveBeenCalledWith({
+      code: 'SERV',
+      name: 'Serviços',
+      description: null,
+    });
+    await click('Alterar');
+    await type(field('Designação'), 'Materiais de obra');
+    await click('Guardar');
+    expect(updateSupplierCategory).toHaveBeenCalledWith('c1', 1, {
+      name: 'Materiais de obra',
+      description: null,
+    });
+    await click('Desactivar');
+    expect(updateSupplierCategory).toHaveBeenLastCalledWith('c1', 1, { active: false });
+  });
+
+  it('sem supplier_category.manage só lê', async () => {
+    const { buttons, tab } = await open({}, ['supplier.read']);
+    await tab('categories');
+    expect(buttons('Criar categoria')).toHaveLength(0);
+    expect(buttons('Desactivar')).toHaveLength(0);
+  });
+});
+
 describe('Requisições', () => {
   it('cria o rascunho com linhas por SKU e submete', async () => {
     const createRequisition = vi.fn(() => of(requisition()));
@@ -295,7 +491,9 @@ describe('Requisições', () => {
     await tab('requisitions');
     await click('Abrir');
     await click('Aprovar');
-    expect(text()).toContain('Quem pediu a requisição não a pode aprovar nem rejeitar');
+    expect(text()).toContain(
+      'quem fez o pedido (requisição ou análise do fornecedor) não o pode aprovar',
+    );
     await click('Rejeitar');
     expect(text()).toContain('Indique o motivo da rejeição');
     await type(field('Motivo da decisão'), 'Sem orçamento');

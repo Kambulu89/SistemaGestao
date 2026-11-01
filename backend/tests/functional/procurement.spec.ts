@@ -1055,3 +1055,357 @@ test.group('fornecedores | referências', (g) => {
     assert.equal(response.body().error.details[0].code, 'UNKNOWN_ORGANIZATION')
   })
 })
+
+test.group('fornecedores | categorias, classificação e homologação (9.1)', (g) => {
+  common(g)
+
+  test('categorias com código imutável; classificação e filtros no fornecedor', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const category = await must<any>(
+      await ctx.http.post('/api/v1/supplier-categories', {
+        code: 'MAT',
+        name: ' Materiais de construção ',
+      }),
+      201
+    )
+    assert.equal(category.name, 'Materiais de construção')
+    const dup = await ctx.http.post('/api/v1/supplier-categories', { code: 'MAT', name: 'x' })
+    dup.assertStatus(409)
+    assert.equal(dup.body().error.code, 'SUPPLIER_CATEGORY_CODE_EXISTS')
+    const immutable = await ctx.http.patch(`/api/v1/supplier-categories/${category.id}`, {
+      expectedVersion: category.version,
+      code: 'OUTRO',
+    })
+    immutable.assertStatus(422)
+
+    const classified = await must<any>(
+      await ctx.http.patch(`/api/v1/suppliers/${ctx.supplier.id}`, {
+        expectedVersion: ctx.supplier.version,
+        categoryId: category.id,
+        supplyType: 'BOTH',
+        critical: true,
+        rating: 'A',
+        leadTimeDays: 10,
+        notes: 'Entrega em obra.',
+      }),
+      200
+    )
+    assert.deepInclude(classified, {
+      categoryId: category.id,
+      categoryName: 'Materiais de construção',
+      supplyType: 'BOTH',
+      critical: true,
+      rating: 'A',
+      leadTimeDays: 10,
+      approvalStatus: 'PENDING',
+    })
+    const invalid = await ctx.http.patch(`/api/v1/suppliers/${ctx.supplier.id}`, {
+      expectedVersion: classified.version,
+      supplyType: 'X',
+      rating: 'Z',
+    })
+    invalid.assertStatus(422)
+    assert.sameMembers(
+      invalid.body().error.details.map((d: any) => d.code),
+      ['INVALID_SUPPLY_TYPE', 'INVALID_RATING']
+    )
+
+    // Uma categoria inactiva não se atribui de novo (o fornecedor que já a tem mantém-na).
+    const inactive = await must<any>(
+      await ctx.http.patch(`/api/v1/supplier-categories/${category.id}`, {
+        expectedVersion: category.version,
+        active: false,
+      }),
+      200
+    )
+    assert.isFalse(inactive.active)
+    const party = await must<any>(
+      await ctx.http.post('/api/v1/organization-parties', {
+        legalName: 'Outra, Lda.',
+        taxCountry: 'AO',
+        taxId: '5000011111',
+      }),
+      201
+    )
+    const rejected = await ctx.http.post('/api/v1/suppliers', {
+      partyId: party.id,
+      organizationId: ctx.org.id,
+      code: 'FOR-002',
+      categoryId: category.id,
+    })
+    rejected.assertStatus(422)
+    assert.equal(code(rejected), 'UNKNOWN_CATEGORY')
+    await must(
+      await ctx.http.patch(`/api/v1/suppliers/${ctx.supplier.id}`, {
+        expectedVersion: classified.version,
+        paymentTermDays: 45,
+      }),
+      200
+    )
+
+    const byCategory = await ctx.http.get(
+      `/api/v1/suppliers?categoryId=${category.id}&critical=true&approvalStatus=PENDING`
+    )
+    assert.deepEqual(
+      byCategory.body().data.map((s: any) => s.code),
+      ['FOR-001']
+    )
+    assert.lengthOf(
+      (await ctx.http.get('/api/v1/suppliers?approvalStatus=APPROVED')).body().data,
+      0
+    )
+    assert.deepEqual(
+      (await ctx.http.get('/api/v1/supplier-categories?active=false'))
+        .body()
+        .data.map((c: any) => c.code),
+      ['MAT']
+    )
+  })
+
+  test('homologação: análise, segregação de funções, condições, suspensão e histórico só-de-acrescentar', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const approver = await memberWith(ctx, ['supplier.read', 'supplier.approve'])
+    const manager = await memberWith(ctx, ['supplier.read', 'supplier.manage'])
+
+    // Sem análise pedida não há decisão.
+    const early = await approver.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+      expectedVersion: ctx.supplier.version,
+      action: 'APPROVE',
+    })
+    early.assertStatus(409)
+    assert.equal(early.body().error.code, 'SUPPLIER_APPROVAL_STATE')
+
+    // Quem gere fornecedores pede a análise mas não decide.
+    const submitted = await must<any>(
+      await manager.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/submit`, {
+        expectedVersion: ctx.supplier.version,
+        reason: 'Documentação entregue.',
+      }),
+      200
+    )
+    assert.equal(submitted.approvalStatus, 'UNDER_REVIEW')
+    ;(
+      await manager.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+        expectedVersion: submitted.version,
+        action: 'APPROVE',
+      })
+    ).assertStatus(403)
+    const twice = await manager.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/submit`, {
+      expectedVersion: submitted.version,
+    })
+    twice.assertStatus(409)
+    assert.equal(twice.body().error.code, 'SUPPLIER_ALREADY_UNDER_REVIEW')
+
+    // O administrador tem todas as permissões, mas a segregação vale para quem pediu: aqui pediu o gestor.
+    const noConditions = await approver.post(
+      `/api/v1/suppliers/${ctx.supplier.id}/approval/decide`,
+      { expectedVersion: submitted.version, action: 'APPROVE_CONDITIONALLY' }
+    )
+    noConditions.assertStatus(422)
+    assert.equal(code(noConditions), 'CONDITIONS_REQUIRED')
+    const stale = await approver.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+      expectedVersion: ctx.supplier.version,
+      action: 'APPROVE',
+    })
+    stale.assertStatus(409)
+    const conditional = await must<any>(
+      await approver.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+        expectedVersion: submitted.version,
+        action: 'APPROVE_CONDITIONALLY',
+        conditions: 'Apresentar alvará actualizado em 90 dias.',
+        validUntil: '2099-12-31',
+      }),
+      200
+    )
+    assert.deepInclude(conditional, {
+      approvalStatus: 'CONDITIONALLY_APPROVED',
+      approvalValidUntil: '2099-12-31',
+      approvalConditions: 'Apresentar alvará actualizado em 90 dias.',
+    })
+
+    const noReason = await approver.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+      expectedVersion: conditional.version,
+      action: 'SUSPEND',
+    })
+    noReason.assertStatus(422)
+    const suspended = await must<any>(
+      await approver.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+        expectedVersion: conditional.version,
+        action: 'SUSPEND',
+        reason: 'Alvará não apresentado.',
+      }),
+      200
+    )
+    assert.equal(suspended.approvalStatus, 'SUSPENDED')
+    assert.isNull(suspended.approvalConditions)
+
+    // Quem pede a renovação (o administrador) não a pode aprovar; outro pode.
+    const renewal = await must<any>(
+      await ctx.http.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/submit`, {
+        expectedVersion: suspended.version,
+      }),
+      200
+    )
+    const self = await ctx.http.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+      expectedVersion: renewal.version,
+      action: 'APPROVE',
+    })
+    self.assertStatus(409)
+    assert.equal(self.body().error.code, 'SEGREGATION_OF_DUTIES')
+    const approved = await must<any>(
+      await approver.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+        expectedVersion: renewal.version,
+        action: 'APPROVE',
+      }),
+      200
+    )
+    assert.deepInclude(approved, { approvalStatus: 'APPROVED', approvalValidUntil: null })
+
+    const history = await must<any[]>(
+      await approver.get(`/api/v1/suppliers/${ctx.supplier.id}/approval-events`),
+      200
+    )
+    assert.deepEqual(
+      history.map((e) => `${e.action}:${e.fromStatus}>${e.toStatus}`),
+      [
+        'APPROVE:UNDER_REVIEW>APPROVED',
+        'SUBMIT:SUSPENDED>UNDER_REVIEW',
+        'SUSPEND:CONDITIONALLY_APPROVED>SUSPENDED',
+        'APPROVE_CONDITIONALLY:UNDER_REVIEW>CONDITIONALLY_APPROVED',
+        'SUBMIT:PENDING>UNDER_REVIEW',
+      ]
+    )
+    assert.equal(history[4].reason, 'Documentação entregue.')
+    assert.isString(history[0].actorMembershipId)
+
+    // O histórico não se altera nem se apaga, nem por SQL directo.
+    let blocked = ''
+    try {
+      await owner(`update supplier_approval_events set reason = 'x'`, ctx.tenant)
+    } catch (error) {
+      blocked = String((error as Error).message)
+    }
+    assert.include(blocked, 'SUPPLIER_APPROVAL_HISTORY_APPEND_ONLY')
+    const events = await owner<{ event_type: string; to: string }>(
+      `select event_type, payload->>'toStatus' as to from outbox_events
+        where aggregate_type = 'supplier' order by created_at, aggregate_version`,
+      ctx.tenant
+    )
+    assert.lengthOf(events, 5)
+    assert.isTrue(events.every((e) => e.event_type === 'procurement.supplier.approval_changed'))
+  })
+
+  test('encomendas: crítico sem homologação, suspenso, rejeitado ou caducado não recebe novas', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const approver = await memberWith(ctx, ['supplier.read', 'supplier.approve'])
+    const order = () =>
+      ctx.http.post('/api/v1/purchase-orders', {
+        supplierId: ctx.supplier.id,
+        lines: [{ variantId: ctx.shirt.id, quantity: '1', unitCost: '10' }],
+      })
+    // Não crítico e por homologar: continua a poder encomendar (compatível com os fornecedores existentes).
+    ;(await order()).assertStatus(201)
+    const critical = await must<any>(
+      await ctx.http.patch(`/api/v1/suppliers/${ctx.supplier.id}`, {
+        expectedVersion: ctx.supplier.version,
+        critical: true,
+      }),
+      200
+    )
+    const notApproved = await order()
+    notApproved.assertStatus(409)
+    assert.equal(notApproved.body().error.code, 'SUPPLIER_NOT_APPROVED')
+
+    const submitted = await must<any>(
+      await ctx.http.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/submit`, {
+        expectedVersion: critical.version,
+      }),
+      200
+    )
+    const approved = await must<any>(
+      await approver.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+        expectedVersion: submitted.version,
+        action: 'APPROVE',
+        validUntil: '2099-01-01',
+      }),
+      200
+    )
+    ;(await order()).assertStatus(201)
+
+    // A validade passada lê-se como EXPIRED (nunca gravado) e bloqueia novas encomendas.
+    await owner(
+      `update suppliers set approval_valid_until = date '2020-01-01' where id = '${ctx.supplier.id}'`,
+      ctx.tenant
+    )
+    const expired = await must<any>(await ctx.http.get(`/api/v1/suppliers/${ctx.supplier.id}`), 200)
+    assert.equal(expired.approvalStatus, 'EXPIRED')
+    const expiredOrder = await order()
+    expiredOrder.assertStatus(409)
+    assert.equal(expiredOrder.body().error.code, 'SUPPLIER_APPROVAL_EXPIRED')
+    assert.deepEqual(
+      (await ctx.http.get('/api/v1/suppliers?approvalStatus=EXPIRED'))
+        .body()
+        .data.map((s: any) => s.code),
+      ['FOR-001']
+    )
+
+    // Suspenso: nem se suspende uma homologação caducada; renova-se e rejeita-se.
+    const cannotSuspend = await approver.post(
+      `/api/v1/suppliers/${ctx.supplier.id}/approval/decide`,
+      { expectedVersion: approved.version, action: 'SUSPEND', reason: 'x' }
+    )
+    cannotSuspend.assertStatus(409)
+    const renewal = await must<any>(
+      await ctx.http.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/submit`, {
+        expectedVersion: approved.version,
+      }),
+      200
+    )
+    await must(
+      await approver.post(`/api/v1/suppliers/${ctx.supplier.id}/approval/decide`, {
+        expectedVersion: renewal.version,
+        action: 'REJECT',
+        reason: 'Sem certificação de qualidade.',
+      }),
+      200
+    )
+    const rejectedOrder = await order()
+    rejectedOrder.assertStatus(409)
+    assert.equal(rejectedOrder.body().error.code, 'SUPPLIER_REJECTED')
+  })
+
+  test('categorias exigem supplier_category.manage; outro tenant dá 404', async ({
+    client,
+    assert,
+  }) => {
+    const ctx = await setup(client)
+    const manager = await memberWith(ctx, ['supplier.read', 'supplier.manage'])
+    ;(await manager.post('/api/v1/supplier-categories', { code: 'X', name: 'X' })).assertStatus(403)
+    const category = await must<any>(
+      await ctx.http.post('/api/v1/supplier-categories', { code: 'SERV', name: 'Serviços' }),
+      201
+    )
+    assert.lengthOf(await must<any[]>(await manager.get('/api/v1/supplier-categories'), 200), 1)
+
+    const other = await setup(client)
+    ;(await other.http.get(`/api/v1/supplier-categories/${category.id}`)).assertStatus(404)
+    ;(await other.http.get(`/api/v1/suppliers/${ctx.supplier.id}/approval-events`)).assertStatus(
+      404
+    )
+    const foreign = await other.http.patch(`/api/v1/suppliers/${other.supplier.id}`, {
+      expectedVersion: other.supplier.version,
+      categoryId: category.id,
+    })
+    foreign.assertStatus(422)
+    assert.equal(code(foreign), 'UNKNOWN_CATEGORY')
+  })
+})

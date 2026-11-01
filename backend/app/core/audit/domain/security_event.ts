@@ -109,6 +109,8 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   credit_notes: 'invoice.read',
   credit_note_lines: 'invoice.read',
   suppliers: 'supplier.read',
+  supplier_categories: 'supplier.read',
+  supplier_approval_events: 'supplier.read',
   purchase_requisitions: 'requisition.read',
   requisition_lines: 'requisition.read',
   purchase_orders: 'purchase.read',
@@ -197,4 +199,6 @@ export const AUDIT_EXEMPT_TABLES: Readonly<Record<string, string>> = {
     'Fila técnica do outbox transaccional: o evento é escrito com a alteração que o originou (já auditada) e só muda de estado ao ser publicado.',
   user_preferences:
     'Preferências pessoais de apresentação; sem efeito em acessos nem dados de negócio.',
+  supplier_approval_events:
+    'Histórico próprio e só de acrescentar da homologação de fornecedores (M06), consultável em GET /suppliers/{id}/approval-events; a mudança no fornecedor é auditada.',
 }

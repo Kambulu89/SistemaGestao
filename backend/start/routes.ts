@@ -856,14 +856,41 @@ router
           .group(() => {
             router.get('/suppliers', [ProcurementController, 'listSuppliers'])
             router.get('/suppliers/:id', [ProcurementController, 'showSupplier'])
+            router.get('/suppliers/:id/approval-events', [
+              ProcurementController,
+              'supplierApprovalHistory',
+            ])
+            router.get('/supplier-categories', [ProcurementController, 'listSupplierCategories'])
+            router.get('/supplier-categories/:id', [ProcurementController, 'showSupplierCategory'])
           })
           .use(middleware.can({ permission: 'supplier.read' }))
         router
           .group(() => {
             router.post('/suppliers', [ProcurementController, 'createSupplier'])
             router.patch('/suppliers/:id', [ProcurementController, 'updateSupplier'])
+            router.post('/suppliers/:id/approval/submit', [
+              ProcurementController,
+              'submitSupplierApproval',
+            ])
           })
           .use(middleware.can({ permission: 'supplier.manage' }))
+        router
+          .group(() => {
+            router.post('/supplier-categories', [ProcurementController, 'createSupplierCategory'])
+            router.patch('/supplier-categories/:id', [
+              ProcurementController,
+              'updateSupplierCategory',
+            ])
+          })
+          .use(middleware.can({ permission: 'supplier_category.manage' }))
+        router
+          .group(() => {
+            router.post('/suppliers/:id/approval/decide', [
+              ProcurementController,
+              'decideSupplierApproval',
+            ])
+          })
+          .use(middleware.can({ permission: 'supplier.approve' }))
       })
       .use(middleware.feature({ code: 'procurement.suppliers' }))
 

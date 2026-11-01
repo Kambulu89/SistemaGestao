@@ -99,7 +99,7 @@ export class PurchaseUseCases {
           'O fornecedor pertence a outra organização.'
         )
       }
-      const blocker = purchaseBlocker(supplier.status)
+      const blocker = purchaseBlocker(supplier)
       if (blocker) throw ApiError.conflict(blocker.code, blocker.message)
       const created = await this.purchases.insert(scope, {
         organizationId: supplier.organizationId,
@@ -149,7 +149,7 @@ export class PurchaseUseCases {
           'O fornecedor pertence a outra organização.'
         )
       }
-      const blocker = purchaseBlocker(supplier.status)
+      const blocker = purchaseBlocker(supplier)
       if (blocker) throw ApiError.conflict(blocker.code, blocker.message)
       const requested = await this.requisitions.listLines(scope, requisitionId)
       const costs = new Map((input.lines ?? []).map((l) => [l.variantId, l]))
@@ -260,7 +260,7 @@ export class PurchaseUseCases {
         throw ApiError.conflict('PURCHASE_ORDER_EMPTY', 'Uma encomenda sem linhas não se confirma.')
       }
       const supplier = await this.suppliers.find(scope, order.supplierId)
-      const blocker = supplier ? purchaseBlocker(supplier.status) : null
+      const blocker = supplier ? purchaseBlocker(supplier) : null
       if (blocker) throw ApiError.conflict(blocker.code, blocker.message)
       const number = await this.references.issueNumber(scope, {
         organizationId: order.organizationId,

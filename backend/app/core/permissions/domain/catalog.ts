@@ -339,7 +339,18 @@ export const PERMISSION_CATALOG: readonly PermissionDefinition[] = [
   {
     code: 'supplier.manage',
     moduleCode: 'procurement',
-    description: 'Criar e alterar fornecedores (condições de compra).',
+    description: 'Criar e alterar fornecedores (condições de compra) e pedir a sua homologação.',
+  },
+  {
+    code: 'supplier.approve',
+    moduleCode: 'procurement',
+    description:
+      'Homologar fornecedores: aprovar, aprovar com condições, rejeitar e suspender (nunca os que pediu).',
+  },
+  {
+    code: 'supplier_category.manage',
+    moduleCode: 'procurement',
+    description: 'Criar, alterar e desactivar categorias de fornecedores.',
   },
   {
     code: 'requisition.read',

@@ -4,12 +4,14 @@ import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { PurchasesTab } from './purchases-tab';
 import { ReceiptsTab } from './receipts-tab';
 import { RequisitionsTab } from './requisitions-tab';
+import { SupplierCategoriesTab } from './supplier-categories-tab';
 import { SuppliersTab } from './suppliers-tab';
 
-type TabId = 'suppliers' | 'requisitions' | 'orders' | 'receipts';
+type TabId = 'suppliers' | 'categories' | 'requisitions' | 'orders' | 'receipts';
 
 const TABS: readonly { id: TabId; label: string; permission: string }[] = [
   { id: 'suppliers', label: 'Fornecedores', permission: 'supplier.read' },
+  { id: 'categories', label: 'Categorias', permission: 'supplier.read' },
   { id: 'requisitions', label: 'Requisições', permission: 'requisition.read' },
   { id: 'orders', label: 'Encomendas', permission: 'purchase.read' },
   { id: 'receipts', label: 'Recepções', permission: 'receipt.read' },
@@ -18,7 +20,14 @@ const TABS: readonly { id: TabId; label: string; permission: string }[] = [
 /** Compras (M06): confirmar uma encomenda não recebe; só uma recepção lançada dá entrada do stock. */
 @Component({
   selector: 'app-purchasing-page',
-  imports: [PageHeader, SuppliersTab, RequisitionsTab, PurchasesTab, ReceiptsTab],
+  imports: [
+    PageHeader,
+    SuppliersTab,
+    SupplierCategoriesTab,
+    RequisitionsTab,
+    PurchasesTab,
+    ReceiptsTab,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header
@@ -46,6 +55,9 @@ const TABS: readonly { id: TabId; label: string; permission: string }[] = [
     @switch (active()) {
       @case ('suppliers') {
         <app-purchasing-suppliers />
+      }
+      @case ('categories') {
+        <app-purchasing-supplier-categories />
       }
       @case ('requisitions') {
         <app-purchasing-requisitions />

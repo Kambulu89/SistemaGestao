@@ -119,6 +119,8 @@ async function snapshot(world: World) {
     shipment: await get(`/api/v1/shipments/${world.ids.shipment}`),
     suppliers: await get('/api/v1/suppliers'),
     supplier: await get(`/api/v1/suppliers/${world.ids.supplier}`),
+    supplierCategories: await get('/api/v1/supplier-categories'),
+    supplierApprovalEvents: await get(`/api/v1/suppliers/${world.ids.supplier}/approval-events`),
     requisitions: await get('/api/v1/purchase-requisitions'),
     requisition: await get(`/api/v1/purchase-requisitions/${world.ids.requisition}`),
     purchases: await get('/api/v1/purchase-orders'),
@@ -372,6 +374,11 @@ function foreignIdCases(me: World, other: World): [Method, string, unknown?][] {
     ['post', `/shipments/${o.shipment}/reverse`, { reason: 'x' }],
     ['get', `/suppliers/${o.supplier}`],
     ['patch', `/suppliers/${o.supplier}`, { ...stale, paymentTermDays: 10 }],
+    ['post', `/suppliers/${o.supplier}/approval/submit`, stale],
+    ['post', `/suppliers/${o.supplier}/approval/decide`, { ...stale, action: 'APPROVE' }],
+    ['get', `/suppliers/${o.supplier}/approval-events`],
+    ['get', `/supplier-categories/${o.supplierCategory}`],
+    ['patch', `/supplier-categories/${o.supplierCategory}`, { ...stale, name: 'x' }],
     ['get', `/purchase-requisitions/${o.requisition}`],
     ['patch', `/purchase-requisitions/${o.requisition}`, { ...stale, notes: 'x' }],
     ['delete', `/purchase-requisitions/${o.requisition}`],
@@ -779,6 +786,8 @@ test.group('matriz de isolamento', (group) => {
       'salesOrders',
       'shipments',
       'suppliers',
+      'supplierCategories',
+      'supplierApprovalEvents',
       'requisitions',
       'purchases',
       'receipts',
@@ -1037,6 +1046,13 @@ test.group('matriz de isolamento', (group) => {
         'post',
         '/purchase-orders',
         { supplierId: bi.supplier },
+        422,
+      ],
+      [
+        'fornecedor com a categoria de B',
+        'patch',
+        `/suppliers/${a.ids.supplier}`,
+        { expectedVersion: 2, categoryId: bi.supplierCategory },
         422,
       ],
       [
@@ -1873,11 +1889,12 @@ test.group('matriz de isolamento', (group) => {
         'report_definitions',
         'journal_entries',
         'journal_lines',
+        'supplier_approval_events',
       ].includes(table)
       assert.match(
         moved.message,
         immutable
-          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY|STATEMENT_LINE_IMMUTABLE|MATCH_IMMUTABLE|CRM_APPEND_ONLY|DOCUMENT_VERSION_IMMUTABLE|TEMPLATE_VERSION_IMMUTABLE|REPORT_PUBLISHED_IMMUTABLE|JOURNAL_ENTRY_IMMUTABLE|JOURNAL_LINES_IMMUTABLE/
+          ? /row-level security|PUBLISHED_VERSION_IMMUTABLE|PUBLISHED_RULE_IMMUTABLE|PUBLISHED_FORM_IMMUTABLE|PUBLISHED_STATE_MACHINE_IMMUTABLE|PUBLISHED_WORKFLOW_IMMUTABLE|WORKFLOW_TERMINAL_IMMUTABLE|CONTRACT_IMMUTABLE|INVOICE_IMMUTABLE|INVOICE_LINES_IMMUTABLE|CREDIT_NOTE_IMMUTABLE|CREDIT_NOTE_LINES_IMMUTABLE|REQUISITION_IMMUTABLE|PURCHASE_ORDER_IMMUTABLE|GOODS_RECEIPT_IMMUTABLE|REQUISITION_LINES_IMMUTABLE|PURCHASE_LINES_IMMUTABLE|GOODS_RECEIPT_LINES_IMMUTABLE|STOCK_TRANSFER_IMMUTABLE|TRANSFER_LINES_IMMUTABLE|STOCK_COUNT_IMMUTABLE|COUNT_LINES_IMMUTABLE|GOODS_RETURN_IMMUTABLE|RETURN_LINES_IMMUTABLE|OBLIGATION_IMMUTABLE|PAYMENT_IMMUTABLE|SUPPLIER_INVOICE_IMMUTABLE|FINANCE_APPEND_ONLY|STATEMENT_LINE_IMMUTABLE|MATCH_IMMUTABLE|CRM_APPEND_ONLY|DOCUMENT_VERSION_IMMUTABLE|TEMPLATE_VERSION_IMMUTABLE|REPORT_PUBLISHED_IMMUTABLE|JOURNAL_ENTRY_IMMUTABLE|JOURNAL_LINES_IMMUTABLE|SUPPLIER_APPROVAL_HISTORY_APPEND_ONLY/
           : /row-level security/,
         `${table}: mover linhas para B`
       )

@@ -8,7 +8,12 @@ import {
   createPurchaseValidator,
   createReceiptValidator,
   createRequisitionValidator,
+  createSupplierCategoryValidator,
   createSupplierValidator,
+  decideSupplierApprovalValidator,
+  listSupplierCategoriesValidator,
+  submitSupplierApprovalValidator,
+  updateSupplierCategoryValidator,
   listPurchasesValidator,
   listReceiptsValidator,
   listRequisitionsValidator,
@@ -33,6 +38,66 @@ function uuidParam(ctx: HttpContext, name: string): string {
 
 /** Transporte apenas: valida, chama o caso de uso e formata a resposta. */
 export default class ProcurementController {
+  // --- categorias e homologação de fornecedores ------------------------------------------------
+
+  async listSupplierCategories(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(listSupplierCategoriesValidator, {
+      data: ctx.request.qs(),
+    })
+    return envelope(ctx, await procurementServices().suppliers.listCategories(ctx.tenantContext, q))
+  }
+
+  async showSupplierCategory(ctx: HttpContext) {
+    return envelope(
+      ctx,
+      await procurementServices().suppliers.getCategory(ctx.tenantContext, uuidParam(ctx, 'id'))
+    )
+  }
+
+  async createSupplierCategory(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(createSupplierCategoryValidator)
+    const created = await procurementServices().suppliers.createCategory(ctx.tenantContext, b)
+    ctx.response.status(201).header('location', `/api/v1/supplier-categories/${created.id}`)
+    return envelope(ctx, created)
+  }
+
+  async updateSupplierCategory(ctx: HttpContext) {
+    const b = await ctx.request.validateUsing(updateSupplierCategoryValidator)
+    return envelope(
+      ctx,
+      await procurementServices().suppliers.updateCategory(
+        ctx.tenantContext,
+        uuidParam(ctx, 'id'),
+        b
+      )
+    )
+  }
+
+  async submitSupplierApproval(ctx: HttpContext) {
+    const id = uuidParam(ctx, 'id')
+    const b = await ctx.request.validateUsing(submitSupplierApprovalValidator)
+    return envelope(
+      ctx,
+      await procurementServices().suppliers.changeApproval(ctx.tenantContext, id, 'SUBMIT', b)
+    )
+  }
+
+  async decideSupplierApproval(ctx: HttpContext) {
+    const id = uuidParam(ctx, 'id')
+    const { action, ...b } = await ctx.request.validateUsing(decideSupplierApprovalValidator)
+    return envelope(
+      ctx,
+      await procurementServices().suppliers.changeApproval(ctx.tenantContext, id, action, b)
+    )
+  }
+
+  async supplierApprovalHistory(ctx: HttpContext) {
+    return envelope(
+      ctx,
+      await procurementServices().suppliers.approvalHistory(ctx.tenantContext, uuidParam(ctx, 'id'))
+    )
+  }
+
   // --- fornecedores --------------------------------------------------------------------------
 
   async listSuppliers(ctx: HttpContext) {

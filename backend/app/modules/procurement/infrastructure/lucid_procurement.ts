@@ -8,6 +8,11 @@ import type {
   RequisitionStatus,
   SupplierStatus,
   SupplierValues,
+  ApprovalChange,
+  ApprovalStatus,
+  SupplierCategoryValues,
+  SupplierRating,
+  SupplyType,
 } from '#modules/procurement/domain/procurement'
 import type {
   PurchaseFilter,
@@ -23,6 +28,9 @@ import type {
   RequisitionLine,
   RequisitionStore,
   Supplier,
+  SupplierApprovalEvent,
+  SupplierCategory,
+  SupplierCategoryStore,
   SupplierFilter,
   SupplierStore,
   Totals,
@@ -59,20 +67,43 @@ interface SupplierRow {
   currency: string
   status: SupplierStatus
   status_reason: string | null
+  category_id: string | null
+  supply_type: SupplyType
+  critical: boolean
+  rating: SupplierRating | null
+  lead_time_days: number | null
+  notes: string | null
+  approval_status: ApprovalStatus
+  approval_valid_until: string | null
+  approval_conditions: string | null
+  approval_requested_by_membership_id: string | null
   version: number
   created_at: Date
   updated_at: Date
   party_name: string
   tax_id: string | null
+  category_name: string | null
 }
 
-/** Junta só para ler (nome e NIF da Party): o fornecedor nunca escreve na Party. */
-const SUPPLIER_SELECT = `
-  select s.id, s.party_id, s.organization_id, s.code, s.payment_term_days, s.currency, s.status, s.status_reason,
-         s.version, s.created_at, s.updated_at, p.display_name as party_name, op.tax_id
+/** `EXPIRED` não se grava: deriva de uma homologação em vigor cuja validade já passou. */
+const EFFECTIVE_APPROVAL = `case
+    when s.approval_status in ('APPROVED', 'CONDITIONALLY_APPROVED') and s.approval_valid_until < current_date
+      then 'EXPIRED' else s.approval_status end`
+
+/** Junta só para ler (nome e NIF da Party, nome da categoria): o fornecedor nunca escreve na Party. */
+const SUPPLIER_FROM = `
     from suppliers s
     join parties p on p.tenant_id = s.tenant_id and p.id = s.party_id
-    left join organization_parties op on op.tenant_id = s.tenant_id and op.party_id = s.party_id`
+    left join organization_parties op on op.tenant_id = s.tenant_id and op.party_id = s.party_id
+    left join supplier_categories c on c.tenant_id = s.tenant_id and c.id = s.category_id`
+
+const SUPPLIER_SELECT = `
+  select s.id, s.party_id, s.organization_id, s.code, s.payment_term_days, s.currency, s.status, s.status_reason,
+         s.category_id, s.supply_type, s.critical, s.rating, s.lead_time_days, s.notes,
+         ${EFFECTIVE_APPROVAL} as approval_status, s.approval_valid_until::text as approval_valid_until,
+         s.approval_conditions, s.approval_requested_by_membership_id,
+         s.version, s.created_at, s.updated_at, p.display_name as party_name, op.tax_id, c.name as category_name
+  ${SUPPLIER_FROM}`
 
 const toSupplier = (r: SupplierRow): Supplier => ({
   id: r.id,
@@ -83,11 +114,22 @@ const toSupplier = (r: SupplierRow): Supplier => ({
   currency: r.currency,
   status: r.status,
   statusReason: r.status_reason,
+  categoryId: r.category_id,
+  supplyType: r.supply_type,
+  critical: r.critical,
+  rating: r.rating,
+  leadTimeDays: r.lead_time_days,
+  notes: r.notes,
+  approvalStatus: r.approval_status,
+  approvalValidUntil: r.approval_valid_until,
+  approvalConditions: r.approval_conditions,
+  approvalRequestedByMembershipId: r.approval_requested_by_membership_id,
   version: r.version,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
   partyName: r.party_name,
   taxId: r.tax_id,
+  categoryName: r.category_name,
 })
 
 export class LucidSupplierStore implements SupplierStore {
@@ -104,11 +146,17 @@ export class LucidSupplierStore implements SupplierStore {
     for (const [column, value] of [
       ['s.status', filter.status],
       ['s.organization_id', filter.organizationId],
+      ['s.category_id', filter.categoryId],
+      [`(${EFFECTIVE_APPROVAL})`, filter.approvalStatus],
     ] as const) {
       if (value) {
         where.push(`${column} = ?`)
         params.push(value)
       }
+    }
+    if (filter.critical !== undefined) {
+      where.push('s.critical = ?')
+      params.push(filter.critical)
     }
     const clause = where.join(' and ')
     const rows = await trxOf(scope).rawQuery(
@@ -116,11 +164,7 @@ export class LucidSupplierStore implements SupplierStore {
       [...params, filter.limit, filter.offset] as never[]
     )
     const count = await trxOf(scope).rawQuery(
-      `select count(*)::int as total
-         from suppliers s
-         join parties p on p.tenant_id = s.tenant_id and p.id = s.party_id
-         left join organization_parties op on op.tenant_id = s.tenant_id and op.party_id = s.party_id
-        where ${clause}`,
+      `select count(*)::int as total ${SUPPLIER_FROM} where ${clause}`,
       params as never[]
     )
     return {
@@ -142,8 +186,9 @@ export class LucidSupplierStore implements SupplierStore {
     try {
       const result = await trxOf(scope).rawQuery(
         `insert into suppliers (tenant_id, party_id, organization_id, code, payment_term_days, currency, status,
-           status_reason, created_by_membership_id, updated_by_membership_id)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
+           status_reason, category_id, supply_type, critical, rating, lead_time_days, notes,
+           created_by_membership_id, updated_by_membership_id)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
         [
           tenantOf(scope),
           v.partyId,
@@ -153,6 +198,12 @@ export class LucidSupplierStore implements SupplierStore {
           v.currency,
           v.status,
           v.statusReason,
+          v.categoryId,
+          v.supplyType,
+          v.critical,
+          v.rating,
+          v.leadTimeDays,
+          v.notes,
           actorOf(scope),
           actorOf(scope),
         ] as never[]
@@ -169,7 +220,8 @@ export class LucidSupplierStore implements SupplierStore {
   async update(scope: TenantScope, id: string, expectedVersion: number, v: SupplierValues) {
     const result = await trxOf(scope).rawQuery(
       `update suppliers
-          set payment_term_days = ?, currency = ?, status = ?, status_reason = ?, updated_at = now(),
+          set payment_term_days = ?, currency = ?, status = ?, status_reason = ?, category_id = ?, supply_type = ?,
+              critical = ?, rating = ?, lead_time_days = ?, notes = ?, updated_at = now(),
               updated_by_membership_id = ?, version = version + 1
         where tenant_id = ? and id = ? and version = ? returning id`,
       [
@@ -177,6 +229,12 @@ export class LucidSupplierStore implements SupplierStore {
         v.currency,
         v.status,
         v.statusReason,
+        v.categoryId,
+        v.supplyType,
+        v.critical,
+        v.rating,
+        v.leadTimeDays,
+        v.notes,
         actorOf(scope),
         tenantOf(scope),
         id,
@@ -185,6 +243,182 @@ export class LucidSupplierStore implements SupplierStore {
     )
     await versioned(result, () => this.find(scope, id))
     return (await this.find(scope, id)) as Supplier
+  }
+
+  async changeApproval(scope: TenantScope, id: string, expectedVersion: number, c: ApprovalChange) {
+    const result = await trxOf(scope).rawQuery(
+      `update suppliers
+          set approval_status = ?, approval_valid_until = ?, approval_conditions = ?,
+              approval_requested_by_membership_id = ?, updated_at = now(), updated_by_membership_id = ?,
+              version = version + 1
+        where tenant_id = ? and id = ? and version = ? returning id`,
+      [
+        c.to,
+        c.validUntil,
+        c.conditions,
+        c.requestedByMembershipId,
+        actorOf(scope),
+        tenantOf(scope),
+        id,
+        expectedVersion,
+      ] as never[]
+    )
+    await versioned(result, () => this.find(scope, id))
+    await trxOf(scope).rawQuery(
+      `insert into supplier_approval_events (tenant_id, supplier_id, action, from_status, to_status, reason,
+         conditions, valid_until, created_by_membership_id, updated_by_membership_id)
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        tenantOf(scope),
+        id,
+        c.action,
+        c.from,
+        c.to,
+        c.reason,
+        c.conditions,
+        c.validUntil,
+        actorOf(scope),
+        actorOf(scope),
+      ] as never[]
+    )
+    return (await this.find(scope, id)) as Supplier
+  }
+
+  async approvalEvents(scope: TenantScope, supplierId: string): Promise<SupplierApprovalEvent[]> {
+    const result = await trxOf(scope).rawQuery(
+      `select id, supplier_id, action, from_status, to_status, reason, conditions, valid_until::text as valid_until,
+              occurred_at, created_by_membership_id
+         from supplier_approval_events
+        where tenant_id = ? and supplier_id = ?
+        order by occurred_at desc, id desc
+        limit 200`,
+      [tenantOf(scope), supplierId]
+    )
+    return (
+      result.rows as {
+        id: string
+        supplier_id: string
+        action: SupplierApprovalEvent['action']
+        from_status: ApprovalStatus
+        to_status: ApprovalStatus
+        reason: string | null
+        conditions: string | null
+        valid_until: string | null
+        occurred_at: Date
+        created_by_membership_id: string | null
+      }[]
+    ).map((r) => ({
+      id: r.id,
+      supplierId: r.supplier_id,
+      action: r.action,
+      fromStatus: r.from_status,
+      toStatus: r.to_status,
+      reason: r.reason,
+      conditions: r.conditions,
+      validUntil: r.valid_until,
+      occurredAt: r.occurred_at,
+      actorMembershipId: r.created_by_membership_id,
+    }))
+  }
+}
+
+// --- categorias de fornecedor -------------------------------------------------------------------------
+
+interface CategoryRow {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  active: boolean
+  version: number
+  created_at: Date
+  updated_at: Date
+}
+
+const toCategory = (r: CategoryRow): SupplierCategory => ({
+  id: r.id,
+  code: r.code,
+  name: r.name,
+  description: r.description,
+  active: r.active,
+  version: r.version,
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+})
+
+const CATEGORY_COLUMNS = 'id, code, name, description, active, version, created_at, updated_at'
+
+export class LucidSupplierCategoryStore implements SupplierCategoryStore {
+  async list(scope: TenantScope, filter: { q?: string; active?: boolean }) {
+    const where = ['tenant_id = ?']
+    const params: unknown[] = [tenantOf(scope)]
+    if (filter.q) {
+      const like = `%${escapeLike(filter.q.toLowerCase())}%`
+      where.push('(lower(name) like ? or lower(code) like ?)')
+      params.push(like, like)
+    }
+    if (filter.active !== undefined) {
+      where.push('active = ?')
+      params.push(filter.active)
+    }
+    const result = await trxOf(scope).rawQuery(
+      `select ${CATEGORY_COLUMNS} from supplier_categories where ${where.join(' and ')}
+        order by lower(name), code limit 500`,
+      params as never[]
+    )
+    return (result.rows as CategoryRow[]).map(toCategory)
+  }
+
+  async find(scope: TenantScope, id: string) {
+    const result = await trxOf(scope).rawQuery(
+      `select ${CATEGORY_COLUMNS} from supplier_categories where tenant_id = ? and id = ?`,
+      [tenantOf(scope), id]
+    )
+    const [row] = result.rows as CategoryRow[]
+    return row ? toCategory(row) : null
+  }
+
+  async insert(scope: TenantScope, v: SupplierCategoryValues) {
+    try {
+      const result = await trxOf(scope).rawQuery(
+        `insert into supplier_categories (tenant_id, code, name, description, active, created_by_membership_id,
+           updated_by_membership_id)
+         values (?, ?, ?, ?, ?, ?, ?) returning ${CATEGORY_COLUMNS}`,
+        [
+          tenantOf(scope),
+          v.code,
+          v.name,
+          v.description,
+          v.active,
+          actorOf(scope),
+          actorOf(scope),
+        ] as never[]
+      )
+      return toCategory(result.rows[0] as CategoryRow)
+    } catch (error) {
+      if (constraintOf(error) === 'supplier_categories_code_unique') return 'CODE' as const
+      throw error
+    }
+  }
+
+  async update(scope: TenantScope, id: string, expectedVersion: number, v: SupplierCategoryValues) {
+    const result = await trxOf(scope).rawQuery(
+      `update supplier_categories
+          set name = ?, description = ?, active = ?, updated_at = now(), updated_by_membership_id = ?,
+              version = version + 1
+        where tenant_id = ? and id = ? and version = ? returning ${CATEGORY_COLUMNS}`,
+      [
+        v.name,
+        v.description,
+        v.active,
+        actorOf(scope),
+        tenantOf(scope),
+        id,
+        expectedVersion,
+      ] as never[]
+    )
+    await versioned(result, () => this.find(scope, id))
+    return toCategory(result.rows[0] as CategoryRow)
   }
 }
 

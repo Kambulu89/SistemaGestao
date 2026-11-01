@@ -1,7 +1,9 @@
 import { test } from '@japa/runner'
 import {
+  approvalTransition,
   canReceive,
   fits,
+  normalizeSupplierCategory,
   normalizeReceiptLine,
   normalizeSupplier,
   purchaseBlocker,
@@ -34,9 +36,141 @@ test.group('compras | fornecedores', () => {
   })
 
   test('só fornecedores activos recebem novas encomendas', ({ assert }) => {
-    assert.isNull(purchaseBlocker('ACTIVE'))
-    assert.equal(purchaseBlocker('BLOCKED')?.code, 'SUPPLIER_BLOCKED')
-    assert.equal(purchaseBlocker('INACTIVE')?.code, 'SUPPLIER_INACTIVE')
+    const ok = { status: 'ACTIVE' as const, approvalStatus: 'PENDING' as const, critical: false }
+    assert.isNull(purchaseBlocker(ok))
+    assert.equal(purchaseBlocker({ ...ok, status: 'BLOCKED' })?.code, 'SUPPLIER_BLOCKED')
+    assert.equal(purchaseBlocker({ ...ok, status: 'INACTIVE' })?.code, 'SUPPLIER_INACTIVE')
+  })
+
+  test('homologação rejeitada, suspensa ou caducada bloqueia; crítico exige homologação', ({
+    assert,
+  }) => {
+    const ok = { status: 'ACTIVE' as const, critical: false }
+    assert.equal(purchaseBlocker({ ...ok, approvalStatus: 'REJECTED' })?.code, 'SUPPLIER_REJECTED')
+    assert.equal(
+      purchaseBlocker({ ...ok, approvalStatus: 'SUSPENDED' })?.code,
+      'SUPPLIER_SUSPENDED'
+    )
+    assert.equal(
+      purchaseBlocker({ ...ok, approvalStatus: 'EXPIRED' })?.code,
+      'SUPPLIER_APPROVAL_EXPIRED'
+    )
+    assert.isNull(purchaseBlocker({ ...ok, approvalStatus: 'UNDER_REVIEW' }))
+    assert.equal(
+      purchaseBlocker({ ...ok, critical: true, approvalStatus: 'UNDER_REVIEW' })?.code,
+      'SUPPLIER_NOT_APPROVED'
+    )
+    assert.isNull(
+      purchaseBlocker({ ...ok, critical: true, approvalStatus: 'CONDITIONALLY_APPROVED' })
+    )
+  })
+
+  test('classificação: tipo, avaliação, prazo e observações', ({ assert }) => {
+    const issues: Issue[] = []
+    const ok = normalizeSupplier(
+      { ...base, supplyType: 'SERVICES', critical: true, rating: 'B', leadTimeDays: 7 },
+      null,
+      'AOA',
+      issues
+    )
+    assert.isEmpty(issues)
+    assert.deepInclude(ok, { supplyType: 'SERVICES', critical: true, rating: 'B', notes: null })
+    const bad: Issue[] = []
+    normalizeSupplier(
+      { ...base, supplyType: 'X', critical: 'sim', rating: 'E', leadTimeDays: 1.5 },
+      null,
+      'AOA',
+      bad
+    )
+    assert.sameMembers(
+      bad.map((i) => i.code),
+      ['INVALID_SUPPLY_TYPE', 'INVALID_CRITICAL', 'INVALID_RATING', 'INVALID_LEAD_TIME']
+    )
+  })
+
+  test('categoria: código imutável e designação obrigatória', ({ assert }) => {
+    const issues: Issue[] = []
+    const created = normalizeSupplierCategory({ code: 'MAT', name: ' Materiais ' }, null, issues)
+    assert.deepEqual(created, { code: 'MAT', name: 'Materiais', description: null, active: true })
+    const bad: Issue[] = []
+    normalizeSupplierCategory({ code: 'OUTRO', name: '' }, created, bad)
+    assert.sameMembers(
+      bad.map((i) => i.code),
+      ['IMMUTABLE', 'REQUIRED']
+    )
+  })
+})
+
+test.group('compras | homologação de fornecedores', () => {
+  const state = (approvalStatus: any, requestedBy: string | null = 'm1') => ({
+    approvalStatus,
+    approvalValidUntil: null,
+    approvalConditions: null,
+    approvalRequestedByMembershipId: requestedBy,
+  })
+  const today = '2026-11-01'
+
+  test('submeter põe em análise e regista quem pediu; não duas vezes', ({ assert }) => {
+    const out = approvalTransition(state('PENDING', null), 'SUBMIT', {}, 'm1', today)
+    assert.isTrue(out.ok)
+    if (out.ok)
+      assert.deepInclude(out.change, { to: 'UNDER_REVIEW', requestedByMembershipId: 'm1' })
+    const again = approvalTransition(state('UNDER_REVIEW'), 'SUBMIT', {}, 'm2', today)
+    assert.deepInclude(again, { ok: false, code: 'SUPPLIER_ALREADY_UNDER_REVIEW' })
+    // Renovar uma homologação caducada volta a pô-la em análise.
+    assert.isTrue(approvalTransition(state('EXPIRED'), 'SUBMIT', {}, 'm1', today).ok)
+  })
+
+  test('quem pediu a análise não aprova; outro aprova com validade futura', ({ assert }) => {
+    const self = approvalTransition(state('UNDER_REVIEW'), 'APPROVE', {}, 'm1', today)
+    assert.deepInclude(self, { ok: false, code: 'SEGREGATION_OF_DUTIES' })
+    const past = approvalTransition(
+      state('UNDER_REVIEW'),
+      'APPROVE',
+      { validUntil: today },
+      'm2',
+      today
+    )
+    assert.isFalse(past.ok)
+    const ok = approvalTransition(
+      state('UNDER_REVIEW'),
+      'APPROVE',
+      { validUntil: '2027-12-31' },
+      'm2',
+      today
+    )
+    assert.isTrue(ok.ok)
+    if (ok.ok) assert.deepInclude(ok.change, { to: 'APPROVED', validUntil: '2027-12-31' })
+  })
+
+  test('condições, motivo e estados de origem', ({ assert }) => {
+    const noConditions = approvalTransition(
+      state('UNDER_REVIEW'),
+      'APPROVE_CONDITIONALLY',
+      {},
+      'm2',
+      today
+    )
+    assert.isFalse(noConditions.ok)
+    if (!noConditions.ok && noConditions.kind === 'invalid') {
+      assert.equal(noConditions.issues[0].code, 'CONDITIONS_REQUIRED')
+    }
+    const noReason = approvalTransition(state('UNDER_REVIEW'), 'REJECT', {}, 'm2', today)
+    assert.isFalse(noReason.ok)
+    const suspendPending = approvalTransition(
+      state('PENDING'),
+      'SUSPEND',
+      { reason: 'x' },
+      'm2',
+      today
+    )
+    assert.deepInclude(suspendPending, { ok: false, code: 'SUPPLIER_APPROVAL_STATE' })
+    const approvePending = approvalTransition(state('PENDING'), 'APPROVE', {}, 'm2', today)
+    assert.deepInclude(approvePending, { ok: false, code: 'SUPPLIER_APPROVAL_STATE' })
+    // Quem pediu pode rejeitar (desistir); a segregação protege a aprovação.
+    assert.isTrue(
+      approvalTransition(state('UNDER_REVIEW'), 'REJECT', { reason: 'Sem alvará' }, 'm1', today).ok
+    )
   })
 })
 

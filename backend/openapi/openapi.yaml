@@ -5914,6 +5914,27 @@ paths:
             required: false,
             schema: { type: string, format: uuid },
           }
+        - { name: categoryId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: approvalStatus,
+            in: query,
+            required: false,
+            schema:
+              {
+                type: string,
+                enum:
+                  [
+                    PENDING,
+                    UNDER_REVIEW,
+                    APPROVED,
+                    CONDITIONALLY_APPROVED,
+                    REJECTED,
+                    SUSPENDED,
+                    EXPIRED,
+                  ],
+              },
+          }
+        - { name: critical, in: query, required: false, schema: { type: boolean } }
         - {
             name: limit,
             in: query,
@@ -5924,7 +5945,7 @@ paths:
       responses:
         '200':
           {
-            description: 'Fornecedores com nome e NIF da Party; `meta.total` conta os que correspondem aos filtros.',
+            description: 'Fornecedores com nome e NIF da Party, categoria, classificação e homologação efectiva (`EXPIRED` derivado da validade); `meta.total` conta os que correspondem aos filtros.',
           }
         '403': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
@@ -5951,8 +5972,14 @@ paths:
                 currency: { type: string, minLength: 3, maxLength: 3 }
                 status: { type: string, enum: [ACTIVE, BLOCKED, INACTIVE] }
                 statusReason: { type: string, nullable: true }
+                categoryId: { type: string, format: uuid, nullable: true }
+                supplyType: { type: string, enum: [GOODS, SERVICES, BOTH] }
+                critical: { type: boolean }
+                rating: { type: string, enum: [A, B, C, D], nullable: true }
+                leadTimeDays: { type: integer, minimum: 0, maximum: 3650, nullable: true }
+                notes: { type: string, maxLength: 1000, nullable: true }
       responses:
-        '201': { description: 'Fornecedor.' }
+        '201': { description: 'Fornecedor (homologação `PENDING`).' }
         '403': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
@@ -5988,11 +6015,151 @@ paths:
                 currency: { type: string }
                 status: { type: string, enum: [ACTIVE, BLOCKED, INACTIVE] }
                 statusReason: { type: string, nullable: true }
+                categoryId: { type: string, format: uuid, nullable: true }
+                supplyType: { type: string, enum: [GOODS, SERVICES, BOTH] }
+                critical: { type: boolean }
+                rating: { type: string, enum: [A, B, C, D], nullable: true }
+                leadTimeDays: { type: integer, nullable: true }
+                notes: { type: string, nullable: true }
       responses:
         '200': { description: 'Fornecedor.' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /suppliers/{id}/approval/submit:
+    post:
+      summary: Pede a análise (ou renovação) da homologação (supplier.manage)
+      description: |
+        Põe a homologação «em análise» e regista quem pediu (essa pessoa não a pode aprovar). 409 `SUPPLIER_ALREADY_UNDER_REVIEW` ou versão desactualizada.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                reason: { type: string, maxLength: 500, nullable: true }
+      responses:
+        '200': { description: 'Fornecedor.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /suppliers/{id}/approval/decide:
+    post:
+      summary: Decide a homologação (supplier.approve)
+      description: |
+        `APPROVE`, `APPROVE_CONDITIONALLY` (exige `conditions`) e `REJECT` (exige `reason`) só a partir de «em análise»; `SUSPEND` (exige `reason`) só uma homologação em vigor. `validUntil` é uma data futura e só na aprovação. Quem pediu a análise não aprova (409 `SEGREGATION_OF_DUTIES`). Cada decisão fica no histórico e no outbox (`procurement.supplier.approval_changed`).
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, action]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                action: { type: string, enum: [APPROVE, APPROVE_CONDITIONALLY, REJECT, SUSPEND] }
+                reason: { type: string, maxLength: 500, nullable: true }
+                conditions: { type: string, maxLength: 1000, nullable: true }
+                validUntil: { type: string, format: date, nullable: true }
+      responses:
+        '200': { description: 'Fornecedor.' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /suppliers/{id}/approval-events:
+    get:
+      summary: Histórico da homologação, mais recente primeiro (supplier.read)
+      description: Só-de-acrescentar; nem SQL directo o altera.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          { description: 'Eventos (acção, de, para, motivo, condições, validade, quem, quando).' }
+        '404': { $ref: '#/components/responses/Error' }
+  /supplier-categories:
+    get:
+      summary: Categorias de fornecedores (supplier.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - { name: active, in: query, required: false, schema: { type: boolean } }
+      responses:
+        '200': { description: OK. }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cria uma categoria de fornecedores (supplier_category.manage); código único e imutável
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string, maxLength: 50 }
+                name: { type: string, maxLength: 160 }
+                description: { type: string, nullable: true }
+                active: { type: boolean }
+      responses:
+        '201': { description: Criada (cabeçalho Location). }
+        '409': { description: Código duplicado (SUPPLIER_CATEGORY_CODE_EXISTS). }
+        '422': { $ref: '#/components/responses/Error' }
+  /supplier-categories/{id}:
+    get:
+      summary: Uma categoria de fornecedores (supplier.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: OK. }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      summary: Altera uma categoria com expectedVersion (supplier_category.manage); inactivar em vez de eliminar
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                active: { type: boolean }
+      responses:
+        '200': { description: Actualizada. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: Versão desactualizada. }
         '422': { $ref: '#/components/responses/Error' }
   /purchase-requisitions:
     get:

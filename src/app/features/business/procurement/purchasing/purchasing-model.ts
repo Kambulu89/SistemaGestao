@@ -1,10 +1,12 @@
 import type { Tone } from '../../../../shared/ui/badge/badge';
 import { documentError } from '../../sales/orders/orders-model';
 import type {
+  ApprovalStatus,
   PurchaseStatus,
   ReceiptStatus,
   RequisitionStatus,
   SupplierStatus,
+  SupplyType,
 } from './purchasing.api';
 
 export {
@@ -20,6 +22,43 @@ export const SUPPLIER_STATUS: Readonly<Record<SupplierStatus, { label: string; t
   BLOCKED: { label: 'Bloqueado', tone: 'danger' },
   INACTIVE: { label: 'Inactivo', tone: 'neutral' },
 };
+
+export const APPROVAL_STATUS: Readonly<Record<ApprovalStatus, { label: string; tone: Tone }>> = {
+  PENDING: { label: 'Por homologar', tone: 'neutral' },
+  UNDER_REVIEW: { label: 'Em análise', tone: 'brand' },
+  APPROVED: { label: 'Homologado', tone: 'success' },
+  CONDITIONALLY_APPROVED: { label: 'Homologado com condições', tone: 'warning' },
+  REJECTED: { label: 'Rejeitado', tone: 'danger' },
+  SUSPENDED: { label: 'Suspenso', tone: 'danger' },
+  EXPIRED: { label: 'Homologação caducada', tone: 'warning' },
+};
+
+export const SUPPLY_TYPE: Readonly<Record<SupplyType, string>> = {
+  GOODS: 'Bens',
+  SERVICES: 'Serviços',
+  BOTH: 'Bens e serviços',
+};
+
+/** O que o servidor aceita em cada estado (os botões só aparecem quando fazem sentido; o servidor decide). */
+export function approvalActions(status: ApprovalStatus): {
+  submit: boolean;
+  decide: boolean;
+  suspend: boolean;
+} {
+  return {
+    submit: status !== 'UNDER_REVIEW',
+    decide: status === 'UNDER_REVIEW',
+    suspend: status === 'APPROVED' || status === 'CONDITIONALLY_APPROVED',
+  };
+}
+
+/** Prazo de entrega opcional: vazio é `null`; senão inteiro entre 0 e 3650. */
+export function leadTimeValue(raw: string | number | null): number | null | undefined {
+  const text = String(raw ?? '').trim();
+  if (!text) return null;
+  const days = Number(text);
+  return Number.isInteger(days) && days >= 0 && days <= 3650 ? days : undefined;
+}
 
 export const REQUISITION_STATUS: Readonly<
   Record<RequisitionStatus, { label: string; tone: Tone }>
@@ -50,13 +89,24 @@ const PURCHASING_ERRORS: Readonly<Record<string, string>> = {
   SUPPLIER_EXISTS: 'Esta pessoa ou organização já é fornecedora desta organização.',
   SUPPLIER_BLOCKED: 'O fornecedor está bloqueado: não recebe novas encomendas.',
   SUPPLIER_INACTIVE: 'O fornecedor está inactivo: não recebe novas encomendas.',
-  REASON_REQUIRED: 'Indique o motivo (até 300 caracteres).',
+  REASON_REQUIRED: 'Indique o motivo.',
   REQUISITION_NOT_DRAFT: 'Só uma requisição em rascunho se altera ou apaga.',
   REQUISITION_EMPTY: 'Uma requisição sem linhas não se submete.',
   REQUISITION_NOT_SUBMITTED: 'Só se decide uma requisição submetida e ainda sem decisão.',
   REQUISITION_NOT_APPROVED: 'Só se converte uma requisição aprovada.',
   REQUISITION_LINE_DUPLICATE: 'Esta variante já está na requisição.',
-  SEGREGATION_OF_DUTIES: 'Quem pediu a requisição não a pode aprovar nem rejeitar.',
+  SEGREGATION_OF_DUTIES:
+    'Segregação de funções: quem fez o pedido (requisição ou análise do fornecedor) não o pode aprovar.',
+  SUPPLIER_REJECTED: 'A homologação do fornecedor foi rejeitada: não recebe novas encomendas.',
+  SUPPLIER_SUSPENDED: 'A homologação do fornecedor está suspensa: não recebe novas encomendas.',
+  SUPPLIER_APPROVAL_EXPIRED: 'A homologação do fornecedor caducou: renove-a antes de encomendar.',
+  SUPPLIER_NOT_APPROVED: 'Um fornecedor crítico só recebe encomendas depois de homologado.',
+  SUPPLIER_ALREADY_UNDER_REVIEW: 'A homologação já está em análise.',
+  SUPPLIER_APPROVAL_STATE: 'Esta decisão não é possível no estado actual da homologação.',
+  SUPPLIER_CATEGORY_CODE_EXISTS: 'Já existe uma categoria com este código.',
+  UNKNOWN_CATEGORY: 'A categoria não existe ou está inactiva.',
+  CONDITIONS_REQUIRED: 'Indique as condições da homologação.',
+  INVALID_VALIDITY: 'A validade é uma data futura.',
   COST_REQUIRED: 'Indique o custo de todas as linhas da requisição.',
   PURCHASE_ORDER_NOT_DRAFT: 'Só uma encomenda em rascunho se altera ou apaga.',
   PURCHASE_ORDER_FROM_REQUISITION: 'Uma encomenda criada de uma requisição não se apaga.',
