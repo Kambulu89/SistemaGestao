@@ -478,6 +478,7 @@ export class EntityDesignerPage {
         icon: v.icon,
         fields: this.fields().map((f, i) => ({ ...f, order: (i + 1) * 10 })),
         expectedVersion: current?.version ?? null,
+        ...(current?.rowVersion !== undefined ? { expectedRowVersion: current.rowVersion } : {}),
       })
       .pipe(switchMap((draft) => (publish ? this.registry.publish(draft.key) : [draft])));
 

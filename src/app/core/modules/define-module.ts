@@ -34,6 +34,8 @@ export interface ModuleDefinition {
   readonly settings?: readonly ModuleSetting[];
   readonly routes?: readonly ModuleRouteDef[];
   readonly featureFlag?: string;
+  /** Módulo do registo do servidor, quando difere do primeiro segmento do código (ex.: `sales.catalog` → `catalog`). */
+  readonly backendModule?: string;
   readonly showInNavigation?: boolean;
 }
 
@@ -66,6 +68,7 @@ export function defineModule(def: ModuleDefinition): ModuleManifest {
     order: def.order ?? 100,
     showInNavigation: def.showInNavigation ?? (kind === 'module' && scope === 'tenant'),
     featureFlag: def.featureFlag,
+    backendModule: def.backendModule,
     basePath: def.code.replace(/\./g, '/'),
   };
 }

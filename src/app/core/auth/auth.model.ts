@@ -6,9 +6,13 @@ export interface User {
   readonly platformPermissions: readonly string[];
 }
 
+/**
+ * Sessão autenticada. O token da sessão é um cookie `HttpOnly` que o JavaScript não vê: aqui só
+ * ficam o utilizador, o token anti-CSRF (em memória, nunca em storage) e a expiração.
+ */
 export interface Session {
   readonly user: User;
-  readonly accessToken: string;
+  readonly csrfToken: string;
   /** Data ISO 8601. */
   readonly expiresAt: string;
 }

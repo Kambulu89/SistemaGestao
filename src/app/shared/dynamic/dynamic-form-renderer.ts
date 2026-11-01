@@ -20,6 +20,7 @@ import {
   type FieldState,
   resolveFieldState,
 } from '../../core/dynamic/engine/field-state';
+import { applyFormConfiguration } from '../../core/dynamic/engine/form-config';
 import { resolveForm } from '../../core/dynamic/engine/form-resolver';
 import { validateRecordData } from '../../core/dynamic/engine/validation';
 import type { EntityDefinition } from '../../core/dynamic/models/entity-definition.model';
@@ -195,10 +196,19 @@ export class DynamicFormRenderer {
     access: () => this.access(),
   };
 
+  /** O formulário em vigor para o modo (o publicado do tenant, ou o gerado a partir dos campos). */
+  private readonly layout = computed(() => resolveForm(this.entity(), this.mode()));
+
+  /**
+   * A entidade **como este formulário a apresenta**: rótulos, ajudas e condições do formulário, e os campos que ele
+   * não inclui escondidos (não se validam nem se enviam). O servidor continua a decidir o que se aceita.
+   */
+  private readonly effective = computed(() => applyFormConfiguration(this.entity(), this.layout()));
+
   /** Só se reconstrói quando muda a entidade (ou o modo): não a cada tecla. */
   protected readonly form = computed(() => {
     this.mode();
-    return buildEntityForm(this.entity(), this.context);
+    return buildEntityForm(this.effective(), this.context);
   });
 
   private readonly values = signal<Readonly<Record<string, FieldValue>>>({});
@@ -206,14 +216,14 @@ export class DynamicFormRenderer {
   protected readonly states = computed<Readonly<Record<string, FieldState>>>(() => {
     const context = { values: this.values(), status: this.status() };
     return Object.fromEntries(
-      activeFields(this.entity()).map((f) => [
+      activeFields(this.effective()).map((f) => [
         f.key,
         resolveFieldState(f, context, this.mode(), this.access()),
       ]),
     );
   });
 
-  private readonly sections = computed(() => resolveForm(this.entity(), this.mode()).sections);
+  private readonly sections = computed(() => this.layout().sections);
 
   protected readonly visibleSections = computed(() =>
     this.sections().filter((s) => this.sectionKeys(s).some((k) => this.states()[k]?.visible)),
@@ -229,7 +239,7 @@ export class DynamicFormRenderer {
   );
 
   private readonly fields = computed(
-    () => new Map(activeFields(this.entity()).map((f) => [f.key, f])),
+    () => new Map(activeFields(this.effective()).map((f) => [f.key, f])),
   );
 
   constructor() {
@@ -237,7 +247,7 @@ export class DynamicFormRenderer {
     // validadores que lêem sinais, e isso não pode tornar este efeito dependente deles.
     effect(() => {
       const form = this.form();
-      const initial = initialFormValues(this.entity(), this.value(), this.mode());
+      const initial = initialFormValues(this.effective(), this.value(), this.mode());
       untracked(() => {
         form.reset(initial);
         this.values.set(form.getRawValue());
@@ -246,7 +256,7 @@ export class DynamicFormRenderer {
 
     effect((onCleanup) => {
       const form = this.form();
-      const dependents = dependentFieldKeys(this.entity());
+      const dependents = dependentFieldKeys(this.effective());
       const sub = form.valueChanges.subscribe(() => {
         this.values.set(form.getRawValue());
         // Campos que dependem de outros: a sua validade pode ter mudado sem terem sido editados.
@@ -311,7 +321,7 @@ export class DynamicFormRenderer {
     form.markAllAsTouched();
 
     const raw = form.getRawValue();
-    const issues = validateRecordData(this.entity(), raw, {
+    const issues = validateRecordData(this.effective(), raw, {
       mode: this.mode(),
       status: this.status(),
       access: this.access(),
@@ -323,6 +333,6 @@ export class DynamicFormRenderer {
       );
       return;
     }
-    this.submitted.emit(collectSubmitValues(this.entity(), raw, this.context));
+    this.submitted.emit(collectSubmitValues(this.effective(), raw, this.context));
   }
 }

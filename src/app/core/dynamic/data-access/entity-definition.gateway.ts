@@ -12,6 +12,8 @@ export interface SaveEntityDraftInput {
   readonly fields: readonly FieldDefinition[];
   /** Versão do rascunho (ou da publicada, se ainda não há rascunho) que o cliente viu; `null` = nova. */
   readonly expectedVersion: number | null;
+  /** Controlo de concorrência da entidade (`EntityDefinition.rowVersion`), quando o servidor o fornece. */
+  readonly expectedRowVersion?: number;
 }
 
 /**

@@ -84,6 +84,8 @@ export interface ModuleManifest {
   readonly showInNavigation: boolean;
   /** Feature flag que liga o módulo inteiro. */
   readonly featureFlag?: string;
+  /** Módulo do registo do servidor, quando difere do primeiro segmento do código. */
+  readonly backendModule?: string;
   /** Segmento de URL dentro do tenant: `/t/:slug/<basePath>`. */
   readonly basePath: string;
 }

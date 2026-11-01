@@ -316,3 +316,81 @@ describe('DynamicFormRenderer: permissions and robustness', () => {
     expect((control('Matrícula') as HTMLInputElement).value).toBe('');
   });
 });
+
+describe('DynamicFormRenderer: formulário publicado do tenant', () => {
+  const entity = defineEntity({
+    key: 'pedido',
+    tenantId: 't',
+    names: { singular: 'Pedido', plural: 'Pedidos' },
+    icon: 'cube',
+    fields: [
+      { type: 'text', key: 'descricao', label: 'Descrição', required: true },
+      {
+        type: 'select',
+        key: 'prioridade',
+        label: 'Prioridade',
+        options: [
+          { value: 'baixa', label: 'Baixa' },
+          { value: 'alta', label: 'Alta' },
+        ],
+      },
+      { type: 'text', key: 'motivo', label: 'Motivo' },
+      { type: 'text', key: 'interno', label: 'Nota interna' },
+    ],
+    forms: [
+      {
+        key: 'ficha',
+        name: 'Ficha',
+        modes: ['create', 'edit', 'read'],
+        isDefault: true,
+        state: 'published',
+        sections: [
+          {
+            key: 'dados',
+            title: 'Dados do pedido',
+            columns: 2,
+            items: [
+              { kind: 'field', field: 'descricao', label: 'Resumo', help: 'O que é preciso fazer' },
+              { kind: 'field', field: 'prioridade' },
+            ],
+          },
+          {
+            key: 'urgencia',
+            title: 'Urgência',
+            columns: 1,
+            visibleWhen: { op: 'eq', field: 'prioridade', value: 'alta' },
+            items: [{ kind: 'field', field: 'motivo' }],
+          },
+        ],
+      },
+    ],
+  });
+
+  async function renderForm() {
+    const view = await render();
+    view.host.entity.set(entity);
+    await view.settle();
+    return view;
+  }
+
+  it('shows the form labels and help, hides what the form leaves out, and follows its conditions', async () => {
+    const { el, host, type, settle } = await renderForm();
+    const headings = () => [...el.querySelectorAll('h2')].map((h) => h.textContent?.trim());
+    expect(headings()).toEqual(['Dados do pedido']);
+    expect(el.textContent).toContain('Resumo');
+    expect(el.textContent).toContain('O que é preciso fazer');
+    expect(el.textContent).not.toContain('Nota interna');
+    expect(el.textContent).not.toContain('Motivo');
+
+    await type('Prioridade', 'alta');
+    expect(headings()).toEqual(['Dados do pedido', 'Urgência']);
+    expect(el.textContent).toContain('Motivo');
+
+    await type('Resumo', 'Trocar fechadura');
+    el.querySelector<HTMLButtonElement>('button[type=submit]')?.click();
+    await settle();
+    // Só segue o que o formulário mostra (a nota interna nunca é enviada).
+    expect(host.submitted[0]).toMatchObject({ descricao: 'Trocar fechadura', prioridade: 'alta' });
+    expect(Object.keys(host.submitted[0]!)).not.toContain('interno');
+  });
+});

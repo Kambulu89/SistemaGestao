@@ -15,7 +15,9 @@ export const PLATFORM_PERMISSIONS = {
   modulesRead: 'platform.modules.read',
   plansRead: 'platform.plans.read',
   subscriptionsRead: 'platform.subscriptions.read',
-  settingsRead: 'platform.settings.read',
+  /** Concessões do servidor (D-033): gerir tenants / planos e assinaturas. */
+  tenantsManage: 'platform.tenant.manage',
+  billingManage: 'platform.billing.manage',
 } as const;
 
 /** Permissões das páginas de administração do tenant (as dos módulos vêm dos manifestos). */
@@ -24,6 +26,23 @@ export const TENANT_PERMISSIONS = {
   usersRead: 'iam.users.read',
   accessRead: 'iam.access-control.read',
   settingsRead: 'tenant.settings.read',
+  settingsManage: 'tenant.settings.manage',
+  sequencesManage: 'tenant.sequences.manage',
+  planRead: 'tenant.plan.read',
+  modulesRead: 'tenant.modules.read',
+  modulesManage: 'tenant.modules.manage',
+  /** Definição de entidades dinâmicas (C10): traduzida de `entity.read` pelo servidor. */
+  entitiesRead: 'configuration.forms.read',
+  /** Caixa de aprovações (C14): o código do servidor, tal e qual. */
+  approvalsDecide: 'approval.decide',
+  /** Automações (C15): o código do servidor, tal e qual. */
+  automationsRead: 'automation.read',
+  /** Centro de notificações (S02): o código do servidor, tal e qual. */
+  notificationsRead: 'notification.read',
+  /** Pesquisa global (S04): o código do servidor, tal e qual. */
+  searchRead: 'search.read',
+  /** Pessoas e entidades (C08): o código do servidor, tal e qual. */
+  partiesRead: 'party.read',
 } as const;
 
 export const PLATFORM_NAMESPACE = 'platform.';

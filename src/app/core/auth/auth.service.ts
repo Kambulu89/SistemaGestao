@@ -3,62 +3,51 @@ import { type Observable, tap } from 'rxjs';
 import { AuthGateway } from './auth.gateway';
 import type { Credentials, Session } from './auth.model';
 
-const STORAGE_KEY = 'sg-session';
-
 /**
  * Estado da sessão. Responsabilidade única: quem está autenticado.
- * Nota de segurança: guardar o token em storage do browser expõe-o a XSS; quando existir
- * backend, preferir cookie httpOnly e remover a persistência do token daqui.
+ * A sessão vive num cookie `HttpOnly` gerido pelo servidor; aqui só há estado em memória
+ * (utilizador e token anti-CSRF). Nada é guardado em `localStorage`/`sessionStorage`; ao recarregar
+ * a página, `restore()` recupera a sessão do servidor.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly gateway = inject(AuthGateway);
 
-  private readonly _session = signal<Session | null>(this.restore());
+  private readonly _session = signal<Session | null>(null);
 
   readonly session = this._session.asReadonly();
   readonly user = computed(() => this._session()?.user ?? null);
-  readonly accessToken = computed(() => this._session()?.accessToken ?? null);
+  readonly csrfToken = computed(() => this._session()?.csrfToken ?? null);
   readonly isAuthenticated = computed(() => this._session() !== null);
 
   login(credentials: Credentials): Observable<Session> {
-    return this.gateway.login(credentials).pipe(
-      tap((session) => {
-        this._session.set(session);
-        this.persist(session);
-      }),
-    );
+    return this.gateway.login(credentials).pipe(tap((session) => this._session.set(session)));
   }
 
+  /** Arranque da aplicação: recupera a sessão do cookie, se existir. */
+  restore(): Observable<Session | null> {
+    return this.gateway.restore().pipe(tap((session) => this._session.set(session)));
+  }
+
+  /**
+   * Termina a sessão: pede ao servidor para a revogar e limpa o estado local de imediato. O pedido
+   * é emitido antes de limpar, para ainda levar o token anti-CSRF.
+   */
   logout(): void {
+    this.gateway.logout().subscribe({ error: () => undefined });
     this._session.set(null);
-    try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Sem storage: nada a limpar.
-    }
+  }
+
+  /** O servidor já não reconhece a sessão (401): limpa só o estado local, sem outro pedido. */
+  expireLocally(): void {
+    this._session.set(null);
   }
 
   requestPasswordReset(email: string): Observable<void> {
     return this.gateway.requestPasswordReset(email);
   }
 
-  private persist(session: Session): void {
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-    } catch {
-      // Sessão vale apenas em memória.
-    }
-  }
-
-  private restore(): Session | null {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const session = JSON.parse(raw) as Session;
-      return new Date(session.expiresAt).getTime() > Date.now() ? session : null;
-    } catch {
-      return null;
-    }
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.gateway.resetPassword(token, newPassword);
   }
 }

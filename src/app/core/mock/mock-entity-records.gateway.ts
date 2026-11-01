@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { map, type Observable, timer } from 'rxjs';
+import { map, of, type Observable, timer } from 'rxjs';
 import type { ApiError } from '../api/api-error.model';
 import type { Page } from '../api/pagination.model';
 import { AuthService } from '../auth/auth.service';
@@ -20,6 +20,7 @@ import {
   type AuditEntry,
   type CreateRecordInput,
   type EntityRecord,
+  type RecordActions,
   type RecordData,
   type RecordQuery,
   type ReferenceLookupQuery,
@@ -211,6 +212,11 @@ export class MockEntityRecordsGateway extends EntityRecordsGateway {
       bucket.splice(bucket.indexOf(record), 1);
       this.pushAudit(record, 'delete', []);
     });
+  }
+
+  /** Os dados de demonstração usam o workflow local: não há acções decididas pelo servidor. */
+  availableActions(): Observable<RecordActions | null> {
+    return of(null);
   }
 
   transition(entityKey: string, id: string, transitionKey: string): Observable<EntityRecord> {

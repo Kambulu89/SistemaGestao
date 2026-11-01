@@ -5,14 +5,31 @@ import { finalize } from 'rxjs';
 import type { ApiError } from '../../../core/api/api-error.model';
 import { AuthService } from '../../../core/auth/auth.service';
 import { APP_ENVIRONMENT } from '../../../core/config/app-environment';
-import { DEMO_ACCOUNTS, MOCK_PASSWORD } from '../../../core/mock/mock-data';
 import { Alert } from '../../../shared/ui/alert/alert';
 import { Button } from '../../../shared/ui/button/button';
 import { Input } from '../../../shared/ui/input/input';
 
+/** Contas do seeder de demonstração do backend (só em desenvolvimento). A palavra-passe é a do ambiente (`DEMO_USER_PASSWORD`). */
+const DEV_ACCOUNTS = [
+  { email: 'admin@demo-a.invalid', description: 'Administrador do tenant Demo A' },
+  { email: 'admin@demo-b.invalid', description: 'Administrador do tenant Demo B' },
+  { email: 'multi@demo.invalid', description: 'Membro dos dois tenants, sem perfis' },
+] as const;
+
 /** Só aceita caminhos internos, evitando redireccionamentos para sites externos. */
 function safeReturnUrl(url: string | undefined): string {
   return url && url.startsWith('/') && !url.startsWith('//') && !url.startsWith('/\\') ? url : '/';
+}
+
+/** O servidor responde igual a email inexistente, palavra-passe errada e conta bloqueada; aqui também. */
+function loginMessage(error: ApiError): string {
+  if (error.status === 429) {
+    const minutes = error.retryAfterSeconds ? Math.ceil(error.retryAfterSeconds / 60) : null;
+    return minutes
+      ? `Demasiadas tentativas. Tente novamente dentro de ${minutes} min.`
+      : 'Demasiadas tentativas. Tente mais tarde.';
+  }
+  return error.message;
 }
 
 @Component({
@@ -68,7 +85,10 @@ function safeReturnUrl(url: string | undefined): string {
             </li>
           }
         </ul>
-        <p class="mt-2 text-xs text-fg-muted">Palavra-passe: {{ demoPassword }}</p>
+        <p class="mt-2 text-xs text-fg-muted">
+          Palavra-passe: a definida em <code>DEMO_USER_PASSWORD</code> ao correr o seeder do
+          backend.
+        </p>
       </section>
     }
   `,
@@ -88,11 +108,10 @@ export class Login {
   protected readonly error = signal<string | null>(null);
 
   protected readonly isProduction = inject(APP_ENVIRONMENT).production;
-  protected readonly demoAccounts = DEMO_ACCOUNTS;
-  protected readonly demoPassword = MOCK_PASSWORD;
+  protected readonly demoAccounts = DEV_ACCOUNTS;
 
   protected fill(email: string): void {
-    this.form.setValue({ email, password: MOCK_PASSWORD });
+    this.form.patchValue({ email });
   }
 
   protected submit(): void {
@@ -108,7 +127,7 @@ export class Login {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => void this.router.navigateByUrl(safeReturnUrl(this.returnUrl())),
-        error: (e: ApiError) => this.error.set(e.message),
+        error: (e: ApiError) => this.error.set(loginMessage(e)),
       });
   }
 }

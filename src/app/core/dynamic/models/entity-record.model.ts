@@ -1,7 +1,38 @@
 import type { PageRequest } from '../../api/pagination.model';
 import type { FieldValue } from './field-definition.model';
+import type { SemanticColor } from './status.model';
 
 export type RecordData = Readonly<Record<string, FieldValue>>;
+
+/** Estado de um registo numa máquina de estados do servidor (C13). */
+export interface RecordStateInfo {
+  readonly code: string;
+  readonly label: string;
+  readonly color: SemanticColor;
+  readonly category: 'INITIAL' | 'ACTIVE' | 'FINAL' | 'CANCELLED';
+  /** `false`: o servidor recusa alterações de valores neste estado. */
+  readonly editable: boolean;
+  /** Versão do estado: a `expectedVersion` das transições. */
+  readonly version: number;
+}
+
+/** Uma transição que o servidor deixa o utilizador executar agora. */
+export interface RecordAction {
+  readonly code: string;
+  readonly label: string;
+  readonly toLabel: string;
+  readonly reasonRequired: boolean;
+}
+
+export interface RecordActions {
+  readonly version: number;
+  readonly actions: readonly RecordAction[];
+}
+
+export interface TransitionOptions {
+  readonly expectedVersion: number;
+  readonly reason?: string;
+}
 
 export interface EntityRecord {
   readonly id: string;
@@ -10,6 +41,8 @@ export interface EntityRecord {
   /** Versão da definição em vigor quando o registo foi escrito pela última vez. */
   readonly definitionVersion: number;
   readonly status: string | null;
+  /** Estado na máquina de estados do servidor (só nos registos que a têm). */
+  readonly state?: RecordStateInfo;
   readonly data: RecordData;
   /** Controlo de concorrência optimista. */
   readonly rowVersion: number;

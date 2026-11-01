@@ -1,5 +1,6 @@
 import { FOUNDATION_CAPABILITIES } from './core/modules/catalog/foundation';
 import type { ModuleManifest } from './core/modules/module.model';
+import { ACCOUNTING_MODULES } from './features/business/accounting/accounting.manifest';
 import { CALENDAR_MODULES } from './features/business/calendar/calendar.manifest';
 import { CRM_MODULES } from './features/business/crm/crm.manifest';
 import { DOCUMENTS_MODULES } from './features/business/documents/documents.manifest';
@@ -33,6 +34,7 @@ export const ALL_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   ...PROCUREMENT_MODULES,
   ...INVENTORY_MODULES,
   ...FINANCE_MODULES,
+  ...ACCOUNTING_MODULES,
   ...HR_MODULES,
   ...PROJECTS_MODULES,
   ...SUPPORT_MODULES,

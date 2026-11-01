@@ -91,6 +91,11 @@ interface FieldBase<T extends FieldType> {
   readonly origin?: FieldOrigin;
   /** Dados sensíveis exigem permissões explícitas de leitura e escrita (ver `permissions`). */
   readonly sensitivity?: FieldSensitivity;
+  /**
+   * Regras de validação do servidor que a interface não edita (ex.: limites de datas, precisão
+   * decimal). Guardam-se tal como vieram e voltam ao servidor ao gravar, para não se perderem.
+   */
+  readonly serverValidation?: Readonly<Record<string, unknown>>;
 }
 
 export type FieldOrigin = 'core' | 'custom';

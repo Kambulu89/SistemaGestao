@@ -107,6 +107,7 @@ const ENTERPRISE_CODES = [
   ...BUSINESS_CODES,
   'inventory.stocktaking',
   'finance.payments-budget',
+  'accounting.general-ledger',
   'hr.talent',
   'projects.timesheets',
   'support.knowledge-base',

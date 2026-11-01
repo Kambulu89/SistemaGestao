@@ -136,8 +136,16 @@ const MANAGED_RULES: readonly ValidationRule['type'][] = [
 /** Propriedades que o designer não mostra mas que um campo existente pode ter. */
 function preservedProps(base: FieldDefinition | undefined) {
   if (!base) return {};
-  const { defaultValue, visible, editable, visibleWhen, editableWhen, requiredWhen, archived } =
-    base;
+  const {
+    defaultValue,
+    visible,
+    editable,
+    visibleWhen,
+    editableWhen,
+    requiredWhen,
+    archived,
+    serverValidation,
+  } = base;
   return Object.fromEntries(
     Object.entries({
       defaultValue,
@@ -147,6 +155,7 @@ function preservedProps(base: FieldDefinition | undefined) {
       editableWhen,
       requiredWhen,
       archived,
+      serverValidation,
       origin: base.origin,
     }).filter(([, v]) => v !== undefined),
   );

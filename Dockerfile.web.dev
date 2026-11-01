@@ -1,0 +1,10 @@
+# syntax=docker/dockerfile:1
+# Frontend Angular em desenvolvimento (ng serve). O código é montado por volume no compose.
+ARG NODE_VERSION=22.22.3
+FROM node:${NODE_VERSION}-alpine
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+EXPOSE 4200
+CMD ["npx", "ng", "serve", "--host", "0.0.0.0", "--poll", "2000"]

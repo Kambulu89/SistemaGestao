@@ -11,7 +11,7 @@ const scaffoldRoute = (manifest: ModuleManifest): ModuleRouteDef => ({
     import('./features/tenant/module-scaffold/module-scaffold').then((m) => m.ModuleScaffold),
 });
 
-function toRoute(def: ModuleRouteDef): Route {
+export function toRoute(def: ModuleRouteDef): Route {
   return {
     path: def.path,
     title: def.title,

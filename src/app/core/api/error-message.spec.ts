@@ -1,4 +1,4 @@
-import { errorMessage } from './error-message';
+import { detailedErrorMessage, errorMessage } from './error-message';
 
 describe('errorMessage', () => {
   it('reads an ApiError directly', () => {
@@ -25,5 +25,33 @@ describe('errorMessage', () => {
     expect(errorMessage(undefined)).toContain('inesperado');
     expect(errorMessage('texto')).toContain('inesperado');
     expect(errorMessage(null, 'x')).toBe('x');
+  });
+});
+
+describe('detailedErrorMessage', () => {
+  const api = {
+    status: 422,
+    message: 'Verifique os campos indicados.',
+    fieldErrors: [
+      { path: 'code', code: 'INVALID_CODE', message: 'Código inválido.' },
+      { path: 'name', code: 'REQUIRED', message: 'Indique o nome.' },
+    ],
+  };
+
+  it('names the fields that failed', () => {
+    expect(detailedErrorMessage(api)).toBe('Código inválido. Indique o nome.');
+  });
+
+  it('unwraps the cause that rxResource attaches', () => {
+    expect(detailedErrorMessage(new Error('x', { cause: api }))).toBe(
+      'Código inválido. Indique o nome.',
+    );
+  });
+
+  it('falls back to the plain message and then to the fallback', () => {
+    expect(detailedErrorMessage({ status: 409, message: 'Código repetido.' })).toBe(
+      'Código repetido.',
+    );
+    expect(detailedErrorMessage(null, 'nada')).toBe('nada');
   });
 });
