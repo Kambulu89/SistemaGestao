@@ -16,6 +16,7 @@ const ContextController = () => import('#platform/tenants/presentation/context_c
 const IamController = () => import('#core/permissions/presentation/iam_controller')
 const OrganizationController = () =>
   import('#core/organization/presentation/organization_controller')
+const PositionsController = () => import('#core/organization/presentation/positions_controller')
 const MembersController = () => import('#core/members/presentation/members_controller')
 const InvitationsController = () => import('#platform/tenants/presentation/invitations_controller')
 const PartyController = () => import('#core/party/presentation/party_controller')
@@ -131,6 +132,8 @@ router
         router.get('/organization-units/:id', [OrganizationController, 'showUnit'])
         router.get('/organization-units/:id/members', [OrganizationController, 'listTeam'])
         router.get('/cost-centers', [OrganizationController, 'listCostCenters'])
+        router.get('/positions', [PositionsController, 'list'])
+        router.get('/positions/:id', [PositionsController, 'show'])
       })
       .use(middleware.can({ permission: 'organization.read' }))
 
@@ -144,6 +147,8 @@ router
         router.delete('/team-members/:id', [OrganizationController, 'removeTeamMember'])
         router.post('/cost-centers', [OrganizationController, 'createCostCenter'])
         router.patch('/cost-centers/:id', [OrganizationController, 'updateCostCenter'])
+        router.post('/positions', [PositionsController, 'create'])
+        router.patch('/positions/:id', [PositionsController, 'update'])
       })
       .use(middleware.can({ permission: 'organization.manage' }))
 

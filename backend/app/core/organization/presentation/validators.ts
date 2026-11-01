@@ -104,3 +104,41 @@ export const listFilterValidator = vine.compile(
     membershipId: uuid().optional(),
   })
 )
+
+const positionFields = {
+  name: vine.string().trim().maxLength(160).optional(),
+  description: vine.string().trim().maxLength(4000).nullable().optional(),
+  jobFamily: vine.string().trim().maxLength(80).nullable().optional(),
+  category: vine.string().trim().maxLength(80).nullable().optional(),
+  hierarchyLevel: vine.number().withoutDecimals().nullable().optional(),
+  departmentId: vine.string().uuid().nullable().optional(),
+  parentId: vine.string().uuid().nullable().optional(),
+  responsibilities: vine.string().trim().maxLength(4000).nullable().optional(),
+  competencies: vine.array(vine.string().trim().maxLength(120)).maxLength(60).optional(),
+  academicRequirements: vine.string().trim().maxLength(1000).nullable().optional(),
+  recommendedExperience: vine.string().trim().maxLength(200).nullable().optional(),
+  status: vine.enum(['ACTIVE', 'INACTIVE'] as const).optional(),
+}
+
+export const createPositionValidator = vine.compile(
+  vine.object({ code: vine.string().trim().maxLength(40), ...positionFields })
+)
+
+export const updatePositionValidator = vine.compile(
+  vine.object({
+    expectedVersion: vine.number().withoutDecimals().min(1),
+    // Aceite só para o caso de uso o recusar com 422 (o código é imutável), em vez de o ignorar em silêncio.
+    code: vine.string().optional(),
+    ...positionFields,
+  })
+)
+
+export const listPositionsValidator = vine.compile(
+  vine.object({
+    departmentId: vine.string().uuid().optional(),
+    status: vine.enum(['ACTIVE', 'INACTIVE'] as const).optional(),
+    q: vine.string().trim().maxLength(80).optional(),
+    limit: vine.number().withoutDecimals().range([1, 200]).optional(),
+    offset: vine.number().withoutDecimals().min(0).optional(),
+  })
+)

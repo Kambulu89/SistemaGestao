@@ -1474,6 +1474,127 @@ paths:
         '201': { description: Criado (cabeçalho Location). }
         '409': { description: Código duplicado. }
         '422': { $ref: '#/components/responses/Error' }
+  /positions:
+    get:
+      summary: Cargos e funções (organization.read; filtros departmentId, status, q, limit, offset)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: departmentId, in: query, required: false, schema: { type: string, format: uuid } }
+        - {
+            name: status,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [ACTIVE, INACTIVE] },
+          }
+        - { name: q, in: query, required: false, schema: { type: string } }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 200 },
+          }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: OK. }
+    post:
+      summary: Cria um cargo (organization.manage); código único no tenant e imutável
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                jobFamily: { type: string, nullable: true }
+                category: { type: string, nullable: true }
+                hierarchyLevel: { type: integer, nullable: true, minimum: 1, maximum: 20 }
+                departmentId:
+                  {
+                    type: string,
+                    format: uuid,
+                    nullable: true,
+                    description: 'Departamento, secção ou equipa do tenant.',
+                  }
+                parentId:
+                  {
+                    type: string,
+                    format: uuid,
+                    nullable: true,
+                    description: 'Cargo superior; sem ciclos.',
+                  }
+                responsibilities: { type: string, nullable: true }
+                competencies: { type: array, items: { type: string } }
+                academicRequirements: { type: string, nullable: true }
+                recommendedExperience: { type: string, nullable: true }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        '201': { description: Criado (cabeçalho Location). }
+        '409': { description: Código duplicado (POSITION_CODE_TAKEN). }
+        '422': { $ref: '#/components/responses/Error' }
+  /positions/{id}:
+    get:
+      summary: Detalhe de um cargo (organization.read)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: OK. }
+        '404': { description: Inexistente ou de outro tenant. }
+    patch:
+      summary: Altera um cargo com expectedVersion; rejeita ciclos e desactivar com subordinados activos
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer }
+                name: { type: string }
+                description: { type: string, nullable: true }
+                jobFamily: { type: string, nullable: true }
+                category: { type: string, nullable: true }
+                hierarchyLevel: { type: integer, nullable: true, minimum: 1, maximum: 20 }
+                departmentId:
+                  {
+                    type: string,
+                    format: uuid,
+                    nullable: true,
+                    description: 'Departamento, secção ou equipa do tenant.',
+                  }
+                parentId:
+                  {
+                    type: string,
+                    format: uuid,
+                    nullable: true,
+                    description: 'Cargo superior; sem ciclos.',
+                  }
+                responsibilities: { type: string, nullable: true }
+                competencies: { type: array, items: { type: string } }
+                academicRequirements: { type: string, nullable: true }
+                recommendedExperience: { type: string, nullable: true }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        '200': { description: Actualizado. }
+        '404': { description: Inexistente ou de outro tenant. }
+        '409': { description: Versão desactualizada ou cargo com subordinados activos. }
+        '422': { $ref: '#/components/responses/Error' }
   /cost-centers/{id}:
     patch:
       summary: Altera um centro de custo; rejeita ciclos

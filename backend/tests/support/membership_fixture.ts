@@ -191,6 +191,7 @@ export async function deleteTestTenants() {
         'membership_scopes',
         'team_members',
         'cost_centers',
+        'positions',
         'organization_units',
         'organizations',
       ]) {

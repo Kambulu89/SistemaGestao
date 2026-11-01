@@ -58,6 +58,7 @@ export const AUDIT_READ_PERMISSION: Readonly<Record<string, string>> = {
   organizations: 'organization.read',
   organization_units: 'organization.read',
   cost_centers: 'organization.read',
+  positions: 'organization.read',
   team_members: 'organization.read',
   parties: 'party.read',
   people: 'party.read',

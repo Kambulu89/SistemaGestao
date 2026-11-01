@@ -28,6 +28,7 @@ export interface World {
     unitRoot: string
     unitChild: string
     costCenter: string
+    position: string
     teamMember: string
     scope: string
     personParty: string
@@ -286,6 +287,14 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       organizationId: organization.id,
       code: SHARED.costCenter,
       name: 'Geral',
+    }),
+    201
+  )
+  const position = await must<{ id: string }>(
+    await http.post('/api/v1/positions', {
+      code: 'DIR-GERAL',
+      name: 'Director geral',
+      departmentId: unitChild.id,
     }),
     201
   )
@@ -1432,6 +1441,7 @@ export async function buildWorld(client: any, label: string, tenant?: Tenant): P
       unitRoot: unitRoot.id,
       unitChild: unitChild.id,
       costCenter: costCenter.id,
+      position: position.id,
       teamMember: teamMember.id,
       scope: scope.id,
       personParty: person.id,

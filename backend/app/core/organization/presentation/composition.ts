@@ -9,6 +9,8 @@ import {
   UnitUseCases,
 } from '#core/organization/application/use_cases'
 import { LucidOrganizationStore } from '#core/organization/infrastructure/lucid_organization'
+import { PositionUseCases } from '#core/organization/application/position_use_cases'
+import { LucidPositionStore } from '#core/organization/infrastructure/lucid_positions'
 
 function build() {
   const uow = new LucidTenantDatabase()
@@ -21,6 +23,7 @@ function build() {
     teams: new TeamUseCases(uow, store, memberships),
     scopes: new ScopeUseCases(uow, store, memberships),
     resolveUnitScope: new ResolveUnitScope(uow, store),
+    positions: new PositionUseCases(uow, new LucidPositionStore(), store),
   }
 }
 

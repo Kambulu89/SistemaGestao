@@ -45,6 +45,31 @@ export interface CostCenterDto {
   readonly version: number;
 }
 
+/** Cargo (função) da estrutura: existe sem ocupante e pode ter vários (o RH liga-lhe os contratos). */
+export interface PositionDto {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly jobFamily: string | null;
+  readonly category: string | null;
+  readonly hierarchyLevel: number | null;
+  readonly departmentId: string | null;
+  readonly parentId: string | null;
+  readonly responsibilities: string | null;
+  readonly competencies: readonly string[];
+  readonly academicRequirements: string | null;
+  readonly recommendedExperience: string | null;
+  readonly status: 'ACTIVE' | 'INACTIVE';
+  readonly version: number;
+}
+
+export type PositionInput = Partial<
+  Omit<PositionDto, 'id' | 'version' | 'code' | 'competencies'> & {
+    competencies: readonly string[];
+  }
+>;
+
 export interface NewCostCenter {
   readonly organizationId: string;
   readonly parentId?: string | null;
@@ -90,6 +115,30 @@ export class OrganizationApi {
     return this.api.patch(`organization-units/${unit.id}`, {
       expectedVersion: unit.version,
       active,
+    });
+  }
+
+  listPositions(filter: {
+    q?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+    departmentId?: string;
+  }): Observable<readonly PositionDto[]> {
+    const params: Record<string, string> = { limit: '200' };
+    for (const [key, value] of Object.entries(filter)) if (value) params[key] = value;
+    return this.api.get('positions', { params });
+  }
+
+  createPosition(body: PositionInput & { code: string; name: string }): Observable<PositionDto> {
+    return this.api.post('positions', body);
+  }
+
+  updatePosition(
+    position: Pick<PositionDto, 'id' | 'version'>,
+    changes: PositionInput,
+  ): Observable<PositionDto> {
+    return this.api.patch(`positions/${position.id}`, {
+      expectedVersion: position.version,
+      ...changes,
     });
   }
 

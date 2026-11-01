@@ -19,6 +19,7 @@ import { Select } from '../../../shared/ui/select/select';
 import { Table, type TableColumn } from '../../../shared/ui/table/table';
 import { OrganizationApi, type UnitDto, type UnitType } from '../data-access/organization.api';
 import { CostCentersPanel } from './cost-centers-panel';
+import { PositionsPanel } from './positions-panel';
 import { buildUnitRows } from './organization-tree';
 import { TeamPanel } from './team-panel';
 
@@ -40,6 +41,7 @@ const UNIT_TYPES: readonly { value: UnitType; label: string }[] = [
     Button,
     Card,
     CostCentersPanel,
+    PositionsPanel,
     Dialog,
     EmptyState,
     Input,
@@ -153,6 +155,7 @@ const UNIT_TYPES: readonly { value: UnitType; label: string }[] = [
         @if (selectedOrg(); as org) {
           <app-team-panel [units]="unitList()" />
           <app-cost-centers-panel [organizationId]="org.id" />
+          <app-positions-panel [units]="unitList()" />
         }
       }
     }
