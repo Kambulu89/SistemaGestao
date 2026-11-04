@@ -32,3 +32,9 @@ falsa. A coluna `scope_type` aceita hoje `TENANT` e `OWN` (CHECK); o 3.4 alarga-
 
 O fornecedor de email é uma decisão pendente. Convites e recuperação funcionam ponta a ponta, mas com `MAIL_DRIVER=none` a
 resposta diz `NOT_CONFIGURED`; nunca se apresenta um envio que não aconteceu.
+
+## D-007 Estrutura organizacional sem eliminação física (aceite)
+
+Entidades legais, filiais, departamentos, cargos e centros de custo vão ser referenciados por documentos, contratos e
+lançamentos; apagar quebraria o histórico. Desactiva-se (`status = INACTIVE`) e a vigência regista o período. Anexos,
+moradas, responsáveis e histórico de alterações entram no Prompt 05.

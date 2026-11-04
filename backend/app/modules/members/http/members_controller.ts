@@ -11,9 +11,11 @@ const listValidator = vine.create({
   limit: vine.number().withoutDecimals().min(1).max(100).optional(),
   offset: vine.number().withoutDecimals().min(0).optional(),
 })
+const scopeTypes = ['TENANT', 'OWN', 'LEGAL_ENTITY', 'BRANCH', 'DEPARTMENT'] as const
 const roleRef = vine.object({
   roleId: vine.string().uuid(),
-  scopeType: vine.enum(['TENANT', 'OWN']).optional(),
+  scopeType: vine.enum(scopeTypes).optional(),
+  scopeId: vine.string().uuid().nullable().optional(),
 })
 const inviteValidator = vine.create({
   email: vine.string().trim().maxLength(254),
@@ -23,7 +25,8 @@ const inviteValidator = vine.create({
 const versionValidator = vine.create({ expectedVersion: vine.number().withoutDecimals().min(1) })
 const assignValidator = vine.create({
   roleId: vine.string().uuid(),
-  scopeType: vine.enum(['TENANT', 'OWN']).optional(),
+  scopeType: vine.enum(scopeTypes).optional(),
+  scopeId: vine.string().uuid().nullable().optional(),
 })
 
 const members = new MemberService()

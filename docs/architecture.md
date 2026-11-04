@@ -52,8 +52,10 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 - Permissões definidas em `app/modules/rbac/domain/permissions.ts` e sincronizadas para `permissions` com
   `node ace rbac:sync` (também actualiza o perfil de sistema `tenant_admin` de todas as empresas).
-- Perfis (`roles`) por empresa; atribuições (`membership_roles`) com âmbito `TENANT` (toda a empresa) ou `OWN` (só
-  registos próprios). Âmbitos por entidade legal, filial, departamento e equipa entram no bloco 3.4, com essas tabelas.
+- Perfis (`roles`) por empresa; atribuições (`membership_roles`) com âmbito `TENANT`, `OWN`, `LEGAL_ENTITY`, `BRANCH`
+  ou `DEPARTMENT` (este inclui os subdepartamentos). O alvo fica numa coluna própria com FK composta e um CHECK exige a
+  coluna certa para cada âmbito. `permissionScope(scope, permissão)` devolve onde a permissão vale; as rotas de gestão
+  continuam a exigir âmbito `TENANT`. Equipas: quando existir o cadastro de equipas.
 - Rotas protegidas com `middleware.can({ permission })`; negar por omissão. Só contam membership **activa** e perfis
   **activos**.
 - Anti-escalada: um perfil só leva permissões que o actor tem com âmbito de empresa; só se atribui um perfil cujas
@@ -66,3 +68,17 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
   depois de gravada a membership. Aceitar consome o token e activa a membership na **mesma** transacção.
 - Sem fornecedor de email escolhido: `MAIL_DRIVER=none` não envia e a API responde `delivery: NOT_CONFIGURED` (nunca finge
   envio); `dev-memory` guarda a mensagem em memória para testes/desenvolvimento (proibido em produção).
+
+## Estrutura organizacional
+
+- `legal_entities` (código e NIF+país únicos, moeda funcional), `branches` (tipo, entidade legal), `departments` (árvore,
+  entidade legal, filial opcional), `positions` (família, categoria, nível 1–20, departamento opcional) e `cost_centers`
+  (árvore, código único por entidade legal, departamento opcional). Todos com estado `ACTIVE`/`INACTIVE` e vigência
+  `valid_from`/`valid_to` coerente; o código e a entidade legal não mudam depois de criados.
+- Filial, pai, departamento e centro de custo referenciados têm de pertencer à **mesma entidade legal**.
+- Ciclos impedidos com CTE recursiva sob um bloqueio por empresa e árvore (`pg_advisory_xact_lock`), pedido **antes** de
+  bloquear a linha (evita o deadlock com a FK do pai; coberto por teste de concorrência).
+- API única `/api/v1/organization/:kind` (`legal-entities`, `branches`, `departments`, `positions`, `cost-centers`) com
+  `organization.read` / `organization.manage`; o domínio só aceita os campos declarados (sem mass assignment).
+- Repositório genérico de tabelas de tenant em `app/shared/db/tenant_crud.ts` (listagem paginada, filtros por igualdade,
+  pesquisa, versão, conflitos de unicidade → 409).

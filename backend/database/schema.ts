@@ -32,15 +32,161 @@ export class AuthSessionSchema extends BaseModel {
   declare userId: string
 }
 
-export class MembershipRoleSchema extends BaseModel {
-  static $columns = ['createdAt', 'createdBy', 'id', 'membershipId', 'roleId', 'scopeType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
-  $columns = MembershipRoleSchema.$columns
+export class BranchSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'name', 'status', 'tenantId', 'type', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = BranchSchema.$columns
+  @column()
+  declare code: string
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
   declare createdBy: string | null
   @column({ isPrimary: true })
   declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare type: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime | null
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class CostCenterSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'departmentId', 'id', 'legalEntityId', 'name', 'parentId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = CostCenterSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare departmentId: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare name: string
+  @column()
+  declare parentId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime | null
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class DepartmentSchema extends BaseModel {
+  static $columns = ['branchId', 'code', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'name', 'parentId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = DepartmentSchema.$columns
+  @column()
+  declare branchId: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare name: string
+  @column()
+  declare parentId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime | null
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class LegalEntitySchema extends BaseModel {
+  static $columns = ['code', 'countryCode', 'createdAt', 'createdBy', 'functionalCurrency', 'id', 'legalName', 'status', 'taxId', 'tenantId', 'tradeName', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = LegalEntitySchema.$columns
+  @column()
+  declare code: string
+  @column()
+  declare countryCode: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare functionalCurrency: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalName: string
+  @column()
+  declare status: string
+  @column()
+  declare taxId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare tradeName: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime | null
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class MembershipRoleSchema extends BaseModel {
+  static $columns = ['branchId', 'createdAt', 'createdBy', 'departmentId', 'id', 'legalEntityId', 'membershipId', 'roleId', 'scopeType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = MembershipRoleSchema.$columns
+  @column()
+  declare branchId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare departmentId: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string | null
   @column()
   declare membershipId: string
   @column()
@@ -97,6 +243,45 @@ export class PermissionSchema extends BaseModel {
   declare module: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+}
+
+export class PositionSchema extends BaseModel {
+  static $columns = ['category', 'code', 'createdAt', 'createdBy', 'departmentId', 'description', 'id', 'jobFamily', 'level', 'name', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = PositionSchema.$columns
+  @column()
+  declare category: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare departmentId: string | null
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare jobFamily: string | null
+  @column()
+  declare level: number | null
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime | null
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
 }
 
 export class RateLimitCounterSchema extends BaseModel {

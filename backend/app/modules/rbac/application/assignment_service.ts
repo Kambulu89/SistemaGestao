@@ -2,7 +2,12 @@ import { ApiError } from '#shared/http/api_error'
 import type { TenantScope } from '#modules/tenancy/index'
 import { RbacRepository } from '#modules/rbac/infrastructure/rbac_repository'
 import { effectivePermissions } from '#modules/rbac/application/authorization'
-import { SCOPE_TYPES, TENANT_ADMIN_ROLE, type ScopeType } from '#modules/rbac/domain/permissions'
+import {
+  SCOPE_TYPES,
+  TARGETED_SCOPES,
+  TENANT_ADMIN_ROLE,
+  type ScopeType,
+} from '#modules/rbac/domain/permissions'
 
 const repository = new RbacRepository()
 
@@ -17,14 +22,27 @@ export class AssignmentService {
     scope: TenantScope,
     membershipId: string,
     roleId: string,
-    scopeType: unknown = 'TENANT'
+    scopeType: unknown = 'TENANT',
+    scopeId: string | null = null
   ) {
     if (membershipId === scope.context.membershipId) {
       throw ApiError.forbidden('SELF_ASSIGNMENT', 'Não pode alterar os seus próprios perfis.')
     }
     if (!SCOPE_TYPES.includes(scopeType as ScopeType)) {
       throw ApiError.validation([
-        { path: 'scopeType', code: 'INVALID_SCOPE', message: 'Âmbito: TENANT ou OWN.' },
+        { path: 'scopeType', code: 'INVALID_SCOPE', message: `Âmbito: ${SCOPE_TYPES.join(', ')}.` },
+      ])
+    }
+    const targeted = TARGETED_SCOPES.includes(scopeType as ScopeType)
+    if (targeted !== Boolean(scopeId)) {
+      throw ApiError.validation([
+        {
+          path: 'scopeId',
+          code: targeted ? 'SCOPE_TARGET_REQUIRED' : 'SCOPE_TARGET_NOT_ALLOWED',
+          message: targeted
+            ? 'Indique a entidade legal, filial ou departamento do âmbito.'
+            : 'Este âmbito não leva alvo.',
+        },
       ])
     }
     const role = await repository.findRole(scope, roleId)
@@ -45,7 +63,7 @@ export class AssignmentService {
         [...missing.map((code) => ({ path: 'roleId', code: 'NOT_HELD', message: code }))]
       )
     }
-    await repository.assign(scope, membershipId, roleId, scopeType as ScopeType)
+    await repository.assign(scope, membershipId, roleId, scopeType as ScopeType, scopeId)
   }
 
   async unassign(scope: TenantScope, membershipId: string, assignmentId: string) {

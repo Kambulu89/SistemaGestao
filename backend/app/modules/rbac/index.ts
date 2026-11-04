@@ -4,7 +4,9 @@ export type { Role } from '#modules/rbac/domain/role'
 export {
   assertCan,
   effectivePermissions,
+  permissionScope,
   permissionsFor,
+  type PermissionScope,
 } from '#modules/rbac/application/authorization'
 export { AssignmentService } from '#modules/rbac/application/assignment_service'
 export { bootstrapTenantAdmin, syncPermissionCatalog } from '#modules/rbac/application/catalog'

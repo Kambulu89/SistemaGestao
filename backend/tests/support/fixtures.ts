@@ -34,7 +34,7 @@ export async function addMembership(tenantId: string, userId: string, status = '
 
 export async function cleanDatabase() {
   await owner().rawQuery(
-    'truncate membership_roles, role_permissions, roles, one_time_tokens, tenant_memberships, auth_sessions, rate_limit_counters, users, tenants restart identity cascade'
+    'truncate cost_centers, positions, departments, branches, legal_entities, membership_roles, role_permissions, roles, one_time_tokens, tenant_memberships, auth_sessions, rate_limit_counters, users, tenants restart identity cascade'
   )
 }
 

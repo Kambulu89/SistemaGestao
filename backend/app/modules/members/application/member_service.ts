@@ -16,14 +16,20 @@ const accounts = new AccountService()
 const tenants = new TenantRepository()
 
 export interface MemberView extends Member {
-  roles: Pick<Assignment, 'id' | 'roleId' | 'roleCode' | 'scopeType'>[]
+  roles: Pick<Assignment, 'id' | 'roleId' | 'roleCode' | 'scopeType' | 'scopeId'>[]
 }
 
 const withRoles = (member: Member, all: Assignment[]): MemberView => ({
   ...member,
   roles: all
     .filter((a) => a.membershipId === member.id)
-    .map(({ id, roleId, roleCode, scopeType }) => ({ id, roleId, roleCode, scopeType })),
+    .map(({ id, roleId, roleCode, scopeType, scopeId }) => ({
+      id,
+      roleId,
+      roleCode,
+      scopeType,
+      scopeId,
+    })),
 })
 
 /** Membros da empresa: convites, aceitação, suspensão e perfis. As regras de perfis vivem no RBAC. */
@@ -63,14 +69,20 @@ export class MemberService {
     input: {
       email: string
       fullName?: string | null
-      roles?: { roleId: string; scopeType?: string }[]
+      roles?: { roleId: string; scopeType?: string; scopeId?: string | null }[]
     }
   ): Promise<{ member: MemberView; delivery: DeliveryStatus }> {
     const user = await accounts.findOrCreateForInvitation(input.email, input.fullName)
     const membershipId = await runInTenant(context, async (scope) => {
       const id = await memberships.insertInvited(scope, user.id)
       for (const role of input.roles ?? [])
-        await assignments.assign(scope, id, role.roleId, role.scopeType ?? 'TENANT')
+        await assignments.assign(
+          scope,
+          id,
+          role.roleId,
+          role.scopeType ?? 'TENANT',
+          role.scopeId ?? null
+        )
       return id
     })
     const tenant = await tenants.find(context.tenantId)
@@ -126,11 +138,21 @@ export class MemberService {
     })
   }
 
-  assignRole(context: TenantContext, id: string, input: { roleId: string; scopeType?: string }) {
+  assignRole(
+    context: TenantContext,
+    id: string,
+    input: { roleId: string; scopeType?: string; scopeId?: string | null }
+  ) {
     return runInTenant(context, async (scope) => {
       const member = await memberships.find(scope, id, true)
       if (!member) throw ApiError.notFound()
-      await assignments.assign(scope, id, input.roleId, input.scopeType ?? 'TENANT')
+      await assignments.assign(
+        scope,
+        id,
+        input.roleId,
+        input.scopeType ?? 'TENANT',
+        input.scopeId ?? null
+      )
       return withRoles(member, await assignments.assignments(scope, [id]))
     })
   }

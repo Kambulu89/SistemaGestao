@@ -27,6 +27,16 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     module: 'rbac',
     description: 'Criar, alterar e eliminar perfis (só com permissões que o próprio tem).',
   },
+  {
+    code: 'organization.read',
+    module: 'organization',
+    description: 'Ver entidades legais, filiais, departamentos, cargos e centros de custo.',
+  },
+  {
+    code: 'organization.manage',
+    module: 'organization',
+    description: 'Criar, alterar e inactivar a estrutura organizacional.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))
@@ -34,5 +44,17 @@ export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p)
 /** Perfil de sistema criado em cada tenant: tem todas as permissões de tenant e não se edita nem elimina. */
 export const TENANT_ADMIN_ROLE = 'tenant_admin'
 
-export type ScopeType = 'TENANT' | 'OWN'
-export const SCOPE_TYPES: readonly ScopeType[] = ['TENANT', 'OWN']
+/**
+ * Âmbito de uma atribuição: toda a empresa, só registos próprios, ou uma entidade legal / filial / departamento (este
+ * inclui os subdepartamentos). As equipas entram quando existir o cadastro de equipas.
+ */
+export type ScopeType = 'TENANT' | 'OWN' | 'LEGAL_ENTITY' | 'BRANCH' | 'DEPARTMENT'
+export const SCOPE_TYPES: readonly ScopeType[] = [
+  'TENANT',
+  'OWN',
+  'LEGAL_ENTITY',
+  'BRANCH',
+  'DEPARTMENT',
+]
+/** Âmbitos que exigem o identificador do alvo (`scopeId`). */
+export const TARGETED_SCOPES: readonly ScopeType[] = ['LEGAL_ENTITY', 'BRANCH', 'DEPARTMENT']

@@ -13,6 +13,7 @@ const ContextController = () => import('#modules/tenancy/http/context_controller
 const RolesController = () => import('#modules/rbac/http/roles_controller')
 const MembersController = () => import('#modules/members/http/members_controller')
 const InvitationController = () => import('#modules/members/http/invitation_controller')
+const OrganizationController = () => import('#modules/organization/http/organization_controller')
 
 router
   .group(() => {
@@ -71,6 +72,20 @@ router
                 ])
               })
               .use(middleware.can({ permission: 'members.manage' }))
+
+            // Estrutura organizacional: :kind = legal-entities | branches | departments | positions | cost-centers
+            router
+              .group(() => {
+                router.get('organization/:kind', [OrganizationController, 'index'])
+                router.get('organization/:kind/:id', [OrganizationController, 'show'])
+              })
+              .use(middleware.can({ permission: 'organization.read' }))
+            router
+              .group(() => {
+                router.post('organization/:kind', [OrganizationController, 'store'])
+                router.patch('organization/:kind/:id', [OrganizationController, 'update'])
+              })
+              .use(middleware.can({ permission: 'organization.manage' }))
           })
           .use(middleware.tenant())
       })
