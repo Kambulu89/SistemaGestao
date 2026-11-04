@@ -1,133 +1,20 @@
-# Ambiente de desenvolvimento. NÃO é uma configuração de produção.
-#   cp .env.compose.example .env && docker compose up --build
-# Serviços: PostgreSQL 16, Redis 7, API e frontend. Os documentos ficam em disco local (volume `documents`).
-# Os trabalhadores (automações, notificações, exportações) arrancam com o perfil `workers`:
-#   docker compose --profile workers up
-# Preparar a base (migrações, catálogo de permissões, registo de módulos e dados de demonstração):
-#   docker compose exec -e DEMO_USER_PASSWORD=... api npm run setup
-name: sistema-gestao
-
+# Só para desenvolvimento local: PostgreSQL 16. A API e o frontend correm com `npm run dev` / `npm start`.
+# As credenciais vêm de um `.env` na raiz (ver `.env.compose.example`); nunca as escreva aqui.
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?defina POSTGRES_ADMIN_PASSWORD no .env}
-      SG_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?defina DB_OWNER_PASSWORD no .env}
-      SG_RUNTIME_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+      POSTGRES_USER: ${DB_USER:-app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+      POSTGRES_DB: ${DB_DATABASE:-app}
+    ports:
+      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
-    ports:
-      - '127.0.0.1:5432:5432'
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-app}']
       interval: 5s
-      timeout: 3s
       retries: 20
-
-  redis:
-    image: redis:7-alpine
-    command: ['redis-server', '--save', '', '--appendonly', 'no']
-    ports:
-      - '127.0.0.1:6379:6379'
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
-  api:
-    build:
-      context: ./backend
-      target: dev
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      NODE_ENV: development
-      HOST: 0.0.0.0
-      PORT: 3333
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      APP_KEY: ${APP_KEY:?defina APP_KEY no .env}
-      CORS_ORIGINS: http://localhost:4200
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: sistema_gestao
-      DB_USER: sg_runtime
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_OWNER_USER: sg_owner
-      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
-      WEB_BASE_URL: http://localhost:4200
-      MAIL_DRIVER: none
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      DOCUMENTS_STORAGE_DIR: /data/documents
-    volumes:
-      - ./backend:/app
-      - api_node_modules:/app/node_modules
-      - documents:/data/documents
-    ports:
-      - '127.0.0.1:3333:3333'
-    # As migrações correm explicitamente: docker compose exec api npm run migrate (ou npm run setup)
-
-  # Trabalhadores: mesma imagem e ambiente da API; só arrancam com --profile workers.
-  automation-worker: &worker
-    profiles: ['workers']
-    build:
-      context: ./backend
-      target: dev
-    command: ['node', 'ace', 'automation:work']
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      NODE_ENV: development
-      HOST: 0.0.0.0
-      PORT: 3333
-      CORS_ORIGINS: http://localhost:4200
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      APP_KEY: ${APP_KEY}
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: sistema_gestao
-      DB_USER: sg_runtime
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_OWNER_USER: sg_owner
-      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD}
-      WEB_BASE_URL: http://localhost:4200
-      MAIL_DRIVER: none
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      DOCUMENTS_STORAGE_DIR: /data/documents
-    volumes:
-      - ./backend:/app
-      - api_node_modules:/app/node_modules
-      - documents:/data/documents
-
-  notifications-worker:
-    <<: *worker
-    command: ['node', 'ace', 'notifications:work']
-
-  exports-worker:
-    <<: *worker
-    command: ['node', 'ace', 'exports:work']
-
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile.web.dev
-    volumes:
-      - ./src:/app/src
-      - ./public:/app/public
-    ports:
-      - '127.0.0.1:4200:4200'
 
 volumes:
   pgdata:
-  documents:
-  api_node_modules:

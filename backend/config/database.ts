@@ -1,26 +1,14 @@
+import app from '@adonisjs/core/services/app'
 import env from '#start/env'
 import { defineConfig } from '@adonisjs/lucid'
 
-/**
- * Duas ligações, duas contas:
- *  - `runtime` (por omissão): conta da aplicação, sem superuser nem BYPASSRLS. É a única usada pelos
- *    pedidos, jobs e consumidores; por isso a RLS (Fase 1) aplica-se sempre.
- *  - `owner`: dona do esquema. Só para migrations e seeds (`npm run migrate`), nunca em runtime.
- */
-const common = {
-  client: 'pg' as const,
-  debug: false,
-  migrations: {
-    naturalSort: true,
-    paths: ['database/migrations'],
-  },
-}
-
+/** Uma só ligação: PostgreSQL (as credenciais vêm do ambiente, validado em `start/env.ts`). */
 const dbConfig = defineConfig({
-  connection: 'runtime',
+  connection: 'pg',
+
   connections: {
-    runtime: {
-      ...common,
+    pg: {
+      client: 'pg',
       connection: {
         host: env.get('DB_HOST'),
         port: env.get('DB_PORT'),
@@ -28,18 +16,15 @@ const dbConfig = defineConfig({
         password: env.get('DB_PASSWORD'),
         database: env.get('DB_DATABASE'),
       },
-      pool: { min: 0, max: 10 },
-    },
-    owner: {
-      ...common,
-      connection: {
-        host: env.get('DB_HOST'),
-        port: env.get('DB_PORT'),
-        user: env.get('DB_OWNER_USER'),
-        password: env.get('DB_OWNER_PASSWORD'),
-        database: env.get('DB_DATABASE'),
+      migrations: {
+        naturalSort: true,
+        paths: ['database/migrations'],
       },
-      pool: { min: 0, max: 2 },
+      schemaGeneration: {
+        enabled: true,
+        rulesPaths: ['./database/schema_rules.js'],
+      },
+      debug: app.inDev,
     },
   },
 })
