@@ -135,6 +135,25 @@ export class DepartmentSchema extends BaseModel {
   declare version: number
 }
 
+export class FeatureSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'description', 'id', 'kind', 'module', 'updatedAt'] as const
+  $columns = FeatureSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare description: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare module: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
 export class LegalEntitySchema extends BaseModel {
   static $columns = ['code', 'countryCode', 'createdAt', 'createdBy', 'functionalCurrency', 'id', 'legalName', 'status', 'taxId', 'tenantId', 'tradeName', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = LegalEntitySchema.$columns
@@ -245,6 +264,50 @@ export class PermissionSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class PlanFeatureSchema extends BaseModel {
+  static $columns = ['createdAt', 'enabled', 'featureCode', 'id', 'limitValue', 'planId', 'updatedAt'] as const
+  $columns = PlanFeatureSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare enabled: boolean
+  @column()
+  declare featureCode: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare limitValue: number | null
+  @column()
+  declare planId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class PlanSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'description', 'id', 'name', 'publishedAt', 'status', 'trialDays', 'updatedAt', 'version'] as const
+  $columns = PlanSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string
+  @column.dateTime()
+  declare publishedAt: DateTime | null
+  @column()
+  declare status: string
+  @column()
+  declare trialDays: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare version: number
+}
+
 export class PositionSchema extends BaseModel {
   static $columns = ['category', 'code', 'createdAt', 'createdBy', 'departmentId', 'description', 'id', 'jobFamily', 'level', 'name', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = PositionSchema.$columns
@@ -351,6 +414,83 @@ export class RoleSchema extends BaseModel {
   declare updatedBy: string | null
   @column()
   declare version: number
+}
+
+export class SubscriptionEventSchema extends BaseModel {
+  static $columns = ['action', 'actorUserId', 'createdAt', 'fromStatus', 'id', 'planId', 'reason', 'subscriptionId', 'tenantId', 'toStatus', 'updatedAt'] as const
+  $columns = SubscriptionEventSchema.$columns
+  @column()
+  declare action: string
+  @column()
+  declare actorUserId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare fromStatus: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare planId: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare subscriptionId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare toStatus: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class SubscriptionSchema extends BaseModel {
+  static $columns = ['createdAt', 'endsAt', 'id', 'planId', 'startsAt', 'status', 'tenantId', 'trialEndsAt', 'updatedAt', 'version'] as const
+  $columns = SubscriptionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare endsAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare planId: string
+  @column.dateTime()
+  declare startsAt: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime()
+  declare trialEndsAt: DateTime | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare version: number
+}
+
+export class TenantEntitlementOverrideSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'enabled', 'expiresAt', 'featureCode', 'id', 'limitValue', 'reason', 'tenantId', 'updatedAt'] as const
+  $columns = TenantEntitlementOverrideSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare enabled: boolean
+  @column.dateTime()
+  declare expiresAt: DateTime | null
+  @column()
+  declare featureCode: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare limitValue: number | null
+  @column()
+  declare reason: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
 }
 
 export class TenantMembershipSchema extends BaseModel {

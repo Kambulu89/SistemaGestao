@@ -3,7 +3,7 @@ import { createGlobalTable, createTenantTable, tenantForeignKey } from '#databas
 
 /**
  * RBAC e tokens de uso único.
- *  - `permissions` (global): catálogo definido no código e sincronizado (`node ace rbac:sync`); igual para todos os tenants.
+ *  - `permissions` (global): catálogo definido no código e sincronizado (`node ace catalog:sync`); igual para todos os tenants.
  *  - `roles`, `role_permissions`, `membership_roles` (tenant): perfis da empresa e atribuições com âmbito. Nesta fase o
  *    âmbito é `TENANT` (toda a empresa) ou `OWN` (só registos próprios); entidade legal, filial, departamento e equipa
  *    entram com a estrutura organizacional (bloco 3.4).

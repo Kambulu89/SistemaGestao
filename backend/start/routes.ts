@@ -14,6 +14,9 @@ const RolesController = () => import('#modules/rbac/http/roles_controller')
 const MembersController = () => import('#modules/members/http/members_controller')
 const InvitationController = () => import('#modules/members/http/invitation_controller')
 const OrganizationController = () => import('#modules/organization/http/organization_controller')
+const TenantSubscriptionController = () =>
+  import('#modules/subscription/http/tenant_subscription_controller')
+const PlatformController = () => import('#modules/platform/http/platform_controller')
 
 router
   .group(() => {
@@ -79,15 +82,53 @@ router
                 router.get('organization/:kind', [OrganizationController, 'index'])
                 router.get('organization/:kind/:id', [OrganizationController, 'show'])
               })
-              .use(middleware.can({ permission: 'organization.read' }))
+              .use([
+                middleware.can({ permission: 'organization.read' }),
+                middleware.entitled({ feature: 'organization' }),
+              ])
             router
               .group(() => {
                 router.post('organization/:kind', [OrganizationController, 'store'])
                 router.patch('organization/:kind/:id', [OrganizationController, 'update'])
               })
-              .use(middleware.can({ permission: 'organization.manage' }))
+              .use([
+                middleware.can({ permission: 'organization.manage' }),
+                middleware.entitled({ feature: 'organization' }),
+              ])
+
+            router
+              .get('tenant/subscription', [TenantSubscriptionController, 'show'])
+              .use(middleware.can({ permission: 'subscription.read' }))
           })
           .use(middleware.tenant())
+
+        // Administração da plataforma (plano de controlo, sem tenant em contexto).
+        router
+          .group(() => {
+            router.get('features', [PlatformController, 'features'])
+            router.get('plans', [PlatformController, 'plans'])
+            router.post('plans', [PlatformController, 'createPlan'])
+            router.get('plans/:id', [PlatformController, 'plan'])
+            router.patch('plans/:id', [PlatformController, 'updatePlan'])
+            router.post('plans/:id/publish', [PlatformController, 'publishPlan'])
+            router.post('plans/:id/retire', [PlatformController, 'retirePlan'])
+            router.get('tenants', [PlatformController, 'tenants'])
+            router.post('tenants', [PlatformController, 'createTenant'])
+            router.patch('tenants/:id', [PlatformController, 'updateTenant'])
+            router.get('tenants/:id/subscription', [PlatformController, 'subscription'])
+            router.post('tenants/:id/subscription', [PlatformController, 'startSubscription'])
+            router.put('tenants/:id/entitlements/:feature', [PlatformController, 'setOverride'])
+            router.delete('tenants/:id/entitlements/:feature', [
+              PlatformController,
+              'removeOverride',
+            ])
+            router.post('subscriptions/:id/transitions', [
+              PlatformController,
+              'transitionSubscription',
+            ])
+          })
+          .prefix('platform')
+          .use(middleware.platformAdmin())
       })
       .use(middleware.auth())
   })

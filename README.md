@@ -31,9 +31,12 @@ npm ci
 cp .env.example .env                # DB_PASSWORD e DB_OWNER_PASSWORD iguais aos do passo 1
 node ace generate:key               # gera APP_KEY no .env
 npm run migrate                     # migrações com a conta dona
-node ace rbac:sync                  # catálogo de permissões
+node ace catalog:sync               # catálogos de permissões e de funcionalidades
+node ace plan:create BASE "Base" --feature=organization --limit=members.max=25 --limit=legal_entities.max=5 --publish
 node ace user:create --email=admin@exemplo.ao --name="Administrador"   # pede a palavra-passe
 node ace tenant:create ACME "Acme, Lda." --admin-email=admin@exemplo.ao
+node ace subscription:start ACME BASE --skip-trial   # sem subscrição, o tenant não tem funcionalidades
+node ace platform:admin --email=admin@exemplo.ao    # opcional: acesso a /api/v1/platform
 npm run dev                         # http://localhost:3333
 
 # 3. Frontend (noutro terminal)
@@ -65,5 +68,11 @@ comandos acima; os restantes membros entram por convite (`POST /api/v1/members/i
 | GET    | `/api/v1/auth/me`     | sessão                                       | Utilizador e empresas                                                                       |
 | POST   | `/api/v1/auth/logout` | sessão + CSRF                                | Revoga a sessão                                                                             |
 | GET    | `/api/v1/context`     | sessão + `X-Tenant-Id` com membership activa | Contexto da empresa                                                                         |
+
+Subscrições (bloco 3.5): `GET /api/v1/tenant/subscription` (permissão `subscription.read`) devolve o plano, o estado e as
+funcionalidades efectivas da empresa. A administração da plataforma (`users.is_platform_admin`, sessão + CSRF, sem
+`X-Tenant-Id`) fica em `/api/v1/platform`: `features`, `plans` (criar, editar em rascunho, `publish`, `retire`),
+`tenants` (listar, criar, suspender), `tenants/:id/subscription` (ver, iniciar), `subscriptions/:id/transitions` e
+`tenants/:id/entitlements/:feature` (PUT/DELETE de excepções com motivo e validade).
 
 O histórico do projecto anterior (SistemaGestao) continua no Git, até ao commit `2ead09c`.

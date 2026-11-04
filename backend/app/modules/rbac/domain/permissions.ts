@@ -1,6 +1,6 @@
 /**
  * Catálogo de permissões, definido no código (fonte de verdade) e sincronizado para a tabela `permissions` com
- * `node ace rbac:sync`. Cada módulo acrescenta as suas aqui quando é implementado; nunca permissões sem rota que as use.
+ * `node ace catalog:sync`. Cada módulo acrescenta as suas aqui quando é implementado; nunca permissões sem rota que as use.
  */
 export interface PermissionDefinition {
   code: string
@@ -36,6 +36,11 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     code: 'organization.manage',
     module: 'organization',
     description: 'Criar, alterar e inactivar a estrutura organizacional.',
+  },
+  {
+    code: 'subscription.read',
+    module: 'subscription',
+    description: 'Ver o plano, o estado da subscrição e as funcionalidades contratadas da empresa.',
   },
 ]
 

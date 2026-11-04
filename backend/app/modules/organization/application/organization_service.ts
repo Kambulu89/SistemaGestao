@@ -10,6 +10,7 @@ import {
   type Row,
 } from '#shared/db/tenant_crud'
 import { runInTenant, type TenantContext } from '#modules/tenancy/index'
+import { assertWithinLimit } from '#modules/subscription/index'
 import { normalize, type OrgKind, type Values } from '#modules/organization/domain/organization'
 
 const common = { status: 'status', validFrom: 'valid_from', validTo: 'valid_to' }
@@ -231,6 +232,15 @@ export class OrganizationService {
     return runInTenant(context, async ({ trx }) => {
       const s = crud(context, trx)
       await lockTree(s, kind)
+      if (kind === 'legalEntities') {
+        await assertWithinLimit(trx, context.tenantId, 'legal_entities.max', async () => {
+          const r = await trx.rawQuery(
+            'select count(*)::int as n from legal_entities where tenant_id = ?',
+            [context.tenantId]
+          )
+          return (r.rows[0] as { n: number }).n
+        })
+      }
       await checkReferences(s, kind, null, values)
       return crudInsert(s, SPECS[kind], values)
     })

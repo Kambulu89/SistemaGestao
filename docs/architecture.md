@@ -51,7 +51,7 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 ## Autorização (RBAC)
 
 - Permissões definidas em `app/modules/rbac/domain/permissions.ts` e sincronizadas para `permissions` com
-  `node ace rbac:sync` (também actualiza o perfil de sistema `tenant_admin` de todas as empresas).
+  `node ace catalog:sync` (também actualiza o perfil de sistema `tenant_admin` de todas as empresas).
 - Perfis (`roles`) por empresa; atribuições (`membership_roles`) com âmbito `TENANT`, `OWN`, `LEGAL_ENTITY`, `BRANCH`
   ou `DEPARTMENT` (este inclui os subdepartamentos). O alvo fica numa coluna própria com FK composta e um CHECK exige a
   coluna certa para cada âmbito. `permissionScope(scope, permissão)` devolve onde a permissão vale; as rotas de gestão
@@ -82,3 +82,17 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
   `organization.read` / `organization.manage`; o domínio só aceita os campos declarados (sem mass assignment).
 - Repositório genérico de tabelas de tenant em `app/shared/db/tenant_crud.ts` (listagem paginada, filtros por igualdade,
   pesquisa, versão, conflitos de unicidade → 409).
+
+## Subscrições e entitlements
+
+- Tabelas globais (plano de controlo, fora do RLS e só alteradas pela administração da plataforma): `features`
+  (catálogo em código, `BOOLEAN` ou `LIMIT`), `plans` (`DRAFT` → `ACTIVE` → `RETIRED`; um plano publicado não muda, por
+  trigger), `plan_features`, `subscriptions` (uma corrente por tenant, índice único parcial), `subscription_events`
+  (só acrescentar, por trigger) e `tenant_entitlement_overrides` (excepção por funcionalidade, com motivo e validade).
+- Estados: `TRIALING` → `ACTIVE` → `SUSPENDED` ↔ `ACTIVE`, qualquer um → `CANCELLED`. `EXPIRED` é derivado (período
+  experimental ou período terminado), não gravado. Só `TRIALING` e `ACTIVE` dão funcionalidades.
+- Entitlement ≠ autorização: `middleware.entitled({ feature })` responde 403 `NOT_ENTITLED` quando a empresa não
+  tem a funcionalidade; a permissão RBAC continua a ser exigida à parte (`can`). Limites com `assertWithinLimit`, que
+  conta sob `pg_advisory_xact_lock` por tenant e funcionalidade (409 `LIMIT_REACHED`); hoje `members.max` (convites) e
+  `legal_entities.max`.
+- Sem plano comercial semeado: preços, faturação e pagamentos ficam para quando houver decisão comercial (D-008).

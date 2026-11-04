@@ -38,3 +38,11 @@ resposta diz `NOT_CONFIGURED`; nunca se apresenta um envio que não aconteceu.
 Entidades legais, filiais, departamentos, cargos e centros de custo vão ser referenciados por documentos, contratos e
 lançamentos; apagar quebraria o histórico. Desactiva-se (`status = INACTIVE`) e a vigência regista o período. Anexos,
 moradas, responsáveis e histórico de alterações entram no Prompt 05.
+
+## D-008 Subscrições como plano de controlo global; entitlement separado do RBAC (aceite)
+
+Planos, subscrições e excepções pertencem à plataforma e não a uma empresa, por isso são tabelas globais alteradas só por
+administradores da plataforma (`users.is_platform_admin`, concedido por comando). Ter a funcionalidade contratada não dá
+acesso a ninguém: a rota exige o entitlement **e** a permissão. Não há planos, preços nem cobrança semeados: os planos
+criam-se em ambiente local com `plan:create` ou pela API da plataforma; faturação e pagamentos aguardam decisão comercial.
+Sem subscrição activa o tenant não tem funcionalidades (negar por omissão).

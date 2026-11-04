@@ -7,7 +7,7 @@ const repository = new RbacRepository()
 
 /**
  * Sincroniza o catálogo do código para a tabela `permissions` e dá todas as permissões aos perfis `tenant_admin` de todas
- * as empresas. Comando de manutenção (`node ace rbac:sync`): usa a conta dona, que não está sujeita à RLS.
+ * as empresas. Comando de manutenção (`node ace catalog:sync`): usa a conta dona, que não está sujeita à RLS.
  */
 export async function syncPermissionCatalog() {
   const owner = db.connection('owner')

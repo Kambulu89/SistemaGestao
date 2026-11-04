@@ -9,6 +9,13 @@ export const PLATFORM_TABLES: ReadonlySet<string> = new Set([
   'rate_limit_counters',
   'permissions',
   'one_time_tokens',
+  // Subscrições (bloco 3.5): plano de controlo; a leitura por tenant filtra pelo tenant do contexto
+  'features',
+  'plans',
+  'plan_features',
+  'subscriptions',
+  'subscription_events',
+  'tenant_entitlement_overrides',
 ])
 
 /** Tabelas do framework (registo de migrações). */

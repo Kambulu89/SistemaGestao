@@ -18,4 +18,6 @@ export const middleware = router.named({
   auth: () => import('#modules/identity/http/auth_middleware'),
   tenant: () => import('#modules/tenancy/http/tenant_middleware'),
   can: () => import('#modules/rbac/http/can_middleware'),
+  entitled: () => import('#modules/subscription/http/entitled_middleware'),
+  platformAdmin: () => import('#modules/platform/http/platform_admin_middleware'),
 })

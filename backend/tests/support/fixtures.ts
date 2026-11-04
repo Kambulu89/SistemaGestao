@@ -34,7 +34,7 @@ export async function addMembership(tenantId: string, userId: string, status = '
 
 export async function cleanDatabase() {
   await owner().rawQuery(
-    'truncate cost_centers, positions, departments, branches, legal_entities, membership_roles, role_permissions, roles, one_time_tokens, tenant_memberships, auth_sessions, rate_limit_counters, users, tenants restart identity cascade'
+    'truncate tenant_entitlement_overrides, subscription_events, subscriptions, plan_features, plans, cost_centers, positions, departments, branches, legal_entities, membership_roles, role_permissions, roles, one_time_tokens, tenant_memberships, auth_sessions, rate_limit_counters, users, tenants restart identity cascade'
   )
 }
 
@@ -47,7 +47,10 @@ export async function login(client: any, email: string, password = PASSWORD) {
 }
 
 /** Tenant com administrador (fluxo real de `tenant:create`). */
-export async function tenantWithAdmin(code = `T${counter++}${Date.now() % 100000}`) {
+export async function tenantWithAdmin(
+  code = `T${counter++}${Date.now() % 100000}`,
+  withSubscription = true
+) {
   const { createTenantWithAdmin } = await import('#modules/members/application/tenant_bootstrap')
   const admin = await createUser()
   const tenant = await createTenantWithAdmin({
@@ -57,7 +60,28 @@ export async function tenantWithAdmin(code = `T${counter++}${Date.now() % 100000
     defaultCurrency: 'AOA',
     adminEmail: admin.email,
   })
+  if (withSubscription) await subscribe(tenant.id, await unlimitedPlan())
   return { tenant, admin }
+}
+
+/** Plano de teste com todas as funcionalidades e sem limites (criado uma vez por limpeza da base). */
+export async function unlimitedPlan() {
+  const { FEATURES, PlatformSubscriptionService } = await import('#modules/subscription/index')
+  const service = new PlatformSubscriptionService()
+  const existing = (await service.listPlans()).find((p) => p.code === 'TESTE_TUDO')
+  if (existing) return existing.id
+  const plan = await service.createPlan({
+    code: 'TESTE_TUDO',
+    name: 'Plano de teste (tudo)',
+    features: FEATURES.map((f) => ({ featureCode: f.code })),
+  })
+  await service.setPlanStatus(plan.id, 'ACTIVE')
+  return plan.id
+}
+
+export async function subscribe(tenantId: string, planId: string, trial = false) {
+  const { PlatformSubscriptionService } = await import('#modules/subscription/index')
+  return new PlatformSubscriptionService().start(tenantId, { planId, trial }, null)
 }
 
 export interface Session {
@@ -68,7 +92,7 @@ export interface Session {
 
 /** Cliente autenticado numa empresa: aplica cookie, CSRF e X-Tenant-Id. */
 export function as(client: any, s: Session) {
-  const wrap = (method: 'get' | 'post' | 'patch' | 'delete', url: string) =>
+  const wrap = (method: 'get' | 'post' | 'put' | 'patch' | 'delete', url: string) =>
     client[method](url)
       .header('cookie', s.cookie)
       .header('x-xsrf-token', s.xsrf)
@@ -76,6 +100,7 @@ export function as(client: any, s: Session) {
   return {
     get: (url: string) => wrap('get', url),
     post: (url: string, body: object = {}) => wrap('post', url).json(body),
+    put: (url: string, body: object = {}) => wrap('put', url).json(body),
     patch: (url: string, body: object = {}) => wrap('patch', url).json(body),
     delete: (url: string) => wrap('delete', url),
   }

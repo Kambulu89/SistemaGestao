@@ -9,6 +9,7 @@ import {
   type TenantContext,
 } from '#modules/tenancy/index'
 import { AssignmentService, type Assignment } from '#modules/rbac/index'
+import { assertWithinLimit } from '#modules/subscription/index'
 
 const memberships = new MembershipRepository()
 const assignments = new AssignmentService()
@@ -74,6 +75,14 @@ export class MemberService {
   ): Promise<{ member: MemberView; delivery: DeliveryStatus }> {
     const user = await accounts.findOrCreateForInvitation(input.email, input.fullName)
     const membershipId = await runInTenant(context, async (scope) => {
+      // Limite contratado de membros: contam todos os que não foram revogados (convidados incluídos).
+      await assertWithinLimit(scope.trx, context.tenantId, 'members.max', async () => {
+        const r = await scope.trx.rawQuery(
+          `select count(*)::int as n from tenant_memberships where tenant_id = ? and status <> 'REVOKED'`,
+          [context.tenantId]
+        )
+        return (r.rows[0] as { n: number }).n
+      })
       const id = await memberships.insertInvited(scope, user.id)
       for (const role of input.roles ?? [])
         await assignments.assign(

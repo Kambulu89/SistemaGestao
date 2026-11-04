@@ -10,6 +10,7 @@ import {
   MembershipRepository,
 } from '#modules/tenancy/index'
 import { bootstrapTenantAdmin, syncPermissionCatalog } from '#modules/rbac/index'
+import { syncFeatureCatalog } from '#modules/subscription/index'
 
 /** Cria um tenant, a membership activa do administrador e o perfil `tenant_admin`, tudo ou nada. */
 export async function createTenantWithAdmin(input: {
@@ -33,6 +34,7 @@ export async function createTenantWithAdmin(input: {
       { path: 'adminEmail', code: 'UNKNOWN_USER', message: 'A conta não existe.' },
     ])
   await syncPermissionCatalog()
+  await syncFeatureCatalog()
   const tenant = await new TenantRepository().insert(values)
   const membershipId = randomUUID()
   const context = { tenantId: tenant.id, userId: adminId, membershipId, requestId: 'bootstrap' }
