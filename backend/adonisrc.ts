@@ -1,43 +1,98 @@
 import { defineConfig } from '@adonisjs/core/app'
 
 export default defineConfig({
+  /*
+  |--------------------------------------------------------------------------
+  | Experimental flags
+  |--------------------------------------------------------------------------
+  |
+  | The following features will be enabled by default in the next major release
+  | of AdonisJS. You can opt into them today to avoid any breaking changes
+  | during upgrade.
+  |
+  */
+  experimental: {},
+
+  /*
+  |--------------------------------------------------------------------------
+  | Commands
+  |--------------------------------------------------------------------------
+  |
+  | List of ace commands to register from packages. The application commands
+  | will be scanned automatically from the "./commands" directory.
+  |
+  */
   commands: [() => import('@adonisjs/core/commands'), () => import('@adonisjs/lucid/commands')],
 
+  /*
+  |--------------------------------------------------------------------------
+  | Service providers
+  |--------------------------------------------------------------------------
+  |
+  | List of service providers to import and register when booting the
+  | application
+  |
+  */
   providers: [
     () => import('@adonisjs/core/providers/app_provider'),
+    () => import('@adonisjs/core/providers/hash_provider'),
     {
       file: () => import('@adonisjs/core/providers/repl_provider'),
       environment: ['repl', 'test'],
     },
-    () => import('@adonisjs/core/providers/hash_provider'),
     () => import('@adonisjs/core/providers/vinejs_provider'),
-    () => import('@adonisjs/cors/cors_provider'),
+    () => import('@adonisjs/shield/shield_provider'),
     () => import('@adonisjs/lucid/database_provider'),
-    () => import('@adonisjs/redis/redis_provider'),
+    () => import('@adonisjs/cors/cors_provider'),
   ],
 
+  /*
+  |--------------------------------------------------------------------------
+  | Preloads
+  |--------------------------------------------------------------------------
+  |
+  | List of modules to import before starting the application.
+  |
+  */
   preloads: [
     () => import('#start/routes'),
     () => import('#start/kernel'),
-    () => import('#start/dynamic'),
-    () => import('#start/modules'),
+    () => import('#start/validator'),
   ],
 
+  /*
+  |--------------------------------------------------------------------------
+  | Tests
+  |--------------------------------------------------------------------------
+  |
+  | List of test suites to organize tests by their type. Feel free to remove
+  | and add additional suites.
+  |
+  */
   tests: {
     suites: [
       {
-        files: ['tests/unit/**/*.spec(.ts|.js)'],
+        files: ['tests/unit/**/*.spec.{ts,js}'],
         name: 'unit',
-        timeout: 5000,
+        timeout: 2000,
       },
       {
-        files: ['tests/functional/**/*.spec(.ts|.js)'],
+        files: ['tests/functional/**/*.spec.{ts,js}'],
         name: 'functional',
-        timeout: 15000,
+        timeout: 30000,
       },
     ],
     forceExit: false,
   },
 
+  /*
+  |--------------------------------------------------------------------------
+  | Metafiles
+  |--------------------------------------------------------------------------
+  |
+  | A collection of files you want to copy to the build folder when creating
+  | the production build.
+  |
+  */
   metaFiles: [],
 })

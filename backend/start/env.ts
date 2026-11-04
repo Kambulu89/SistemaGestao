@@ -1,18 +1,46 @@
 /*
 |--------------------------------------------------------------------------
-| Validação das variáveis de ambiente
+| Environment variables service
 |--------------------------------------------------------------------------
+|
+| The `Env.create` method creates an instance of the Env service. The
+| service validates the environment variables and also cast values
+| to JavaScript data types.
+|
 */
 
 import { Env } from '@adonisjs/core/env'
-import { assertEnvConsistency, envSchema } from '#start/env_schema'
 
-const env = await Env.create(new URL('../', import.meta.url), envSchema)
+export default await Env.create(new URL('../', import.meta.url), {
+  // Node
+  NODE_ENV: Env.schema.enum(['development', 'production', 'test'] as const),
+  PORT: Env.schema.number(),
+  HOST: Env.schema.string({ format: 'host' }),
+  LOG_LEVEL: Env.schema.string(),
 
-assertEnvConsistency({
-  NODE_ENV: env.get('NODE_ENV'),
-  MAIL_DRIVER: env.get('MAIL_DRIVER'),
-  APP_KEY: env.get('APP_KEY'),
+  // App
+  APP_KEY: Env.schema.secret(),
+  APP_URL: Env.schema.string({ format: 'url', tld: false }),
+
+  // Session
+  SESSION_DRIVER: Env.schema.enum(['cookie', 'memory', 'database'] as const),
+
+  // Base de dados (PostgreSQL)
+  DB_HOST: Env.schema.string({ format: 'host' }),
+  DB_PORT: Env.schema.number(),
+  DB_USER: Env.schema.string(),
+  DB_PASSWORD: Env.schema.string.optional(),
+  DB_DATABASE: Env.schema.string(),
+  /** Conta dona do esquema: só migrações. A conta `DB_USER` (runtime) não é dona nem tem BYPASSRLS. */
+  DB_OWNER_USER: Env.schema.string(),
+  DB_OWNER_PASSWORD: Env.schema.string.optional(),
+
+  /**
+   * Entrega de emails (convites, recuperação). `none`: não envia (a API diz `NOT_CONFIGURED`, nunca finge envio).
+   * `dev-memory`: guarda a mensagem em memória do processo para testes e desenvolvimento — proibido em produção.
+   */
+  MAIL_DRIVER: Env.schema.enum.optional(['none', 'dev-memory'] as const),
+
+  // CORS: origens permitidas separadas por vírgula (ex.: o frontend em desenvolvimento)
+  CORS_ORIGIN: Env.schema.string.optional(),
 })
-
-export default env

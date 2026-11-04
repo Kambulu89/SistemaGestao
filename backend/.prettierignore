@@ -1,3 +1,4 @@
-build
+.adonisjs
 node_modules
-package-lock.json
+build
+database/schema.ts

@@ -1,7 +1,0 @@
-node_modules
-build
-tmp
-.env
-.env.*
-!.env.example
-!.env.test.example

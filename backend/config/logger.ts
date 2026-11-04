@@ -1,59 +1,40 @@
 import env from '#start/env'
 import app from '@adonisjs/core/services/app'
-import { defineConfig, targets } from '@adonisjs/core/logger'
-
-/**
- * Caminhos de campos cujo valor nunca pode chegar aos logs. Complementa a regra de não registar
- * payloads: o que não é necessário para diagnosticar não se regista.
- */
-export const REDACTED_PATHS = [
-  'password',
-  'passwordConfirmation',
-  'token',
-  'secret',
-  'apiKey',
-  'authorization',
-  'cookie',
-  '*.password',
-  '*.passwordConfirmation',
-  '*.token',
-  '*.secret',
-  '*.apiKey',
-  '*.authorization',
-  '*.cookie',
-  'headers.authorization',
-  'headers.cookie',
-  'req.headers.authorization',
-  'req.headers.cookie',
-  'res.headers["set-cookie"]',
-  'currentPassword',
-  '*.currentPassword',
-  'newPassword',
-  '*.newPassword',
-  'passwordHash',
-  '*.passwordHash',
-  'csrfToken',
-  '*.csrfToken',
-  'sessionToken',
-  '*.sessionToken',
-  'verificationToken',
-  '*.verificationToken',
-]
+import { defineConfig, syncDestination, targets } from '@adonisjs/core/logger'
 
 const loggerConfig = defineConfig({
+  /**
+   * Default logger name used by ctx.logger and app logger calls.
+   */
   default: 'app',
 
   loggers: {
     app: {
+      /**
+       * Toggle this logger on/off.
+       */
       enabled: true,
-      name: 'sistema-gestao-api',
+
+      /**
+       * Logger name shown in log records.
+       */
+      name: env.get('APP_NAME'),
+
+      /**
+       * Minimum level to output (trace, debug, info, warn, error, fatal).
+       */
       level: env.get('LOG_LEVEL'),
-      redact: { paths: REDACTED_PATHS, censor: '[REDACTED]' },
+
+      /**
+       * Use sync destination in non-production for immediate flush.
+       */
+      destination: !app.inProduction ? await syncDestination() : undefined,
+
+      /**
+       * Configure where logs are written.
+       */
       transport: {
-        targets: targets()
-          .pushIf(!app.inProduction, targets.pretty())
-          .pushIf(app.inProduction, targets.file({ destination: 1 }))
-          .toArray(),
+        targets: [targets.file({ destination: 1 })],
       },
     },
   },
@@ -61,6 +42,10 @@ const loggerConfig = defineConfig({
 
 export default loggerConfig
 
+/**
+ * Inferring types for the list of loggers you have configured
+ * in your application.
+ */
 declare module '@adonisjs/core/types' {
   export interface LoggersList extends InferLoggers<typeof loggerConfig> {}
 }
