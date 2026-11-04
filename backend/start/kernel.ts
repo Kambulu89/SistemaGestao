@@ -17,4 +17,5 @@ router.use([
 export const middleware = router.named({
   auth: () => import('#modules/identity/http/auth_middleware'),
   tenant: () => import('#modules/tenancy/http/tenant_middleware'),
+  can: () => import('#modules/rbac/http/can_middleware'),
 })

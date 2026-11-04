@@ -34,7 +34,7 @@ export async function addMembership(tenantId: string, userId: string, status = '
 
 export async function cleanDatabase() {
   await owner().rawQuery(
-    'truncate tenant_memberships, auth_sessions, rate_limit_counters, users, tenants restart identity cascade'
+    'truncate membership_roles, role_permissions, roles, one_time_tokens, tenant_memberships, auth_sessions, rate_limit_counters, users, tenants restart identity cascade'
   )
 }
 
@@ -44,4 +44,96 @@ export async function login(client: any, email: string, password = PASSWORD) {
   const cookies = (response.headers()['set-cookie'] as string[]).map((c) => c.split(';')[0])
   const xsrf = cookies.find((c) => c.startsWith('XSRF-TOKEN='))!.split('=')[1]
   return { response, cookie: cookies.join('; '), xsrf }
+}
+
+/** Tenant com administrador (fluxo real de `tenant:create`). */
+export async function tenantWithAdmin(code = `T${counter++}${Date.now() % 100000}`) {
+  const { createTenantWithAdmin } = await import('#modules/members/application/tenant_bootstrap')
+  const admin = await createUser()
+  const tenant = await createTenantWithAdmin({
+    code,
+    name: `Empresa ${code}`,
+    countryCode: 'AO',
+    defaultCurrency: 'AOA',
+    adminEmail: admin.email,
+  })
+  return { tenant, admin }
+}
+
+export interface Session {
+  cookie: string
+  xsrf: string
+  tenantId: string
+}
+
+/** Cliente autenticado numa empresa: aplica cookie, CSRF e X-Tenant-Id. */
+export function as(client: any, s: Session) {
+  const wrap = (method: 'get' | 'post' | 'patch' | 'delete', url: string) =>
+    client[method](url)
+      .header('cookie', s.cookie)
+      .header('x-xsrf-token', s.xsrf)
+      .header('x-tenant-id', s.tenantId)
+  return {
+    get: (url: string) => wrap('get', url),
+    post: (url: string, body: object = {}) => wrap('post', url).json(body),
+    patch: (url: string, body: object = {}) => wrap('patch', url).json(body),
+    delete: (url: string) => wrap('delete', url),
+  }
+}
+
+export async function signIn(
+  client: any,
+  email: string,
+  tenantId: string,
+  password = PASSWORD
+): Promise<Session> {
+  const { cookie, xsrf } = await login(client, email, password)
+  return { cookie, xsrf, tenantId }
+}
+
+/** Último token enviado para um email (caixa de desenvolvimento), extraído da ligação. */
+export async function lastTokenFor(email: string, purpose: 'INVITATION' | 'PASSWORD_RESET') {
+  const { devMailboxMessages } = await import('#modules/identity/index')
+  const message = [...devMailboxMessages()]
+    .reverse()
+    .find((m) => m.to === email && m.purpose === purpose)
+  return message ? new URL(message.link, 'http://x').searchParams.get('token')! : null
+}
+
+/** Convida, aceita e entra: devolve a sessão de um membro com os perfis dados. */
+export async function memberWithRoles(client: any, admin: Session, roleIds: string[]) {
+  const email = `m${process.pid}-${Date.now()}-${counter++}@teste.invalid`
+  const invited = await as(client, admin).post('/api/v1/members/invitations', {
+    email,
+    fullName: 'Membro de Teste',
+    roles: roleIds.map((roleId) => ({ roleId })),
+  })
+  if (invited.status() !== 201) throw new Error(`convite falhou: ${JSON.stringify(invited.body())}`)
+  const token = await lastTokenFor(email, 'INVITATION')
+  const accepted = await client
+    .post('/api/v1/auth/invitations/accept')
+    .json({ token, password: PASSWORD })
+  if (accepted.status() !== 200)
+    throw new Error(`aceitação falhou: ${JSON.stringify(accepted.body())}`)
+  return {
+    session: await signIn(client, email, admin.tenantId),
+    memberId: invited.body().data.member.id as string,
+    email,
+  }
+}
+
+export async function createRole(
+  client: any,
+  admin: Session,
+  code: string,
+  permissionCodes: string[]
+) {
+  const response = await as(client, admin).post('/api/v1/roles', {
+    code,
+    name: `Perfil ${code}`,
+    permissionCodes,
+  })
+  if (response.status() !== 201)
+    throw new Error(`perfil falhou: ${JSON.stringify(response.body())}`)
+  return response.body().data as { id: string; version: number }
 }

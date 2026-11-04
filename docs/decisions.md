@@ -21,3 +21,14 @@ o cookie HttpOnly não. Sessões opacas em PostgreSQL permitem revogar e listar 
 
 O acesso a dados de tenant tem de correr dentro da transacção com `app.tenant_id`; repositórios com SQL explícito tornam
 isso visível e evitam consultas fora do âmbito. A geração automática de esquema do Lucid foi desligada.
+
+## D-005 RBAC com âmbitos TENANT/OWN nesta fase (aceite)
+
+O Prompt 03 pede âmbitos por empresa, entidade legal, filial, departamento, equipa e próprio. Entidades legais, filiais e
+departamentos só existem no bloco 3.4; criar âmbitos que apontam para tabelas inexistentes seria uma funcionalidade
+falsa. A coluna `scope_type` aceita hoje `TENANT` e `OWN` (CHECK); o 3.4 alarga-a e acrescenta `scope_id` com FK composta.
+
+## D-006 Email sem fornecedor real (aceite)
+
+O fornecedor de email é uma decisão pendente. Convites e recuperação funcionam ponta a ponta, mas com `MAIL_DRIVER=none` a
+resposta diz `NOT_CONFIGURED`; nunca se apresenta um envio que não aconteceu.

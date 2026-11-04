@@ -31,6 +31,9 @@ npm ci
 cp .env.example .env                # DB_PASSWORD e DB_OWNER_PASSWORD iguais aos do passo 1
 node ace generate:key               # gera APP_KEY no .env
 npm run migrate                     # migrações com a conta dona
+node ace rbac:sync                  # catálogo de permissões
+node ace user:create --email=admin@exemplo.ao --name="Administrador"   # pede a palavra-passe
+node ace tenant:create ACME "Acme, Lda." --admin-email=admin@exemplo.ao
 npm run dev                         # http://localhost:3333
 
 # 3. Frontend (noutro terminal)
@@ -40,8 +43,8 @@ npm start                           # http://localhost:4200 (o proxy encaminha /
 ```
 
 Os testes do backend usam a base `app_test` (`backend/.env.test`) e correm as migrações com a conta dona.
-Ainda não há administração pela interface nem seed de demonstração: os utilizadores e tenants de teste são criados pelos
-testes.
+Ainda não há interface de administração nem seed de demonstração: tenants e o primeiro administrador criam-se com os
+comandos acima; os restantes membros entram por convite (`POST /api/v1/members/invitations`).
 
 ## Comandos
 

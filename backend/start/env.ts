@@ -35,6 +35,12 @@ export default await Env.create(new URL('../', import.meta.url), {
   DB_OWNER_USER: Env.schema.string(),
   DB_OWNER_PASSWORD: Env.schema.string.optional(),
 
+  /**
+   * Entrega de emails (convites, recuperação). `none`: não envia (a API diz `NOT_CONFIGURED`, nunca finge envio).
+   * `dev-memory`: guarda a mensagem em memória do processo para testes e desenvolvimento — proibido em produção.
+   */
+  MAIL_DRIVER: Env.schema.enum.optional(['none', 'dev-memory'] as const),
+
   // CORS: origens permitidas separadas por vírgula (ex.: o frontend em desenvolvimento)
   CORS_ORIGIN: Env.schema.string.optional(),
 })

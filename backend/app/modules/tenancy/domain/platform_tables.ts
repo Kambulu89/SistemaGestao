@@ -7,6 +7,8 @@ export const PLATFORM_TABLES: ReadonlySet<string> = new Set([
   'users',
   'auth_sessions',
   'rate_limit_counters',
+  'permissions',
+  'one_time_tokens',
 ])
 
 /** Tabelas do framework (registo de migrações). */

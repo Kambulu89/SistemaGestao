@@ -47,3 +47,22 @@ técnico partilhado e não depende de módulos.
 
 Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details[], requestId } }` (400, 401, 403, 404,
 409, 422, 429, 5xx genérico). Nunca stack, SQL nem segredos. O registo de SQL está desligado.
+
+## Autorização (RBAC)
+
+- Permissões definidas em `app/modules/rbac/domain/permissions.ts` e sincronizadas para `permissions` com
+  `node ace rbac:sync` (também actualiza o perfil de sistema `tenant_admin` de todas as empresas).
+- Perfis (`roles`) por empresa; atribuições (`membership_roles`) com âmbito `TENANT` (toda a empresa) ou `OWN` (só
+  registos próprios). Âmbitos por entidade legal, filial, departamento e equipa entram no bloco 3.4, com essas tabelas.
+- Rotas protegidas com `middleware.can({ permission })`; negar por omissão. Só contam membership **activa** e perfis
+  **activos**.
+- Anti-escalada: um perfil só leva permissões que o actor tem com âmbito de empresa; só se atribui um perfil cujas
+  permissões o actor tem; ninguém altera os próprios perfis nem o próprio estado; o último administrador activo não é
+  suspenso nem perde o perfil (verificado sob `FOR UPDATE`).
+
+## Convites e email
+
+- Convidar cria (ou reutiliza) a conta global e uma membership `INVITED`; o token de uso único (7 dias) só é emitido
+  depois de gravada a membership. Aceitar consome o token e activa a membership na **mesma** transacção.
+- Sem fornecedor de email escolhido: `MAIL_DRIVER=none` não envia e a API responde `delivery: NOT_CONFIGURED` (nunca finge
+  envio); `dev-memory` guarda a mensagem em memória para testes/desenvolvimento (proibido em produção).

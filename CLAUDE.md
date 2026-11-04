@@ -1,8 +1,8 @@
 # CLAUDE.md — instruções de desenvolvimento
 
 Aplicação web nova: `frontend/` (Angular 22 + Tailwind CSS 4) e `backend/` (AdonisJS 7, kit API, PostgreSQL 16).
-Objectivo: ERP SaaS multiempresa (Prompts 01–22 do utilizador). Estado: fundação parcial do Prompt 03 (tenants com RLS,
-identidade, sessão, contexto de tenant). Arquitectura e invariantes em `docs/architecture.md`; decisões em
+Objectivo: ERP SaaS multiempresa (Prompts 01–22 do utilizador). Estado: Prompt 03 até 3.3 (tenants com RLS,
+identidade, sessão, contexto de tenant, RBAC, convites, recuperação). Arquitectura e invariantes em `docs/architecture.md`; decisões em
 `docs/decisions.md`. Um bloco de cada vez; não implementar módulos sem a fundação de que dependem.
 
 ## Comandos
