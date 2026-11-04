@@ -31,6 +31,9 @@ export default await Env.create(new URL('../', import.meta.url), {
   DB_USER: Env.schema.string(),
   DB_PASSWORD: Env.schema.string.optional(),
   DB_DATABASE: Env.schema.string(),
+  /** Conta dona do esquema: só migrações. A conta `DB_USER` (runtime) não é dona nem tem BYPASSRLS. */
+  DB_OWNER_USER: Env.schema.string(),
+  DB_OWNER_PASSWORD: Env.schema.string.optional(),
 
   // CORS: origens permitidas separadas por vírgula (ex.: o frontend em desenvolvimento)
   CORS_ORIGIN: Env.schema.string.optional(),

@@ -5,16 +5,6 @@ import type { Config } from '@japa/runner/types'
 import { pluginAdonisJS } from '@japa/plugin-adonisjs'
 import { dbAssertions } from '@adonisjs/lucid/plugins/db'
 import testUtils from '@adonisjs/core/services/test_utils'
-import { authApiClient } from '@adonisjs/auth/plugins/api_client'
-import { sessionApiClient } from '@adonisjs/session/plugins/api_client'
-import type { Registry } from '../.adonisjs/client/registry/schema.d.ts'
-
-/**
- * This file is imported by the "bin/test.ts" entrypoint file
- */
-declare module '@japa/api-client/types' {
-  interface RoutesRegistry extends Registry {}
-}
 
 /**
  * This file is imported by the "bin/test.ts" entrypoint file
@@ -29,8 +19,6 @@ export const plugins: Config['plugins'] = [
   pluginAdonisJS(app),
   dbAssertions(app),
   apiClient(),
-  sessionApiClient(app),
-  authApiClient(app),
 ]
 
 /**
@@ -41,7 +29,7 @@ export const plugins: Config['plugins'] = [
  * The teardown functions are executed after all the tests
  */
 export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
-  setup: [() => testUtils.db().migrate()],
+  setup: [() => testUtils.db('owner').migrate()],
   teardown: [],
 }
 

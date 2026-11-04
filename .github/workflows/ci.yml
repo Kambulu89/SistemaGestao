@@ -33,13 +33,12 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: app
-          POSTGRES_PASSWORD: ci-only-password
-          POSTGRES_DB: app_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-superuser
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U app" --health-interval 5s --health-timeout 3s --health-retries 20
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 20
     env:
       TZ: UTC
       PORT: 3333
@@ -53,6 +52,8 @@ jobs:
       DB_PORT: 5432
       DB_USER: app
       DB_PASSWORD: ci-only-password
+      DB_OWNER_USER: app_owner
+      DB_OWNER_PASSWORD: ci-only-owner-password
       DB_DATABASE: app_test
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +62,13 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      - name: Contas PostgreSQL (owner + runtime sem BYPASSRLS)
+        run: ../docker/postgres/create-roles.sh
+        env:
+          PGHOST: 127.0.0.1
+          PGUSER: postgres
+          PGPASSWORD: ci-only-superuser
+          DATABASES: app_test
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check

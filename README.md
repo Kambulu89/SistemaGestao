@@ -1,8 +1,9 @@
 # Projecto
 
-Estrutura base de uma aplicação web com **frontend Angular 22 + Tailwind CSS 4** e **API AdonisJS 7** sobre
-**PostgreSQL 16**. Ainda não tem funcionalidades de negócio: só a moldura da interface, a verificação de saúde da API e a
-autenticação por token que vem com o kit API do AdonisJS.
+ERP SaaS multiempresa em construção: **frontend Angular 22 + Tailwind CSS 4** e **API AdonisJS 7** sobre **PostgreSQL 16**.
+Estado actual: fundação parcial (tenants com isolamento por RLS, utilizadores globais, memberships, sessão em cookie com
+CSRF e limite de tentativas, contexto de tenant). Ainda sem módulos de negócio. Ver `docs/architecture.md` e
+`docs/decisions.md`.
 
 ## Requisitos
 
@@ -19,16 +20,17 @@ autenticação por token que vem com o kit API do AdonisJS.
 ## Arranque local
 
 ```bash
-# 1. Base de dados (ou use um PostgreSQL já instalado)
-cp .env.compose.example .env        # defina DB_PASSWORD
-docker compose up -d postgres
+# 1. PostgreSQL com as contas app_owner (migrações) e app (runtime, sem BYPASSRLS)
+cp .env.compose.example .env        # defina as três palavras-passe
+docker compose up -d postgres       # cria as contas e as bases app e app_test
+#    (sem Docker: com um superuser, DB_PASSWORD=… DB_OWNER_PASSWORD=… DATABASES="app app_test" docker/postgres/create-roles.sh)
 
 # 2. API
 cd backend
 npm ci
-cp .env.example .env                # preencha DB_PASSWORD (igual ao do compose)
+cp .env.example .env                # DB_PASSWORD e DB_OWNER_PASSWORD iguais aos do passo 1
 node ace generate:key               # gera APP_KEY no .env
-node ace migration:run
+npm run migrate                     # migrações com a conta dona
 npm run dev                         # http://localhost:3333
 
 # 3. Frontend (noutro terminal)
@@ -37,7 +39,9 @@ npm ci
 npm start                           # http://localhost:4200 (o proxy encaminha /api para a porta 3333)
 ```
 
-Os testes do backend usam a base `app_test` (ver `backend/.env.test`); crie-a antes de os correr.
+Os testes do backend usam a base `app_test` (`backend/.env.test`) e correm as migrações com a conta dona.
+Ainda não há administração pela interface nem seed de demonstração: os utilizadores e tenants de teste são criados pelos
+testes.
 
 ## Comandos
 
@@ -51,12 +55,12 @@ Os testes do backend usam a base `app_test` (ver `backend/.env.test`); crie-a an
 
 ## API
 
-| Método | Rota                      | Descrição                                                     |
-| ------ | ------------------------- | ------------------------------------------------------------- |
-| GET    | `/api/v1/health`          | Estado da API e da base de dados (503 se o PostgreSQL falhar) |
-| POST   | `/api/v1/auth/signup`     | Cria conta e devolve um token                                 |
-| POST   | `/api/v1/auth/login`      | Devolve um token de acesso                                    |
-| GET    | `/api/v1/account/profile` | Perfil (exige `Authorization: Bearer <token>`)                |
-| POST   | `/api/v1/account/logout`  | Revoga o token actual                                         |
+| Método | Rota                  | Acesso                                       | Descrição                                                                                   |
+| ------ | --------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/health`      | público                                      | Estado da API e da base (503 se o PostgreSQL falhar)                                        |
+| POST   | `/api/v1/auth/login`  | público, com limite de tentativas            | Cria sessão (cookies `sg_session` e `XSRF-TOKEN`) e devolve o utilizador e as suas empresas |
+| GET    | `/api/v1/auth/me`     | sessão                                       | Utilizador e empresas                                                                       |
+| POST   | `/api/v1/auth/logout` | sessão + CSRF                                | Revoga a sessão                                                                             |
+| GET    | `/api/v1/context`     | sessão + `X-Tenant-Id` com membership activa | Contexto da empresa                                                                         |
 
 O histórico do projecto anterior (SistemaGestao) continua no Git, até ao commit `2ead09c`.
