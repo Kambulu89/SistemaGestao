@@ -31,6 +31,8 @@ export interface Member {
   status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REVOKED';
   joinedAt: string | null;
   invitedAt: string | null;
+  /** Validade do convite pendente (só membros convidados). */
+  invitationExpiresAt?: string | null;
   version: number;
   roles: MemberRole[];
 }

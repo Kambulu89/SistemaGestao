@@ -63,10 +63,57 @@ export const NAVIGATION: NavGroup[] = [
     ],
   },
   {
+    label: 'Empresa',
+    items: [
+      {
+        label: 'Perfil da empresa',
+        path: '/empresa/perfil',
+        icon: 'building',
+        permission: 'settings.read',
+      },
+      {
+        label: 'Configurações',
+        path: '/empresa/configuracoes',
+        icon: 'settings',
+        permission: 'settings.read',
+      },
+      {
+        label: 'Câmbios',
+        path: '/empresa/exchange-rates',
+        icon: 'coins',
+        permission: 'settings.read',
+      },
+      {
+        label: 'Séries documentais',
+        path: '/empresa/document-series',
+        icon: 'layers',
+        permission: 'settings.read',
+      },
+      {
+        label: 'Calendários',
+        path: '/empresa/calendars',
+        icon: 'calendar',
+        permission: 'settings.read',
+      },
+      {
+        label: 'Contas bancárias',
+        path: '/empresa/bank-accounts',
+        icon: 'card',
+        permission: 'bank_accounts.read',
+      },
+    ],
+  },
+  {
     label: 'Administração',
     items: [
       { label: 'Membros', path: '/membros', icon: 'users', permission: 'members.read' },
       { label: 'Perfis', path: '/perfis', icon: 'shield', permission: 'roles.read' },
+      {
+        label: 'Matriz de permissões',
+        path: '/perfis/matriz',
+        icon: 'grid',
+        permission: 'roles.read',
+      },
       {
         label: 'Workflows de aprovação',
         path: '/aprovacoes/workflows',

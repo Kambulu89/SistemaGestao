@@ -38,6 +38,38 @@ import { type Member, type Role, SCOPE_TARGETS } from './rbac-types';
               >Entrada: {{ when(m.joinedAt) }} · Convite: {{ when(m.invitedAt) }}</span
             >
           </div>
+          @if (m.status === 'INVITED') {
+            <div class="w-full text-sm" data-testid="invitation">
+              @if (m.invitationExpiresAt) {
+                <p [class.text-danger-text]="expired(m)">
+                  {{ expired(m) ? 'Convite expirado em' : 'Convite válido até' }}
+                  {{ when(m.invitationExpiresAt) }}.
+                </p>
+              } @else {
+                <p class="text-muted">Sem convite válido (expirou ou foi usado).</p>
+              }
+              @if (canInvite()) {
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    [disabled]="action.busy()"
+                    (click)="resendInvitation()"
+                  >
+                    Reenviar convite
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-danger"
+                    [disabled]="action.busy()"
+                    (click)="revokeInvitation()"
+                  >
+                    Revogar convite
+                  </button>
+                </div>
+              }
+            </div>
+          }
           @if (canManage() && !isSelf()) {
             @if (m.status === 'ACTIVE') {
               <button
@@ -165,6 +197,7 @@ export class MemberDetail {
   protected readonly label = recordLabel;
   protected readonly scopeTypes = Object.keys(SCOPE_LABELS);
   protected readonly canManage = computed(() => this.workspace.can('members.manage'));
+  protected readonly canInvite = computed(() => this.workspace.can('members.invite'));
   protected readonly isSelf = computed(() => this.workspace.context()?.membershipId === this.id());
   protected readonly roles = signal<Role[]>([]);
   protected readonly activeRoles = computed(() =>
@@ -264,6 +297,40 @@ export class MemberDetail {
       this.member.value.set(updated);
       this.toasts.show(action === 'suspend' ? 'Membro suspenso.' : 'Membro reactivado.');
     }
+  }
+
+  protected expired(m: Member) {
+    return !!m.invitationExpiresAt && Date.parse(m.invitationExpiresAt) < Date.now();
+  }
+
+  protected async resendInvitation() {
+    const m = this.member.value()!;
+    const result = await this.action.run(() =>
+      this.api.post<{ member: Member; delivery: string }>(`members/${m.id}/invitation/resend`, {}),
+    );
+    if (!result) return;
+    this.member.value.set(result.member);
+    this.toasts.show(
+      result.delivery === 'NOT_CONFIGURED'
+        ? 'Novo convite emitido, mas o envio de email não está configurado.'
+        : 'Convite reenviado; o anterior deixou de funcionar.',
+      result.delivery === 'NOT_CONFIGURED' ? 'info' : 'success',
+    );
+  }
+
+  protected async revokeInvitation() {
+    const m = this.member.value()!;
+    const ok = await this.confirm.ask({
+      title: 'Revogar convite',
+      message: `A ligação enviada a ${m.email} deixa de funcionar e o membro fica revogado.`,
+      confirmLabel: 'Revogar',
+      danger: true,
+    });
+    if (!ok) return;
+    await this.action.run(() => this.api.delete(`members/${m.id}/invitation`));
+    if (this.action.error()) return;
+    this.toasts.show('Convite revogado.');
+    await this.member.load();
   }
 
   protected async assign() {

@@ -2,6 +2,10 @@ import { Component, computed, input } from '@angular/core';
 
 /** Ícones de traço (24×24, `currentColor`), desenhados para esta aplicação. Decorativos: o texto vem do contexto. */
 const PATHS: Record<string, string> = {
+  settings:
+    'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-1-3-2 .2-1.5-1.5L16.7 4l-3-1-1 2h-1.4l-1-2-3 1 .2 2.7L6 8.2 4 8 3 11l2 1v1.4l-2 1 1 3 2.3-.2 1.5 1.5-.2 2.3 3 1 1-2h1.4l1 2 3-1-.2-2.3 1.5-1.5 2.3.2 1-3-2-1z',
+  calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   home: 'M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2M10 20a2 2 0 0 0 4 0',
   check: 'M4 12l5 5L20 6',

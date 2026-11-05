@@ -15,6 +15,8 @@ export const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pendente',
   APPROVED: 'Aprovado',
   REJECTED: 'Rejeitado',
+  PENDING_APPROVAL: 'Aguarda aprovação',
+  CLOSED: 'Fechada',
 };
 
 const TONES: Record<string, string> = {
@@ -22,6 +24,7 @@ const TONES: Record<string, string> = {
   APPROVED: 'bg-success-soft text-success-text',
   TRIALING: 'bg-info-soft text-info-text',
   PENDING: 'bg-warning-soft text-warning-text',
+  PENDING_APPROVAL: 'bg-warning-soft text-warning-text',
   INVITED: 'bg-warning-soft text-warning-text',
   DRAFT: 'bg-surface-2 text-fg',
 };

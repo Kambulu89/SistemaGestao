@@ -11,7 +11,9 @@ import { Loadable } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
-import { BRANCH_TYPES, ORG_KINDS, type OrgRecord, recordLabel } from './org-kinds';
+import { BRANCH_TYPES, ORG_KINDS, type OrgRecord, recordLabel, TREE_KINDS } from './org-kinds';
+import { OrgTree } from './org-tree';
+import { Tabs } from '../ui/tabs';
 
 const LIMIT = 25;
 /** Tipos que se filtram pela entidade legal / filial do âmbito de trabalho. */
@@ -20,7 +22,17 @@ const SCOPED_BY_ENTITY = new Set(['branches', 'departments', 'cost-centers']);
 /** Lista de uma entidade organizacional: pesquisa, estado, âmbito, ordenação e paginação no servidor, exportação. */
 @Component({
   selector: 'app-organization-list',
-  imports: [FormsModule, RouterLink, PageHeader, DataTable, CellDef, StatusBadge, Icon],
+  imports: [
+    FormsModule,
+    RouterLink,
+    PageHeader,
+    DataTable,
+    CellDef,
+    StatusBadge,
+    Icon,
+    Tabs,
+    OrgTree,
+  ],
   template: `
     @if (meta(); as k) {
       <app-page-header [title]="k.title">
@@ -30,61 +42,74 @@ const SCOPED_BY_ENTITY = new Set(['branches', 'departments', 'cost-centers']);
           >
         }
       </app-page-header>
-      <form class="mb-4 flex flex-wrap items-end gap-2" (ngSubmit)="go(0)" role="search">
-        <div>
-          <label class="label" for="q">Pesquisar</label>
-          <input
-            id="q"
-            name="q"
-            type="search"
-            class="input w-64"
-            placeholder="Código ou nome"
-            [(ngModel)]="q"
-          />
+      @if (hasTree()) {
+        <app-tabs [tabs]="views" label="Vista" [(active)]="view" />
+      }
+      @if (view() === 'tree' && hasTree()) {
+        <div role="tabpanel" id="panel-tree" aria-labelledby="tab-tree">
+          <app-org-tree [kind]="k.segment" [label]="'Organograma: ' + k.title" />
         </div>
-        <div>
-          <label class="label" for="status">Estado</label>
-          <select
-            id="status"
-            name="status"
-            class="input w-40"
-            [(ngModel)]="status"
-            (ngModelChange)="go(0)"
+      } @else {
+        <div role="tabpanel" id="panel-list" aria-labelledby="tab-list">
+          <form class="mb-4 flex flex-wrap items-end gap-2" (ngSubmit)="go(0)" role="search">
+            <div>
+              <label class="label" for="q">Pesquisar</label>
+              <input
+                id="q"
+                name="q"
+                type="search"
+                class="input w-64"
+                placeholder="Código ou nome"
+                [(ngModel)]="q"
+              />
+            </div>
+            <div>
+              <label class="label" for="status">Estado</label>
+              <select
+                id="status"
+                name="status"
+                class="input w-40"
+                [(ngModel)]="status"
+                (ngModelChange)="go(0)"
+              >
+                <option value="">Todos</option>
+                <option value="ACTIVE">Activos</option>
+                <option value="INACTIVE">Inactivos</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-secondary">Pesquisar</button>
+            @if (scopeLabel(); as label) {
+              <p class="ml-auto text-sm text-muted" data-testid="scope-filter">
+                Filtrado pelo âmbito: <strong class="text-fg">{{ label }}</strong>
+              </p>
+            }
+          </form>
+          <app-data-table
+            [label]="k.title"
+            [columns]="columns()"
+            [rows]="page.value()?.items ?? []"
+            [total]="page.value()?.total ?? 0"
+            [loading]="page.loading()"
+            [error]="page.error()"
+            [sort]="sort()"
+            [offset]="offset()"
+            [limit]="limit"
+            [emptyText]="
+              q() || status() ? 'Sem registos com estes filtros.' : 'Ainda não há registos.'
+            "
+            [exportable]="true"
+            [exporting]="exporting()"
+            (sortChange)="onSort($event)"
+            (offsetChange)="go($event)"
+            (retry)="page.load()"
+            (export)="export()"
           >
-            <option value="">Todos</option>
-            <option value="ACTIVE">Activos</option>
-            <option value="INACTIVE">Inactivos</option>
-          </select>
+            <ng-template appCell="status" let-row
+              ><app-status-badge [status]="row.status"
+            /></ng-template>
+          </app-data-table>
         </div>
-        <button type="submit" class="btn-secondary">Pesquisar</button>
-        @if (scopeLabel(); as label) {
-          <p class="ml-auto text-sm text-muted" data-testid="scope-filter">
-            Filtrado pelo âmbito: <strong class="text-fg">{{ label }}</strong>
-          </p>
-        }
-      </form>
-      <app-data-table
-        [label]="k.title"
-        [columns]="columns()"
-        [rows]="page.value()?.items ?? []"
-        [total]="page.value()?.total ?? 0"
-        [loading]="page.loading()"
-        [error]="page.error()"
-        [sort]="sort()"
-        [offset]="offset()"
-        [limit]="limit"
-        [emptyText]="q() || status() ? 'Sem registos com estes filtros.' : 'Ainda não há registos.'"
-        [exportable]="true"
-        [exporting]="exporting()"
-        (sortChange)="onSort($event)"
-        (offsetChange)="go($event)"
-        (retry)="page.load()"
-        (export)="export()"
-      >
-        <ng-template appCell="status" let-row
-          ><app-status-badge [status]="row.status"
-        /></ng-template>
-      </app-data-table>
+      }
     } @else {
       <p class="card">Tipo desconhecido.</p>
     }
@@ -98,6 +123,12 @@ export class OrganizationList {
   protected readonly meta = computed(() => ORG_KINDS[this.kind()] ?? null);
   protected readonly canManage = computed(() => this.workspace.can('organization.manage'));
   protected readonly limit = LIMIT;
+  protected readonly hasTree = computed(() => TREE_KINDS.has(this.kind()));
+  protected readonly views = [
+    { id: 'list', label: 'Lista' },
+    { id: 'tree', label: 'Organograma' },
+  ];
+  protected readonly view = signal('list');
   protected readonly q = signal('');
   protected readonly status = signal('');
   protected readonly offset = signal(0);
@@ -133,6 +164,7 @@ export class OrganizationList {
       this.kind();
       untracked(() => {
         this.q.set('');
+        this.view.set('list');
         this.status.set('');
         this.sort.set(null);
         this.offset.set(0);

@@ -13,24 +13,21 @@ import { Action } from '../ui/load';
 import { PageDetail } from '../ui/page-detail';
 import { ErrorState, Skeleton } from '../ui/states';
 import { ToastService } from '../ui/toasts';
-import { ORG_KINDS, type OrgField, type OrgRecord, payloadFor, recordLabel } from './org-kinds';
+import {
+  ORG_KINDS,
+  ORG_SECTIONS,
+  type OrgField,
+  type OrgRecord,
+  payloadFor,
+  recordLabel,
+  sectionOf,
+} from './org-kinds';
+import type { Member } from './rbac-types';
 
-const SECTIONS = [
-  { id: 'main', title: 'Identificação', description: 'Código e dados principais.' },
-  {
-    id: 'links',
-    title: 'Relações',
-    description: 'Tudo da mesma entidade legal (o servidor verifica).',
-  },
-  {
-    id: 'state',
-    title: 'Estado e vigência',
-    description: 'Inactivar em vez de eliminar: o histórico fica.',
-  },
-] as const;
-
-const sectionOf = (f: OrgField) =>
-  f.key === 'status' || f.key.startsWith('valid') ? 'state' : f.type === 'ref' ? 'links' : 'main';
+interface Dependent {
+  label: string;
+  count: number;
+}
 
 /** Criar (`:id = novo`) ou ver/alterar um registo organizacional, com anexos e histórico. */
 @Component({
@@ -98,6 +95,33 @@ const sectionOf = (f: OrgField) =>
                             }
                           </select>
                         }
+                        @case ('boolean') {
+                          <select
+                            appControl
+                            class="input"
+                            [name]="f.key"
+                            [disabled]="readonly(f)"
+                            [(ngModel)]="form[f.key]"
+                          >
+                            <option [ngValue]="null">—</option>
+                            <option [ngValue]="true">Sim</option>
+                            <option [ngValue]="false">Não</option>
+                          </select>
+                        }
+                        @case ('member') {
+                          <select
+                            appControl
+                            class="input"
+                            [name]="f.key"
+                            [disabled]="readonly(f)"
+                            [(ngModel)]="form[f.key]"
+                          >
+                            <option [ngValue]="null">—</option>
+                            @for (m of memberOptions(f); track m.id) {
+                              <option [ngValue]="m.id">{{ m.label }}</option>
+                            }
+                          </select>
+                        }
                         @case ('ref') {
                           <select
                             appControl
@@ -145,6 +169,11 @@ const sectionOf = (f: OrgField) =>
                         @default {
                           <input
                             appControl
+                            [type]="
+                              f.type === 'email' || f.type === 'tel' || f.type === 'url'
+                                ? f.type
+                                : 'text'
+                            "
                             class="input"
                             [name]="f.key"
                             [disabled]="readonly(f)"
@@ -170,6 +199,24 @@ const sectionOf = (f: OrgField) =>
           </form>
           <div aside>
             @if (!isNew() && record(); as r) {
+              @if (dependents().length > 0) {
+                <section class="card" aria-labelledby="deps-title">
+                  <h2 id="deps-title" class="font-semibold">Dependências activas</h2>
+                  <p class="mt-1 text-xs text-muted">
+                    Só se pode inactivar quando não houver dependências activas.
+                  </p>
+                  <ul class="mt-2 space-y-1 text-sm" data-testid="dependents">
+                    @for (d of dependents(); track d.label) {
+                      <li class="flex justify-between gap-2">
+                        <span>{{ d.label }}</span>
+                        <span class="badge" [class.bg-surface-2]="d.count === 0">{{
+                          d.count
+                        }}</span>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
               <app-attachments
                 [subjectType]="k.entityType"
                 [subjectId]="r.id"
@@ -195,7 +242,7 @@ export class OrganizationForm implements HasUnsavedChanges {
   private readonly toasts = inject(ToastService);
   private readonly breadcrumbs = inject(Breadcrumbs);
   protected readonly workspace = inject(Workspace);
-  protected readonly sections = SECTIONS;
+  protected readonly sections = ORG_SECTIONS;
   protected readonly meta = computed(() => ORG_KINDS[this.kind()] ?? null);
   protected readonly isNew = computed(() => this.id() === 'novo');
   protected readonly canManage = computed(() => this.workspace.can('organization.manage'));
@@ -203,6 +250,8 @@ export class OrganizationForm implements HasUnsavedChanges {
   protected readonly loaded = signal(false);
   protected readonly loadError = signal<ApiError | null>(null);
   protected readonly refs = signal<Record<string, OrgRecord[]>>({});
+  protected readonly members = signal<{ id: string; label: string }[]>([]);
+  protected readonly dependents = signal<Dependent[]>([]);
   protected readonly title = computed(() => (this.record() ? recordLabel(this.record()!) : null));
   protected readonly action = new Action();
   protected form: Record<string, unknown> = {};
@@ -236,6 +285,13 @@ export class OrganizationForm implements HasUnsavedChanges {
         refKinds.map((r) => this.api.page<OrgRecord>(`organization/${r}`, { limit: 200 })),
       );
       this.refs.set(Object.fromEntries(refKinds.map((r, i) => [r, pages[i].items])));
+      if (meta.fields.some((f) => f.type === 'member') && this.workspace.can('members.read'))
+        this.members.set(
+          (await this.api.page<Member>('members', { status: 'ACTIVE', limit: 200 })).items.map(
+            (m) => ({ id: m.id, label: `${m.fullName} (${m.email})` }),
+          ),
+        );
+      this.dependents.set([]);
       if (id === 'novo') {
         this.record.set(null);
         const legalEntityId = meta.fields.some((f) => f.key === 'legalEntityId')
@@ -255,12 +311,30 @@ export class OrganizationForm implements HasUnsavedChanges {
         this.record.set(record);
         this.form = { ...record };
         this.breadcrumbs.setCurrent(recordLabel(record));
+        void this.loadDependents(kind, id);
       }
       this.initial = snapshot(this.form);
       this.loaded.set(true);
     } catch (error) {
       this.loadError.set(ApiError.from(error));
     }
+  }
+
+  private async loadDependents(kind: string, id: string) {
+    try {
+      this.dependents.set(await this.api.get<Dependent[]>(`organization/${kind}/${id}/dependents`));
+    } catch {
+      this.dependents.set([]);
+    }
+  }
+
+  /** Membros activos; se o responsável actual já não estiver na lista (ou não houver permissão), mantém-se a opção. */
+  protected memberOptions(f: OrgField) {
+    const current = this.form[f.key] as string | null | undefined;
+    const list = this.members();
+    return current && !list.some((m) => m.id === current)
+      ? [...list, { id: current, label: 'Responsável actual' }]
+      : list;
   }
 
   protected fieldsOf(section: string) {
@@ -299,6 +373,8 @@ export class OrganizationForm implements HasUnsavedChanges {
         : this.api.post<OrgRecord>(`organization/${meta.segment}`, body),
     );
     if (!result) {
+      if (original && this.action.error()?.code === 'HAS_ACTIVE_DEPENDENTS')
+        void this.loadDependents(meta.segment, original.id);
       if (this.action.error()?.code === 'VERSION_CONFLICT')
         this.toasts.show(
           'Outra pessoa alterou este registo. Recarregue para ver a versão actual.',
@@ -319,6 +395,7 @@ export class OrganizationForm implements HasUnsavedChanges {
     this.record.set(result);
     this.form = { ...result };
     this.breadcrumbs.setCurrent(recordLabel(result));
+    void this.loadDependents(meta.segment, result.id);
     this.toasts.show('Alterações guardadas.');
   }
 }

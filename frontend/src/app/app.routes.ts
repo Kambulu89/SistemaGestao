@@ -2,6 +2,7 @@ import type { ActivatedRouteSnapshot, Routes } from '@angular/router';
 import { accessGuard, authGuard, guestGuard, platformGuard, tenantGuard } from './core/guards';
 import { unsavedChangesGuard } from './core/unsaved';
 import { ORG_KINDS } from './admin/org-kinds';
+import { REF_KINDS } from './settings/reference-kinds';
 
 const page = (permission?: string, feature?: string) => ({
   canActivate: [accessGuard],
@@ -117,6 +118,12 @@ export const routes: Routes = [
             children: [
               { path: '', loadComponent: () => import('./admin/roles').then((m) => m.Roles) },
               {
+                path: 'matriz',
+                title: 'Matriz de permissões',
+                loadComponent: () =>
+                  import('./admin/permission-matrix').then((m) => m.PermissionMatrix),
+              },
+              {
                 path: ':id',
                 title: (r: ActivatedRouteSnapshot) => (isNew(r) ? 'Novo perfil' : 'Perfil'),
                 canDeactivate: [unsavedChangesGuard],
@@ -124,6 +131,42 @@ export const routes: Routes = [
               },
             ],
           },
+          {
+            path: 'empresa/perfil',
+            title: 'Perfil da empresa',
+            ...page('settings.read'),
+            canDeactivate: [unsavedChangesGuard],
+            loadComponent: () =>
+              import('./settings/company-profile').then((m) => m.CompanyProfilePage),
+          },
+          {
+            path: 'empresa/configuracoes',
+            title: 'Configurações',
+            ...page('settings.read'),
+            canDeactivate: [unsavedChangesGuard],
+            loadComponent: () =>
+              import('./settings/company-settings').then((m) => m.CompanySettingsPage),
+          },
+          ...Object.values(REF_KINDS).map((k) => ({
+            path: `empresa/${k.segment}`,
+            title: k.title,
+            ...page(k.readPermission),
+            data: { permission: k.readPermission, kind: k.segment },
+            children: [
+              {
+                path: '',
+                loadComponent: () =>
+                  import('./settings/reference-list').then((m) => m.ReferenceList),
+              },
+              {
+                path: ':id',
+                title: (r: ActivatedRouteSnapshot) => (isNew(r) ? 'Novo registo' : 'Detalhe'),
+                canDeactivate: [unsavedChangesGuard],
+                loadComponent: () =>
+                  import('./settings/reference-form').then((m) => m.ReferenceForm),
+              },
+            ],
+          })),
           {
             path: 'subscricao',
             title: 'Subscrição',
