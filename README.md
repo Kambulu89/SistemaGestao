@@ -1,9 +1,10 @@
 # Projecto
 
 ERP SaaS multiempresa em construção: **frontend Angular 22 + Tailwind CSS 4** e **API AdonisJS 7** sobre **PostgreSQL 16**.
-Estado actual: fundação parcial (tenants com isolamento por RLS, utilizadores globais, memberships, sessão em cookie com
-CSRF e limite de tentativas, contexto de tenant). Ainda sem módulos de negócio. Ver `docs/architecture.md` e
-`docs/decisions.md`.
+Estado actual: **fundação do Prompt 03 concluída** (blocos 3.1–3.8): empresas isoladas por RLS, identidade e sessão,
+RBAC com âmbitos, estrutura organizacional, planos e subscrições, auditoria, aprovações, anexos, notificações e a interface
+de todas estas áreas. Ainda sem módulos de negócio (contabilidade, RH, inventário…). Ver `docs/architecture.md`,
+`docs/decisions.md` e o relatório `docs/reports/prompt-03.md`.
 
 ## Requisitos
 
@@ -15,7 +16,7 @@ CSRF e limite de tentativas, contexto de tenant). Ainda sem módulos de negócio
 | Pasta       | Conteúdo                                                                                                |
 | ----------- | ------------------------------------------------------------------------------------------------------- |
 | `frontend/` | Angular 22 (componentes standalone, sinais), Tailwind CSS 4, testes com Vitest, ESLint (angular-eslint) |
-| `backend/`  | AdonisJS 7 (kit API), Lucid + PostgreSQL, VineJS, autenticação por token de acesso, testes com Japa     |
+| `backend/`  | AdonisJS 7 (kit API), Lucid + PostgreSQL, VineJS, sessão em cookie HttpOnly + CSRF, testes com Japa     |
 
 ## Arranque local
 
@@ -47,8 +48,27 @@ npm start                           # http://localhost:4200 (o proxy encaminha /
 ```
 
 Os testes do backend usam a base `app_test` (`backend/.env.test`) e correm as migrações com a conta dona.
-Não há seed de demonstração: a primeira conta, o primeiro plano e a primeira empresa criam-se com os comandos acima (ou,
-com `platform:admin`, na área **Plataforma** da interface); os restantes membros entram por convite.
+
+### Dados de demonstração (opcional, só desenvolvimento)
+
+Em vez dos comandos do passo 2 a partir de `plan:create`, pode criar uma empresa fictícia já preenchida:
+
+```bash
+cd backend
+DEMO_PASSWORD='uma-frase-com-12-ou-mais' npm run seed:demo   # sem DEMO_PASSWORD gera uma e mostra-a uma vez
+```
+
+Cria o plano `DEMO`, a empresa `DEMO` (entidade legal, filiais, departamentos, cargo, centro de custo, perfis `aprovador`
+e `colaborador`, workflow `DESPESAS`) e as contas `admin@demo.invalid`, `aprovacao@demo.invalid` e
+`colaborador@demo.invalid`. Não altera nada se a empresa `DEMO` já existir e o Lucid recusa-o em produção. São dados
+fictícios: não usar como referência fiscal ou legal.
+
+### Verificação rápida
+
+1. `http://localhost:4200` → entrar com `colaborador@demo.invalid` → **Aprovações → Novo pedido** (workflow `DESPESAS`).
+2. Entrar com `aprovacao@demo.invalid` → o pedido aparece em **As minhas tarefas** e nas notificações → aprovar.
+3. Entrar com `admin@demo.invalid` → **Auditoria** mostra o pedido e a decisão; **Organização** tem os registos
+   de demonstração.
 
 ## Interface (frontend)
 
@@ -74,6 +94,17 @@ A navegação esconde o que o membro não pode usar ou a empresa não contratou;
 | Tipos      | (no build)             | `npm run typecheck`    |
 | Testes     | `npm test`             | `npm test`             |
 | Build      | `npm run build`        | `npm run build`        |
+
+O que os testes do backend garantem (além dos testes de cada módulo):
+
+- `routes_protection.spec.ts`: cada rota registada é pública por lista, de conta, de plataforma ou de empresa com
+  `can()` (ou com a autorização no caso de uso, justificada); um membro sem perfis recebe 403 em todas as rotas `can()`.
+- `isolation_matrix.spec.ts`: o administrador de outra empresa recebe 404 em leituras e escritas de cada tipo de
+  registo, não consegue referir ids de outra empresa e as listas não misturam dados; `X-Tenant-Id` alheio dá 403.
+- `schema_conformance.spec.ts`: todas as tabelas de empresa têm RLS forçada e política.
+- `hardening.spec.ts` e testes de módulo: concorrência (convites, limites, quotas, decisões, árvores, último
+  administrador), tokens expirados, integridade dos anexos.
+- Cada execução aplica e reverte todas as migrações.
 
 ## API
 

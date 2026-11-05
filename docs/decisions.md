@@ -65,3 +65,11 @@ semelhante. Os componentes usam primitivas CSS mínimas para não antecipar o de
 substituir. `GET /context` passou a devolver as funcionalidades activas e o estado da subscrição (só para a navegação) e
 `GET /platform/tenants/:id` foi acrescentado para o detalhe da empresa na plataforma. A delegação de aprovações exige
 ver a lista de membros (`members.read`); um directório mínimo de colegas fica para decisão posterior.
+
+## D-011 Qualidade da fundação: protecção de rotas verificada e dados de demonstração isolados (aceite)
+
+A protecção de cada rota é verificada a partir do próprio router (não de uma lista mantida à mão): uma rota nova sem
+sessão, sem contexto de empresa ou sem `can()` falha o teste, salvo se constar das listas explícitas com justificação.
+Os dados de demonstração são um seeder Lucid limitado a desenvolvimento/testes, construído só com as APIs públicas dos
+módulos (passam pelas mesmas regras e ficam auditados), com contas `@demo.invalid` e sem efeito se a empresa `DEMO`
+já existir.
