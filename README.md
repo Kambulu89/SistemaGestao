@@ -47,8 +47,23 @@ npm start                           # http://localhost:4200 (o proxy encaminha /
 ```
 
 Os testes do backend usam a base `app_test` (`backend/.env.test`) e correm as migrações com a conta dona.
-Ainda não há interface de administração nem seed de demonstração: tenants e o primeiro administrador criam-se com os
-comandos acima; os restantes membros entram por convite (`POST /api/v1/members/invitations`).
+Não há seed de demonstração: a primeira conta, o primeiro plano e a primeira empresa criam-se com os comandos acima (ou,
+com `platform:admin`, na área **Plataforma** da interface); os restantes membros entram por convite.
+
+## Interface (frontend)
+
+Em `http://localhost:4200`: `/entrar`, `/recuperar`, `/redefinir-palavra-passe?token=`, `/aceitar-convite?token=` (as
+ligações dos emails), `/empresas` (escolha da empresa; com uma só, entra directamente) e, dentro da aplicação:
+
+| Área          | Ecrãs                                                                                              | Acesso                                                       |
+| ------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Geral         | Painel (tarefas, notificações, subscrição), Notificações, A minha conta (sessões)                  | sessão + empresa                                             |
+| Organização   | Entidades legais, filiais, departamentos, cargos, centros de custo (lista, criar, alterar, anexos) | `organization.read`/`manage` + funcionalidade `organization` |
+| Administração | Membros (convidar, suspender, perfis com âmbito), Perfis, Subscrição, Auditoria                    | `members.*`, `roles.*`, `subscription.read`, `audit.read`    |
+| Aprovações    | Para decidir, pedidos, novo pedido, detalhe (decidir, cancelar, anexos), delegações, workflows     | funcionalidade `approvals` (+ `approvals.request`/`manage`)  |
+| Plataforma    | Empresas (criar, suspender, subscrição, excepções, histórico), Planos (criar, publicar, retirar)   | `is_platform_admin`                                          |
+
+A navegação esconde o que o membro não pode usar ou a empresa não contratou; a autorização é sempre a da API.
 
 ## Comandos
 

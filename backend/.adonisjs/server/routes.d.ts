@@ -67,6 +67,7 @@ export type ScannedRoutes = {
     'platform.retire_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.tenants': { paramsTuple?: []; params?: {} }
     'platform.create_tenant': { paramsTuple?: []; params?: {} }
+    'platform.tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.subscription': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.start_subscription': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -103,6 +104,7 @@ export type ScannedRoutes = {
     'platform.plans': { paramsTuple?: []; params?: {} }
     'platform.plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.tenants': { paramsTuple?: []; params?: {} }
+    'platform.tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.subscription': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   HEAD: {
@@ -134,6 +136,7 @@ export type ScannedRoutes = {
     'platform.plans': { paramsTuple?: []; params?: {} }
     'platform.plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.tenants': { paramsTuple?: []; params?: {} }
+    'platform.tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.subscription': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   POST: {

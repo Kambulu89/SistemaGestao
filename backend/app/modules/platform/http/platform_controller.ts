@@ -131,6 +131,11 @@ export default class PlatformController {
     return ok(ctx, items, { total: page.total })
   }
 
+  async tenant(ctx: HttpContext) {
+    const tenant = await tenantOr404(id(ctx))
+    return ok(ctx, { ...tenant, subscriptionStatus: (await entitlementsFor(tenant.id)).status })
+  }
+
   async createTenant(ctx: HttpContext) {
     const tenant = await createTenantWithAdmin(
       await ctx.request.validateUsing(createTenantValidator)

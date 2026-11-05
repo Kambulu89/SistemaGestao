@@ -166,6 +166,7 @@ router
             router.post('plans/:id/retire', [PlatformController, 'retirePlan'])
             router.get('tenants', [PlatformController, 'tenants'])
             router.post('tenants', [PlatformController, 'createTenant'])
+            router.get('tenants/:id', [PlatformController, 'tenant'])
             router.patch('tenants/:id', [PlatformController, 'updateTenant'])
             router.get('tenants/:id/subscription', [PlatformController, 'subscription'])
             router.post('tenants/:id/subscription', [PlatformController, 'startSubscription'])

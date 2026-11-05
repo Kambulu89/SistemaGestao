@@ -173,6 +173,10 @@ test.group('subscrições | planos e plataforma', (group) => {
     ;(await as(client, s).get('/api/v1/context')).assertStatus(200)
     const list = await as(client, p).get(`${P}/tenants?q=nova`)
     assert.deepInclude(list.body().data[0], { code: 'NOVA', subscriptionStatus: 'NONE' })
+    const one = await as(client, p).get(`${P}/tenants/${tenant.id}`)
+    assert.deepInclude(one.body().data, { code: 'NOVA', subscriptionStatus: 'NONE', version: 1 })
+    ;(await as(client, p).get(`${P}/tenants/${crypto.randomUUID()}`)).assertStatus(404)
+    ;(await as(client, s).get(`${P}/tenants/${tenant.id}`)).assertStatus(403)
     ;(
       await as(client, p).patch(`${P}/tenants/${tenant.id}`, {
         expectedVersion: 1,

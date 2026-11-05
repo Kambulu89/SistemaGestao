@@ -143,3 +143,18 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
   contexto. Só in-app: o email espera fornecedor (D-009).
 - `GET /me/tasks` deriva as tarefas das fontes de verdade (hoje: etapas de aprovação que o membro pode decidir, por si ou
   por delegação); não há tabela de tarefas duplicada.
+
+## Frontend
+
+- Angular 22 standalone, sinais e detecção de alterações sem zone; Tailwind 4 com primitivas mínimas em `styles.css`
+  (`btn-*`, `input`, `card`, `table`, `badge`) até ao design system do Prompt 04.
+- `core/api.ts`: único cliente HTTP; desembrulha `data`/`meta.total` e converte erros em `ApiError` (código, mensagem,
+  detalhes por campo, `requestId`). `core/http.ts`: interceptor que envia `X-Tenant-Id` e, num 401, limpa a sessão e
+  volta ao login. CSRF pelo mecanismo do Angular (`XSRF-TOKEN` → `X-XSRF-TOKEN`); a sessão é só o cookie HttpOnly.
+- `core/session.ts` (`/auth/me`) e `core/workspace.ts` (`/context` + `/me/permissions`): a empresa escolhida fica em
+  `localStorage` apenas como preferência; o servidor valida-a em cada pedido.
+- Guards: `authGuard`, `tenantGuard` (escolha automática quando há uma só empresa), `accessGuard` (permissão e
+  funcionalidade em `data`) e `platformGuard`. Esconder um ecrã nunca substitui a verificação da API.
+- Formulários mostram os erros de validação do servidor junto do campo; alterações enviam `expectedVersion` e só os
+  campos alterados (os imutáveis nunca se reenviam).
+- O painel só mostra dados reais (tarefas, notificações, subscrição); módulos de negócio ausentes não aparecem.

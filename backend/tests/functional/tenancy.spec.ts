@@ -6,6 +6,8 @@ import {
   createTenant,
   createUser,
   login,
+  signIn,
+  tenantWithAdmin,
 } from '#tests/support/fixtures'
 import { runInTenant } from '#modules/tenancy/infrastructure/tenant_database'
 
@@ -29,6 +31,9 @@ test.group('tenancy | contexto e isolamento', (group) => {
     ok.assertStatus(200)
     assert.equal(ok.body().data.tenant.code, 'MINHA')
     assert.equal(ok.body().data.membershipId, membershipId)
+    // Sem subscrição: nenhuma funcionalidade activa (negar por omissão).
+    assert.equal(ok.body().data.subscriptionStatus, 'NONE')
+    assert.deepEqual(ok.body().data.features, [])
 
     const foreign = await client
       .get('/api/v1/context')
@@ -120,5 +125,19 @@ test.group('tenancy | contexto e isolamento', (group) => {
         `select count(*)::int as n from pg_tables where schemaname = 'public' and tableowner = current_user`
       )
     assert.equal(owned.rows[0].n, 0)
+  })
+
+  test('o contexto lista as funcionalidades activas da subscrição', async ({ client, assert }) => {
+    const { tenant, admin } = await tenantWithAdmin()
+    const s = await signIn(client, admin.email, tenant.id)
+    const ctx = await client
+      .get('/api/v1/context')
+      .header('cookie', s.cookie)
+      .header('x-tenant-id', tenant.id)
+    assert.equal(ctx.body().data.subscriptionStatus, 'ACTIVE')
+    assert.includeMembers(
+      ctx.body().data.features.map((f: any) => f.code),
+      ['organization', 'approvals']
+    )
   })
 })

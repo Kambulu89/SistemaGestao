@@ -57,3 +57,11 @@ Sem subscrição activa o tenant não tem funcionalidades (negar por omissão).
   para não haver um caminho paralelo de acesso aos dados.
 - Notificações só in-app enquanto não houver fornecedor de email escolhido; o centro de tarefas é uma vista derivada.
 - O único tipo de assunto é `manual`: não se criam assuntos provisórios de módulos que ainda não existem.
+
+## D-010 Frontend sem biblioteca de estado e com primitivas mínimas até ao design system (aceite)
+
+O estado partilhado é pequeno (sessão, empresa, permissões) e cabe em dois serviços com sinais; não se adiciona NgRx ou
+semelhante. Os componentes usam primitivas CSS mínimas para não antecipar o design system (Prompt 04), que as vai
+substituir. `GET /context` passou a devolver as funcionalidades activas e o estado da subscrição (só para a navegação) e
+`GET /platform/tenants/:id` foi acrescentado para o detalhe da empresa na plataforma. A delegação de aprovações exige
+ver a lista de membros (`members.read`); um directório mínimo de colegas fica para decisão posterior.
