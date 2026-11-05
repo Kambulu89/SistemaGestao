@@ -24,6 +24,7 @@ const AttachmentsController = () => import('#modules/attachments/http/attachment
 const TasksController = () => import('#modules/tasks/http/tasks_controller')
 const DashboardController = () => import('#modules/dashboard/http/dashboard_controller')
 const SettingsController = () => import('#modules/settings/http/settings_controller')
+const AccountingController = () => import('#modules/accounting/http/accounting_controller')
 
 router
   .group(() => {
@@ -186,6 +187,68 @@ router
                   .as('bank_accounts.update')
               })
               .use(middleware.can({ permission: 'bank_accounts.manage' }))
+
+            // Contabilidade (Prompt 06): configuração, períodos e lançamentos. Cada acção tem a sua permissão.
+            const accounting = (permission: string) => [
+              middleware.can({ permission }),
+              middleware.entitled({ feature: 'accounting' }),
+            ]
+            router
+              .group(() => {
+                for (const segment of ['charts', 'accounts', 'fiscal-years', 'journals']) {
+                  const name = segment.replace('-', '_')
+                  router
+                    .get(`accounting/${segment}`, [AccountingController, 'index'])
+                    .as(`accounting.${name}.index`)
+                  router
+                    .get(`accounting/${segment}/:id`, [AccountingController, 'show'])
+                    .as(`accounting.${name}.show`)
+                }
+                router.get('accounting/entries', [AccountingController, 'entries'])
+                router.get('accounting/entries/:id', [AccountingController, 'entry'])
+              })
+              .use(accounting('accounting.read'))
+            router
+              .group(() => {
+                for (const segment of ['charts', 'accounts', 'fiscal-years', 'journals']) {
+                  const name = segment.replace('-', '_')
+                  router
+                    .post(`accounting/${segment}`, [AccountingController, 'store'])
+                    .as(`accounting.${name}.store`)
+                  router
+                    .patch(`accounting/${segment}/:id`, [AccountingController, 'update'])
+                    .as(`accounting.${name}.update`)
+                }
+              })
+              .use(accounting('accounting.settings'))
+            router
+              .post('accounting/periods/:id/close', [AccountingController, 'closePeriod'])
+              .use(accounting('accounting.close'))
+            router
+              .post('accounting/periods/:id/reopen', [AccountingController, 'reopenPeriod'])
+              .use(accounting('accounting.reopen'))
+            router
+              .group(() => {
+                router.post('accounting/entries', [AccountingController, 'createEntry'])
+                router.patch('accounting/entries/:id', [AccountingController, 'updateEntry'])
+                router.delete('accounting/entries/:id', [AccountingController, 'deleteEntry'])
+                router.post('accounting/entries/:id/submit', [AccountingController, 'submit'])
+              })
+              .use(accounting('accounting.create'))
+            router.group(() => {
+              router
+                .post('accounting/entries/:id/approve', [AccountingController, 'approve'])
+                .use(accounting('accounting.approve'))
+              router
+                .post('accounting/entries/:id/reject', [AccountingController, 'reject'])
+                .use(accounting('accounting.approve'))
+              router
+                .post('accounting/entries/:id/post', [AccountingController, 'post'])
+                .use(accounting('accounting.post'))
+              router
+                .post('accounting/entries/:id/reverse', [AccountingController, 'reverse'])
+                .use(accounting('accounting.reverse'))
+            })
 
             router
               .get('audit-events', [AuditController, 'index'])

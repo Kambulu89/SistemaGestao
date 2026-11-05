@@ -767,3 +767,17 @@ export async function workingDaysBetween(
   )
   return (r.rows[0] as { n: number }).n
 }
+
+/** Série documental (entidade legal, tipo e estado) para outros módulos validarem a sua ligação. */
+export async function documentSeriesFacts(scope: TenantScope, id: string) {
+  const r = await scope.trx.rawQuery(
+    `select id, code, legal_entity_id as "legalEntityId", document_type as "documentType", status
+       from document_series where tenant_id = ? and id = ?`,
+    [scope.context.tenantId, id]
+  )
+  return (
+    (r.rows[0] as
+      | { id: string; code: string; legalEntityId: string; documentType: string; status: string }
+      | undefined) ?? null
+  )
+}

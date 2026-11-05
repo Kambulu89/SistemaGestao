@@ -87,6 +87,46 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Gerir workflows de aprovação, cancelar qualquer pedido e ver ou revogar delegações de outros.',
   },
+  {
+    code: 'accounting.read',
+    module: 'accounting',
+    description: 'Ver planos de contas, exercícios, diários e lançamentos.',
+  },
+  {
+    code: 'accounting.create',
+    module: 'accounting',
+    description: 'Criar, alterar e submeter lançamentos em rascunho.',
+  },
+  {
+    code: 'accounting.approve',
+    module: 'accounting',
+    description: 'Aprovar ou rejeitar lançamentos submetidos (nunca os próprios).',
+  },
+  {
+    code: 'accounting.post',
+    module: 'accounting',
+    description: 'Contabilizar lançamentos aprovados (passam a imutáveis).',
+  },
+  {
+    code: 'accounting.reverse',
+    module: 'accounting',
+    description: 'Estornar lançamentos contabilizados.',
+  },
+  {
+    code: 'accounting.close',
+    module: 'accounting',
+    description: 'Fechar períodos contabilísticos.',
+  },
+  {
+    code: 'accounting.reopen',
+    module: 'accounting',
+    description: 'Reabrir períodos contabilísticos fechados.',
+  },
+  {
+    code: 'accounting.settings',
+    module: 'accounting',
+    description: 'Gerir planos de contas, contas, exercícios e diários.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

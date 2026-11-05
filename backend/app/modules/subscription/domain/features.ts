@@ -44,6 +44,12 @@ export const FEATURES: readonly FeatureDefinition[] = [
     kind: 'LIMIT',
     description: 'Espaço para anexos, em MB (sem limite = ilimitado; ausente = sem anexos).',
   },
+  {
+    code: 'accounting',
+    module: 'accounting',
+    kind: 'BOOLEAN',
+    description: 'Contabilidade: planos de contas, exercícios, diários e lançamentos.',
+  },
 ]
 
 export const FEATURE_KINDS: ReadonlyMap<string, FeatureKind> = new Map(

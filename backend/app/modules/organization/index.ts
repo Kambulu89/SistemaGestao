@@ -4,6 +4,8 @@ export {
   OrganizationService,
   organizationRecordExists,
   organizationCounts,
+  legalEntityFacts,
+  costCenterFacts,
   searchOrganization,
   SPECS as ORGANIZATION_SPECS,
 } from '#modules/organization/application/organization_service'

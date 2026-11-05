@@ -2,6 +2,7 @@
 export { tenantSettings } from '#modules/settings/application/company_service'
 export {
   onBankAccountDecided,
+  documentSeriesFacts,
   rateOn,
   reserveDocumentNumber,
   workingDaysBetween,

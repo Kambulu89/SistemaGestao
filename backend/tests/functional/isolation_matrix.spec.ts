@@ -120,8 +120,76 @@ async function populate(client: any) {
     }),
     200
   )
+  // Contabilidade: série de lançamentos, plano com duas contas, exercício, diário e um lançamento contabilizado.
+  const jSeries = ok(
+    await as(client, s).post('/api/v1/document-series', {
+      legalEntityId: le.id,
+      documentType: 'JOURNAL',
+      code: 'DGA',
+    })
+  )
+  const chart = ok(
+    await as(client, s).post('/api/v1/accounting/charts', {
+      legalEntityId: le.id,
+      code: 'PCA',
+      name: 'Plano A',
+      jurisdiction: 'AO',
+    })
+  )
+  const acc = async (code: string, level: string, parentId: string | null, postable = false) =>
+    ok(
+      await as(client, s).post('/api/v1/accounting/accounts', {
+        chartId: chart.id,
+        code,
+        name: `Conta ${code}`,
+        level,
+        nature: 'ASSET',
+        parentId,
+        postable,
+      })
+    )
+  const cls = await acc('1', 'CLASS', null)
+  const accountA = await acc('11', 'ACCOUNT', cls.id, true)
+  const accountB = await acc('12', 'ACCOUNT', cls.id, true)
+  const fy = ok(
+    await as(client, s).post('/api/v1/accounting/fiscal-years', {
+      legalEntityId: le.id,
+      code: '2026',
+      startDate: '2026-01-01',
+      endDate: '2026-12-31',
+    })
+  )
+  const journal = ok(
+    await as(client, s).post('/api/v1/accounting/journals', {
+      legalEntityId: le.id,
+      code: 'DGA',
+      name: 'Diário A',
+      type: 'GENERAL',
+      documentSeriesId: jSeries.id,
+    })
+  )
+  const entry = ok(
+    await as(client, s).post('/api/v1/accounting/entries', {
+      legalEntityId: le.id,
+      journalId: journal.id,
+      entryDate: '2026-02-10',
+      description: 'Lançamento A',
+      lines: [
+        { accountId: accountA.id, debit: '10' },
+        { accountId: accountB.id, credit: '10' },
+      ],
+    })
+  )
+  const period = (await as(client, s).get(`/api/v1/accounting/fiscal-years/${fy.id}`)).body().data
+    .periods[2]
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    chart,
+    accountA,
+    fy,
+    period,
+    journal,
+    entry,
     rate,
     series,
     calendar,
@@ -254,6 +322,11 @@ test.group('isolamento | matriz entre empresas', (group) => {
       B.get('/api/v1/calendars'),
       B.get('/api/v1/bank-accounts'),
       B.get('/api/v1/organization/departments/tree'),
+      B.get('/api/v1/accounting/charts'),
+      B.get('/api/v1/accounting/accounts'),
+      B.get('/api/v1/accounting/fiscal-years'),
+      B.get('/api/v1/accounting/journals'),
+      B.get('/api/v1/accounting/entries'),
     ])
     const idsOfA = new Set(
       [
@@ -269,6 +342,11 @@ test.group('isolamento | matriz entre empresas', (group) => {
         a.series.id,
         a.calendar.id,
         a.bank.id,
+        a.chart.id,
+        a.accountA.id,
+        a.fy.id,
+        a.journal.id,
+        a.entry.id,
       ].map(String)
     )
     const leaked = lists.flatMap((r) =>
@@ -314,6 +392,37 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.equal(hol.rows[0].n, 1)
     const lookup = await B.get('/api/v1/exchange-rates/lookup?from=USD&to=AOA&date=2026-02-01')
     lookup.assertStatus(404)
+    // Referências cruzadas na contabilidade: B não usa diário, plano ou contas de A.
+    const leB = (
+      await B.post('/api/v1/organization/legal-entities', {
+        code: 'LEB',
+        legalName: 'Entidade B, Lda.',
+        taxId: '5000000202',
+        countryCode: 'AO',
+        functionalCurrency: 'AOA',
+      })
+    ).body().data
+    const crossEntry = await B.post('/api/v1/accounting/entries', {
+      legalEntityId: leB.id,
+      journalId: a.journal.id,
+      entryDate: '2026-02-10',
+      description: 'Cruzado',
+      lines: [{ accountId: a.accountA.id, debit: '1' }],
+    })
+    crossEntry.assertStatus(422)
+    const crossAccount = await B.post('/api/v1/accounting/accounts', {
+      chartId: a.chart.id,
+      code: '9',
+      name: 'Cruzada',
+      level: 'CLASS',
+      nature: 'ASSET',
+    })
+    crossAccount.assertStatus(422)
+    const entryA = await owner.rawQuery(
+      'select status, description from journal_entries where id = ?',
+      [a.entry.id]
+    )
+    assert.deepEqual(entryA.rows[0], { status: 'DRAFT', description: 'Lançamento A' })
   })
 
   test('com a sessão de B e X-Tenant-Id de A todas as rotas de empresa são negadas', async ({
@@ -337,6 +446,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/settings',
       '/api/v1/exchange-rates',
       `/api/v1/bank-accounts/${a.bank.id}`,
+      '/api/v1/accounting/entries',
+      `/api/v1/accounting/charts/${a.chart.id}`,
     ]) {
       const r = await spoof.get(url)
       assert.equal(r.status(), 403, url)

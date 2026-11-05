@@ -61,6 +61,21 @@ function policies(): Record<string, SubjectPolicy> {
       return { read: true, write: held.has('bank_accounts.manage') }
     },
   }
+  // Documentos de suporte de lançamentos: acrescentam-se até à contabilização; depois ficam só para consulta.
+  map.journal_entry = {
+    feature: 'accounting',
+    access: async (scope, id) => {
+      const held = (await effectivePermissions(scope)).tenant
+      if (!held.has('accounting.read')) return null
+      const r = await scope.trx.rawQuery(
+        'select status from journal_entries where tenant_id = ? and id = ?',
+        [scope.context.tenantId, id]
+      )
+      const entry = r.rows[0] as { status: string } | undefined
+      if (!entry) return null
+      return { read: true, write: held.has('accounting.create') && entry.status !== 'POSTED' }
+    },
+  }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {
       feature: 'organization',

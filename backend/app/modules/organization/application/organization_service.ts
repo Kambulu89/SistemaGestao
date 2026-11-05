@@ -528,3 +528,28 @@ export async function searchOrganization(scope: TenantScope, q: string, limit: n
   }
   return out
 }
+
+/** Dados mínimos de uma entidade legal para outros módulos (contabilidade): estado e moeda funcional. */
+export async function legalEntityFacts(scope: TenantScope, id: string) {
+  const r = await scope.trx.rawQuery(
+    `select id, code, status, functional_currency as "functionalCurrency"
+       from legal_entities where tenant_id = ? and id = ?`,
+    [scope.context.tenantId, id]
+  )
+  return (
+    (r.rows[0] as
+      { id: string; code: string; status: string; functionalCurrency: string } | undefined) ?? null
+  )
+}
+
+/** Centros de custo (estado e entidade legal) por id, para validar imputações noutros módulos. */
+export async function costCenterFacts(scope: TenantScope, ids: string[]) {
+  if (ids.length === 0) return new Map<string, { status: string; legalEntityId: string }>()
+  const r = await scope.trx.rawQuery(
+    `select id, status, legal_entity_id as "legalEntityId" from cost_centers where tenant_id = ? and id = any(?::uuid[])`,
+    [scope.context.tenantId, ids]
+  )
+  return new Map(
+    (r.rows as { id: string; status: string; legalEntityId: string }[]).map((x) => [x.id, x])
+  )
+}
