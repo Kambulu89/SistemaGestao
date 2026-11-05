@@ -18,18 +18,18 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 const TONES: Record<string, string> = {
-  ACTIVE: 'bg-green-100 text-green-800',
-  APPROVED: 'bg-green-100 text-green-800',
-  TRIALING: 'bg-sky-100 text-sky-800',
-  PENDING: 'bg-amber-100 text-amber-800',
-  INVITED: 'bg-amber-100 text-amber-800',
-  DRAFT: 'bg-slate-100 text-slate-700',
+  ACTIVE: 'bg-success-soft text-success-text',
+  APPROVED: 'bg-success-soft text-success-text',
+  TRIALING: 'bg-info-soft text-info-text',
+  PENDING: 'bg-warning-soft text-warning-text',
+  INVITED: 'bg-warning-soft text-warning-text',
+  DRAFT: 'bg-surface-2 text-fg',
 };
 
 export const statusLabel = (code: string | null | undefined) =>
   code ? (STATUS_LABELS[code] ?? code) : '—';
 export const statusTone = (code: string | null | undefined) =>
-  (code && TONES[code]) || 'bg-slate-100 text-slate-700';
+  (code && TONES[code]) || 'bg-surface-2 text-fg';
 
 export const SCOPE_LABELS: Record<string, string> = {
   TENANT: 'Toda a empresa',

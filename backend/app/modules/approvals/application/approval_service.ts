@@ -528,3 +528,84 @@ export class DelegationService {
     })
   }
 }
+
+/**
+ * Números de aprovações para o painel: tarefas do próprio, pedidos próprios abertos e, com `approvals.read`, os
+ * pedidos da empresa por estado e por semana (últimas 8). Sem `approvals.read` os totais são só os pedidos em que
+ * participa.
+ */
+export async function approvalStats(scope: TenantScope) {
+  const me = scope.context.membershipId
+  const all = (await effectivePermissions(scope)).tenant.has('approvals.read')
+  const tasks = (await repository.pendingSlots(scope, me)).length
+  const involved = `(r.requested_by_membership_id = ? or exists (select 1 from approval_decisions d
+      where d.tenant_id = r.tenant_id and d.request_id = r.id and (d.decided_by_membership_id = ? or d.on_behalf_of_membership_id = ?)))`
+  const filter = all ? '' : ` and ${involved}`
+  const params = all ? [scope.context.tenantId] : [scope.context.tenantId, me, me, me]
+  const byStatus = await scope.trx.rawQuery(
+    `select r.status, count(*)::int as n from approval_requests r where r.tenant_id = ?${filter} group by r.status`,
+    params as never[]
+  )
+  const mine = await scope.trx.rawQuery(
+    `select count(*)::int as n from approval_requests where tenant_id = ? and requested_by_membership_id = ? and status = 'PENDING'`,
+    [scope.context.tenantId, me]
+  )
+  const weekly = await scope.trx.rawQuery(
+    `select to_char(w.week, 'YYYY-MM-DD') as week, count(r.id)::int as n
+       from generate_series(date_trunc('week', now()) - interval '7 weeks', date_trunc('week', now()), interval '1 week') as w(week)
+       left join approval_requests r on r.tenant_id = ? and date_trunc('week', r.created_at) = w.week${filter}
+      group by w.week order by w.week`,
+    params as never[]
+  )
+  return {
+    scope: all ? ('TENANT' as const) : ('MINE' as const),
+    tasks,
+    myOpen: (mine.rows[0] as { n: number }).n,
+    byStatus: Object.fromEntries(
+      (byStatus.rows as { status: string; n: number }[]).map((r) => [r.status, r.n])
+    ),
+    weekly: (weekly.rows as { week: string; n: number }[]).map((r) => ({
+      week: r.week,
+      count: r.n,
+    })),
+  }
+}
+
+/** Pesquisa de pedidos visíveis (todos com `approvals.read`, senão os do próprio) e de workflows (`approvals.manage`). */
+export async function searchApprovals(scope: TenantScope, q: string, limit: number) {
+  const me = scope.context.membershipId
+  const held = (await effectivePermissions(scope)).tenant
+  const like = `%${q.toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+  const visibility = held.has('approvals.read')
+    ? ''
+    : ` and (r.requested_by_membership_id = ? or exists (select 1 from approval_decisions d where d.tenant_id = r.tenant_id
+          and d.request_id = r.id and (d.decided_by_membership_id = ? or d.on_behalf_of_membership_id = ?)))`
+  const requests = await scope.trx.rawQuery(
+    `select r.id, r.title, r.status from approval_requests r
+      where r.tenant_id = ? and lower(r.title) like ?${visibility} order by r.created_at desc limit ?`,
+    (held.has('approvals.read')
+      ? [scope.context.tenantId, like, limit]
+      : [scope.context.tenantId, like, me, me, me, limit]) as never[]
+  )
+  const workflows = held.has('approvals.manage')
+    ? await scope.trx.rawQuery(
+        `select id, code, name, status from approval_workflows
+          where tenant_id = ? and (lower(name) like ? or lower(code) like ?) order by code limit ?`,
+        [scope.context.tenantId, like, like, limit]
+      )
+    : { rows: [] }
+  return {
+    requests: (requests.rows as { id: string; title: string; status: string }[]).map((r) => ({
+      id: r.id,
+      title: r.title,
+      status: r.status,
+    })),
+    workflows: (workflows.rows as { id: string; code: string; name: string; status: string }[]).map(
+      (w) => ({
+        id: w.id,
+        title: `${w.code} — ${w.name}`,
+        status: w.status,
+      })
+    ),
+  }
+}

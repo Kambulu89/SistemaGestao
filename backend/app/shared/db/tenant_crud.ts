@@ -51,7 +51,14 @@ const columnFor = (spec: CrudSpec, key: string) => {
 export async function crudList(
   s: CrudScope,
   spec: CrudSpec,
-  filter: { equals?: Record<string, unknown>; q?: string; limit: number; offset: number }
+  filter: {
+    equals?: Record<string, unknown>
+    q?: string
+    limit: number
+    offset: number
+    /** Campo declarado (camelCase) ou `createdAt`/`updatedAt`; outro valor é ignorado. */
+    sort?: { field: string; direction: 'asc' | 'desc' }
+  }
 ): Promise<{ items: Row[]; total: number }> {
   const where = ['tenant_id = ?']
   const params: unknown[] = [s.tenantId]
@@ -70,7 +77,7 @@ export async function crudList(
   }
   const clause = where.join(' and ')
   const rows = await s.trx.rawQuery(
-    `select ${selectList(spec)} from ${spec.table} where ${clause} order by ${spec.orderBy} limit ? offset ?`,
+    `select ${selectList(spec)} from ${spec.table} where ${clause} order by ${orderClause(spec, filter.sort)} limit ? offset ?`,
     [...params, filter.limit, filter.offset] as never[]
   )
   const count = await s.trx.rawQuery(
@@ -78,6 +85,21 @@ export async function crudList(
     params as never[]
   )
   return { items: rows.rows as Row[], total: (count.rows[0] as { total: number }).total }
+}
+
+const AUDIT_COLUMNS: Record<string, string> = { createdAt: 'created_at', updatedAt: 'updated_at' }
+
+/** Campos ordenáveis de uma especificação (os declarados e as datas de auditoria). */
+export const sortableFields = (spec: CrudSpec) => [
+  ...Object.keys(spec.columns),
+  ...Object.keys(AUDIT_COLUMNS),
+]
+
+function orderClause(spec: CrudSpec, sort?: { field: string; direction: 'asc' | 'desc' }) {
+  const column = sort ? (spec.columns[sort.field] ?? AUDIT_COLUMNS[sort.field]) : undefined
+  if (!column) return spec.orderBy
+  // Nomes vêm só da especificação (nunca do pedido); o id desempata para a paginação ser estável.
+  return `${column} ${sort!.direction === 'desc' ? 'desc' : 'asc'} nulls last, id`
 }
 
 export async function crudFind(

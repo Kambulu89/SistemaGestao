@@ -8,6 +8,11 @@ import { ErrorAlert } from '../ui/error-alert';
 import { Action } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
 import { StatusBadge } from '../ui/status-badge';
+import { Autocomplete, type Option } from '../ui/autocomplete';
+import { ConfirmService } from '../ui/confirm';
+import { ToastService } from '../ui/toasts';
+import { Breadcrumbs } from '../core/breadcrumbs';
+import { type HasUnsavedChanges, snapshot, warnOnUnload } from '../core/unsaved';
 import type { Step, Workflow } from './types';
 
 type StepDraft = Omit<Step, 'sequence'>;
@@ -23,7 +28,7 @@ const emptyStep = (): StepDraft => ({
 /** Editor de workflow: etapas ordenadas com aprovador por perfil ou membro; publicar e retirar. */
 @Component({
   selector: 'app-workflow-form',
-  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, StatusBadge],
+  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, StatusBadge, Autocomplete],
   template: `
     <app-page-header [title]="isNew() ? 'Novo workflow' : (workflow()?.name ?? 'Workflow')">
       <a routerLink="/aprovacoes/workflows" class="btn-secondary">Voltar</a>
@@ -37,7 +42,7 @@ const emptyStep = (): StepDraft => ({
               Estado: <app-status-badge [status]="workflow()?.status ?? 'DRAFT'" />
             </p>
             @if (saved()) {
-              <p class="text-sm text-green-700" role="status">Guardado.</p>
+              <p class="text-sm text-success-text" role="status">Guardado.</p>
             }
           </div>
           <div class="md:col-span-3"><app-error-alert [error]="action.error()" /></div>
@@ -77,13 +82,13 @@ const emptyStep = (): StepDraft => ({
         <section class="card">
           <h2 class="font-semibold">Etapas</h2>
           @if (!canPickRoles() || !canPickMembers()) {
-            <p class="mt-1 text-xs text-slate-500">
+            <p class="mt-1 text-xs text-muted">
               Para escolher aprovadores precisa de ver perfis (roles.read) e membros (members.read).
             </p>
           }
           <ol class="mt-3 space-y-3">
             @for (s of steps(); track $index; let i = $index) {
-              <li class="grid gap-3 rounded-md border border-slate-200 p-3 md:grid-cols-5">
+              <li class="grid gap-3 rounded-md border border-border p-3 md:grid-cols-5">
                 <div class="md:col-span-2">
                   <label class="label" [for]="'step-name-' + i">{{ i + 1 }}. Nome da etapa</label>
                   <input
@@ -124,18 +129,14 @@ const emptyStep = (): StepDraft => ({
                     </select>
                   } @else {
                     <label class="label" [for]="'step-member-' + i">Membro</label>
-                    <select
-                      class="input"
-                      [id]="'step-member-' + i"
+                    <app-autocomplete
+                      [inputId]="'step-member-' + i"
                       [name]="'step-member-' + i"
+                      [search]="searchMembers"
+                      [initialLabel]="memberName(s.approverMembershipId)"
                       [disabled]="!editable()"
                       [(ngModel)]="s.approverMembershipId"
-                    >
-                      <option [ngValue]="null">—</option>
-                      @for (m of members(); track m.id) {
-                        <option [ngValue]="m.id">{{ m.fullName }}</option>
-                      }
-                    </select>
+                    />
                   }
                 </div>
                 <div>
@@ -225,7 +226,7 @@ const emptyStep = (): StepDraft => ({
     }
   `,
 })
-export class WorkflowForm {
+export class WorkflowForm implements HasUnsavedChanges {
   readonly id = input.required<string>();
   private readonly api = inject(Api);
   private readonly router = inject(Router);
@@ -245,8 +246,40 @@ export class WorkflowForm {
   protected code = '';
   protected name = '';
   protected description = '';
+  private readonly confirm = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
+  private readonly breadcrumbs = inject(Breadcrumbs);
+  private initial = '';
+
+  hasUnsavedChanges() {
+    return this.ready() && this.editable() && this.current() !== this.initial;
+  }
+
+  private current() {
+    return snapshot({
+      code: this.code,
+      name: this.name,
+      description: this.description,
+      steps: this.steps(),
+    });
+  }
+
+  /** Procura membros activos pela API (só com members.read). */
+  protected readonly searchMembers = async (q: string): Promise<Option[]> =>
+    (
+      await this.api.page<Member>('members', { q: q || undefined, status: 'ACTIVE', limit: 10 })
+    ).items.map((m) => ({
+      id: m.id,
+      label: m.fullName,
+      hint: m.email,
+    }));
+
+  protected memberName(id: string | null) {
+    return this.members().find((m) => m.id === id)?.fullName ?? null;
+  }
 
   constructor() {
+    warnOnUnload(this);
     effect(() => {
       const id = this.id();
       untracked(() => void this.load(id));
@@ -263,6 +296,7 @@ export class WorkflowForm {
           (await this.api.page<Member>('members', { status: 'ACTIVE', limit: 100 })).items,
         );
       if (id !== 'novo') this.apply(await this.api.get<Workflow>(`approvals/workflows/${id}`));
+      this.initial = this.current();
       this.ready.set(true);
     } catch (error) {
       this.loadError.set(ApiError.from(error));
@@ -271,6 +305,7 @@ export class WorkflowForm {
 
   private apply(w: Workflow) {
     this.workflow.set(w);
+    this.breadcrumbs.setCurrent(w.name);
     this.code = w.code;
     this.name = w.name;
     this.description = w.description ?? '';
@@ -321,6 +356,7 @@ export class WorkflowForm {
   }
 
   protected async save() {
+    if (this.action.busy()) return;
     this.saved.set(false);
     const current = this.workflow();
     const result = await this.action.run(() =>
@@ -336,30 +372,58 @@ export class WorkflowForm {
     );
     if (!result) return;
     if (!current) {
+      this.initial = this.current();
+      this.toasts.show('Rascunho criado.');
       await this.router.navigate(['/aprovacoes/workflows', result.id]);
       return;
     }
     this.apply(result);
-    this.saved.set(true);
+    this.initial = this.current();
+    this.toasts.show('Rascunho guardado.');
   }
 
   protected async setStatus(action: 'publish' | 'retire') {
     const current = this.workflow()!;
-    const label =
+    if (this.hasUnsavedChanges()) {
+      this.toasts.show('Guarde o rascunho antes de publicar.', 'info');
+      return;
+    }
+    const ok = await this.confirm.ask(
       action === 'publish'
-        ? 'Publicar? Depois de publicado não se altera.'
-        : 'Retirar? Deixa de aceitar pedidos novos.';
-    if (!confirm(label)) return;
+        ? {
+            title: 'Publicar workflow',
+            message: 'Depois de publicado não se altera; para mudar, retire-o e crie outro.',
+            confirmLabel: 'Publicar',
+          }
+        : {
+            title: 'Retirar workflow',
+            message: 'Deixa de aceitar pedidos novos; os pendentes continuam.',
+            confirmLabel: 'Retirar',
+            danger: true,
+          },
+    );
+    if (!ok) return;
     const result = await this.action.run(() =>
       this.api.post<Workflow>(`approvals/workflows/${current.id}/${action}`, {
         expectedVersion: current.version,
       }),
     );
-    if (result) this.apply(result);
+    if (result) {
+      this.apply(result);
+      this.initial = this.current();
+      this.toasts.show(action === 'publish' ? 'Workflow publicado.' : 'Workflow retirado.');
+    }
   }
 
   protected async remove() {
-    if (!confirm('Eliminar este rascunho?')) return;
+    const ok = await this.confirm.ask({
+      title: 'Eliminar rascunho',
+      message: 'Eliminar este rascunho de workflow?',
+      confirmLabel: 'Eliminar',
+      danger: true,
+    });
+    if (!ok) return;
+    this.initial = this.current();
     await this.action.run(() => this.api.delete(`approvals/workflows/${this.workflow()!.id}`));
     if (!this.action.error()) await this.router.navigateByUrl('/aprovacoes/workflows');
   }

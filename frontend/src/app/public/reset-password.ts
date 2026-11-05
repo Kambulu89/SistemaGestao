@@ -12,9 +12,9 @@ import { AuthLayout } from './auth-layout';
   template: `
     <app-auth-layout title="Nova palavra-passe">
       @if (!token) {
-        <p class="text-sm text-red-700" role="alert">Ligação inválida: falta o código.</p>
+        <p class="text-sm text-danger-text" role="alert">Ligação inválida: falta o código.</p>
       } @else if (done()) {
-        <p class="text-sm text-slate-700" role="status">
+        <p class="text-sm text-fg" role="status">
           Palavra-passe alterada. As outras sessões foram terminadas.
         </p>
       } @else {
@@ -31,7 +31,7 @@ import { AuthLayout } from './auth-layout';
               aria-describedby="password-hint"
               [(ngModel)]="password"
             />
-            <p id="password-hint" class="mt-1 text-xs text-slate-500">Entre 12 e 128 caracteres.</p>
+            <p id="password-hint" class="mt-1 text-xs text-muted">Entre 12 e 128 caracteres.</p>
           </div>
           <div>
             <label class="label" for="confirm">Confirmar</label>

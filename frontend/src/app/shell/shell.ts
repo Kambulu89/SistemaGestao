@@ -1,139 +1,125 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
-import { Api } from '../core/api';
-import { Session } from '../core/session';
-import { Workspace } from '../core/workspace';
-import { visibleNavigation } from './navigation';
+import { Component, inject, signal, viewChild } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { Preferences } from '../core/preferences';
+import { Icon } from '../ui/icon';
+import { BreadcrumbsBar } from './breadcrumbs-bar';
+import { NotificationMenu } from './notification-menu';
+import { ScopeSelector } from './scope-selector';
+import { Sidebar } from './sidebar';
+import { TenantSwitcher } from './tenant-switcher';
+import { UserMenu } from './user-menu';
+import { Toasts } from '../ui/toasts';
+import { GlobalSearch } from './global-search';
+import { ConfirmHost } from '../ui/confirm';
+import { Breadcrumbs } from '../core/breadcrumbs';
 
-/** Moldura autenticada: navegação filtrada por permissões e funcionalidades, empresa, notificações e conta. */
+/** Moldura autenticada: barra lateral, barra superior (empresa, âmbito, pesquisa, notificações, conta) e conteúdo. */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  // Não devolver `false` aqui: o Angular faria preventDefault e anularia o Escape dos diálogos nativos.
+  host: { '(document:keydown.escape)': 'onEscape()' },
+  imports: [
+    RouterOutlet,
+    Icon,
+    Sidebar,
+    TenantSwitcher,
+    ScopeSelector,
+    NotificationMenu,
+    UserMenu,
+    BreadcrumbsBar,
+    Toasts,
+    GlobalSearch,
+    ConfirmHost,
+  ],
   template: `
-    <div class="min-h-screen bg-slate-50 text-slate-900 lg:flex">
-      <a href="#conteudo" class="sr-only focus:not-sr-only focus:absolute focus:p-2"
-        >Saltar para o conteúdo</a
+    <a
+      href="#conteudo"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-surface focus:p-2 focus:text-fg"
+    >
+      Saltar para o conteúdo
+    </a>
+    <div class="flex min-h-screen bg-bg text-fg">
+      <div
+        class="hidden shrink-0 border-r border-border bg-surface transition-[width] duration-[var(--motion-base)] lg:block"
+        [class.w-64]="!prefs.sidebarCollapsed()"
+        [class.w-16]="prefs.sidebarCollapsed()"
       >
-      <aside
-        class="border-b border-slate-200 bg-white lg:min-h-screen lg:w-64 lg:border-r lg:border-b-0"
-      >
-        <div class="flex items-center justify-between px-4 py-4">
-          <a routerLink="/" class="text-base font-semibold text-indigo-700">Sistema de Gestão</a>
-          <button
-            type="button"
-            class="btn-secondary lg:hidden"
-            [attr.aria-expanded]="menuOpen()"
-            aria-controls="menu"
-            (click)="menuOpen.set(!menuOpen())"
+        <aside class="sticky top-0 h-screen"><app-sidebar /></aside>
+      </div>
+      @if (drawerOpen()) {
+        <div
+          #drawer
+          class="fixed inset-0 z-40 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+        >
+          <div class="absolute inset-0 bg-overlay" (click)="closeDrawer()" aria-hidden="true"></div>
+          <aside
+            class="relative h-full w-72 max-w-[85vw] border-r border-border bg-surface shadow-[var(--shadow-overlay)]"
           >
-            Menu
-          </button>
+            <app-sidebar [drawer]="true" (closed)="closeDrawer()" (navigated)="closeDrawer()" />
+          </aside>
         </div>
-        <nav
-          id="menu"
-          class="px-2 pb-4 lg:block"
-          [class.hidden]="!menuOpen()"
-          aria-label="Principal"
-        >
-          @for (group of navigation(); track group.label) {
-            <p class="mt-3 px-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-              {{ group.label }}
-            </p>
-            <ul class="mt-1">
-              @for (item of group.items; track item.path) {
-                <li>
-                  <a
-                    [routerLink]="item.path"
-                    routerLinkActive="bg-indigo-50 text-indigo-800"
-                    [routerLinkActiveOptions]="{ exact: item.path === '/aprovacoes' }"
-                    class="block rounded-md px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-100"
-                    (click)="menuOpen.set(false)"
-                    >{{ item.label }}</a
-                  >
-                </li>
-              }
-            </ul>
-          }
-        </nav>
-      </aside>
-      <div class="flex-1">
+      }
+      <div class="flex min-w-0 flex-1 flex-col">
         <header
-          class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3"
+          class="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2"
         >
-          <div class="text-sm">
-            @if (workspace.context(); as ctx) {
-              <span class="font-medium" data-testid="current-tenant">{{ ctx.tenant.name }}</span>
-              @if (session.available().length > 1 || session.user()?.isPlatformAdmin) {
-                <a routerLink="/empresas" class="btn-link ml-2">Mudar</a>
-              }
-            } @else {
-              <a routerLink="/empresas" class="btn-link">Escolher empresa</a>
-            }
+          <button
+            #menuButton
+            type="button"
+            class="btn-ghost px-2 lg:hidden"
+            aria-label="Abrir menu"
+            [attr.aria-expanded]="drawerOpen()"
+            (click)="drawerOpen.set(true)"
+          >
+            <app-icon name="menu" />
+          </button>
+          <app-tenant-switcher />
+          <app-scope-selector />
+          <div class="order-last w-full md:order-none md:ml-2 md:w-auto md:flex-1">
+            <app-global-search />
           </div>
-          <div class="flex items-center gap-3 text-sm">
-            @if (workspace.context()) {
-              <a routerLink="/notificacoes" class="btn-link" data-testid="unread">
-                Notificações
-                @if (unread() > 0) {
-                  <span class="badge ml-1 bg-red-600 text-white">{{ unread() }}</span>
-                }
-              </a>
-            }
-            <a routerLink="/perfil" class="btn-link">{{ session.user()?.fullName }}</a>
-            <button type="button" class="btn-secondary" (click)="logout()">Sair</button>
+          <div class="ml-auto flex items-center gap-1">
+            <app-notification-menu />
+            <app-user-menu />
           </div>
         </header>
-        <main id="conteudo" class="mx-auto max-w-6xl px-4 py-6">
+        <main
+          id="conteudo"
+          tabindex="-1"
+          class="mx-auto w-full max-w-7xl flex-1 px-4 py-5 focus:outline-none"
+        >
+          <app-breadcrumbs-bar />
           <router-outlet />
         </main>
       </div>
     </div>
+    <app-toasts />
+    <app-confirm-host />
   `,
 })
 export class Shell {
-  protected readonly session = inject(Session);
-  protected readonly workspace = inject(Workspace);
-  private readonly api = inject(Api);
-  private readonly router = inject(Router);
-  protected readonly menuOpen = signal(false);
-  protected readonly unread = signal(0);
-  protected readonly navigation = computed(() =>
-    visibleNavigation(
-      (p) => this.workspace.can(p),
-      (f) => this.workspace.has(f),
-      this.workspace.context() !== null,
-      this.session.user()?.isPlatformAdmin === true,
-    ),
-  );
+  protected readonly prefs = inject(Preferences);
+  // Instancia o trilho cedo, para acompanhar a primeira navegação.
+  protected readonly breadcrumbs = inject(Breadcrumbs);
+  protected readonly drawerOpen = signal(false);
+  private readonly menuButton = viewChild<{ nativeElement: HTMLButtonElement }>('menuButton');
+  private readonly drawer = viewChild<{ nativeElement: HTMLElement }>('drawer');
 
-  constructor() {
-    void this.refreshUnread();
-    this.router.events
-      .pipe(
-        filter((e) => e instanceof NavigationEnd),
-        takeUntilDestroyed(inject(DestroyRef)),
-      )
-      .subscribe(() => void this.refreshUnread());
+  /** Abre a gaveta (ecrã pequeno) e leva o foco para dentro dela; Escape ou o botão fechar devolvem-no ao menu. */
+  protected openDrawer() {
+    this.drawerOpen.set(true);
+    setTimeout(() => this.drawer()?.nativeElement.querySelector<HTMLElement>('button, a')?.focus());
   }
 
-  private async refreshUnread() {
-    if (!this.workspace.context()) return;
-    try {
-      const page = await this.api.getWithMeta<unknown[]>('me/notifications', {
-        limit: 1,
-        unread: true,
-      });
-      this.unread.set(Number(page.meta['unread'] ?? 0));
-    } catch {
-      /* o contador é informativo: um erro aqui não bloqueia a página */
-    }
+  protected onEscape(): void {
+    if (this.drawerOpen()) this.closeDrawer();
   }
 
-  protected async logout() {
-    await this.session.logout();
-    this.workspace.reset();
-    await this.router.navigateByUrl('/entrar');
+  protected closeDrawer() {
+    this.drawerOpen.set(false);
+    setTimeout(() => this.menuButton()?.nativeElement.focus());
   }
 }

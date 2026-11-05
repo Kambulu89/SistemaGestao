@@ -2,6 +2,7 @@
 export interface NavItem {
   label: string;
   path: string;
+  icon: string;
   permission?: string;
   feature?: string;
 }
@@ -16,9 +17,9 @@ export const NAVIGATION: NavGroup[] = [
   {
     label: 'Geral',
     items: [
-      { label: 'Painel', path: '/painel' },
-      { label: 'Notificações', path: '/notificacoes' },
-      { label: 'Aprovações', path: '/aprovacoes', feature: 'approvals' },
+      { label: 'Painel', path: '/painel', icon: 'home' },
+      { label: 'Notificações', path: '/notificacoes', icon: 'bell' },
+      { label: 'Aprovações', path: '/aprovacoes', icon: 'approvals', feature: 'approvals' },
     ],
   },
   {
@@ -27,30 +28,35 @@ export const NAVIGATION: NavGroup[] = [
       {
         label: 'Entidades legais',
         path: '/organizacao/legal-entities',
+        icon: 'building',
         permission: 'organization.read',
         feature: 'organization',
       },
       {
         label: 'Filiais',
         path: '/organizacao/branches',
+        icon: 'branch',
         permission: 'organization.read',
         feature: 'organization',
       },
       {
         label: 'Departamentos',
         path: '/organizacao/departments',
+        icon: 'tree',
         permission: 'organization.read',
         feature: 'organization',
       },
       {
         label: 'Cargos',
         path: '/organizacao/positions',
+        icon: 'badge',
         permission: 'organization.read',
         feature: 'organization',
       },
       {
         label: 'Centros de custo',
         path: '/organizacao/cost-centers',
+        icon: 'coins',
         permission: 'organization.read',
         feature: 'organization',
       },
@@ -59,16 +65,17 @@ export const NAVIGATION: NavGroup[] = [
   {
     label: 'Administração',
     items: [
-      { label: 'Membros', path: '/membros', permission: 'members.read' },
-      { label: 'Perfis', path: '/perfis', permission: 'roles.read' },
+      { label: 'Membros', path: '/membros', icon: 'users', permission: 'members.read' },
+      { label: 'Perfis', path: '/perfis', icon: 'shield', permission: 'roles.read' },
       {
         label: 'Workflows de aprovação',
         path: '/aprovacoes/workflows',
+        icon: 'flow',
         permission: 'approvals.manage',
         feature: 'approvals',
       },
-      { label: 'Subscrição', path: '/subscricao', permission: 'subscription.read' },
-      { label: 'Auditoria', path: '/auditoria', permission: 'audit.read' },
+      { label: 'Subscrição', path: '/subscricao', icon: 'card', permission: 'subscription.read' },
+      { label: 'Auditoria', path: '/auditoria', icon: 'history', permission: 'audit.read' },
     ],
   },
 ];
@@ -77,8 +84,8 @@ export const PLATFORM_NAVIGATION: NavGroup = {
   label: 'Plataforma',
   platform: true,
   items: [
-    { label: 'Empresas', path: '/plataforma/empresas' },
-    { label: 'Planos', path: '/plataforma/planos' },
+    { label: 'Empresas', path: '/plataforma/empresas', icon: 'globe' },
+    { label: 'Planos', path: '/plataforma/planos', icon: 'layers' },
   ],
 };
 

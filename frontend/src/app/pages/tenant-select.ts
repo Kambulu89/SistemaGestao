@@ -13,10 +13,10 @@ import { statusLabel } from '../ui/labels';
   template: `
     <main class="mx-auto max-w-xl px-4 py-12">
       <h1 class="text-2xl font-semibold">Escolher empresa</h1>
-      <p class="mt-1 text-sm text-slate-600">Sessão de {{ session.user()?.fullName }}.</p>
+      <p class="mt-1 text-sm text-muted">Sessão de {{ session.user()?.fullName }}.</p>
       <div class="mt-4"><app-error-alert [error]="error()" /></div>
       @if (session.tenants().length === 0) {
-        <p class="card mt-6 text-sm text-slate-700">
+        <p class="card mt-6 text-sm text-fg">
           Ainda não pertence a nenhuma empresa. Peça um convite ao administrador da sua empresa.
         </p>
       } @else {
@@ -25,16 +25,16 @@ import { statusLabel } from '../ui/labels';
             <li>
               <button
                 type="button"
-                class="card flex w-full items-center justify-between text-left hover:border-indigo-400 disabled:opacity-60"
+                class="card flex w-full items-center justify-between text-left hover:border-primary disabled:opacity-60"
                 [disabled]="!t.available || busy()"
                 (click)="choose(t.id)"
               >
                 <span>
                   <span class="block font-medium">{{ t.name }}</span>
-                  <span class="text-xs text-slate-500">{{ t.code }}</span>
+                  <span class="text-xs text-muted">{{ t.code }}</span>
                 </span>
                 @if (!t.available) {
-                  <span class="text-xs text-slate-600">
+                  <span class="text-xs text-muted">
                     {{
                       t.status !== 'ACTIVE'
                         ? 'Empresa ' + label(t.status)

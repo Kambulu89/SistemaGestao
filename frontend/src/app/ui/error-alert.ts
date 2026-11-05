@@ -6,7 +6,10 @@ import type { ApiError } from '../core/api';
   selector: 'app-error-alert',
   template: `
     @if (error(); as e) {
-      <div role="alert" class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+      <div
+        role="alert"
+        class="rounded-md border border-danger-border bg-danger-soft p-3 text-sm text-danger-text"
+      >
         <p class="font-medium">{{ e.message }}</p>
         @if (showDetails()) {
           <ul class="mt-1 list-disc pl-5">
@@ -16,7 +19,7 @@ import type { ApiError } from '../core/api';
           </ul>
         }
         @if (e.requestId) {
-          <p class="mt-1 text-xs text-red-700">Referência: {{ e.requestId }}</p>
+          <p class="mt-1 text-xs text-danger-text">Referência: {{ e.requestId }}</p>
         }
       </div>
     }

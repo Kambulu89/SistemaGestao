@@ -38,6 +38,8 @@ export type ScannedRoutes = {
     'notifications.read_all': { paramsTuple?: []; params?: {} }
     'notifications.read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'tasks.index': { paramsTuple?: []; params?: {} }
+    'dashboard.summary': { paramsTuple?: []; params?: {} }
+    'dashboard.search': { paramsTuple?: []; params?: {} }
     'approvals.workflows': { paramsTuple?: []; params?: {} }
     'approvals.create_workflow': { paramsTuple?: []; params?: {} }
     'approvals.workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -92,6 +94,8 @@ export type ScannedRoutes = {
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
+    'dashboard.summary': { paramsTuple?: []; params?: {} }
+    'dashboard.search': { paramsTuple?: []; params?: {} }
     'approvals.workflows': { paramsTuple?: []; params?: {} }
     'approvals.workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.active_workflows': { paramsTuple?: []; params?: {} }
@@ -124,6 +128,8 @@ export type ScannedRoutes = {
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
+    'dashboard.summary': { paramsTuple?: []; params?: {} }
+    'dashboard.search': { paramsTuple?: []; params?: {} }
     'approvals.workflows': { paramsTuple?: []; params?: {} }
     'approvals.workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.active_workflows': { paramsTuple?: []; params?: {} }

@@ -60,9 +60,9 @@ const LIMIT = 50;
     </form>
     <app-error-alert [error]="page.error()" />
     @if (page.loading()) {
-      <p class="text-sm text-slate-500">A carregar…</p>
+      <p class="text-sm text-muted">A carregar…</p>
     } @else if ((page.value()?.items ?? []).length === 0) {
-      <p class="card text-sm text-slate-600">Sem eventos.</p>
+      <p class="card text-sm text-muted">Sem eventos.</p>
     } @else {
       <div class="card overflow-x-auto p-0">
         <table class="table" aria-label="Eventos de auditoria">
@@ -82,7 +82,7 @@ const LIMIT = 50;
                 <td>{{ e.actor?.fullName ?? e.actor?.email ?? 'Sistema' }}</td>
                 <td class="font-mono text-xs">{{ e.action }}</td>
                 <td class="text-xs">
-                  {{ e.entityType }}<br /><span class="text-slate-500">{{ e.entityId ?? '' }}</span>
+                  {{ e.entityType }}<br /><span class="text-muted">{{ e.entityId ?? '' }}</span>
                 </td>
                 <td class="text-xs">
                   @for (c of changes(e); track c.field) {
@@ -93,7 +93,7 @@ const LIMIT = 50;
                   }
                   @if (e.metadata) {
                     <details>
-                      <summary class="cursor-pointer text-slate-600">Metadados</summary>
+                      <summary class="cursor-pointer text-muted">Metadados</summary>
                       <pre class="mt-1 whitespace-pre-wrap">{{ json(e.metadata) }}</pre>
                     </details>
                   }

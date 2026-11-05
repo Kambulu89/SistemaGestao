@@ -1,9 +1,9 @@
 # CLAUDE.md — instruções de desenvolvimento
 
 Aplicação web nova: `frontend/` (Angular 22 + Tailwind CSS 4) e `backend/` (AdonisJS 7, kit API, PostgreSQL 16).
-Objectivo: ERP SaaS multiempresa (Prompts 01–22 do utilizador). Estado: Prompt 03 concluído, 3.1–3.8 (tenants com RLS,
+Objectivo: ERP SaaS multiempresa (Prompts 01–22 do utilizador). Estado: Prompts 03 e 04 concluídos (tenants com RLS,
 identidade, sessão, contexto de tenant, RBAC com âmbitos, convites, recuperação, estrutura organizacional, planos,
-subscrições e entitlements, auditoria, aprovações com delegações, anexos, notificações e centro de tarefas; interface de todas estas áreas). Arquitectura e invariantes em `docs/architecture.md`; decisões em
+subscrições e entitlements, auditoria, aprovações com delegações, anexos, notificações e centro de tarefas; interface de todas estas áreas com design system, painel e pesquisa global). Arquitectura e invariantes em `docs/architecture.md`; decisões em
 `docs/decisions.md`. Um bloco de cada vez; não implementar módulos sem a fundação de que dependem.
 
 ## Comandos
@@ -17,6 +17,8 @@ subscrições e entitlements, auditoria, aprovações com delegações, anexos, 
 
 - Frontend: componentes standalone com sinais, `Api` (`core/api.ts`) para todos os pedidos, `Workspace` para a
   empresa/permissões; a navegação filtrada é só usabilidade (a API decide). Sem dados fictícios nem módulos sem backend.
+- UI: só tokens semânticos (`docs/design-system.md`), nunca cores do Tailwind; listas com `DataTable`, formulários com
+  `FormField`/`appControl`, confirmações com `ConfirmService`; o teste de contraste tem de passar nos dois temas.
 
 - Nunca fazer commit de `.env` nem de segredos (só `*.example` e `backend/.env.test`, que não tem segredos).
 - Sem Redis por agora; o estado partilhado fica no PostgreSQL.

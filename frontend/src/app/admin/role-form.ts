@@ -6,6 +6,11 @@ import { Workspace } from '../core/workspace';
 import { ErrorAlert } from '../ui/error-alert';
 import { Action } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
+import { AuditHistory } from '../ui/audit-history';
+import { ConfirmService } from '../ui/confirm';
+import { ToastService } from '../ui/toasts';
+import { Breadcrumbs } from '../core/breadcrumbs';
+import { type HasUnsavedChanges, snapshot, warnOnUnload } from '../core/unsaved';
 import type { PermissionDefinition, Role } from './rbac-types';
 
 /**
@@ -14,7 +19,7 @@ import type { PermissionDefinition, Role } from './rbac-types';
  */
 @Component({
   selector: 'app-role-form',
-  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert],
+  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, AuditHistory],
   template: `
     <app-page-header [title]="isNew() ? 'Novo perfil' : (role()?.name ?? 'Perfil')">
       <a routerLink="/perfis" class="btn-secondary">Voltar</a>
@@ -24,10 +29,10 @@ import type { PermissionDefinition, Role } from './rbac-types';
       <form class="card space-y-4" (ngSubmit)="save()" novalidate>
         <app-error-alert [error]="action.error()" />
         @if (saved()) {
-          <p class="text-sm text-green-700" role="status">Guardado.</p>
+          <p class="text-sm text-success-text" role="status">Guardado.</p>
         }
         @if (role()?.isSystem) {
-          <p class="text-sm text-slate-600">
+          <p class="text-sm text-muted">
             Perfil de sistema: tem todas as permissões e não se altera.
           </p>
         }
@@ -41,7 +46,7 @@ import type { PermissionDefinition, Role } from './rbac-types';
               [disabled]="!isNew() || !editable()"
               [(ngModel)]="code"
             />
-            <p class="mt-1 text-xs text-slate-500">Minúsculas, números e _ (2 a 50).</p>
+            <p class="mt-1 text-xs text-muted">Minúsculas, números e _ (2 a 50).</p>
           </div>
           <div>
             <label class="label" for="name">Nome *</label>
@@ -81,7 +86,7 @@ import type { PermissionDefinition, Role } from './rbac-types';
           <legend class="label">Permissões</legend>
           @for (group of groups(); track group.module) {
             <div class="mt-3">
-              <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+              <p class="text-xs font-semibold tracking-wide text-muted uppercase">
                 {{ group.module }}
               </p>
               @for (p of group.items; track p.code) {
@@ -96,7 +101,7 @@ import type { PermissionDefinition, Role } from './rbac-types';
                   <span>
                     <span class="font-mono text-xs">{{ p.code }}</span> — {{ p.description }}
                     @if (!held().has(p.code)) {
-                      <span class="text-xs text-slate-500">(não a tem: não a pode conceder)</span>
+                      <span class="text-xs text-muted">(não a tem: não a pode conceder)</span>
                     }
                   </span>
                 </label>
@@ -122,10 +127,15 @@ import type { PermissionDefinition, Role } from './rbac-types';
           </div>
         }
       </form>
+      @if (role(); as r) {
+        <div class="mt-4">
+          <app-audit-history entityType="role" [entityId]="r.id" [refreshKey]="r.version" />
+        </div>
+      }
     }
   `,
 })
-export class RoleForm {
+export class RoleForm implements HasUnsavedChanges {
   readonly id = input.required<string>();
   private readonly api = inject(Api);
   private readonly router = inject(Router);
@@ -151,8 +161,27 @@ export class RoleForm {
   protected name = '';
   protected description = '';
   protected status: 'ACTIVE' | 'INACTIVE' = 'ACTIVE';
+  private readonly confirm = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
+  private readonly breadcrumbs = inject(Breadcrumbs);
+  private initial = '';
+
+  hasUnsavedChanges() {
+    return this.ready() && this.editable() && this.current() !== this.initial;
+  }
+
+  private current() {
+    return snapshot({
+      code: this.code,
+      name: this.name,
+      description: this.description,
+      status: this.status,
+      permissions: [...this.selected()].sort(),
+    });
+  }
 
   constructor() {
+    warnOnUnload(this);
     effect(() => {
       const id = this.id();
       untracked(() => void this.load(id));
@@ -170,6 +199,8 @@ export class RoleForm {
       this.description = role?.description ?? '';
       this.status = role?.status ?? 'ACTIVE';
       this.selected.set(new Set(role?.permissionCodes ?? []));
+      if (role) this.breadcrumbs.setCurrent(role.name);
+      this.initial = this.current();
       this.ready.set(true);
     } catch (error) {
       this.loadError.set(ApiError.from(error));
@@ -184,6 +215,7 @@ export class RoleForm {
   }
 
   protected async save() {
+    if (this.action.busy()) return;
     this.saved.set(false);
     const body = {
       name: this.name.trim(),
@@ -201,19 +233,32 @@ export class RoleForm {
         : this.api.post<Role>('roles', { ...body, code: this.code.trim() }),
     );
     if (!result) return;
+    this.initial = this.current();
     if (!role) {
+      this.toasts.show('Perfil criado.');
       await this.router.navigate(['/perfis', result.id]);
       return;
     }
     this.role.set(result);
-    this.saved.set(true);
+    this.initial = this.current();
+    this.toasts.show('Perfil guardado.');
     await this.workspace.refresh();
   }
 
   protected async remove() {
     const role = this.role()!;
-    if (!confirm(`Eliminar o perfil "${role.name}"?`)) return;
+    const ok = await this.confirm.ask({
+      title: 'Eliminar perfil',
+      message: `Eliminar o perfil "${role.name}"? Só é possível se não estiver atribuído.`,
+      confirmLabel: 'Eliminar',
+      danger: true,
+    });
+    if (!ok) return;
     await this.action.run(() => this.api.delete(`roles/${role.id}`));
-    if (!this.action.error()) await this.router.navigateByUrl('/perfis');
+    if (!this.action.error()) {
+      this.initial = this.current();
+      this.toasts.show('Perfil eliminado.');
+      await this.router.navigateByUrl('/perfis');
+    }
   }
 }

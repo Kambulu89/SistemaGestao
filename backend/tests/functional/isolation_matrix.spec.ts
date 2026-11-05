@@ -191,6 +191,20 @@ test.group('isolamento | matriz entre empresas', (group) => {
     )
     assert.deepEqual(leaked, [])
 
+    // A pesquisa global de B não encontra nada de A.
+    for (const q of ['Entidade A', 'Filial A', 'Pedido A', 'aprovador_a', 'Workflow A']) {
+      const hits = (await B.get(`/api/v1/search?q=${encodeURIComponent(q)}`)).body().data as any[]
+      assert.deepEqual(
+        hits.filter((h) => idsOfA.has(h.id)),
+        [],
+        q
+      )
+    }
+    // O painel de B só conta registos de B.
+    const dash = (await B.get('/api/v1/dashboard')).body().data
+    assert.equal(dash.organization.legalEntities, 0)
+    assert.equal(dash.members.ACTIVE, 1)
+
     // Nada de A mudou.
     const owner = db.connection('owner')
     const le = await owner.rawQuery('select version, trade_name from legal_entities where id = ?', [

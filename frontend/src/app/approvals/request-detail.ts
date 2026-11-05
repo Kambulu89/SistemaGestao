@@ -9,12 +9,16 @@ import { ErrorAlert } from '../ui/error-alert';
 import { Action, Loadable } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
 import { StatusBadge } from '../ui/status-badge';
+import { type StepItem, Stepper } from '../ui/stepper';
+import { ConfirmService } from '../ui/confirm';
+import { ToastService } from '../ui/toasts';
+import { Breadcrumbs } from '../core/breadcrumbs';
 import { personName, type RequestDetail } from './types';
 
 /** Pedido: etapas, decisões, decidir (por si ou por delegação), cancelar e anexos. */
 @Component({
   selector: 'app-request-detail',
-  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, StatusBadge, Attachments],
+  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, StatusBadge, Attachments, Stepper],
   template: `
     <app-error-alert [error]="request.error()" />
     @if (request.value(); as r) {
@@ -31,16 +35,12 @@ import { personName, type RequestDetail } from './types';
           <section class="card">
             <p class="text-sm">Estado: <app-status-badge [status]="r.status" /></p>
             @if (r.description) {
-              <p class="mt-2 text-sm whitespace-pre-line text-slate-700">{{ r.description }}</p>
+              <p class="mt-2 text-sm whitespace-pre-line text-fg">{{ r.description }}</p>
             }
           </section>
 
           @if (r.myOptions.length > 0) {
-            <form
-              class="card space-y-3 border-indigo-200"
-              (ngSubmit)="decide()"
-              aria-label="Decidir"
-            >
+            <form class="card space-y-3 border-primary" (ngSubmit)="decide()" aria-label="Decidir">
               <h2 class="font-semibold">A sua decisão — etapa {{ r.currentStep }}</h2>
               <app-error-alert [error]="action.error()" />
               @if (r.myOptions.length > 1 || r.myOptions[0].onBehalfOf) {
@@ -88,17 +88,19 @@ import { personName, type RequestDetail } from './types';
 
           <section class="card">
             <h2 class="font-semibold">Etapas</h2>
+            <div class="mt-3"><app-stepper label="Etapas do pedido" [steps]="stepItems()" /></div>
+            <h3 class="mt-4 text-sm font-semibold">Decisões</h3>
             <ol class="mt-2 space-y-3">
               @for (s of r.steps; track s.sequence) {
                 <li class="text-sm">
                   <span class="font-medium">{{ s.sequence }}. {{ s.name }}</span>
                   @if (r.status === 'PENDING' && r.currentStep === s.sequence) {
-                    <span class="badge ml-1 bg-amber-100 text-amber-800">Em curso</span>
+                    <span class="badge ml-1 bg-warning-soft text-warning-text">Em curso</span>
                   }
-                  <span class="text-xs text-slate-500">
+                  <span class="text-xs text-muted">
                     · {{ s.requiredApprovals }} aprovação(ões)</span
                   >
-                  <ul class="mt-1 pl-4 text-xs text-slate-700">
+                  <ul class="mt-1 pl-4 text-xs text-fg">
                     @for (d of decisionsFor(s.sequence); track $index) {
                       <li>
                         {{ d.decision === 'APPROVE' ? 'Aprovado' : 'Rejeitado' }} por
@@ -154,6 +156,7 @@ export class RequestDetailPage {
   protected readonly action = new Action();
   protected readonly request = new Loadable(async () => {
     const r = await this.api.get<RequestDetail>(`approvals/requests/${this.id()}`);
+    this.breadcrumbs.setCurrent(r.title);
     this.onBehalfOf.set(r.myOptions[0]?.onBehalfOf ?? null);
     return r;
   });
@@ -179,6 +182,32 @@ export class RequestDetailPage {
     });
   }
 
+  private readonly confirm = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
+  private readonly breadcrumbs = inject(Breadcrumbs);
+
+  protected readonly stepItems = computed<StepItem[]>(() => {
+    const r = this.request.value();
+    if (!r) return [];
+    return r.steps.map((s) => {
+      const decisions = r.decisions.filter((d) => d.stepSequence === s.sequence);
+      const rejected = decisions.some((d) => d.decision === 'REJECT');
+      const approvals = decisions.filter((d) => d.decision === 'APPROVE').length;
+      const state: StepItem['state'] = rejected
+        ? 'failed'
+        : r.status === 'PENDING' && r.currentStep === s.sequence
+          ? 'current'
+          : approvals >= s.requiredApprovals
+            ? 'done'
+            : 'pending';
+      return {
+        label: s.name,
+        state,
+        detail: `${approvals} de ${s.requiredApprovals} aprovação(ões)`,
+      };
+    });
+  });
+
   protected decisionsFor(step: number) {
     return (this.request.value()?.decisions ?? []).filter((d) => d.stepSequence === step);
   }
@@ -194,16 +223,28 @@ export class RequestDetailPage {
     if (updated) {
       this.comment.set('');
       this.request.value.set(updated);
+      this.toasts.show(
+        this.decision() === 'APPROVE' ? 'Aprovação registada.' : 'Rejeição registada.',
+      );
     }
   }
 
   protected async cancel() {
-    if (!confirm('Cancelar este pedido?')) return;
+    const ok = await this.confirm.ask({
+      title: 'Cancelar pedido',
+      message: 'O pedido deixa de poder ser decidido.',
+      confirmLabel: 'Cancelar pedido',
+      danger: true,
+    });
+    if (!ok) return;
     const updated = await this.action.run(() =>
       this.api.post<RequestDetail>(`approvals/requests/${this.id()}/cancel`, {
         reason: this.reason().trim() || null,
       }),
     );
-    if (updated) this.request.value.set(updated);
+    if (updated) {
+      this.request.value.set(updated);
+      this.toasts.show('Pedido cancelado.');
+    }
   }
 }

@@ -29,19 +29,19 @@ const LIMIT = 30;
     </app-page-header>
     <app-error-alert [error]="page.error() ?? action.error()" />
     @if (page.loading()) {
-      <p class="text-sm text-slate-500">A carregar…</p>
+      <p class="text-sm text-muted">A carregar…</p>
     } @else if ((page.value()?.items ?? []).length === 0) {
-      <p class="card text-sm text-slate-600">Sem notificações.</p>
+      <p class="card text-sm text-muted">Sem notificações.</p>
     } @else {
-      <ul class="card divide-y divide-slate-100 p-0" data-testid="notifications">
+      <ul class="card divide-y divide-border p-0" data-testid="notifications">
         @for (n of page.value()?.items; track n.id) {
           <li class="flex flex-wrap items-start justify-between gap-2 px-4 py-3">
             <div class="text-sm">
               <p [class.font-semibold]="!n.readAt">{{ n.title }}</p>
               @if (n.body) {
-                <p class="text-slate-600">{{ n.body }}</p>
+                <p class="text-muted">{{ n.body }}</p>
               }
-              <p class="text-xs text-slate-500">{{ when(n.createdAt) }}</p>
+              <p class="text-xs text-muted">{{ when(n.createdAt) }}</p>
             </div>
             <div class="flex gap-2">
               @if (link(n.subjectType, n.subjectId); as target) {

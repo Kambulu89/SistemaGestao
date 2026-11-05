@@ -30,15 +30,15 @@ const LIMIT = 25;
       <h2 id="todo-title" class="font-semibold">Para decidir</h2>
       <app-error-alert [error]="tasks.error()" />
       @if ((tasks.value() ?? []).length === 0 && !tasks.loading()) {
-        <p class="mt-2 text-sm text-slate-600">Nada pendente.</p>
+        <p class="mt-2 text-sm text-muted">Nada pendente.</p>
       }
-      <ul class="mt-2 divide-y divide-slate-100" data-testid="approval-tasks">
+      <ul class="mt-2 divide-y divide-border" data-testid="approval-tasks">
         @for (t of tasks.value(); track t.subjectId + t.onBehalfOf) {
           <li class="py-2 text-sm">
             <a class="btn-link" [routerLink]="['/aprovacoes/pedidos', t.subjectId]">{{
               t.title
             }}</a>
-            <span class="block text-xs text-slate-500"
+            <span class="block text-xs text-muted"
               >Etapa {{ t.detail }}{{ t.onBehalfOf ? ' · por delegação' : '' }} ·
               {{ when(t.since) }}</span
             >
@@ -65,7 +65,7 @@ const LIMIT = 25;
       </div>
       <app-error-alert [error]="requests.error()" />
       @if ((requests.value()?.items ?? []).length === 0 && !requests.loading()) {
-        <p class="card text-sm text-slate-600">Sem pedidos.</p>
+        <p class="card text-sm text-muted">Sem pedidos.</p>
       } @else {
         <div class="card overflow-x-auto p-0">
           <table class="table" aria-label="Pedidos de aprovação">

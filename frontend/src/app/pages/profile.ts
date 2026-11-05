@@ -26,7 +26,7 @@ interface SessionView {
     <app-page-header title="A minha conta" [subtitle]="session.user()?.email ?? ''" />
     <section class="card">
       <h2 class="font-semibold">Sessões activas</h2>
-      <p class="text-sm text-slate-600">Termine as sessões que não reconhece.</p>
+      <p class="text-sm text-muted">Termine as sessões que não reconhece.</p>
       <app-error-alert [error]="sessions.error() ?? action.error()" />
       <div class="mt-3 overflow-x-auto">
         <table class="table">
@@ -45,7 +45,7 @@ interface SessionView {
                 <td class="max-w-xs truncate" [title]="s.userAgent ?? ''">
                   {{ s.userAgent ?? 'Desconhecido' }}
                   @if (s.current) {
-                    <span class="badge ml-1 bg-indigo-100 text-indigo-800">Esta sessão</span>
+                    <span class="badge ml-1 bg-primary-soft text-link">Esta sessão</span>
                   }
                 </td>
                 <td>{{ s.ip ?? '—' }}</td>

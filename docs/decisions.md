@@ -73,3 +73,12 @@ sessão, sem contexto de empresa ou sem `can()` falha o teste, salvo se constar 
 Os dados de demonstração são um seeder Lucid limitado a desenvolvimento/testes, construído só com as APIs públicas dos
 módulos (passam pelas mesmas regras e ficam auditados), com contas `@demo.invalid` e sem efeito se a empresa `DEMO`
 já existir.
+
+## D-012 Design system próprio sobre Tailwind, sem biblioteca de componentes (aceite)
+
+Tokens semânticos em CSS (`--c-*`) com tema escuro por atributo e utilidades Tailwind ligadas por `@theme inline`;
+componentes próprios pequenos, construídos sobre elementos nativos acessíveis (`<dialog>`, `<select>`, inputs) e os
+padrões ARIA de combobox, menu e tabs. Evita uma dependência grande e mantém controlo sobre contraste (testado),
+densidade e comportamento de teclado. Gráficos simples em HTML/CSS; uma biblioteca de gráficos entra só quando houver
+relatórios que a justifiquem (Prompt 26). O âmbito de trabalho (entidade legal/filial) é preferência de apresentação,
+não autorização.

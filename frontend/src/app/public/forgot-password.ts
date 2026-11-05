@@ -12,7 +12,7 @@ import { AuthLayout } from './auth-layout';
   template: `
     <app-auth-layout title="Recuperar palavra-passe">
       @if (sent()) {
-        <p class="text-sm text-slate-700" role="status">
+        <p class="text-sm text-fg" role="status">
           Se existir uma conta com esse email, foi enviada uma ligação para definir uma nova
           palavra-passe.
         </p>

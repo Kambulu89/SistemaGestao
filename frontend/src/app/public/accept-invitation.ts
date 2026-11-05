@@ -12,15 +12,15 @@ import { AuthLayout } from './auth-layout';
   template: `
     <app-auth-layout title="Aceitar convite">
       @if (!token) {
-        <p class="text-sm text-red-700" role="alert">
+        <p class="text-sm text-danger-text" role="alert">
           Ligação inválida: falta o código do convite.
         </p>
       } @else if (done()) {
-        <p class="text-sm text-slate-700" role="status">Convite aceite. Já pode entrar.</p>
+        <p class="text-sm text-fg" role="status">Convite aceite. Já pode entrar.</p>
         <p class="mt-4"><a routerLink="/entrar" class="btn-primary w-full">Entrar</a></p>
       } @else {
         <form class="space-y-4" (ngSubmit)="submit()">
-          <p class="text-sm text-slate-600">
+          <p class="text-sm text-muted">
             Se ainda não tem conta, indique o nome e escolha uma palavra-passe. Se já tem, deixe a
             palavra-passe em branco e use a que já tem para entrar.
           </p>

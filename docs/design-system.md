@@ -1,0 +1,69 @@
+# Design system (Prompt 04)
+
+Fonte de verdade dos tokens: `frontend/src/styles.css`. Componentes em `frontend/src/app/ui` (e a moldura em
+`frontend/src/app/shell`). Alvo: WCAG 2.2 AA.
+
+## Tokens
+
+| Grupo           | Como se usa                                                                                                                                                                                                                                                                                                                                                                                                                    | Notas                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Cor semântica   | `bg-bg`, `bg-surface`, `bg-surface-2`, `text-fg`, `text-muted`, `text-subtle`, `border-border`, `border-border-strong`, `bg-primary`/`text-on-primary`, `bg-primary-soft`/`text-on-primary-soft`, `text-link`, `outline-focus`, `bg-danger`/`text-on-danger`, `bg-danger-soft`/`text-danger-text`, `bg-success-soft`/`text-success-text`, `bg-warning-soft`/`text-warning-text`, `bg-info-soft`/`text-info-text`, `bg-overlay` | Variáveis `--c-*`, redefinidas em `[data-theme=dark]`. Nunca cores do Tailwind (`slate-*`, `indigo-*`) nos componentes. |
+| Tema            | `Preferences.theme`: claro, escuro, sistema                                                                                                                                                                                                                                                                                                                                                                                    | Atributo `data-theme` no `<html>`; "sistema" segue `prefers-color-scheme`.                                              |
+| Contraste       | `design/contrast.spec.ts`                                                                                                                                                                                                                                                                                                                                                                                                      | Texto ≥ 4.5:1; foco e limites de campos ≥ 3:1, nos dois temas. Mudar um token sem cumprir falha o teste.                |
+| Tipografia      | `font-sans` (Inter/sistema); escala do Tailwind (`text-xs`…`text-3xl`)                                                                                                                                                                                                                                                                                                                                                         | Títulos de página `text-2xl font-semibold`; secções `font-semibold`.                                                    |
+| Espaçamento     | escala do Tailwind (4 px)                                                                                                                                                                                                                                                                                                                                                                                                      | Cartões `p-4`, grelhas `gap-4`.                                                                                         |
+| Raios e sombras | `rounded-control`, `rounded-card`, `shadow-card`, `--shadow-overlay`                                                                                                                                                                                                                                                                                                                                                           |                                                                                                                         |
+| Foco            | utilitário `focus-ring` (contorno 2 px `--c-focus`, deslocado)                                                                                                                                                                                                                                                                                                                                                                 | Todos os controlos interactivos.                                                                                        |
+| Densidade       | `Preferences.density`: confortável/compacto                                                                                                                                                                                                                                                                                                                                                                                    | `--control-py` e `--cell-py` (campos, botões e linhas de tabela).                                                       |
+| Movimento       | `--motion-fast` (120 ms), `--motion-base` (200 ms)                                                                                                                                                                                                                                                                                                                                                                             | Zero com `prefers-reduced-motion`.                                                                                      |
+| Breakpoints     | `sm` 640, `md` 768, `lg` 1024, `xl` 1280                                                                                                                                                                                                                                                                                                                                                                                       | Mobile-first; a navegação passa a gaveta abaixo de `lg`.                                                                |
+
+Classes base: `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-danger`, `btn-link`, `label`, `input`, `field-error`,
+`card`, `table`, `badge`, `skeleton`.
+
+## Moldura (`shell/`)
+
+- **Sidebar**: grupos recolhíveis, estreita em ecrã largo (ícones com nome acessível) e gaveta em ecrã pequeno (foco
+  dentro, Escape fecha e devolve o foco). Itens filtrados por permissão e funcionalidade (`navigation.ts`).
+- **Barra superior**: troca de empresa (limpa contexto, permissões, âmbito e cache), âmbito de trabalho (entidade
+  legal/filial, guardado por empresa), pesquisa global (Ctrl+K ou "/"), notificações e menu da conta (tema, densidade,
+  sair).
+- **Trilho e títulos**: `title` em cada rota; o ecrã de detalhe troca o último elemento pelo nome do registo
+  (`Breadcrumbs.setCurrent`). O separador do browser fica "<título> · Sistema de Gestão".
+- "Saltar para o conteúdo" é o primeiro elemento focável.
+
+## Componentes (`ui/`)
+
+| Componente                                | Uso                                                                                            | Acessibilidade                                                  |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `PageHeader`                              | título, subtítulo, acções                                                                      | `h1` único por página                                           |
+| `PageDetail`                              | detalhe: cabeçalho com estado, conteúdo e coluna lateral (`<div aside>`)                       | coluna passa para baixo em ecrã pequeno                         |
+| `DataTable` + `appCell`                   | listas com ordenação e paginação no servidor, esqueleto, vazio, erro com repetição, exportação | `caption`, `aria-sort`, `aria-busy`, contagem em `aria-live`    |
+| `exportList` / `toCsv`                    | CSV pela mesma API e permissões; `;`, BOM, neutralização de fórmulas; máximo 5000 linhas       | —                                                               |
+| `FormSection`, `FormField` + `appControl` | secções e campos com etiqueta, obrigatório, ajuda e erro do servidor                           | `for`/`id`, `aria-describedby`, `aria-invalid`, `aria-required` |
+| `MoneyInput`                              | valor monetário como texto decimal (`1234.50`), nunca `number`                                 | `inputmode=decimal`                                             |
+| `DateInput`                               | data AAAA-MM-DD com limites e limpar                                                           | nativo, na língua da página                                     |
+| `Autocomplete`                            | escolha com pesquisa na API                                                                    | padrão combobox + listbox, ↑/↓/Enter/Escape                     |
+| `Dropdown`                                | menus da barra superior                                                                        | `aria-expanded`, ↑/↓, Escape devolve o foco                     |
+| `Modal` (e gaveta com `side`)             | janelas                                                                                        | `<dialog>` nativo: foco preso, fundo inerte, Escape             |
+| `ConfirmService`                          | confirmação de acções com consequências                                                        | substitui `window.confirm`                                      |
+| `Tabs`                                    | separadores                                                                                    | `tablist`/`tab`, foco móvel com ←/→                             |
+| `Stepper`                                 | etapas (aprovações)                                                                            | `aria-current="step"`, estado em texto                          |
+| `StatusBadge`                             | estados com texto (nunca só cor)                                                               | —                                                               |
+| `EmptyState`, `ErrorState`, `Skeleton`    | estados de carregamento                                                                        | erro em `role=alert`, com referência do pedido                  |
+| `ToastService`                            | resultado de acções                                                                            | `role=status` (erros `role=alert`)                              |
+| `Attachments`                             | anexos de um registo                                                                           | confirmação ao eliminar                                         |
+| `AuditHistory`                            | histórico do registo (só com `audit.read`)                                                     | lista cronológica                                               |
+| `PermissionGate` (`*appCan`)              | mostrar só com permissão/funcionalidade                                                        | apresentação; a API decide                                      |
+| `BarChart`                                | gráficos simples                                                                               | `role=img` com descrição e tabela equivalente                   |
+| `unsavedChangesGuard` + `warnOnUnload`    | aviso de alterações por guardar (navegação e fecho do separador)                               | confirmação acessível                                           |
+
+## Padrões
+
+- **Formulários**: etiquetas visíveis, obrigatórios marcados, validação do servidor junto do campo, botão desactivado
+  e "A guardar…" durante o pedido (sem submissão dupla), aviso de alterações por guardar, conflito de versão
+  explicado, histórico no detalhe.
+- **Listagens**: título, pesquisa, filtros, colunas ordenáveis (só as que o servidor ordena), paginação no servidor,
+  exportação autorizada, estados vazio/erro/carregamento.
+- **Painel e pesquisa**: só dados reais devolvidos pela API com as permissões do membro; secção sem acesso diz
+  "sem acesso", API em falha diz "indisponível".

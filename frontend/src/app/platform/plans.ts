@@ -20,7 +20,7 @@ import type { Plan } from './types';
     </app-page-header>
     <app-error-alert [error]="plans.error()" />
     @if ((plans.value() ?? []).length === 0 && !plans.loading()) {
-      <p class="card text-sm text-slate-600">Ainda não há planos.</p>
+      <p class="card text-sm text-muted">Ainda não há planos.</p>
     } @else {
       <div class="card overflow-x-auto p-0">
         <table class="table" aria-label="Planos">

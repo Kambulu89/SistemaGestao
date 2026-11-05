@@ -85,6 +85,10 @@ ligações dos emails), `/empresas` (escolha da empresa; com uma só, entra dire
 
 A navegação esconde o que o membro não pode usar ou a empresa não contratou; a autorização é sempre a da API.
 
+Moldura e atalhos (Prompt 04): tema claro/escuro/sistema e modo compacto no menu da conta; troca de empresa e âmbito
+de trabalho (entidade legal/filial) na barra superior; pesquisa global com **Ctrl+K** ou **/**; menu lateral
+recolhível; trilho de navegação e títulos por página. Componentes e tokens em `docs/design-system.md`.
+
 ## Comandos
 
 |            | Frontend (`frontend/`) | Backend (`backend/`)   |

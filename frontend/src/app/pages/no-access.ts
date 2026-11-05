@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router';
   template: `
     <section class="card max-w-lg">
       <h1 class="text-xl font-semibold">Sem acesso</h1>
-      <p class="mt-2 text-sm text-slate-600">
+      <p class="mt-2 text-sm text-muted">
         Não tem permissão para esta área, ou a funcionalidade não está incluída na subscrição da
         empresa.
       </p>

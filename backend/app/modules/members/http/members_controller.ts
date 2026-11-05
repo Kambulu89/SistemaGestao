@@ -10,6 +10,8 @@ const listValidator = vine.create({
   q: vine.string().trim().maxLength(100).optional(),
   limit: vine.number().withoutDecimals().min(1).max(100).optional(),
   offset: vine.number().withoutDecimals().min(0).optional(),
+  sort: vine.enum(['fullName', 'email', 'status', 'joinedAt'] as const).optional(),
+  direction: vine.enum(['asc', 'desc'] as const).optional(),
 })
 const scopeTypes = ['TENANT', 'OWN', 'LEGAL_ENTITY', 'BRANCH', 'DEPARTMENT'] as const
 const roleRef = vine.object({
@@ -39,7 +41,11 @@ const uuid = (ctx: HttpContext, name: string) => {
 export default class MembersController {
   async index(ctx: HttpContext) {
     const filter = await ctx.request.validateUsing(listValidator, { data: ctx.request.qs() })
-    const page = await members.list(ctx.tenantContext!, filter)
+    const { sort, direction, ...rest } = filter
+    const page = await members.list(ctx.tenantContext!, {
+      ...rest,
+      sort: sort ? { field: sort, direction: direction ?? 'asc' } : undefined,
+    })
     return ok(ctx, page.items, { total: page.total })
   }
 

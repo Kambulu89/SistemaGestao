@@ -80,7 +80,7 @@ const LIMIT = 25;
     </form>
     <app-error-alert [error]="page.error()" />
     @if (page.loading()) {
-      <p class="text-sm text-slate-500">A carregar…</p>
+      <p class="text-sm text-muted">A carregar…</p>
     } @else {
       <div class="card overflow-x-auto p-0">
         <table class="table" aria-label="Empresas">

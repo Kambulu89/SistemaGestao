@@ -257,3 +257,12 @@ export class AttachmentService {
     })
   }
 }
+
+/** Espaço ocupado pelos anexos activos da empresa, em bytes (para o painel). */
+export async function storageUsedBytes(scope: TenantScope) {
+  const r = await scope.trx.rawQuery(
+    `select coalesce(sum(size_bytes), 0)::bigint as used from attachments where tenant_id = ? and status = 'ACTIVE'`,
+    [scope.context.tenantId]
+  )
+  return Number((r.rows[0] as { used: string }).used)
+}

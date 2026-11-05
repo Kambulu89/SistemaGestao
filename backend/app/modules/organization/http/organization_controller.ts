@@ -3,9 +3,11 @@ import vine from '@vinejs/vine'
 import { ApiError } from '#shared/http/api_error'
 import { created, ok } from '#shared/http/respond'
 import { isUuid } from '#shared/db/sql'
+import { sortableFields } from '#shared/db/tenant_crud'
 import {
   FILTERS,
   OrganizationService,
+  SPECS,
 } from '#modules/organization/application/organization_service'
 import type { OrgKind } from '#modules/organization/domain/organization'
 
@@ -24,6 +26,8 @@ const listValidator = vine.create(
       q: vine.string().trim().maxLength(100).optional(),
       limit: vine.number().withoutDecimals().min(1).max(200).optional(),
       offset: vine.number().withoutDecimals().min(0).optional(),
+      sort: vine.string().trim().maxLength(40).optional(),
+      direction: vine.enum(['asc', 'desc'] as const).optional(),
     })
     .allowUnknownProperties()
 )
@@ -60,11 +64,17 @@ export default class OrganizationController {
       }
       equals[key] = value
     }
+    if (query.sort && !sortableFields(SPECS[kind]).includes(query.sort)) {
+      throw ApiError.validation([
+        { path: 'sort', code: 'NOT_SORTABLE', message: 'Não é possível ordenar por este campo.' },
+      ])
+    }
     const page = await service.list(ctx.tenantContext!, kind, {
       equals,
       q: query.q,
       limit: query.limit,
       offset: query.offset,
+      sort: query.sort ? { field: query.sort, direction: query.direction ?? 'asc' } : undefined,
     })
     return ok(ctx, page.items, { total: page.total })
   }

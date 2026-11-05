@@ -9,12 +9,15 @@ import { ErrorAlert } from '../ui/error-alert';
 import { Action, Loadable } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
 import { StatusBadge } from '../ui/status-badge';
+import { Autocomplete, type Option } from '../ui/autocomplete';
+import { ConfirmService } from '../ui/confirm';
+import { ToastService } from '../ui/toasts';
 import { type Delegation, personName } from './types';
 
 /** Delegações: dar as minhas aprovações a alguém por um período; ver as recebidas; revogar as que dei. */
 @Component({
   selector: 'app-delegations',
-  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, StatusBadge],
+  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, StatusBadge, Autocomplete],
   template: `
     <app-page-header
       title="Delegações"
@@ -31,12 +34,12 @@ import { type Delegation, personName } from './types';
       >
         <div>
           <label class="label" for="delegate">Delegar em *</label>
-          <select id="delegate" name="delegate" class="input" [(ngModel)]="delegateId">
-            <option [ngValue]="null">—</option>
-            @for (m of candidates(); track m.id) {
-              <option [ngValue]="m.id">{{ m.fullName }} ({{ m.email }})</option>
-            }
-          </select>
+          <app-autocomplete
+            inputId="delegate"
+            name="delegate"
+            [search]="searchMembers"
+            [(ngModel)]="delegateId"
+          />
         </div>
         <div>
           <label class="label" for="ends">Até *</label>
@@ -64,7 +67,7 @@ import { type Delegation, personName } from './types';
         </div>
       </form>
     } @else {
-      <p class="card mb-6 text-sm text-slate-600">
+      <p class="card mb-6 text-sm text-muted">
         Para escolher em quem delegar precisa de ver a lista de membros (permissão members.read).
         Peça ao administrador.
       </p>
@@ -72,7 +75,7 @@ import { type Delegation, personName } from './types';
 
     <app-error-alert [error]="list.error()" />
     @if ((list.value() ?? []).length === 0 && !list.loading()) {
-      <p class="card text-sm text-slate-600">Sem delegações.</p>
+      <p class="card text-sm text-muted">Sem delegações.</p>
     } @else {
       <div class="card overflow-x-auto p-0">
         <table class="table" aria-label="Delegações">
@@ -124,10 +127,15 @@ export class Delegations {
   protected readonly me = computed(() => this.workspace.context()?.membershipId ?? null);
   protected readonly canManage = computed(() => this.workspace.can('approvals.manage'));
   protected readonly canPickMembers = computed(() => this.workspace.can('members.read'));
-  protected readonly members = signal<Member[]>([]);
-  protected readonly candidates = computed(() =>
-    this.members().filter((m) => m.status === 'ACTIVE' && m.id !== this.me()),
-  );
+  private readonly confirm = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
+  /** Membros activos (excepto o próprio), pesquisados na API. */
+  protected readonly searchMembers = async (q: string): Promise<Option[]> =>
+    (
+      await this.api.page<Member>('members', { q: q || undefined, status: 'ACTIVE', limit: 10 })
+    ).items
+      .filter((m) => m.id !== this.me())
+      .map((m) => ({ id: m.id, label: m.fullName, hint: m.email }));
   protected readonly delegateId = signal<string | null>(null);
   protected readonly endsOn = signal('');
   protected readonly reason = signal('');
@@ -138,11 +146,6 @@ export class Delegations {
 
   constructor() {
     void this.list.load();
-    if (this.canPickMembers())
-      this.api.page<Member>('members', { status: 'ACTIVE', limit: 100 }).then(
-        (p) => this.members.set(p.items),
-        () => undefined,
-      );
   }
 
   protected async create() {
@@ -154,6 +157,7 @@ export class Delegations {
       }),
     );
     if (!done) return;
+    this.toasts.show('Delegação criada.');
     this.delegateId.set(null);
     this.endsOn.set('');
     this.reason.set('');
@@ -161,6 +165,13 @@ export class Delegations {
   }
 
   protected async revoke(d: Delegation) {
+    const ok = await this.confirm.ask({
+      title: 'Revogar delegação',
+      message: `${personName(d.delegate)} deixa de poder decidir em nome de ${personName(d.delegator)}.`,
+      confirmLabel: 'Revogar',
+      danger: true,
+    });
+    if (!ok) return;
     await this.action.run(() => this.api.post(`approvals/delegations/${d.id}/revoke`));
     await this.list.load();
   }

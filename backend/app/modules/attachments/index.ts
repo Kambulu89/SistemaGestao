@@ -1,2 +1,5 @@
 /** API pública dos anexos. */
-export { AttachmentService } from '#modules/attachments/application/attachment_service'
+export {
+  AttachmentService,
+  storageUsedBytes,
+} from '#modules/attachments/application/attachment_service'

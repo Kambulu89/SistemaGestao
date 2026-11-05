@@ -5,9 +5,9 @@ import { Component, input } from '@angular/core';
   template: `
     <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 class="text-2xl font-semibold text-slate-900">{{ title() }}</h1>
+        <h1 class="text-2xl font-semibold text-fg">{{ title() }}</h1>
         @if (subtitle()) {
-          <p class="mt-1 text-sm text-slate-600">{{ subtitle() }}</p>
+          <p class="mt-1 text-sm text-muted">{{ subtitle() }}</p>
         }
       </div>
       <div class="flex flex-wrap gap-2"><ng-content /></div>

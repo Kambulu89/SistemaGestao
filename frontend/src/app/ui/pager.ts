@@ -5,10 +5,7 @@ import { Component, computed, input, output } from '@angular/core';
   selector: 'app-pager',
   template: `
     @if (total() > limit()) {
-      <nav
-        class="mt-3 flex items-center justify-between text-sm text-slate-600"
-        aria-label="Paginação"
-      >
+      <nav class="mt-3 flex items-center justify-between text-sm text-muted" aria-label="Paginação">
         <span>{{ from() }}–{{ to() }} de {{ total() }}</span>
         <span class="flex gap-2">
           <button type="button" class="btn-secondary" [disabled]="offset() === 0" (click)="go(-1)">

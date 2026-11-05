@@ -25,7 +25,7 @@ interface AvailableWorkflow {
     <app-error-alert [error]="workflows.error()" />
     @if (workflows.value(); as list) {
       @if (list.length === 0) {
-        <p class="card text-sm text-slate-600">
+        <p class="card text-sm text-muted">
           Não há workflows publicados. Peça a um gestor que publique um.
         </p>
       } @else {
@@ -60,7 +60,7 @@ interface AvailableWorkflow {
               [(ngModel)]="description"
             ></textarea>
           </div>
-          <p class="text-xs text-slate-500">
+          <p class="text-xs text-muted">
             Depois de submeter, pode anexar documentos no detalhe do pedido.
           </p>
           <button

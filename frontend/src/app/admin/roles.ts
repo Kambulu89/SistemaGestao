@@ -2,7 +2,8 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Api } from '../core/api';
 import { Workspace } from '../core/workspace';
-import { ErrorAlert } from '../ui/error-alert';
+import { CellDef, type Column, DataTable } from '../ui/data-table';
+import { Icon } from '../ui/icon';
 import { Loadable } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
 import { StatusBadge } from '../ui/status-badge';
@@ -10,51 +11,51 @@ import type { Role } from './rbac-types';
 
 @Component({
   selector: 'app-roles',
-  imports: [RouterLink, PageHeader, ErrorAlert, StatusBadge],
+  imports: [RouterLink, PageHeader, DataTable, CellDef, StatusBadge, Icon],
   template: `
     <app-page-header title="Perfis" subtitle="Conjuntos de permissões atribuídos aos membros.">
       @if (canManage()) {
-        <a class="btn-primary" routerLink="/perfis/novo">Novo perfil</a>
+        <a class="btn-primary" routerLink="/perfis/novo"
+          ><app-icon name="plus" [size]="16" />Novo perfil</a
+        >
       }
     </app-page-header>
-    <app-error-alert [error]="roles.error()" />
-    @if (roles.loading()) {
-      <p class="text-sm text-slate-500">A carregar…</p>
-    } @else {
-      <div class="card overflow-x-auto p-0">
-        <table class="table" aria-label="Perfis">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Código</th>
-              <th>Permissões</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of roles.value(); track r.id) {
-              <tr>
-                <td>
-                  <a class="btn-link" [routerLink]="['/perfis', r.id]">{{ r.name }}</a>
-                  @if (r.isSystem) {
-                    <span class="badge ml-1 bg-slate-100 text-slate-700">Sistema</span>
-                  }
-                </td>
-                <td class="font-mono text-xs">{{ r.code }}</td>
-                <td>{{ r.permissionCodes.length }}</td>
-                <td><app-status-badge [status]="r.status" /></td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
+    <app-data-table
+      label="Perfis"
+      [columns]="columns"
+      [rows]="roles.value() ?? []"
+      [total]="(roles.value() ?? []).length"
+      [limit]="1000"
+      [loading]="roles.loading()"
+      [error]="roles.error()"
+      emptyText="Sem perfis."
+      (retry)="roles.load()"
+    >
+      <ng-template appCell="name" let-row>
+        <a class="btn-link" [routerLink]="['/perfis', row.id]">{{ row.name }}</a>
+        @if (row.isSystem) {
+          <span class="badge ml-1 bg-surface-2 text-muted">Sistema</span>
+        }
+      </ng-template>
+      <ng-template appCell="status" let-row><app-status-badge [status]="row.status" /></ng-template>
+    </app-data-table>
   `,
 })
 export class Roles {
   private readonly api = inject(Api);
   private readonly workspace = inject(Workspace);
   protected readonly canManage = computed(() => this.workspace.can('roles.manage'));
+  protected readonly columns: Column<Role>[] = [
+    { key: 'name', label: 'Nome' },
+    { key: 'code', label: 'Código', hideOnMobile: true },
+    {
+      key: 'permissions',
+      label: 'Permissões',
+      value: (r) => r.permissionCodes.length,
+      align: 'end',
+    },
+    { key: 'status', label: 'Estado' },
+  ];
   protected readonly roles = new Loadable(() => this.api.get<Role[]>('roles'));
 
   constructor() {

@@ -6,6 +6,10 @@ import { ErrorAlert } from '../ui/error-alert';
 import { Action } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
 import { StatusBadge } from '../ui/status-badge';
+import { ConfirmService } from '../ui/confirm';
+import { ToastService } from '../ui/toasts';
+import { Breadcrumbs } from '../core/breadcrumbs';
+import { type HasUnsavedChanges, snapshot, warnOnUnload } from '../core/unsaved';
 import type { FeatureDefinition, Plan } from './types';
 
 interface FeatureRow {
@@ -30,7 +34,7 @@ interface FeatureRow {
           <div class="md:col-span-4 flex items-center justify-between">
             <p class="text-sm">Estado: <app-status-badge [status]="plan()?.status ?? 'DRAFT'" /></p>
             @if (saved()) {
-              <p class="text-sm text-green-700" role="status">Guardado.</p>
+              <p class="text-sm text-success-text" role="status">Guardado.</p>
             }
           </div>
           <div class="md:col-span-4"><app-error-alert [error]="action.error()" /></div>
@@ -103,9 +107,7 @@ interface FeatureRow {
                   </td>
                   <td>
                     <span class="font-mono text-xs">{{ row.definition.code }}</span
-                    ><br /><span class="text-xs text-slate-500">{{
-                      row.definition.description
-                    }}</span>
+                    ><br /><span class="text-xs text-muted">{{ row.definition.description }}</span>
                   </td>
                   <td>{{ row.definition.kind }}</td>
                   <td>
@@ -157,7 +159,7 @@ interface FeatureRow {
     }
   `,
 })
-export class PlatformPlanForm {
+export class PlatformPlanForm implements HasUnsavedChanges {
   readonly id = input.required<string>();
   private readonly api = inject(Api);
   private readonly router = inject(Router);
@@ -173,8 +175,21 @@ export class PlatformPlanForm {
   protected name = '';
   protected description = '';
   protected trialDays = 0;
+  private readonly confirm = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
+  private readonly breadcrumbs = inject(Breadcrumbs);
+  private initial = '';
+
+  hasUnsavedChanges() {
+    return this.ready() && this.editable() && this.current() !== this.initial;
+  }
+
+  private current() {
+    return snapshot({ code: this.code, ...this.body() });
+  }
 
   constructor() {
+    warnOnUnload(this);
     effect(() => {
       const id = this.id();
       untracked(() => void this.load(id));
@@ -208,6 +223,8 @@ export class PlatformPlanForm {
         };
       }),
     );
+    if (plan) this.breadcrumbs.setCurrent(plan.name);
+    this.initial = this.current();
   }
 
   private body() {
@@ -226,6 +243,7 @@ export class PlatformPlanForm {
   }
 
   protected async save() {
+    if (this.action.busy()) return;
     this.saved.set(false);
     const plan = this.plan();
     const result = await this.action.run(() =>
@@ -240,12 +258,14 @@ export class PlatformPlanForm {
           }),
     );
     if (!result) return;
+    this.initial = this.current();
     if (!plan) {
+      this.toasts.show('Plano criado.');
       await this.router.navigate(['/plataforma/planos', result.id]);
       return;
     }
     this.apply(result);
-    this.saved.set(true);
+    this.toasts.show('Plano guardado.');
   }
 
   protected async setStatus(action: 'publish' | 'retire') {
@@ -253,10 +273,23 @@ export class PlatformPlanForm {
       action === 'publish'
         ? 'Publicar? Depois de publicado o plano não se altera.'
         : 'Retirar? Deixa de aceitar subscrições novas.';
-    if (!confirm(message)) return;
+    if (this.hasUnsavedChanges()) {
+      this.toasts.show('Guarde o plano antes de mudar o estado.', 'info');
+      return;
+    }
+    const ok = await this.confirm.ask({
+      title: action === 'publish' ? 'Publicar plano' : 'Retirar plano',
+      message,
+      confirmLabel: action === 'publish' ? 'Publicar' : 'Retirar',
+      danger: action === 'retire',
+    });
+    if (!ok) return;
     const result = await this.action.run(() =>
       this.api.post<Plan>(`platform/plans/${this.plan()!.id}/${action}`),
     );
-    if (result) this.apply(result);
+    if (result) {
+      this.apply(result);
+      this.toasts.show(action === 'publish' ? 'Plano publicado.' : 'Plano retirado.');
+    }
   }
 }

@@ -6,6 +6,7 @@ import {
   TenantRepository,
   type Member,
   type MembershipStatus,
+  type MemberSortField,
   type TenantContext,
 } from '#modules/tenancy/index'
 import { AssignmentService, type Assignment } from '#modules/rbac/index'
@@ -38,7 +39,13 @@ const withRoles = (member: Member, all: Assignment[]): MemberView => ({
 export class MemberService {
   list(
     context: TenantContext,
-    filter: { status?: MembershipStatus; q?: string; limit?: number; offset?: number }
+    filter: {
+      status?: MembershipStatus
+      q?: string
+      limit?: number
+      offset?: number
+      sort?: { field: MemberSortField; direction: 'asc' | 'desc' }
+    }
   ) {
     return runInTenant(context, async (scope) => {
       const page = await memberships.list(scope, {

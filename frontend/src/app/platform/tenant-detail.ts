@@ -8,6 +8,9 @@ import { statusLabel } from '../ui/labels';
 import { Action } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
 import { StatusBadge } from '../ui/status-badge';
+import { ConfirmService } from '../ui/confirm';
+import { ToastService } from '../ui/toasts';
+import { Breadcrumbs } from '../core/breadcrumbs';
 import type { FeatureDefinition, Plan, PlatformTenant, TenantSubscriptionAdmin } from './types';
 
 const ACTIONS: Record<string, { label: string; from: string[]; needsReason: boolean }> = {
@@ -190,7 +193,7 @@ const ACTIONS: Record<string, { label: string; from: string[]; needsReason: bool
             </div>
           }
           <form
-            class="grid gap-3 border-t border-slate-100 pt-3 md:grid-cols-6"
+            class="grid gap-3 border-t border-border pt-3 md:grid-cols-6"
             (ngSubmit)="setOverride()"
             aria-label="Nova excepção"
           >
@@ -252,7 +255,7 @@ const ACTIONS: Record<string, { label: string; from: string[]; needsReason: bool
                 {{ label(h.toStatus) }} · {{ h.planCode }}{{ h.reason ? ' · ' + h.reason : '' }}
               </li>
             } @empty {
-              <li class="text-slate-600">Sem histórico.</li>
+              <li class="text-muted">Sem histórico.</li>
             }
           </ul>
         </section>
@@ -290,6 +293,9 @@ export class PlatformTenantDetail {
     expiresOn: '',
   };
   protected readonly action = new Action();
+  private readonly confirm = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
+  private readonly breadcrumbs = inject(Breadcrumbs);
 
   constructor() {
     effect(() => {
@@ -307,6 +313,7 @@ export class PlatformTenantDetail {
         this.api.get<FeatureDefinition[]>('platform/features'),
       ]);
       this.tenant.set(tenant);
+      this.breadcrumbs.setCurrent(tenant.name);
       this.sub.set(subscription);
       this.plans.set(plans);
       this.features.set(features);
@@ -328,7 +335,15 @@ export class PlatformTenantDetail {
 
   protected async setTenantStatus(status: 'ACTIVE' | 'SUSPENDED') {
     const t = this.tenant()!;
-    if (status === 'SUSPENDED' && !confirm('Suspender a empresa? Ninguém consegue entrar nela.'))
+    if (
+      status === 'SUSPENDED' &&
+      !(await this.confirm.ask({
+        title: 'Suspender empresa',
+        message: 'Ninguém consegue entrar nesta empresa enquanto estiver suspensa.',
+        confirmLabel: 'Suspender',
+        danger: true,
+      }))
+    )
       return;
     const updated = await this.action.run(() =>
       this.api.patch<PlatformTenant>(`platform/tenants/${t.id}`, {

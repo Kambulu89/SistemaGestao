@@ -158,3 +158,13 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 - Formulários mostram os erros de validação do servidor junto do campo; alterações enviam `expectedVersion` e só os
   campos alterados (os imutáveis nunca se reenviam).
 - O painel só mostra dados reais (tarefas, notificações, subscrição); módulos de negócio ausentes não aparecem.
+
+## Painel e pesquisa global
+
+- `GET /api/v1/dashboard` e `GET /api/v1/search?q=` (módulo `dashboard`) só compõem funções públicas dos módulos donos
+  (`organizationCounts`, `countsByStatus`, `approvalStats`, `storageUsedBytes`, `searchOrganization`,
+  `searchApprovals`, …), na empresa em contexto, com a mesma permissão e funcionalidade de cada módulo. Secção sem
+  acesso vem `null`; fonte sem acesso não entra na pesquisa. Cobertos por `dashboard.spec.ts` e pela matriz de
+  isolamento.
+- Listas com ordenação no servidor: só campos declarados (organização: os da especificação e as datas; membros:
+  `fullName`, `email`, `status`, `joinedAt`); outro campo dá 422. Os nomes de colunas nunca vêm do pedido.

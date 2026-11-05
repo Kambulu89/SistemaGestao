@@ -3,6 +3,8 @@ import { Api } from '../core/api';
 import { formatDateTime } from './dates';
 import { ErrorAlert } from './error-alert';
 import { Action, Loadable } from './load';
+import { ConfirmService } from './confirm';
+import { ToastService } from './toasts';
 
 export interface Attachment {
   id: string;
@@ -45,7 +47,7 @@ export function formatSize(bytes: number) {
             [disabled]="action.busy()"
             (change)="upload($event)"
           />
-          <p class="mt-1 text-xs text-slate-500">
+          <p class="mt-1 text-xs text-muted">
             PDF, imagens, texto, CSV e documentos Office/ODF; até 10 MB.
           </p>
           @if (tooBig()) {
@@ -54,16 +56,16 @@ export function formatSize(bytes: number) {
         </div>
       }
       @if (list.loading()) {
-        <p class="mt-2 text-sm text-slate-500">A carregar…</p>
+        <p class="mt-2 text-sm text-muted">A carregar…</p>
       } @else if ((list.value() ?? []).length === 0) {
-        <p class="mt-2 text-sm text-slate-600">Sem anexos.</p>
+        <p class="mt-2 text-sm text-muted">Sem anexos.</p>
       } @else {
-        <ul class="mt-2 divide-y divide-slate-100" data-testid="attachments">
+        <ul class="mt-2 divide-y divide-border" data-testid="attachments">
           @for (a of list.value(); track a.id) {
             <li class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
               <span>
                 <span class="font-medium">{{ a.fileName }}</span>
-                <span class="block text-xs text-slate-500">
+                <span class="block text-xs text-muted">
                   {{ size(a.sizeBytes) }} · {{ a.createdBy?.fullName ?? '—' }} ·
                   {{ when(a.createdAt) }}
                 </span>
@@ -95,6 +97,8 @@ export class Attachments {
   readonly subjectId = input.required<string>();
   readonly canWrite = input(false);
   private readonly api = inject(Api);
+  private readonly confirm = inject(ConfirmService);
+  private readonly toasts = inject(ToastService);
   protected readonly accepted = ACCEPTED;
   protected readonly size = formatSize;
   protected readonly when = formatDateTime;
@@ -128,7 +132,8 @@ export class Attachments {
     form.append('subjectType', this.subjectType());
     form.append('subjectId', this.subjectId());
     form.append('file', file, file.name);
-    await this.action.run(() => this.api.upload('attachments', form));
+    const uploaded = await this.action.run(() => this.api.upload('attachments', form));
+    if (uploaded) this.toasts.show(`"${file.name}" carregado.`);
     input.value = '';
     await this.list.load();
   }
@@ -145,8 +150,15 @@ export class Attachments {
   }
 
   protected async remove(a: Attachment) {
-    if (!confirm(`Eliminar o anexo "${a.fileName}"?`)) return;
+    const ok = await this.confirm.ask({
+      title: 'Eliminar anexo',
+      message: `Eliminar "${a.fileName}"? Fica registado na auditoria.`,
+      confirmLabel: 'Eliminar',
+      danger: true,
+    });
+    if (!ok) return;
     await this.action.run(() => this.api.delete(`attachments/${a.id}`));
+    if (!this.action.error()) this.toasts.show('Anexo eliminado.');
     await this.list.load();
   }
 }

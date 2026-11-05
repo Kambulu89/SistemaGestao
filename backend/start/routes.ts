@@ -22,6 +22,7 @@ const NotificationsController = () => import('#modules/notifications/http/notifi
 const ApprovalsController = () => import('#modules/approvals/http/approvals_controller')
 const AttachmentsController = () => import('#modules/attachments/http/attachments_controller')
 const TasksController = () => import('#modules/tasks/http/tasks_controller')
+const DashboardController = () => import('#modules/dashboard/http/dashboard_controller')
 
 router
   .group(() => {
@@ -114,6 +115,9 @@ router
             router.post('me/notifications/read-all', [NotificationsController, 'readAll'])
             router.post('me/notifications/:id/read', [NotificationsController, 'read'])
             router.get('me/tasks', [TasksController, 'index'])
+            // Painel e pesquisa: cada secção/fonte aplica as permissões e funcionalidades do módulo dono.
+            router.get('dashboard', [DashboardController, 'summary'])
+            router.get('search', [DashboardController, 'search'])
 
             // Aprovações: decidir depende de ser aprovador da etapa (ou delegado), não de uma permissão.
             router

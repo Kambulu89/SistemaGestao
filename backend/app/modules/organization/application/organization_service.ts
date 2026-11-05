@@ -216,7 +216,13 @@ export class OrganizationService {
   list(
     context: TenantContext,
     kind: OrgKind,
-    filter: { equals: Values; q?: string; limit?: number; offset?: number }
+    filter: {
+      equals: Values
+      q?: string
+      limit?: number
+      offset?: number
+      sort?: { field: string; direction: 'asc' | 'desc' }
+    }
   ) {
     return runInTenant(context, ({ trx }) =>
       crudList(crud(context, trx), SPECS[kind], {
@@ -224,6 +230,7 @@ export class OrganizationService {
         q: filter.q,
         limit: Math.min(filter.limit ?? 50, 200),
         offset: filter.offset ?? 0,
+        sort: filter.sort,
       })
     )
   }
@@ -304,4 +311,36 @@ export async function organizationRecordExists(scope: TenantScope, entityType: s
   if (!kind) return false
   const s = crud(scope.context, scope.trx)
   return (await crudFind(s, SPECS[kind], id)) !== null
+}
+
+/** Registos activos de cada tipo (para o painel). */
+export async function organizationCounts(scope: TenantScope) {
+  const result = await scope.trx.rawQuery(
+    `select 'legalEntities' as kind, count(*)::int as n from legal_entities where tenant_id = ? and status = 'ACTIVE'
+     union all select 'branches', count(*)::int from branches where tenant_id = ? and status = 'ACTIVE'
+     union all select 'departments', count(*)::int from departments where tenant_id = ? and status = 'ACTIVE'
+     union all select 'positions', count(*)::int from positions where tenant_id = ? and status = 'ACTIVE'
+     union all select 'costCenters', count(*)::int from cost_centers where tenant_id = ? and status = 'ACTIVE'`,
+    Array(5).fill(scope.context.tenantId)
+  )
+  return Object.fromEntries(
+    (result.rows as { kind: string; n: number }[]).map((r) => [r.kind, r.n])
+  ) as Record<OrgKind, number>
+}
+
+/** Pesquisa por código/nome em todos os tipos (até `limit` por tipo). */
+export async function searchOrganization(scope: TenantScope, q: string, limit: number) {
+  const s = crud(scope.context, scope.trx)
+  const out: { kind: OrgKind; id: string; title: string; subtitle: string | null }[] = []
+  for (const kind of Object.keys(SPECS) as OrgKind[]) {
+    const page = await crudList(s, SPECS[kind], { q, limit, offset: 0 })
+    for (const r of page.items)
+      out.push({
+        kind,
+        id: r.id,
+        title: `${r.code as string} — ${(r.name ?? r.legalName) as string}`,
+        subtitle: (r.status as string) === 'INACTIVE' ? 'Inactivo' : null,
+      })
+  }
+  return out
 }

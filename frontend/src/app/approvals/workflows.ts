@@ -20,7 +20,7 @@ import type { Workflow } from './types';
     </app-page-header>
     <app-error-alert [error]="list.error()" />
     @if ((list.value() ?? []).length === 0 && !list.loading()) {
-      <p class="card text-sm text-slate-600">Ainda não há workflows.</p>
+      <p class="card text-sm text-muted">Ainda não há workflows.</p>
     } @else {
       <div class="card overflow-x-auto p-0">
         <table class="table" aria-label="Workflows">
