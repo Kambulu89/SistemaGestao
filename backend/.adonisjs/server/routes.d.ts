@@ -24,15 +24,44 @@ export type ScannedRoutes = {
     'members.index': { paramsTuple?: []; params?: {} }
     'members.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.invite': { paramsTuple?: []; params?: {} }
+    'members.resend_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'members.revoke_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.reactivate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.assign_role': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.unassign_role': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'assignmentId': ParamValue} }
     'organization.index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'organization.tree': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'organization.show': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'organization.dependents': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'organization.store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'organization.update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'tenant_subscription.show': { paramsTuple?: []; params?: {} }
+    'settings.profile': { paramsTuple?: []; params?: {} }
+    'settings.settings': { paramsTuple?: []; params?: {} }
+    'exchange_rates.index': { paramsTuple?: []; params?: {} }
+    'settings.lookup_rate': { paramsTuple?: []; params?: {} }
+    'exchange_rates.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'document_series.index': { paramsTuple?: []; params?: {} }
+    'document_series.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.preview_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'calendars.index': { paramsTuple?: []; params?: {} }
+    'calendars.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.working_days': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.update_profile': { paramsTuple?: []; params?: {} }
+    'settings.update_settings': { paramsTuple?: []; params?: {} }
+    'exchange_rates.store': { paramsTuple?: []; params?: {} }
+    'exchange_rates.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'document_series.store': { paramsTuple?: []; params?: {} }
+    'document_series.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'calendars.store': { paramsTuple?: []; params?: {} }
+    'calendars.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.add_holiday': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.remove_holiday': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'holidayId': ParamValue} }
+    'bank_accounts.index': { paramsTuple?: []; params?: {} }
+    'bank_accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'bank_accounts.store': { paramsTuple?: []; params?: {} }
+    'bank_accounts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'notifications.read_all': { paramsTuple?: []; params?: {} }
@@ -89,8 +118,23 @@ export type ScannedRoutes = {
     'members.index': { paramsTuple?: []; params?: {} }
     'members.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'organization.index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'organization.tree': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'organization.show': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'organization.dependents': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'tenant_subscription.show': { paramsTuple?: []; params?: {} }
+    'settings.profile': { paramsTuple?: []; params?: {} }
+    'settings.settings': { paramsTuple?: []; params?: {} }
+    'exchange_rates.index': { paramsTuple?: []; params?: {} }
+    'settings.lookup_rate': { paramsTuple?: []; params?: {} }
+    'exchange_rates.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'document_series.index': { paramsTuple?: []; params?: {} }
+    'document_series.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.preview_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'calendars.index': { paramsTuple?: []; params?: {} }
+    'calendars.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.working_days': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'bank_accounts.index': { paramsTuple?: []; params?: {} }
+    'bank_accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
@@ -123,8 +167,23 @@ export type ScannedRoutes = {
     'members.index': { paramsTuple?: []; params?: {} }
     'members.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'organization.index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'organization.tree': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'organization.show': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'organization.dependents': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'tenant_subscription.show': { paramsTuple?: []; params?: {} }
+    'settings.profile': { paramsTuple?: []; params?: {} }
+    'settings.settings': { paramsTuple?: []; params?: {} }
+    'exchange_rates.index': { paramsTuple?: []; params?: {} }
+    'settings.lookup_rate': { paramsTuple?: []; params?: {} }
+    'exchange_rates.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'document_series.index': { paramsTuple?: []; params?: {} }
+    'document_series.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.preview_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'calendars.index': { paramsTuple?: []; params?: {} }
+    'calendars.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'settings.working_days': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'bank_accounts.index': { paramsTuple?: []; params?: {} }
+    'bank_accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
@@ -153,10 +212,16 @@ export type ScannedRoutes = {
     'auth.logout': { paramsTuple?: []; params?: {} }
     'roles.store': { paramsTuple?: []; params?: {} }
     'members.invite': { paramsTuple?: []; params?: {} }
+    'members.resend_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.reactivate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.assign_role': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'organization.store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'exchange_rates.store': { paramsTuple?: []; params?: {} }
+    'document_series.store': { paramsTuple?: []; params?: {} }
+    'calendars.store': { paramsTuple?: []; params?: {} }
+    'settings.add_holiday': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'bank_accounts.store': { paramsTuple?: []; params?: {} }
     'notifications.read_all': { paramsTuple?: []; params?: {} }
     'notifications.read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.create_workflow': { paramsTuple?: []; params?: {} }
@@ -178,7 +243,9 @@ export type ScannedRoutes = {
   DELETE: {
     'account.revoke_session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'roles.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'members.revoke_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.unassign_role': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'assignmentId': ParamValue} }
+    'settings.remove_holiday': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'holidayId': ParamValue} }
     'approvals.delete_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.remove_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
@@ -186,11 +253,17 @@ export type ScannedRoutes = {
   PATCH: {
     'roles.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'organization.update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'exchange_rates.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'document_series.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'calendars.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'bank_accounts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   PUT: {
+    'settings.update_profile': { paramsTuple?: []; params?: {} }
+    'settings.update_settings': { paramsTuple?: []; params?: {} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

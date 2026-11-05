@@ -490,20 +490,10 @@ export class ReferenceService {
   // ---- câmbios
   /** Câmbio em vigor numa data: o registo mais recente até essa data (directo; não deriva pares inversos). */
   lookupRate(context: TenantContext, from: string, to: string, on: string) {
-    return runInTenant(context, async ({ trx }) => {
-      const r = await trx.rawQuery(
-        `select rate::text as rate, valid_on::text as "validOn", source from exchange_rates
-          where tenant_id = ? and from_currency = ? and to_currency = ? and valid_on <= ?
-          order by valid_on desc limit 1`,
-        [context.tenantId, from, to, on]
-      )
-      if (r.rows.length === 0)
-        throw new ApiError(404, 'RATE_NOT_FOUND', `Sem câmbio ${from}→${to} até ${on}.`)
-      return {
-        from,
-        to,
-        ...(r.rows[0] as { rate: string; validOn: string; source: string | null }),
-      }
+    return runInTenant(context, async (scope) => {
+      const rate = await rateOn(scope, from, to, on)
+      if (!rate) throw new ApiError(404, 'RATE_NOT_FOUND', `Sem câmbio ${from}→${to} até ${on}.`)
+      return rate
     })
   }
 
@@ -591,23 +581,10 @@ export class ReferenceService {
 
   /** Dias úteis entre duas datas (inclusive): exclui fim-de-semana do calendário e feriados (até 366 dias). */
   workingDays(context: TenantContext, calendarId: string, from: string, to: string) {
-    if (!ISO_DATE.test(from) || !ISO_DATE.test(to) || to < from)
-      throw ApiError.validation([
-        { path: 'to', code: 'RANGE', message: 'Intervalo de datas inválido.' },
-      ])
-    const span = (Date.parse(to) - Date.parse(from)) / 86_400_000
-    if (span > 366)
-      throw ApiError.validation([{ path: 'to', code: 'TOO_LONG', message: 'No máximo 366 dias.' }])
-    return runInTenant(context, async ({ trx }) => {
-      const row = await crudFind(crud(context, trx), SETTINGS_SPECS.calendars, calendarId)
-      if (!row) throw ApiError.notFound()
-      const r = await trx.rawQuery(
-        `select count(*)::int as n from generate_series(?::date, ?::date, interval '1 day') d
-          where not (extract(isodow from d)::smallint = any(?::smallint[]))
-            and not exists (select 1 from calendar_holidays h where h.tenant_id = ? and h.calendar_id = ? and h.holiday_on = d::date)`,
-        [from, to, row.weekendDays as number[], context.tenantId, calendarId] as never[]
-      )
-      return { from, to, workingDays: (r.rows[0] as { n: number }).n }
+    return runInTenant(context, async (scope) => {
+      const n = await workingDaysBetween(scope, calendarId, from, to)
+      if (n === null) throw ApiError.notFound()
+      return { from, to, workingDays: n }
     })
   }
 }
@@ -747,4 +724,46 @@ export async function reserveDocumentNumber(scope: TenantScope, seriesId: string
     number: row.next_number,
     formatted: formatDocumentNumber(row.prefix, row.next_number, row.padding),
   }
+}
+
+/**
+ * Câmbio em vigor numa data (contrato para os módulos de negócio): o mais recente com `valid_on` ≤ data, ou null.
+ * A taxa vem em texto decimal (nunca `float`).
+ */
+export async function rateOn(scope: TenantScope, from: string, to: string, on: string) {
+  const r = await scope.trx.rawQuery(
+    `select rate::text as rate, valid_on::text as "validOn", source from exchange_rates
+      where tenant_id = ? and from_currency = ? and to_currency = ? and valid_on <= ?
+      order by valid_on desc limit 1`,
+    [scope.context.tenantId, from, to, on]
+  )
+  if (r.rows.length === 0) return null
+  return { from, to, ...(r.rows[0] as { rate: string; validOn: string; source: string | null }) }
+}
+
+/**
+ * Dias úteis de um calendário entre duas datas, inclusive (sem dias de descanso nem feriados). Null se o calendário
+ * não existir nesta empresa; intervalo inválido ou maior que 366 dias → erro de validação.
+ */
+export async function workingDaysBetween(
+  scope: TenantScope,
+  calendarId: string,
+  from: string,
+  to: string
+) {
+  if (!ISO_DATE.test(from) || !ISO_DATE.test(to) || to < from)
+    throw ApiError.validation([
+      { path: 'to', code: 'RANGE', message: 'Intervalo de datas inválido.' },
+    ])
+  if ((Date.parse(to) - Date.parse(from)) / 86_400_000 > 366)
+    throw ApiError.validation([{ path: 'to', code: 'TOO_LONG', message: 'No máximo 366 dias.' }])
+  const row = await crudFind(crud(scope.context, scope.trx), SETTINGS_SPECS.calendars, calendarId)
+  if (!row) return null
+  const r = await scope.trx.rawQuery(
+    `select count(*)::int as n from generate_series(?::date, ?::date, interval '1 day') d
+      where not (extract(isodow from d)::smallint = any(?::smallint[]))
+        and not exists (select 1 from calendar_holidays h where h.tenant_id = ? and h.calendar_id = ? and h.holiday_on = d::date)`,
+    [from, to, row.weekendDays as number[], scope.context.tenantId, calendarId] as never[]
+  )
+  return (r.rows[0] as { n: number }).n
 }

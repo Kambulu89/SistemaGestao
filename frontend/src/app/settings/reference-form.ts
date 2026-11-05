@@ -333,11 +333,13 @@ interface Holiday {
               </section>
             }
             @if (!isNew() && record(); as r) {
-              <app-attachments
-                [subjectType]="k.entityType"
-                [subjectId]="r.id"
-                [canWrite]="canManage() && attachmentsAllowed()"
-              />
+              @if (attachmentsAllowed()) {
+                <app-attachments
+                  [subjectType]="k.entityType"
+                  [subjectId]="r.id"
+                  [canWrite]="canManage()"
+                />
+              }
               <app-audit-history
                 [entityType]="k.entityType"
                 [entityId]="r.id"

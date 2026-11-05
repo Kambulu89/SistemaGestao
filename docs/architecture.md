@@ -10,12 +10,17 @@ serviços técnicos) e `http/` (controllers e middleware, só transporte). Cada 
 `index.ts`; os outros importam **só** daí (`tests/unit/architecture.spec.ts` falha caso contrário). `app/shared/` é código
 técnico partilhado e não depende de módulos.
 
-| Módulo                                                                                     | Estado    | Responsabilidade                                                                                                               |
-| ------------------------------------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `health`                                                                                   | Feito     | `GET /api/v1/health`                                                                                                           |
-| `identity`                                                                                 | Parcial   | Utilizador global, sessão opaca em cookie, CSRF, limite de tentativas. Por fazer: convites, recuperação, sessões do utilizador |
-| `tenancy`                                                                                  | Parcial   | Tenant, contexto de tenant, `runInTenant`, memberships. Por fazer: administração de tenants e memberships pela API             |
-| `rbac`, `organization`, `subscription`, `approvals`, `audit`, `notifications`, `documents` | Por fazer | Prompt 03, blocos 3.3–3.6                                                                                                      |
+| Módulo                                                        | Responsabilidade                                                                          |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `health`                                                      | `GET /api/v1/health`                                                                      |
+| `identity`                                                    | Utilizador global, sessão em cookie, CSRF, convites, recuperação, sessões                 |
+| `tenancy`, `members`                                          | Tenant, contexto, `runInTenant`, memberships e convites                                   |
+| `rbac`                                                        | Perfis, permissões e atribuições com âmbito                                               |
+| `organization`                                                | Entidades legais, filiais, departamentos, cargos, centros de custo, dependências, árvores |
+| `settings`                                                    | Perfil e configurações da empresa, câmbios, séries, calendários, contas bancárias         |
+| `subscription`, `platform`                                    | Funcionalidades, planos, subscrições, limites; administração da plataforma                |
+| `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
+| `dashboard`                                                   | Painel e pesquisa global                                                                  |
 
 ## Multi-tenancy
 
@@ -64,8 +69,9 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 ## Convites e email
 
-- Convidar cria (ou reutiliza) a conta global e uma membership `INVITED`; o token de uso único (7 dias) só é emitido
-  depois de gravada a membership. Aceitar consome o token e activa a membership na **mesma** transacção.
+- Convidar cria (ou reutiliza) a conta global e uma membership `INVITED`; o token de uso único (validade configurável
+  por empresa, 1–30 dias, 7 por omissão) só é emitido depois de gravada a membership. Reenviar invalida os tokens
+  anteriores e emite outro; revogar invalida-os e põe a membership `REVOKED`; o detalhe mostra a validade. Aceitar consome o token e activa a membership na **mesma** transacção.
 - Sem fornecedor de email escolhido: `MAIL_DRIVER=none` não envia e a API responde `delivery: NOT_CONFIGURED` (nunca finge
   envio); `dev-memory` guarda a mensagem em memória para testes/desenvolvimento (proibido em produção).
 
@@ -80,6 +86,12 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
   bloquear a linha (evita o deadlock com a FK do pai; coberto por teste de concorrência).
 - API única `/api/v1/organization/:kind` (`legal-entities`, `branches`, `departments`, `positions`, `cost-centers`) com
   `organization.read` / `organization.manage`; o domínio só aceita os campos declarados (sem mass assignment).
+- Prompt 05: regime fiscal, IVA, início do exercício, contactos, morada (província, município, comuna, bairro) e
+  representante nas entidades legais; contactos, morada, responsável (membership activa) e centro de custo (da mesma
+  entidade legal) nas filiais; responsável e centro de custo nos departamentos; responsável nos centros de custo;
+  função, requisitos e responsabilidades nos cargos. Inactivar com dependentes activos é recusado (409
+  `HAS_ACTIVE_DEPENDENTS`, com a contagem por tipo); `GET …/:id/dependents` e `GET …/tree` (organograma de
+  departamentos e centros de custo) alimentam a interface.
 - Repositório genérico de tabelas de tenant em `app/shared/db/tenant_crud.ts` (listagem paginada, filtros por igualdade,
   pesquisa, versão, conflitos de unicidade → 409).
 
@@ -113,8 +125,10 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 - `approval_workflows` (DRAFT → ACTIVE → RETIRED; publicado é imutável, também por trigger nas etapas) com etapas
   ordenadas; aprovador por **perfil** (qualquer membro activo com o perfil activo, em qualquer âmbito) ou por **membro**;
   `requiredApprovals` por etapa. Publicar exige perfis activos com titulares suficientes e membros activos.
-- Pedidos (`approval_requests`) sobre um assunto; hoje só `manual` (título e descrição). Os módulos de negócio vão
-  registar o seu `subject_type` e o efeito da aprovação no próprio módulo.
+- Pedidos (`approval_requests`) sobre um assunto: `manual` ou um tipo registado por um módulo (`bank_account`). O módulo
+  dono submete com `submitForSubject` na sua transacção e regista o efeito com `registerSubjectHandler` (em
+  `start/module_hooks.ts`, para não criar importações circulares); o efeito corre na transacção da decisão final
+  (aprovado, rejeitado ou cancelado).
 - Decidir não depende de uma permissão: depende de ser aprovador da etapa corrente ou delegado activo de um. O pedido
   é bloqueado (`FOR UPDATE`) durante a decisão; `approval_decisions` é só de acrescentar e tem dois índices únicos: um
   voto por aprovador elegível e um voto por pessoa em cada etapa (um delegado que também é aprovador não vota duas vezes).
@@ -123,6 +137,29 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
   "em nome de" e fica registado quem decidiu e por quem. Sem cadeias: só se delega o que se tem directamente.
 - Visibilidade: `approvals.read` vê tudo; os restantes vêem os pedidos que fizeram, em que decidiram ou que podem
   decidir agora (os outros respondem 404).
+
+## Configurações da empresa (módulo `settings`)
+
+- `tenant_profiles` (um por empresa): nome a apresentar, referências, contactos, morada, logótipo (imagem anexada ao
+  perfil). Idioma, fuso e moeda por omissão continuam no tenant (dono: `tenancy`) e são validados pelas regras dele. A
+  identidade fiscal é de cada entidade legal, não do perfil.
+- `tenant_settings`: casas decimais de valores (0–6), quantidades (0–6) e preços (0–8), arredondamento `HALF_UP` ou
+  `HALF_EVEN`, validade dos convites, notificações de aprovação desligáveis (a tarefa existe sempre), workflow de
+  aprovação de contas bancárias. Sem linha, valem os valores por omissão; `tenantSettings(scope)` é o contrato.
+- `exchange_rates`: taxa `numeric(24,10)` em texto decimal na API (nunca `float`), um por par e data; a taxa em vigor
+  numa data é a mais recente com `valid_on` ≤ data (`rateOn`).
+- `document_series`: por entidade legal (filial opcional) e tipo de documento; a numeração só avança e uma série fechada
+  não reabre. `reserveDocumentNumber(scope, seriesId, on)` bloqueia a série (`FOR UPDATE`) e devolve o número formatado
+  na transacção de quem emite (sem lacunas se a emissão falhar, porque tudo volta atrás).
+- `calendars` e `calendar_holidays`: dias de descanso (ISO 1–7) e feriados nacionais/regionais/da empresa; `GET
+…/working-days` conta dias úteis (até 366 dias; `workingDaysBetween` para os módulos).
+- `bank_accounts`: IBAN validado (mod 97) e SWIFT/BIC; dados bancários imutáveis (para mudar, cria-se outra conta);
+  uma conta por omissão por entidade legal e moeda; com workflow configurado nasce `PENDING_APPROVAL` e só fica
+  `ACTIVE` quando aprovada (rejeitada → `REJECTED`); sem aprovações contratadas e com workflow configurado recusa-se
+  (409 `APPROVAL_UNAVAILABLE`). As listas mostram o IBAN mascarado.
+- Permissões: `settings.read`/`settings.manage` e `bank_accounts.read`/`bank_accounts.manage`. Depois de acrescentar
+  permissões, `node ace catalog:sync` dá-as ao perfil `tenant_admin` das empresas existentes.
+- Fora deste módulo, de propósito: cálculo fiscal, tesouraria, movimentos bancários.
 
 ## Anexos
 

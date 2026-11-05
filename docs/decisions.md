@@ -82,3 +82,13 @@ padrões ARIA de combobox, menu e tabs. Evita uma dependência grande e mantém 
 densidade e comportamento de teclado. Gráficos simples em HTML/CSS; uma biblioteca de gráficos entra só quando houver
 relatórios que a justifiquem (Prompt 26). O âmbito de trabalho (entidade legal/filial) é preferência de apresentação,
 não autorização.
+
+## D-013 Configurações da empresa como contratos para os módulos de negócio (aceite)
+
+Perfil, precisões, câmbios, séries, calendários e contas bancárias ficam num módulo `settings` que expõe funções
+(`tenantSettings`, `rateOn`, `reserveDocumentNumber`, dias úteis) em vez de tabelas partilhadas: Facturação,
+Compras, Inventário, Finanças, Contabilidade, RH e Assiduidade chamam-nas na sua transacção. A numeração documental é
+atribuída sob bloqueio da série, sem lacunas e sem recuo. Contas bancárias passam por aprovação configurável (o efeito
+é registado pelo módulo dono no arranque, `start/module_hooks.ts`) e os dados bancários não se editam (protecção
+contra fraude). Câmbios são introduzidos pela empresa (sem fonte externa automática até haver integração validada).
+Nenhuma regra fiscal ou laboral é implementada aqui; o regime fiscal é só identificação.
