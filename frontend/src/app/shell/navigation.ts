@@ -63,6 +63,39 @@ export const NAVIGATION: NavGroup[] = [
     ],
   },
   {
+    label: 'Contabilidade',
+    items: [
+      {
+        label: 'Lançamentos',
+        path: '/contabilidade/lancamentos',
+        icon: 'file',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+      {
+        label: 'Planos de contas',
+        path: '/contabilidade/planos',
+        icon: 'tree',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+      {
+        label: 'Exercícios',
+        path: '/contabilidade/exercicios',
+        icon: 'calendar',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+      {
+        label: 'Diários',
+        path: '/contabilidade/diarios',
+        icon: 'layers',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+    ],
+  },
+  {
     label: 'Empresa',
     items: [
       {

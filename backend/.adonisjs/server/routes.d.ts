@@ -62,6 +62,34 @@ export type ScannedRoutes = {
     'bank_accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'bank_accounts.store': { paramsTuple?: []; params?: {} }
     'bank_accounts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.charts.index': { paramsTuple?: []; params?: {} }
+    'accounting.charts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.accounts.index': { paramsTuple?: []; params?: {} }
+    'accounting.accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.fiscal_years.index': { paramsTuple?: []; params?: {} }
+    'accounting.fiscal_years.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.journals.index': { paramsTuple?: []; params?: {} }
+    'accounting.journals.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.entries': { paramsTuple?: []; params?: {} }
+    'accounting.entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.charts.store': { paramsTuple?: []; params?: {} }
+    'accounting.charts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.accounts.store': { paramsTuple?: []; params?: {} }
+    'accounting.accounts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.fiscal_years.store': { paramsTuple?: []; params?: {} }
+    'accounting.fiscal_years.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.journals.store': { paramsTuple?: []; params?: {} }
+    'accounting.journals.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.reopen_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.create_entry': { paramsTuple?: []; params?: {} }
+    'accounting.update_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.delete_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.post': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'notifications.read_all': { paramsTuple?: []; params?: {} }
@@ -135,6 +163,16 @@ export type ScannedRoutes = {
     'settings.working_days': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'bank_accounts.index': { paramsTuple?: []; params?: {} }
     'bank_accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.charts.index': { paramsTuple?: []; params?: {} }
+    'accounting.charts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.accounts.index': { paramsTuple?: []; params?: {} }
+    'accounting.accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.fiscal_years.index': { paramsTuple?: []; params?: {} }
+    'accounting.fiscal_years.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.journals.index': { paramsTuple?: []; params?: {} }
+    'accounting.journals.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.entries': { paramsTuple?: []; params?: {} }
+    'accounting.entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
@@ -184,6 +222,16 @@ export type ScannedRoutes = {
     'settings.working_days': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'bank_accounts.index': { paramsTuple?: []; params?: {} }
     'bank_accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.charts.index': { paramsTuple?: []; params?: {} }
+    'accounting.charts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.accounts.index': { paramsTuple?: []; params?: {} }
+    'accounting.accounts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.fiscal_years.index': { paramsTuple?: []; params?: {} }
+    'accounting.fiscal_years.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.journals.index': { paramsTuple?: []; params?: {} }
+    'accounting.journals.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.entries': { paramsTuple?: []; params?: {} }
+    'accounting.entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
@@ -222,6 +270,18 @@ export type ScannedRoutes = {
     'calendars.store': { paramsTuple?: []; params?: {} }
     'settings.add_holiday': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'bank_accounts.store': { paramsTuple?: []; params?: {} }
+    'accounting.charts.store': { paramsTuple?: []; params?: {} }
+    'accounting.accounts.store': { paramsTuple?: []; params?: {} }
+    'accounting.fiscal_years.store': { paramsTuple?: []; params?: {} }
+    'accounting.journals.store': { paramsTuple?: []; params?: {} }
+    'accounting.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.reopen_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.create_entry': { paramsTuple?: []; params?: {} }
+    'accounting.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.post': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'notifications.read_all': { paramsTuple?: []; params?: {} }
     'notifications.read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.create_workflow': { paramsTuple?: []; params?: {} }
@@ -246,6 +306,7 @@ export type ScannedRoutes = {
     'members.revoke_invitation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.unassign_role': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'assignmentId': ParamValue} }
     'settings.remove_holiday': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'holidayId': ParamValue} }
+    'accounting.delete_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.delete_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.remove_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
@@ -257,6 +318,11 @@ export type ScannedRoutes = {
     'document_series.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'calendars.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'bank_accounts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.charts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.accounts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.fiscal_years.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.journals.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.update_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

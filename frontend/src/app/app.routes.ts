@@ -180,6 +180,13 @@ export const routes: Routes = [
             loadComponent: () => import('./admin/audit').then((m) => m.Audit),
           },
           {
+            path: 'contabilidade',
+            title: 'Contabilidade',
+            ...page('accounting.read', 'accounting'),
+            loadChildren: () =>
+              import('./accounting/accounting.routes').then((m) => m.ACCOUNTING_ROUTES),
+          },
+          {
             path: 'aprovacoes',
             title: 'Aprovações',
             ...page(undefined, 'approvals'),

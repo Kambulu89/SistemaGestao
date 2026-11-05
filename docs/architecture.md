@@ -161,6 +161,29 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
   permissões, `node ace catalog:sync` dá-as ao perfil `tenant_admin` das empresas existentes.
 - Fora deste módulo, de propósito: cálculo fiscal, tesouraria, movimentos bancários.
 
+## Contabilidade (módulo `accounting`, Prompt 06)
+
+Blocos 6.1 e 6.2 feitos; 6.3–6.10 por fazer (ver `docs/reports/prompt-06.md`).
+
+- **Plano de contas** por entidade legal (um activo, índice parcial único). Contas em árvore: classe → conta →
+  subconta; o código do filho começa pelo do pai; só contas sem subcontas são movimentáveis; natureza, saldo normal,
+  exigência de centro de custo/terceiro e linha das demonstrações (código livre para 6.8). Uma conta com movimentos
+  não muda de natureza nem deixa de ser movimentável. **Nenhum plano oficial é pré-carregado** (D-014).
+- **Exercícios** sem sobreposição (restrição de exclusão `daterange`), 1 a 24 meses, com períodos gerados: abertura
+  (0), mensais e regularizações. Fechar um período exige não haver lançamentos submetidos/aprovados; reabrir exige
+  motivo; ambos auditados (`accounting.close` / `accounting.reopen`).
+- **Diários** numerados por uma série documental do tipo `JOURNAL` da mesma entidade legal
+  (`reserveDocumentNumber`, sem lacunas, no momento da contabilização).
+- **Lançamentos**: rascunho → submetido → aprovado → contabilizado. Submeter e contabilizar validam ≥ 2 linhas, um
+  só lado por linha, valores > 0, contas movimentáveis e activas do plano da entidade, centros de custo da mesma
+  entidade, período e exercício abertos e débito = crédito **na moeda do lançamento e na funcional** (conversão
+  linha a linha com o arredondamento da empresa, decimais exactos em BigInt). Quem criou ou submeteu não aprova nem
+  rejeita. Contabilizado é imutável (trigger `journal_entries_guard`/`journal_lines_guard`, também para a conta dona);
+  corrige-se por estorno (lados trocados, mesmo diário, numerado, uma única vez, nunca de um estorno).
+  `idempotencyKey` devolve o lançamento já criado (bloqueio consultivo + índice único). Montantes guardados em
+  `numeric(24,6)` e devolvidos na precisão da empresa. Anexos (`journal_entry`) até à contabilização.
+- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings`; funcionalidade `accounting`.
+
 ## Anexos
 
 - Metadados em `attachments` (RLS) e ficheiro no armazenamento local (`ATTACHMENTS_DIR`), numa chave gerada pelo

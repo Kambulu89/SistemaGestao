@@ -7,6 +7,80 @@
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
+export class AccountChartSchema extends BaseModel {
+  static $columns = ['baseModel', 'code', 'createdAt', 'createdBy', 'id', 'jurisdiction', 'legalEntityId', 'name', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AccountChartSchema.$columns
+  @column()
+  declare baseModel: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare jurisdiction: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AccountSchema extends BaseModel {
+  static $columns = ['chartId', 'code', 'createdAt', 'createdBy', 'id', 'level', 'name', 'nature', 'normalBalance', 'parentId', 'postable', 'requiresCostCenter', 'requiresThirdParty', 'statementLine', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AccountSchema.$columns
+  @column()
+  declare chartId: string
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare level: string
+  @column()
+  declare name: string
+  @column()
+  declare nature: string
+  @column()
+  declare normalBalance: string
+  @column()
+  declare parentId: string | null
+  @column()
+  declare postable: boolean
+  @column()
+  declare requiresCostCenter: boolean
+  @column()
+  declare requiresThirdParty: boolean
+  @column()
+  declare statementLine: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class ApprovalDecisionSchema extends BaseModel {
   static $columns = ['comment', 'createdAt', 'createdBy', 'decidedByMembershipId', 'decision', 'id', 'onBehalfOfMembershipId', 'requestId', 'stepSequence', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = ApprovalDecisionSchema.$columns
@@ -592,6 +666,211 @@ export class FeatureSchema extends BaseModel {
   declare module: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+}
+
+export class FiscalPeriodSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'endDate', 'fiscalYearId', 'id', 'kind', 'name', 'number', 'startDate', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FiscalPeriodSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare endDate: DateTime
+  @column()
+  declare fiscalYearId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare name: string
+  @column()
+  declare number: number
+  @column.date()
+  declare startDate: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class FiscalYearSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'endDate', 'id', 'legalEntityId', 'startDate', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FiscalYearSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare endDate: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column.date()
+  declare startDate: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class JournalEntrySchema extends BaseModel {
+  static $columns = ['approvedAt', 'approvedBy', 'chartId', 'createdAt', 'createdBy', 'currency', 'description', 'documentDate', 'entryDate', 'exchangeRate', 'fiscalYearId', 'id', 'idempotencyKey', 'journalId', 'legalEntityId', 'number', 'periodId', 'postedAt', 'postedBy', 'reference', 'rejectionReason', 'reversalOfId', 'reversedById', 'source', 'sourceRef', 'status', 'submittedAt', 'submittedBy', 'tenantId', 'totalCredit', 'totalDebit', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = JournalEntrySchema.$columns
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare chartId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare description: string
+  @column.date()
+  declare documentDate: DateTime | null
+  @column.date()
+  declare entryDate: DateTime
+  @column()
+  declare exchangeRate: string
+  @column()
+  declare fiscalYearId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string | null
+  @column()
+  declare journalId: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare number: string | null
+  @column()
+  declare periodId: string
+  @column.dateTime()
+  declare postedAt: DateTime | null
+  @column()
+  declare postedBy: string | null
+  @column()
+  declare reference: string | null
+  @column()
+  declare rejectionReason: string | null
+  @column()
+  declare reversalOfId: string | null
+  @column()
+  declare reversedById: string | null
+  @column()
+  declare source: string
+  @column()
+  declare sourceRef: string | null
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalCredit: string
+  @column()
+  declare totalDebit: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class JournalLineSchema extends BaseModel {
+  static $columns = ['accountId', 'costCenterId', 'createdAt', 'createdBy', 'credit', 'creditFunctional', 'debit', 'debitFunctional', 'description', 'entryId', 'id', 'lineNo', 'tenantId', 'thirdPartyRef', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = JournalLineSchema.$columns
+  @column()
+  declare accountId: string
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare credit: string
+  @column()
+  declare creditFunctional: string
+  @column()
+  declare debit: string
+  @column()
+  declare debitFunctional: string
+  @column()
+  declare description: string | null
+  @column()
+  declare entryId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare tenantId: string
+  @column()
+  declare thirdPartyRef: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class JournalSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'documentSeriesId', 'id', 'legalEntityId', 'name', 'status', 'tenantId', 'type', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = JournalSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare documentSeriesId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare type: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
 }
 
 export class LegalEntitySchema extends BaseModel {

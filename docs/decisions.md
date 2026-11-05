@@ -92,3 +92,13 @@ atribuída sob bloqueio da série, sem lacunas e sem recuo. Contas bancárias pa
 é registado pelo módulo dono no arranque, `start/module_hooks.ts`) e os dados bancários não se editam (protecção
 contra fraude). Câmbios são introduzidos pela empresa (sem fonte externa automática até haver integração validada).
 Nenhuma regra fiscal ou laboral é implementada aqui; o regime fiscal é só identificação.
+
+## D-014 Contabilidade sem plano oficial pré-carregado e com controlo de partidas dobradas no servidor (aceite)
+
+O plano de contas é criado (ou, no bloco 6.4, importado) pela empresa: não se pré-carrega o PGC angolano nem se
+alega conformidade AGT/SAF-T, porque a versão em vigor e os critérios dos mapas têm de ser confirmados com a norma
+oficial antes de qualquer alegação. O campo "modelo de referência" é só texto. As regras que garantem a integridade
+ficam no servidor e, para a imutabilidade, também na base de dados (triggers): um lançamento contabilizado não muda e
+corrige-se por estorno. O equilíbrio exige-se nas duas moedas para que o razão funcional nunca fique desequilibrado
+por arredondamentos. O fluxo de aprovação é interno ao lançamento (segregação de funções), sem passar pelos workflows
+genéricos, para não depender da funcionalidade de aprovações; poderá ligar-se a eles mais tarde se for pedido.
