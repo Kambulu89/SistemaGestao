@@ -21,6 +21,17 @@ export interface NotificationView {
 }
 
 /**
+ * Filtro de notificações por empresa (ex.: a empresa desligou um tipo nas configurações). Registado no arranque pelo
+ * módulo de configurações (`start/module_hooks.ts`); sem filtro, tudo é notificado.
+ */
+type NotificationFilter = (scope: TenantScope, type: string) => Promise<boolean>
+let notificationFilter: NotificationFilter = async () => true
+
+export function registerNotificationFilter(fn: NotificationFilter) {
+  notificationFilter = fn
+}
+
+/**
  * Notifica membros na transacção de quem chama (se a operação falhar, a notificação não fica). Ignora duplicados e
  * o próprio actor (ninguém é notificado do que acabou de fazer).
  */
@@ -29,6 +40,7 @@ export async function notify(
   recipientMembershipIds: readonly string[],
   input: NotificationInput
 ) {
+  if (!(await notificationFilter(scope, input.type))) return 0
   const recipients = [...new Set(recipientMembershipIds)].filter(
     (id) => id !== scope.context.membershipId
   )

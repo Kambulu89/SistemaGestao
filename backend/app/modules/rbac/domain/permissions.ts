@@ -43,6 +43,29 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description: 'Ver o plano, o estado da subscrição e as funcionalidades contratadas da empresa.',
   },
   {
+    code: 'settings.read',
+    module: 'settings',
+    description:
+      'Ver o perfil da empresa, configurações, câmbios, séries documentais e calendários.',
+  },
+  {
+    code: 'settings.manage',
+    module: 'settings',
+    description:
+      'Alterar o perfil da empresa, configurações, câmbios, séries documentais e calendários.',
+  },
+  {
+    code: 'bank_accounts.read',
+    module: 'settings',
+    description: 'Ver as contas bancárias institucionais.',
+  },
+  {
+    code: 'bank_accounts.manage',
+    module: 'settings',
+    description:
+      'Registar e inactivar contas bancárias institucionais (com aprovação, se configurada).',
+  },
+  {
     code: 'audit.read',
     module: 'audit',
     description: 'Consultar o registo de auditoria da empresa.',

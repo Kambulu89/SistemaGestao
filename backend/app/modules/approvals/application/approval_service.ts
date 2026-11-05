@@ -19,6 +19,82 @@ import {
 } from '#modules/approvals/infrastructure/approval_repository'
 
 const repository = new ApprovalRepository()
+
+export type ApprovalOutcome = 'APPROVED' | 'REJECTED' | 'CANCELLED'
+
+/**
+ * Efeito da conclusão de um pedido no módulo dono do assunto, executado na **mesma** transacção da decisão (ou o
+ * pedido e o registo mudam juntos, ou nada muda). Registado no arranque (`start/approval_subjects.ts`).
+ */
+export type SubjectHandler = (
+  scope: TenantScope,
+  subjectId: string,
+  outcome: ApprovalOutcome
+) => Promise<void>
+const handlers = new Map<string, SubjectHandler>()
+
+export function registerSubjectHandler(subjectType: string, handler: SubjectHandler) {
+  handlers.set(subjectType, handler)
+}
+
+async function completeSubject(
+  scope: TenantScope,
+  request: ApprovalRequest,
+  outcome: ApprovalOutcome
+) {
+  if (request.subjectType === 'manual' || !request.subjectId) return
+  const handler = handlers.get(request.subjectType)
+  if (!handler) throw new Error(`Sem efeito registado para o assunto ${request.subjectType}.`)
+  await handler(scope, request.subjectId, outcome)
+}
+
+/**
+ * Submete um registo de outro módulo a aprovação, na transacção de quem chama. O workflow tem de estar publicado e
+ * ser do mesmo tipo de assunto. Devolve o id do pedido.
+ */
+export async function submitForSubject(
+  scope: TenantScope,
+  input: {
+    workflowId: string
+    subjectType: string
+    subjectId: string
+    title: string
+    description?: string | null
+  }
+) {
+  const wf = await repository.findWorkflow(scope, input.workflowId)
+  if (!wf || wf.status !== 'ACTIVE' || wf.subjectType !== input.subjectType)
+    throw ApiError.conflict(
+      'APPROVAL_WORKFLOW_UNAVAILABLE',
+      'O workflow de aprovação configurado não está publicado.'
+    )
+  const id = await repository.insertRequest(scope, {
+    workflowId: wf.id,
+    subjectType: input.subjectType,
+    subjectId: input.subjectId,
+    title: input.title.slice(0, 200),
+    description: input.description ?? null,
+    firstStep: wf.steps[0].sequence,
+  })
+  await audit(scope, {
+    action: 'approval_request.submitted',
+    entityType: 'approval_request',
+    entityId: id,
+    metadata: { workflowCode: wf.code, subjectType: input.subjectType, subjectId: input.subjectId },
+  })
+  await new ApprovalRequestService().notifyCurrentApprovers(scope, id, input.title)
+  return id
+}
+
+/** Workflow publicado deste tipo de assunto? (para validar configurações). */
+export async function isActiveWorkflowFor(
+  scope: TenantScope,
+  workflowId: string,
+  subjectType: string
+) {
+  const wf = await repository.findWorkflow(scope, workflowId)
+  return !!wf && wf.status === 'ACTIVE' && wf.subjectType === subjectType
+}
 const WORKFLOW_FIELDS = ['name', 'description', 'subjectType', 'steps'] as const
 
 /** Definições de workflow: só se alteram em DRAFT; publicar valida aprovadores; retirar impede pedidos novos. */
@@ -359,6 +435,7 @@ export class ApprovalRequestService {
           changes: { status: { from: 'PENDING', to: 'APPROVED' } },
         })
       if (status !== 'PENDING') {
+        await completeSubject(scope, request, status)
         await notify(scope, [request.requestedBy.membershipId], {
           type: status === 'APPROVED' ? 'approval.approved' : 'approval.rejected',
           title: `${status === 'APPROVED' ? 'Aprovado' : 'Rejeitado'}: ${request.title}`,
@@ -383,6 +460,7 @@ export class ApprovalRequestService {
       if (request.status !== 'PENDING')
         throw ApiError.conflict('REQUEST_CLOSED', 'O pedido já não está pendente.')
       await repository.setRequestState(scope, id, 'CANCELLED', null)
+      await completeSubject(scope, request, 'CANCELLED')
       await audit(scope, {
         action: 'approval_request.cancelled',
         entityType: 'approval_request',
@@ -405,6 +483,10 @@ export class ApprovalRequestService {
   /** Centro de tarefas: etapas que o membro pode decidir agora. */
   pendingTasks(context: TenantContext) {
     return runInTenant(context, (scope) => repository.pendingSlots(scope, context.membershipId))
+  }
+
+  notifyCurrentApprovers(scope: TenantScope, requestId: string, title: string) {
+    return this.notifyApprovers(scope, requestId, title)
   }
 
   private async notifyApprovers(scope: TenantScope, requestId: string, title: string) {

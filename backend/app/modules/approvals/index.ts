@@ -2,6 +2,10 @@
 export {
   ApprovalRequestService,
   canViewRequest,
+  registerSubjectHandler,
+  submitForSubject,
+  isActiveWorkflowFor,
+  type ApprovalOutcome,
   approvalStats,
   searchApprovals,
   WorkflowService,

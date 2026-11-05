@@ -2,10 +2,11 @@ import type { ErrorDetail } from '#shared/http/api_error'
 import { isUuid } from '#shared/db/sql'
 
 /**
- * Assuntos que podem ser aprovados. Hoje só `manual` (pedido avulso com título e descrição, sem registo associado):
- * os módulos de negócio acrescentam aqui o seu tipo quando existirem, com o efeito da aprovação no próprio módulo.
+ * Assuntos que podem ser aprovados: `manual` (pedido avulso, sem registo associado) e os registos de módulos que
+ * submetem aprovações (`bank_account`: alteração de dados bancários institucionais). Cada módulo regista o efeito
+ * da conclusão no próprio módulo (`registerSubjectHandler`).
  */
-export const SUBJECT_TYPES = ['manual'] as const
+export const SUBJECT_TYPES = ['manual', 'bank_account'] as const
 export type SubjectType = (typeof SUBJECT_TYPES)[number]
 
 export type WorkflowStatus = 'DRAFT' | 'ACTIVE' | 'RETIRED'

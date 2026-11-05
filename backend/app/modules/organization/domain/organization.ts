@@ -67,6 +67,48 @@ const validTo: Field = {
 }
 const name: Field = { key: 'name', required: true, check: text(160, 2), normalize: trim }
 
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const optional = (key: string, max: number): Field => ({
+  key,
+  check: optionalText(max),
+  normalize: trim,
+})
+const email: Field = {
+  key: 'email',
+  check: (v) =>
+    v === null || (typeof v === 'string' && v.length <= 254 && EMAIL.test(v))
+      ? null
+      : 'Email inválido.',
+  normalize: (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v),
+}
+const phone: Field = {
+  key: 'phone',
+  check: (v) =>
+    v === null || (typeof v === 'string' && /^[+0-9 ()-]{6,40}$/.test(v))
+      ? null
+      : 'Telefone: dígitos, espaço, + ( ) -.',
+  normalize: trim,
+}
+const website: Field = {
+  key: 'website',
+  check: (v) =>
+    v === null || (typeof v === 'string' && /^https?:\/\/[^\s]{3,190}$/.test(v))
+      ? null
+      : 'Endereço web (http/https).',
+  normalize: trim,
+}
+/** Morada estruturada (Angola: província, município, comuna, bairro); texto livre, sem listas oficiais pré-carregadas. */
+const ADDRESS: Field[] = [
+  optional('addressLine', 200),
+  optional('neighbourhood', 120),
+  optional('commune', 120),
+  optional('municipality', 120),
+  optional('province', 120),
+  optional('postalCode', 20),
+]
+const manager: Field = { key: 'managerMembershipId', check: uuidOrNull }
+const costCenter: Field = { key: 'costCenterId', check: uuidOrNull }
+
 export const FIELDS: Record<OrgKind, Field[]> = {
   legalEntities: [
     code,
@@ -95,6 +137,22 @@ export const FIELDS: Record<OrgKind, Field[]> = {
         typeof v === 'string' && /^[A-Za-z]{3}$/.test(v.trim()) ? null : 'Moeda ISO 4217.',
       normalize: upper,
     },
+    optional('taxRegime', 60),
+    {
+      key: 'vatRegistered',
+      check: (v) => (typeof v === 'boolean' ? null : 'Sim ou não.'),
+    },
+    {
+      key: 'fiscalYearStartMonth',
+      check: (v) =>
+        Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 12 ? null : 'Mês de 1 a 12.',
+    },
+    email,
+    phone,
+    website,
+    ...ADDRESS,
+    optional('representativeName', 160),
+    optional('representativeRole', 120),
     status,
     validFrom,
     validTo,
@@ -108,6 +166,11 @@ export const FIELDS: Record<OrgKind, Field[]> = {
       check: (v) =>
         BRANCH_TYPES.includes(v as never) ? null : `Tipo: ${BRANCH_TYPES.join(', ')}.`,
     },
+    email,
+    phone,
+    ...ADDRESS,
+    manager,
+    costCenter,
     status,
     validFrom,
     validTo,
@@ -118,6 +181,8 @@ export const FIELDS: Record<OrgKind, Field[]> = {
     { key: 'legalEntityId', required: true, immutable: true, check: uuidOrNull },
     { key: 'branchId', check: uuidOrNull },
     { key: 'parentId', check: uuidOrNull },
+    manager,
+    costCenter,
     status,
     validFrom,
     validTo,
@@ -136,6 +201,9 @@ export const FIELDS: Record<OrgKind, Field[]> = {
           : 'Nível 1 a 20.',
     },
     { key: 'description', check: optionalText(4000), normalize: trim },
+    optional('jobFunction', 120),
+    optional('requirements', 4000),
+    optional('responsibilities', 4000),
     status,
     validFrom,
     validTo,
@@ -146,6 +214,7 @@ export const FIELDS: Record<OrgKind, Field[]> = {
     { key: 'legalEntityId', required: true, immutable: true, check: uuidOrNull },
     { key: 'parentId', check: uuidOrNull },
     { key: 'departmentId', check: uuidOrNull },
+    manager,
     status,
     validFrom,
     validTo,

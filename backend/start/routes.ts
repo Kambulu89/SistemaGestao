@@ -23,6 +23,7 @@ const ApprovalsController = () => import('#modules/approvals/http/approvals_cont
 const AttachmentsController = () => import('#modules/attachments/http/attachments_controller')
 const TasksController = () => import('#modules/tasks/http/tasks_controller')
 const DashboardController = () => import('#modules/dashboard/http/dashboard_controller')
+const SettingsController = () => import('#modules/settings/http/settings_controller')
 
 router
   .group(() => {
@@ -68,7 +69,14 @@ router
               })
               .use(middleware.can({ permission: 'members.read' }))
             router
-              .post('members/invitations', [MembersController, 'invite'])
+              .group(() => {
+                router.post('members/invitations', [MembersController, 'invite'])
+                router.post('members/:id/invitation/resend', [
+                  MembersController,
+                  'resendInvitation',
+                ])
+                router.delete('members/:id/invitation', [MembersController, 'revokeInvitation'])
+              })
               .use(middleware.can({ permission: 'members.invite' }))
             router
               .group(() => {
@@ -86,7 +94,12 @@ router
             router
               .group(() => {
                 router.get('organization/:kind', [OrganizationController, 'index'])
+                router.get('organization/:kind/tree', [OrganizationController, 'tree'])
                 router.get('organization/:kind/:id', [OrganizationController, 'show'])
+                router.get('organization/:kind/:id/dependents', [
+                  OrganizationController,
+                  'dependents',
+                ])
               })
               .use([
                 middleware.can({ permission: 'organization.read' }),
@@ -105,6 +118,74 @@ router
             router
               .get('tenant/subscription', [TenantSubscriptionController, 'show'])
               .use(middleware.can({ permission: 'subscription.read' }))
+
+            // Administração empresarial: perfil, configurações e dados de referência (Prompt 05).
+            router
+              .group(() => {
+                router.get('company/profile', [SettingsController, 'profile'])
+                router.get('settings', [SettingsController, 'settings'])
+                router
+                  .get('exchange-rates', [SettingsController, 'index'])
+                  .as('exchange_rates.index')
+                router.get('exchange-rates/lookup', [SettingsController, 'lookupRate'])
+                router
+                  .get('exchange-rates/:id', [SettingsController, 'show'])
+                  .as('exchange_rates.show')
+                router
+                  .get('document-series', [SettingsController, 'index'])
+                  .as('document_series.index')
+                router
+                  .get('document-series/:id', [SettingsController, 'show'])
+                  .as('document_series.show')
+                router.get('document-series/:id/preview', [SettingsController, 'previewSeries'])
+                router.get('calendars', [SettingsController, 'index']).as('calendars.index')
+                router.get('calendars/:id', [SettingsController, 'show']).as('calendars.show')
+                router.get('calendars/:id/working-days', [SettingsController, 'workingDays'])
+              })
+              .use(middleware.can({ permission: 'settings.read' }))
+            router
+              .group(() => {
+                router.put('company/profile', [SettingsController, 'updateProfile'])
+                router.put('settings', [SettingsController, 'updateSettings'])
+                router
+                  .post('exchange-rates', [SettingsController, 'store'])
+                  .as('exchange_rates.store')
+                router
+                  .patch('exchange-rates/:id', [SettingsController, 'update'])
+                  .as('exchange_rates.update')
+                router
+                  .post('document-series', [SettingsController, 'store'])
+                  .as('document_series.store')
+                router
+                  .patch('document-series/:id', [SettingsController, 'update'])
+                  .as('document_series.update')
+                router.post('calendars', [SettingsController, 'store']).as('calendars.store')
+                router.patch('calendars/:id', [SettingsController, 'update']).as('calendars.update')
+                router.post('calendars/:id/holidays', [SettingsController, 'addHoliday'])
+                router.delete('calendars/:id/holidays/:holidayId', [
+                  SettingsController,
+                  'removeHoliday',
+                ])
+              })
+              .use(middleware.can({ permission: 'settings.manage' }))
+            router
+              .group(() => {
+                router.get('bank-accounts', [SettingsController, 'index']).as('bank_accounts.index')
+                router
+                  .get('bank-accounts/:id', [SettingsController, 'show'])
+                  .as('bank_accounts.show')
+              })
+              .use(middleware.can({ permission: 'bank_accounts.read' }))
+            router
+              .group(() => {
+                router
+                  .post('bank-accounts', [SettingsController, 'store'])
+                  .as('bank_accounts.store')
+                router
+                  .patch('bank-accounts/:id', [SettingsController, 'update'])
+                  .as('bank_accounts.update')
+              })
+              .use(middleware.can({ permission: 'bank_accounts.manage' }))
 
             router
               .get('audit-events', [AuditController, 'index'])

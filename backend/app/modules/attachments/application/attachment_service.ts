@@ -19,7 +19,8 @@ import { LocalStorage } from '#modules/attachments/infrastructure/local_storage'
  * pertence. `access` devolve `null` se o registo não existe ou não é visível (404), senão se pode ler e/ou escrever.
  */
 interface SubjectPolicy {
-  feature: string
+  /** Funcionalidade contratada exigida (`null`: núcleo, sempre disponível). */
+  feature: string | null
   access: (scope: TenantScope, id: string) => Promise<{ read: boolean; write: boolean } | null>
 }
 
@@ -34,6 +35,30 @@ function policies(): Record<string, SubjectPolicy> {
         const manager = (await effectivePermissions(scope)).tenant.has('approvals.manage')
         return { read: true, write: (own && request.status === 'PENDING') || manager }
       },
+    },
+  }
+  // Documentos do perfil da empresa (o assunto é o próprio tenant).
+  map.tenant_profile = {
+    feature: null,
+    access: async (scope, id) => {
+      if (id !== scope.context.tenantId) return null
+      const held = (await effectivePermissions(scope)).tenant
+      if (!held.has('settings.read')) return null
+      return { read: true, write: held.has('settings.manage') }
+    },
+  }
+  // Comprovativos de contas bancárias (ex.: declaração do banco).
+  map.bank_account = {
+    feature: null,
+    access: async (scope, id) => {
+      const held = (await effectivePermissions(scope)).tenant
+      if (!held.has('bank_accounts.read')) return null
+      const r = await scope.trx.rawQuery(
+        'select 1 from bank_accounts where tenant_id = ? and id = ?',
+        [scope.context.tenantId, id]
+      )
+      if (r.rows.length === 0) return null
+      return { read: true, write: held.has('bank_accounts.manage') }
     },
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
@@ -90,7 +115,7 @@ async function authorize(
 ) {
   const policy = policies()[subjectType]
   if (!policy) throw ApiError.notFound()
-  await assertEntitled(scope.context.tenantId, policy.feature)
+  if (policy.feature) await assertEntitled(scope.context.tenantId, policy.feature)
   const access = await policy.access(scope, subjectId)
   if (!access) throw ApiError.notFound()
   if (!access[need]) throw ApiError.forbidden()

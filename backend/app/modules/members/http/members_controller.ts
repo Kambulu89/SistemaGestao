@@ -59,6 +59,14 @@ export default class MembersController {
     return created(ctx, result, `/api/v1/members/${result.member.id}`)
   }
 
+  async resendInvitation(ctx: HttpContext) {
+    return ok(ctx, await members.resendInvitation(ctx.tenantContext!, uuid(ctx, 'id')))
+  }
+
+  async revokeInvitation(ctx: HttpContext) {
+    return ok(ctx, await members.revokeInvitation(ctx.tenantContext!, uuid(ctx, 'id')))
+  }
+
   async suspend(ctx: HttpContext) {
     const { expectedVersion } = await ctx.request.validateUsing(versionValidator)
     return ok(

@@ -79,6 +79,19 @@ export default class OrganizationController {
     return ok(ctx, page.items, { total: page.total })
   }
 
+  async dependents(ctx: HttpContext) {
+    return ok(ctx, await service.dependents(ctx.tenantContext!, kindOf(ctx), idOf(ctx)))
+  }
+
+  async tree(ctx: HttpContext) {
+    const legalEntityId = ctx.request.qs().legalEntityId
+    if (legalEntityId !== undefined && !isUuid(legalEntityId))
+      throw ApiError.validation([
+        { path: 'legalEntityId', code: 'INVALID', message: 'Identificador inválido.' },
+      ])
+    return ok(ctx, await service.tree(ctx.tenantContext!, kindOf(ctx), legalEntityId))
+  }
+
   async show(ctx: HttpContext) {
     return ok(ctx, await service.get(ctx.tenantContext!, kindOf(ctx), idOf(ctx)))
   }

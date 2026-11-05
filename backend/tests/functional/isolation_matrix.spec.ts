@@ -76,8 +76,57 @@ async function populate(client: any) {
   const attachment = ok(await upload(client, s, 'legal_entity', le.id))
   const notification = (await as(client, approver.session).get('/api/v1/me/notifications')).body()
     .data[0]
+  const rate = ok(
+    await as(client, s).post('/api/v1/exchange-rates', {
+      fromCurrency: 'USD',
+      toCurrency: 'AOA',
+      rate: '900',
+      validOn: '2026-01-02',
+    })
+  )
+  const series = ok(
+    await as(client, s).post('/api/v1/document-series', {
+      legalEntityId: le.id,
+      documentType: 'INVOICE',
+      code: 'FTA',
+    })
+  )
+  const calendar = ok(
+    await as(client, s).post('/api/v1/calendars', {
+      code: 'CALA',
+      name: 'Calendário A',
+      countryCode: 'AO',
+    })
+  )
+  const holiday = ok(
+    await as(client, s).post(`/api/v1/calendars/${calendar.id}/holidays`, {
+      date: '2026-11-11',
+      name: 'Independência',
+    })
+  )
+  const bank = ok(
+    await as(client, s).post('/api/v1/bank-accounts', {
+      legalEntityId: le.id,
+      holderName: 'Entidade A, Lda.',
+      bankName: 'Banco A',
+      accountNumber: '123456789',
+      currency: 'AOA',
+    })
+  )
+  ok(
+    await as(client, s).put('/api/v1/company/profile', {
+      expectedVersion: 0,
+      displayName: 'Marca A',
+    }),
+    200
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    rate,
+    series,
+    calendar,
+    holiday,
+    bank,
     tenantId: tenant.id,
     le,
     branch,
@@ -133,6 +182,33 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.get(`/api/v1/attachments?subjectType=legal_entity&subjectId=${a.le.id}`),
       ],
       ['marcar notificação', B.post(`/api/v1/me/notifications/${a.notification.id}/read`)],
+      ['GET câmbio', B.get(`/api/v1/exchange-rates/${a.rate.id}`)],
+      ['PATCH câmbio', B.patch(`/api/v1/exchange-rates/${a.rate.id}`, { ...v, rate: '1' })],
+      ['GET série', B.get(`/api/v1/document-series/${a.series.id}`)],
+      ['PATCH série', B.patch(`/api/v1/document-series/${a.series.id}`, { ...v, name: 'x' })],
+      ['pré-visualizar série', B.get(`/api/v1/document-series/${a.series.id}/preview`)],
+      ['GET calendário', B.get(`/api/v1/calendars/${a.calendar.id}`)],
+      [
+        'dias úteis',
+        B.get(`/api/v1/calendars/${a.calendar.id}/working-days?from=2026-11-01&to=2026-11-30`),
+      ],
+      [
+        'feriado em calendário de A',
+        B.post(`/api/v1/calendars/${a.calendar.id}/holidays`, {
+          date: '2026-12-25',
+          name: 'Natal',
+        }),
+      ],
+      ['remover feriado', B.delete(`/api/v1/calendars/${a.calendar.id}/holidays/${a.holiday.id}`)],
+      ['GET conta bancária', B.get(`/api/v1/bank-accounts/${a.bank.id}`)],
+      [
+        'PATCH conta bancária',
+        B.patch(`/api/v1/bank-accounts/${a.bank.id}`, { ...v, isDefault: true }),
+      ],
+      [
+        'dependentes da entidade',
+        B.get(`/api/v1/organization/legal-entities/${a.le.id}/dependents`),
+      ],
     ]
     const wrong: string[] = []
     for (const [name, promise] of attempts) {
@@ -173,6 +249,11 @@ test.group('isolamento | matriz entre empresas', (group) => {
       B.get('/api/v1/audit-events?limit=200'),
       B.get('/api/v1/me/notifications'),
       B.get('/api/v1/me/tasks'),
+      B.get('/api/v1/exchange-rates'),
+      B.get('/api/v1/document-series'),
+      B.get('/api/v1/calendars'),
+      B.get('/api/v1/bank-accounts'),
+      B.get('/api/v1/organization/departments/tree'),
     ])
     const idsOfA = new Set(
       [
@@ -184,6 +265,10 @@ test.group('isolamento | matriz entre empresas', (group) => {
         a.request.id,
         a.delegation.id,
         a.audit.id,
+        a.rate.id,
+        a.series.id,
+        a.calendar.id,
+        a.bank.id,
       ].map(String)
     )
     const leaked = lists.flatMap((r) =>
@@ -219,6 +304,16 @@ test.group('isolamento | matriz entre empresas', (group) => {
       a.attachment.id,
     ])
     assert.equal(att.rows[0].status, 'ACTIVE')
+    // Perfil e configurações são por empresa: B vê os seus (vazios), nunca os de A.
+    const profile = (await B.get('/api/v1/company/profile')).body().data
+    assert.notEqual(profile.displayName, 'Marca A')
+    const hol = await owner.rawQuery(
+      'select count(*)::int as n from calendar_holidays where id = ?',
+      [a.holiday.id]
+    )
+    assert.equal(hol.rows[0].n, 1)
+    const lookup = await B.get('/api/v1/exchange-rates/lookup?from=USD&to=AOA&date=2026-02-01')
+    lookup.assertStatus(404)
   })
 
   test('com a sessão de B e X-Tenant-Id de A todas as rotas de empresa são negadas', async ({
@@ -238,6 +333,10 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/attachments/${a.attachment.id}/content`,
       '/api/v1/audit-events',
       '/api/v1/me/notifications',
+      '/api/v1/company/profile',
+      '/api/v1/settings',
+      '/api/v1/exchange-rates',
+      `/api/v1/bank-accounts/${a.bank.id}`,
     ]) {
       const r = await spoof.get(url)
       assert.equal(r.status(), 403, url)

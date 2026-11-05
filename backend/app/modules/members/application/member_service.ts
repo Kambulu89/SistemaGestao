@@ -12,6 +12,7 @@ import {
 import { AssignmentService, type Assignment } from '#modules/rbac/index'
 import { assertWithinLimit } from '#modules/subscription/index'
 import { audit, writeAudit } from '#modules/audit/index'
+import { tenantSettings } from '#modules/settings/index'
 
 const memberships = new MembershipRepository()
 const assignments = new AssignmentService()
@@ -20,6 +21,16 @@ const tenants = new TenantRepository()
 
 export interface MemberView extends Member {
   roles: Pick<Assignment, 'id' | 'roleId' | 'roleCode' | 'scopeType' | 'scopeId'>[]
+  /** Validade do convite pendente (só membros convidados). */
+  invitationExpiresAt?: Date | null
+}
+
+async function withExpiry(views: MemberView[]) {
+  const invited = views.filter((v) => v.status === 'INVITED').map((v) => v.id)
+  const expiry = await accounts.invitationExpiry(invited)
+  return views.map((v) =>
+    v.status === 'INVITED' ? { ...v, invitationExpiresAt: expiry.get(v.id) ?? null } : v
+  )
 }
 
 const withRoles = (member: Member, all: Assignment[]): MemberView => ({
@@ -58,7 +69,7 @@ export class MemberService {
         page.items.map((m) => m.id)
       )
       return { items: page.items.map((m) => withRoles(m, roles)), total: page.total }
-    })
+    }).then(async (page) => ({ ...page, items: await withExpiry(page.items) }))
   }
 
   get(context: TenantContext, id: string): Promise<MemberView> {
@@ -66,7 +77,7 @@ export class MemberService {
       const member = await memberships.find(scope, id)
       if (!member) throw ApiError.notFound()
       return withRoles(member, await assignments.assignments(scope, [id]))
-    })
+    }).then(async (view) => (await withExpiry([view]))[0])
   }
 
   /**
@@ -82,7 +93,9 @@ export class MemberService {
     }
   ): Promise<{ member: MemberView; delivery: DeliveryStatus }> {
     const user = await accounts.findOrCreateForInvitation(input.email, input.fullName)
+    let ttlDays = 7
     const membershipId = await runInTenant(context, async (scope) => {
+      ttlDays = (await tenantSettings(scope)).invitationTtlDays
       // Limite contratado de membros: contam todos os que não foram revogados (convidados incluídos).
       await assertWithinLimit(scope.trx, context.tenantId, 'members.max', async () => {
         const r = await scope.trx.rawQuery(
@@ -113,9 +126,61 @@ export class MemberService {
       user,
       context.tenantId,
       membershipId,
-      tenant!.name
+      tenant!.name,
+      ttlDays
     )
     return { member: await this.get(context, membershipId), delivery }
+  }
+
+  /** Reenvia o convite de um membro ainda convidado (o anterior deixa de valer). */
+  async resendInvitation(context: TenantContext, id: string) {
+    const { member, ttlDays } = await runInTenant(context, async (scope) => {
+      const found = await memberships.find(scope, id, true)
+      if (!found) throw ApiError.notFound()
+      if (found.status !== 'INVITED')
+        throw ApiError.conflict(
+          'NOT_INVITED',
+          'Só se reenvia o convite de quem ainda não o aceitou.'
+        )
+      await audit(scope, {
+        action: 'member.invitation_resent',
+        entityType: 'membership',
+        entityId: id,
+      })
+      return { member: found, ttlDays: (await tenantSettings(scope)).invitationTtlDays }
+    })
+    const tenant = await tenants.find(context.tenantId)
+    const user = { id: member.userId, email: member.email } as Parameters<
+      AccountService['issueInvitation']
+    >[0]
+    const delivery = await accounts.issueInvitation(
+      user,
+      context.tenantId,
+      id,
+      tenant!.name,
+      ttlDays
+    )
+    return { member: await this.get(context, id), delivery }
+  }
+
+  /** Revoga um convite pendente: a membership fica REVOKED e a ligação do email deixa de funcionar. */
+  async revokeInvitation(context: TenantContext, id: string) {
+    const member = await runInTenant(context, async (scope) => {
+      const found = await memberships.find(scope, id, true)
+      if (!found) throw ApiError.notFound()
+      if (found.status !== 'INVITED')
+        throw ApiError.conflict('NOT_INVITED', 'Só se revoga um convite ainda não aceite.')
+      await memberships.setStatus(scope, id, found.version, 'REVOKED')
+      await audit(scope, {
+        action: 'member.invitation_revoked',
+        entityType: 'membership',
+        entityId: id,
+        changes: { status: { from: 'INVITED', to: 'REVOKED' } },
+      })
+      return found
+    })
+    await accounts.revokeInvitations(member.userId, context.tenantId)
+    return this.get(context, id)
   }
 
   /** Público: aceita o convite (activa a membership na mesma transacção que consome o token). */
