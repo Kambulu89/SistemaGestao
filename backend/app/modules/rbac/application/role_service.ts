@@ -3,6 +3,9 @@ import { runInTenant, type TenantContext } from '#modules/tenancy/index'
 import { normalizeRole, type Role } from '#modules/rbac/domain/role'
 import { RbacRepository } from '#modules/rbac/infrastructure/rbac_repository'
 import { effectivePermissions } from '#modules/rbac/application/authorization'
+import { audit, diff } from '#modules/audit/index'
+
+const ROLE_FIELDS = ['code', 'name', 'description', 'status', 'permissionCodes'] as const
 
 const repository = new RbacRepository()
 
@@ -46,7 +49,14 @@ export class RoleService {
     if (!values) throw ApiError.validation(issues)
     return runInTenant(context, async (scope) => {
       await assertGrantable(scope, values.permissionCodes)
-      return repository.insertRole(scope, values)
+      const role = await repository.insertRole(scope, values)
+      await audit(scope, {
+        action: 'role.created',
+        entityType: 'role',
+        entityId: role.id,
+        changes: diff(null, { ...role }, ROLE_FIELDS),
+      })
+      return role
     })
   }
 
@@ -67,7 +77,11 @@ export class RoleService {
         scope,
         values.permissionCodes.filter((code) => !current.permissionCodes.includes(code))
       )
-      return repository.updateRole(scope, id, input.expectedVersion, values)
+      const role = await repository.updateRole(scope, id, input.expectedVersion, values)
+      const changes = diff({ ...current }, { ...role }, ROLE_FIELDS)
+      if (changes)
+        await audit(scope, { action: 'role.updated', entityType: 'role', entityId: id, changes })
+      return role
     })
   }
 
@@ -84,6 +98,12 @@ export class RoleService {
         )
       }
       await repository.deleteRole(scope, id)
+      await audit(scope, {
+        action: 'role.deleted',
+        entityType: 'role',
+        entityId: id,
+        metadata: { code: current.code, name: current.name },
+      })
     })
   }
 }

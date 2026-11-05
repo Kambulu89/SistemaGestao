@@ -32,7 +32,8 @@ cp .env.example .env                # DB_PASSWORD e DB_OWNER_PASSWORD iguais aos
 node ace generate:key               # gera APP_KEY no .env
 npm run migrate                     # migrações com a conta dona
 node ace catalog:sync               # catálogos de permissões e de funcionalidades
-node ace plan:create BASE "Base" --feature=organization --limit=members.max=25 --limit=legal_entities.max=5 --publish
+node ace plan:create BASE "Base" --feature=organization --feature=approvals --limit=members.max=25 \
+  --limit=legal_entities.max=5 --limit=attachments.storage_mb=100 --publish
 node ace user:create --email=admin@exemplo.ao --name="Administrador"   # pede a palavra-passe
 node ace tenant:create ACME "Acme, Lda." --admin-email=admin@exemplo.ao
 node ace subscription:start ACME BASE --skip-trial   # sem subscrição, o tenant não tem funcionalidades
@@ -74,5 +75,18 @@ funcionalidades efectivas da empresa. A administração da plataforma (`users.is
 `X-Tenant-Id`) fica em `/api/v1/platform`: `features`, `plans` (criar, editar em rascunho, `publish`, `retire`),
 `tenants` (listar, criar, suspender), `tenants/:id/subscription` (ver, iniciar), `subscriptions/:id/transitions` e
 `tenants/:id/entitlements/:feature` (PUT/DELETE de excepções com motivo e validade).
+
+Transversais (bloco 3.6), todas com `X-Tenant-Id`:
+
+- `GET /api/v1/audit-events` (`audit.read`): auditoria da empresa, filtros `entityType`, `entityId`, `action` (ou
+  prefixo `member.*`), `actorUserId`, `from`, `to`.
+- `GET /api/v1/me/notifications` (`?unread=true`), `POST /api/v1/me/notifications/:id/read`,
+  `POST /api/v1/me/notifications/read-all`; `GET /api/v1/me/tasks` (centro de tarefas).
+- `/api/v1/approvals` (funcionalidade `approvals`): `workflows` (`approvals.manage`: criar, editar em rascunho,
+  `publish`, `retire`, eliminar rascunho), `available-workflows` e `POST requests` (`approvals.request`), `requests`,
+  `requests/:id`, `requests/:id/decisions`, `requests/:id/cancel`, `delegations`, `delegations/:id/revoke`.
+- `/api/v1/attachments`: `GET ?subjectType=&subjectId=`, `POST` (multipart: `file`, `subjectType`, `subjectId`),
+  `GET :id/content`, `DELETE :id`. O acesso herda do registo (`legal_entity`, `branch`, `department`, `position`,
+  `cost_center`, `approval_request`).
 
 O histórico do projecto anterior (SistemaGestao) continua no Git, até ao commit `2ead09c`.

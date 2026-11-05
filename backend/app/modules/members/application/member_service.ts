@@ -10,6 +10,7 @@ import {
 } from '#modules/tenancy/index'
 import { AssignmentService, type Assignment } from '#modules/rbac/index'
 import { assertWithinLimit } from '#modules/subscription/index'
+import { audit, writeAudit } from '#modules/audit/index'
 
 const memberships = new MembershipRepository()
 const assignments = new AssignmentService()
@@ -92,6 +93,12 @@ export class MemberService {
           role.scopeType ?? 'TENANT',
           role.scopeId ?? null
         )
+      await audit(scope, {
+        action: 'member.invited',
+        entityType: 'membership',
+        entityId: id,
+        metadata: { email: user.email, roles: input.roles ?? [] },
+      })
       return id
     })
     const tenant = await tenants.find(context.tenantId)
@@ -110,13 +117,29 @@ export class MemberService {
       input.token,
       input.password,
       input.fullName,
-      (trx, invitation) =>
-        memberships.activateInvited(
+      async (trx, invitation) => {
+        await memberships.activateInvited(
           trx,
           invitation.tenantId,
           invitation.membershipId,
           invitation.userId
         )
+        await writeAudit(
+          trx,
+          {
+            tenantId: invitation.tenantId,
+            userId: invitation.userId,
+            membershipId: invitation.membershipId,
+            requestId: null,
+          },
+          {
+            action: 'member.invitation_accepted',
+            entityType: 'membership',
+            entityId: invitation.membershipId,
+            changes: { status: { from: 'INVITED', to: 'ACTIVE' } },
+          }
+        )
+      }
     )
   }
 
@@ -140,6 +163,12 @@ export class MemberService {
       }
       if (status === 'SUSPENDED') await assignments.assertNotLastAdmin(scope, id)
       await memberships.setStatus(scope, id, expectedVersion, status)
+      await audit(scope, {
+        action: status === 'SUSPENDED' ? 'member.suspended' : 'member.reactivated',
+        entityType: 'membership',
+        entityId: id,
+        changes: { status: { from: member.status, to: status } },
+      })
       return withRoles(
         (await memberships.find(scope, id))!,
         await assignments.assignments(scope, [id])
@@ -162,7 +191,26 @@ export class MemberService {
         input.scopeType ?? 'TENANT',
         input.scopeId ?? null
       )
-      return withRoles(member, await assignments.assignments(scope, [id]))
+      const after = await assignments.assignments(scope, [id])
+      const added = after.find(
+        (a) =>
+          a.roleId === input.roleId &&
+          a.scopeType === (input.scopeType ?? 'TENANT') &&
+          a.scopeId === (input.scopeId ?? null)
+      )
+      await audit(scope, {
+        action: 'member.role_assigned',
+        entityType: 'membership',
+        entityId: id,
+        metadata: {
+          assignmentId: added?.id ?? null,
+          roleId: input.roleId,
+          roleCode: added?.roleCode ?? null,
+          scopeType: input.scopeType ?? 'TENANT',
+          scopeId: input.scopeId ?? null,
+        },
+      })
+      return withRoles(member, after)
     })
   }
 
@@ -170,7 +218,24 @@ export class MemberService {
     return runInTenant(context, async (scope) => {
       const member = await memberships.find(scope, id, true)
       if (!member) throw ApiError.notFound()
+      const removed = (await assignments.assignments(scope, [id])).find(
+        (a) => a.id === assignmentId
+      )
       await assignments.unassign(scope, id, assignmentId)
+      await audit(scope, {
+        action: 'member.role_unassigned',
+        entityType: 'membership',
+        entityId: id,
+        metadata: removed
+          ? {
+              assignmentId,
+              roleId: removed.roleId,
+              roleCode: removed.roleCode,
+              scopeType: removed.scopeType,
+              scopeId: removed.scopeId,
+            }
+          : { assignmentId },
+      })
       return withRoles(member, await assignments.assignments(scope, [id]))
     })
   }

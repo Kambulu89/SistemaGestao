@@ -34,7 +34,7 @@ export async function addMembership(tenantId: string, userId: string, status = '
 
 export async function cleanDatabase() {
   await owner().rawQuery(
-    'truncate tenant_entitlement_overrides, subscription_events, subscriptions, plan_features, plans, cost_centers, positions, departments, branches, legal_entities, membership_roles, role_permissions, roles, one_time_tokens, tenant_memberships, auth_sessions, rate_limit_counters, users, tenants restart identity cascade'
+    'truncate attachments, approval_delegations, approval_decisions, approval_requests, approval_workflow_steps, approval_workflows, notifications, audit_events, tenant_entitlement_overrides, subscription_events, subscriptions, plan_features, plans, cost_centers, positions, departments, branches, legal_entities, membership_roles, role_permissions, roles, one_time_tokens, tenant_memberships, auth_sessions, rate_limit_counters, users, tenants restart identity cascade'
   )
 }
 

@@ -7,6 +7,249 @@
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
+export class ApprovalDecisionSchema extends BaseModel {
+  static $columns = ['comment', 'createdAt', 'createdBy', 'decidedByMembershipId', 'decision', 'id', 'onBehalfOfMembershipId', 'requestId', 'stepSequence', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ApprovalDecisionSchema.$columns
+  @column()
+  declare comment: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare decidedByMembershipId: string
+  @column()
+  declare decision: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare onBehalfOfMembershipId: string | null
+  @column()
+  declare requestId: string
+  @column()
+  declare stepSequence: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class ApprovalDelegationSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'delegateMembershipId', 'delegatorMembershipId', 'endsAt', 'id', 'reason', 'revokedAt', 'startsAt', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'workflowId'] as const
+  $columns = ApprovalDelegationSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare delegateMembershipId: string
+  @column()
+  declare delegatorMembershipId: string
+  @column.dateTime()
+  declare endsAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare reason: string
+  @column.dateTime()
+  declare revokedAt: DateTime | null
+  @column.dateTime()
+  declare startsAt: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare workflowId: string | null
+}
+
+export class ApprovalRequestSchema extends BaseModel {
+  static $columns = ['completedAt', 'createdAt', 'createdBy', 'currentStep', 'description', 'id', 'requestedByMembershipId', 'status', 'subjectId', 'subjectType', 'tenantId', 'title', 'updatedAt', 'updatedBy', 'version', 'workflowId'] as const
+  $columns = ApprovalRequestSchema.$columns
+  @column.dateTime()
+  declare completedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currentStep: number | null
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare requestedByMembershipId: string
+  @column()
+  declare status: string
+  @column()
+  declare subjectId: string | null
+  @column()
+  declare subjectType: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare workflowId: string
+}
+
+export class ApprovalWorkflowStepSchema extends BaseModel {
+  static $columns = ['approverMembershipId', 'approverRoleId', 'approverType', 'createdAt', 'createdBy', 'id', 'name', 'requiredApprovals', 'sequence', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'workflowId'] as const
+  $columns = ApprovalWorkflowStepSchema.$columns
+  @column()
+  declare approverMembershipId: string | null
+  @column()
+  declare approverRoleId: string | null
+  @column()
+  declare approverType: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string
+  @column()
+  declare requiredApprovals: number
+  @column()
+  declare sequence: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare workflowId: string
+}
+
+export class ApprovalWorkflowSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'description', 'id', 'name', 'publishedAt', 'status', 'subjectType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ApprovalWorkflowSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string
+  @column.dateTime()
+  declare publishedAt: DateTime | null
+  @column()
+  declare status: string
+  @column()
+  declare subjectType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AttachmentSchema extends BaseModel {
+  static $columns = ['contentType', 'createdAt', 'createdBy', 'deletedAt', 'deletedBy', 'fileName', 'id', 'sha256', 'sizeBytes', 'status', 'storageKey', 'subjectId', 'subjectType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AttachmentSchema.$columns
+  @column()
+  declare contentType: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.dateTime()
+  declare deletedAt: DateTime | null
+  @column()
+  declare deletedBy: string | null
+  @column()
+  declare fileName: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare sha256: string
+  @column()
+  declare sizeBytes: bigint | number
+  @column()
+  declare status: string
+  @column()
+  declare storageKey: string
+  @column()
+  declare subjectId: string
+  @column()
+  declare subjectType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AuditEventSchema extends BaseModel {
+  static $columns = ['action', 'actorMembershipId', 'actorUserId', 'changes', 'createdAt', 'createdBy', 'entityId', 'entityType', 'id', 'metadata', 'occurredAt', 'requestId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AuditEventSchema.$columns
+  @column()
+  declare action: string
+  @column()
+  declare actorMembershipId: string | null
+  @column()
+  declare actorUserId: string | null
+  @column()
+  declare changes: any | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare entityId: string | null
+  @column()
+  declare entityType: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare metadata: any | null
+  @column.dateTime()
+  declare occurredAt: DateTime
+  @column()
+  declare requestId: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class AuthSessionSchema extends BaseModel {
   static $columns = ['createdAt', 'expiresAt', 'id', 'ip', 'lastSeenAt', 'revokedAt', 'tokenHash', 'updatedAt', 'userAgent', 'userId'] as const
   $columns = AuthSessionSchema.$columns
@@ -214,6 +457,39 @@ export class MembershipRoleSchema extends BaseModel {
   declare scopeType: string
   @column()
   declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class NotificationSchema extends BaseModel {
+  static $columns = ['body', 'createdAt', 'createdBy', 'id', 'readAt', 'recipientMembershipId', 'subjectId', 'subjectType', 'tenantId', 'title', 'type', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = NotificationSchema.$columns
+  @column()
+  declare body: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.dateTime()
+  declare readAt: DateTime | null
+  @column()
+  declare recipientMembershipId: string
+  @column()
+  declare subjectId: string | null
+  @column()
+  declare subjectType: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare title: string
+  @column()
+  declare type: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
   @column()

@@ -33,6 +33,31 @@ export type ScannedRoutes = {
     'organization.store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'organization.update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'tenant_subscription.show': { paramsTuple?: []; params?: {} }
+    'audit.index': { paramsTuple?: []; params?: {} }
+    'notifications.index': { paramsTuple?: []; params?: {} }
+    'notifications.read_all': { paramsTuple?: []; params?: {} }
+    'notifications.read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'tasks.index': { paramsTuple?: []; params?: {} }
+    'approvals.workflows': { paramsTuple?: []; params?: {} }
+    'approvals.create_workflow': { paramsTuple?: []; params?: {} }
+    'approvals.workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.delete_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.publish_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.retire_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.active_workflows': { paramsTuple?: []; params?: {} }
+    'approvals.submit': { paramsTuple?: []; params?: {} }
+    'approvals.requests': { paramsTuple?: []; params?: {} }
+    'approvals.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.delegations': { paramsTuple?: []; params?: {} }
+    'approvals.create_delegation': { paramsTuple?: []; params?: {} }
+    'approvals.revoke_delegation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'attachments.index': { paramsTuple?: []; params?: {} }
+    'attachments.store': { paramsTuple?: []; params?: {} }
+    'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'attachments.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
     'platform.plans': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
@@ -63,6 +88,17 @@ export type ScannedRoutes = {
     'organization.index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'organization.show': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'tenant_subscription.show': { paramsTuple?: []; params?: {} }
+    'audit.index': { paramsTuple?: []; params?: {} }
+    'notifications.index': { paramsTuple?: []; params?: {} }
+    'tasks.index': { paramsTuple?: []; params?: {} }
+    'approvals.workflows': { paramsTuple?: []; params?: {} }
+    'approvals.workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.active_workflows': { paramsTuple?: []; params?: {} }
+    'approvals.requests': { paramsTuple?: []; params?: {} }
+    'approvals.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.delegations': { paramsTuple?: []; params?: {} }
+    'attachments.index': { paramsTuple?: []; params?: {} }
+    'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
     'platform.plans': { paramsTuple?: []; params?: {} }
     'platform.plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -83,6 +119,17 @@ export type ScannedRoutes = {
     'organization.index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'organization.show': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'tenant_subscription.show': { paramsTuple?: []; params?: {} }
+    'audit.index': { paramsTuple?: []; params?: {} }
+    'notifications.index': { paramsTuple?: []; params?: {} }
+    'tasks.index': { paramsTuple?: []; params?: {} }
+    'approvals.workflows': { paramsTuple?: []; params?: {} }
+    'approvals.workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.active_workflows': { paramsTuple?: []; params?: {} }
+    'approvals.requests': { paramsTuple?: []; params?: {} }
+    'approvals.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.delegations': { paramsTuple?: []; params?: {} }
+    'attachments.index': { paramsTuple?: []; params?: {} }
+    'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
     'platform.plans': { paramsTuple?: []; params?: {} }
     'platform.plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -101,6 +148,17 @@ export type ScannedRoutes = {
     'members.reactivate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.assign_role': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'organization.store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'notifications.read_all': { paramsTuple?: []; params?: {} }
+    'notifications.read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.create_workflow': { paramsTuple?: []; params?: {} }
+    'approvals.publish_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.retire_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.submit': { paramsTuple?: []; params?: {} }
+    'approvals.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'approvals.create_delegation': { paramsTuple?: []; params?: {} }
+    'approvals.revoke_delegation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.retire_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -112,11 +170,14 @@ export type ScannedRoutes = {
     'account.revoke_session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'roles.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'members.unassign_role': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'assignmentId': ParamValue} }
+    'approvals.delete_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'attachments.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.remove_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
   PATCH: {
     'roles.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'organization.update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }

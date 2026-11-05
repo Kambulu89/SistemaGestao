@@ -96,3 +96,50 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
   conta sob `pg_advisory_xact_lock` por tenant e funcionalidade (409 `LIMIT_REACHED`); hoje `members.max` (convites) e
   `legal_entities.max`.
 - Sem plano comercial semeado: preços, faturação e pagamentos ficam para quando houver decisão comercial (D-008).
+
+## Auditoria
+
+- `audit_events` por tenant (RLS), escrito com `audit(scope, { action, entityType, entityId, changes, metadata })` na
+  **mesma** transacção da operação: se a operação falha, o evento não fica; se o evento falha, a operação também não.
+- Só de acrescentar: a conta de runtime não tem `UPDATE`/`DELETE`/`TRUNCATE` e um trigger recusa alterações a qualquer
+  conta. O actor vem do contexto do servidor; `changes` guarda só os campos alterados; chaves com aspecto de segredo
+  (`password`, `token`, `hash`, …) ficam `[REDACTED]`.
+- Auditado hoje: criação do tenant, convites e aceitação, suspensão/reactivação, atribuição e remoção de perfis,
+  perfis, estrutura organizacional, workflows, pedidos e decisões de aprovação, delegações, anexos (carregar,
+  descarregar, eliminar). Consulta com `audit.read`.
+
+## Aprovações
+
+- `approval_workflows` (DRAFT → ACTIVE → RETIRED; publicado é imutável, também por trigger nas etapas) com etapas
+  ordenadas; aprovador por **perfil** (qualquer membro activo com o perfil activo, em qualquer âmbito) ou por **membro**;
+  `requiredApprovals` por etapa. Publicar exige perfis activos com titulares suficientes e membros activos.
+- Pedidos (`approval_requests`) sobre um assunto; hoje só `manual` (título e descrição). Os módulos de negócio vão
+  registar o seu `subject_type` e o efeito da aprovação no próprio módulo.
+- Decidir não depende de uma permissão: depende de ser aprovador da etapa corrente ou delegado activo de um. O pedido
+  é bloqueado (`FOR UPDATE`) durante a decisão; `approval_decisions` é só de acrescentar e tem dois índices únicos: um
+  voto por aprovador elegível e um voto por pessoa em cada etapa (um delegado que também é aprovador não vota duas vezes).
+- Segregação de funções: o requerente (e quem lhe delegou) não decide o próprio pedido. Rejeitar exige motivo.
+- Delegações: cada membro delega as suas aprovações (período, motivo, opcionalmente só um workflow); o delegado decide
+  "em nome de" e fica registado quem decidiu e por quem. Sem cadeias: só se delega o que se tem directamente.
+- Visibilidade: `approvals.read` vê tudo; os restantes vêem os pedidos que fizeram, em que decidiram ou que podem
+  decidir agora (os outros respondem 404).
+
+## Anexos
+
+- Metadados em `attachments` (RLS) e ficheiro no armazenamento local (`ATTACHMENTS_DIR`), numa chave gerada pelo
+  servidor `<tenant>/<prefixo>/<id>`; nunca o nome enviado. Nome apresentável limpo de caminho e caracteres de controlo.
+- Tipo decidido pela extensão (lista fechada: pdf, png, jpg/jpeg, webp, txt, csv, docx, xlsx, odt, ods) e confirmado pela
+  assinatura do conteúdo; até 10 MB; SHA-256 gravado e verificado na descarga. Descarga com `attachment`, `nosniff`,
+  `no-store` e CSP `sandbox`.
+- Acesso herdado: cada `subject_type` tem uma política (funcionalidade contratada + permissões do registo). Ler exige
+  ver o registo; escrever exige poder alterá-lo. Quota `attachments.storage_mb` (soma dos activos, sob advisory lock).
+- Eliminação lógica (`DELETED`): ficheiro e metadados ficam para a auditoria; purga física por política de retenção
+  fica pendente.
+
+## Notificações e centro de tarefas
+
+- `notifications` por destinatário (membership), criadas na transacção do evento (pedido pendente, decisão,
+  cancelamento, delegação recebida); o actor não se notifica a si próprio. A leitura filtra sempre pela membership em
+  contexto. Só in-app: o email espera fornecedor (D-009).
+- `GET /me/tasks` deriva as tarefas das fontes de verdade (hoje: etapas de aprovação que o membro pode decidir, por si ou
+  por delegação); não há tabela de tarefas duplicada.

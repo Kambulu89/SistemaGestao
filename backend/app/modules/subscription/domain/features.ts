@@ -32,6 +32,18 @@ export const FEATURES: readonly FeatureDefinition[] = [
     kind: 'LIMIT',
     description: 'Número máximo de entidades legais.',
   },
+  {
+    code: 'approvals',
+    module: 'approvals',
+    kind: 'BOOLEAN',
+    description: 'Workflows de aprovação com etapas, decisões e delegações.',
+  },
+  {
+    code: 'attachments.storage_mb',
+    module: 'attachments',
+    kind: 'LIMIT',
+    description: 'Espaço para anexos, em MB (sem limite = ilimitado; ausente = sem anexos).',
+  },
 ]
 
 export const FEATURE_KINDS: ReadonlyMap<string, FeatureKind> = new Map(

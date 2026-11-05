@@ -3,6 +3,7 @@ export { FEATURES, type FeatureDefinition } from '#modules/subscription/domain/f
 export {
   assertEntitled,
   assertWithinLimit,
+  assertWithinQuota,
   entitlementsFor,
 } from '#modules/subscription/application/entitlements'
 export { PlatformSubscriptionService } from '#modules/subscription/application/platform_service'

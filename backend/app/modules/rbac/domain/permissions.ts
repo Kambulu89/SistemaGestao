@@ -42,6 +42,28 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     module: 'subscription',
     description: 'Ver o plano, o estado da subscrição e as funcionalidades contratadas da empresa.',
   },
+  {
+    code: 'audit.read',
+    module: 'audit',
+    description: 'Consultar o registo de auditoria da empresa.',
+  },
+  {
+    code: 'approvals.read',
+    module: 'approvals',
+    description:
+      'Ver todos os pedidos de aprovação da empresa (os próprios e os que decide vêem-se sempre).',
+  },
+  {
+    code: 'approvals.request',
+    module: 'approvals',
+    description: 'Submeter pedidos de aprovação.',
+  },
+  {
+    code: 'approvals.manage',
+    module: 'approvals',
+    description:
+      'Gerir workflows de aprovação, cancelar qualquer pedido e ver ou revogar delegações de outros.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

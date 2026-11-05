@@ -46,3 +46,14 @@ administradores da plataforma (`users.is_platform_admin`, concedido por comando)
 acesso a ninguém: a rota exige o entitlement **e** a permissão. Não há planos, preços nem cobrança semeados: os planos
 criam-se em ambiente local com `plan:create` ou pela API da plataforma; faturação e pagamentos aguardam decisão comercial.
 Sem subscrição activa o tenant não tem funcionalidades (negar por omissão).
+
+## D-009 Transversais: auditoria na transacção, aprovações sem permissão de decisão, anexos herdam acesso (aceite)
+
+- A auditoria é gravada na mesma transacção da operação (não num log assíncrono) para nunca haver operação sem rasto
+  nem rasto sem operação; a tabela é só de acrescentar, por privilégios e por trigger.
+- Decidir uma aprovação é uma atribuição (aprovador da etapa ou delegado), não uma permissão RBAC; as permissões só
+  regem ver tudo, pedir e gerir workflows. Requerente nunca aprova o próprio pedido.
+- Os anexos não têm permissões próprias: herdam a autorização e a funcionalidade contratada do registo a que pertencem,
+  para não haver um caminho paralelo de acesso aos dados.
+- Notificações só in-app enquanto não houver fornecedor de email escolhido; o centro de tarefas é uma vista derivada.
+- O único tipo de assunto é `manual`: não se criam assuntos provisórios de módulos que ainda não existem.

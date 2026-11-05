@@ -41,6 +41,9 @@ export default await Env.create(new URL('../', import.meta.url), {
    */
   MAIL_DRIVER: Env.schema.enum.optional(['none', 'dev-memory'] as const),
 
+  /** Pasta dos anexos (relativa à app ou absoluta). Por omissão `storage/attachments`. */
+  ATTACHMENTS_DIR: Env.schema.string.optional(),
+
   // CORS: origens permitidas separadas por vírgula (ex.: o frontend em desenvolvimento)
   CORS_ORIGIN: Env.schema.string.optional(),
 })

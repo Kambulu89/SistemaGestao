@@ -17,6 +17,11 @@ const OrganizationController = () => import('#modules/organization/http/organiza
 const TenantSubscriptionController = () =>
   import('#modules/subscription/http/tenant_subscription_controller')
 const PlatformController = () => import('#modules/platform/http/platform_controller')
+const AuditController = () => import('#modules/audit/http/audit_controller')
+const NotificationsController = () => import('#modules/notifications/http/notifications_controller')
+const ApprovalsController = () => import('#modules/approvals/http/approvals_controller')
+const AttachmentsController = () => import('#modules/attachments/http/attachments_controller')
+const TasksController = () => import('#modules/tasks/http/tasks_controller')
 
 router
   .group(() => {
@@ -99,6 +104,53 @@ router
             router
               .get('tenant/subscription', [TenantSubscriptionController, 'show'])
               .use(middleware.can({ permission: 'subscription.read' }))
+
+            router
+              .get('audit-events', [AuditController, 'index'])
+              .use(middleware.can({ permission: 'audit.read' }))
+
+            // Caixa pessoal: notificações e tarefas do membro em contexto (sem permissão extra).
+            router.get('me/notifications', [NotificationsController, 'index'])
+            router.post('me/notifications/read-all', [NotificationsController, 'readAll'])
+            router.post('me/notifications/:id/read', [NotificationsController, 'read'])
+            router.get('me/tasks', [TasksController, 'index'])
+
+            // Aprovações: decidir depende de ser aprovador da etapa (ou delegado), não de uma permissão.
+            router
+              .group(() => {
+                router
+                  .group(() => {
+                    router.get('workflows', [ApprovalsController, 'workflows'])
+                    router.post('workflows', [ApprovalsController, 'createWorkflow'])
+                    router.get('workflows/:id', [ApprovalsController, 'workflow'])
+                    router.patch('workflows/:id', [ApprovalsController, 'updateWorkflow'])
+                    router.delete('workflows/:id', [ApprovalsController, 'deleteWorkflow'])
+                    router.post('workflows/:id/publish', [ApprovalsController, 'publishWorkflow'])
+                    router.post('workflows/:id/retire', [ApprovalsController, 'retireWorkflow'])
+                  })
+                  .use(middleware.can({ permission: 'approvals.manage' }))
+                router
+                  .group(() => {
+                    router.get('available-workflows', [ApprovalsController, 'activeWorkflows'])
+                    router.post('requests', [ApprovalsController, 'submit'])
+                  })
+                  .use(middleware.can({ permission: 'approvals.request' }))
+                router.get('requests', [ApprovalsController, 'requests'])
+                router.get('requests/:id', [ApprovalsController, 'request'])
+                router.post('requests/:id/decisions', [ApprovalsController, 'decide'])
+                router.post('requests/:id/cancel', [ApprovalsController, 'cancel'])
+                router.get('delegations', [ApprovalsController, 'delegations'])
+                router.post('delegations', [ApprovalsController, 'createDelegation'])
+                router.post('delegations/:id/revoke', [ApprovalsController, 'revokeDelegation'])
+              })
+              .prefix('approvals')
+              .use(middleware.entitled({ feature: 'approvals' }))
+
+            // Anexos: o acesso (e a funcionalidade) herda do registo a que pertencem.
+            router.get('attachments', [AttachmentsController, 'index'])
+            router.post('attachments', [AttachmentsController, 'store'])
+            router.get('attachments/:id/content', [AttachmentsController, 'download'])
+            router.delete('attachments/:id', [AttachmentsController, 'destroy'])
           })
           .use(middleware.tenant())
 

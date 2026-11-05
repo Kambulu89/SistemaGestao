@@ -54,3 +54,33 @@ export async function assertWithinLimit(
     throw ApiError.conflict('LIMIT_REACHED', `Atingiu o limite contratado (${entitlement.limit}).`)
   }
 }
+
+/**
+ * Quota acumulada (ex.: espaço de armazenamento em MB): falha se `used + adding` ultrapassar o limite. Serializa por
+ * tenant e funcionalidade como `assertWithinLimit`. `unitBytes` converte o limite (ex.: MB → bytes).
+ */
+export async function assertWithinQuota(
+  trx: TransactionClientContract,
+  tenantId: string,
+  feature: string,
+  used: () => Promise<number>,
+  adding: number,
+  unit = 1
+) {
+  await trx.rawQuery('select pg_advisory_xact_lock(hashtext(?))', [`${tenantId}:limit:${feature}`])
+  const entitlement: Entitlement | undefined = (await entitlementsFor(tenantId)).features.get(
+    feature
+  )
+  if (!entitlement?.enabled) {
+    throw ApiError.forbidden(
+      'NOT_ENTITLED',
+      'Esta funcionalidade não está incluída na subscrição da empresa.'
+    )
+  }
+  if (entitlement.limit !== null && (await used()) + adding > entitlement.limit * unit) {
+    throw ApiError.conflict(
+      'QUOTA_EXCEEDED',
+      `Ultrapassaria o limite contratado (${entitlement.limit}).`
+    )
+  }
+}

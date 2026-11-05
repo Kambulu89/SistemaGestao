@@ -9,8 +9,9 @@ import {
   type CrudSpec,
   type Row,
 } from '#shared/db/tenant_crud'
-import { runInTenant, type TenantContext } from '#modules/tenancy/index'
+import { runInTenant, type TenantContext, type TenantScope } from '#modules/tenancy/index'
 import { assertWithinLimit } from '#modules/subscription/index'
+import { audit, diff } from '#modules/audit/index'
 import { normalize, type OrgKind, type Values } from '#modules/organization/domain/organization'
 
 const common = { status: 'status', validFrom: 'valid_from', validTo: 'valid_to' }
@@ -201,6 +202,15 @@ async function checkReferences(s: CrudScope, kind: OrgKind, id: string | null, m
   if (issues.length > 0) throw ApiError.validation(issues)
 }
 
+/** Tipo da entidade na auditoria e nos anexos (singular, snake_case). */
+export const ENTITY_TYPES: Record<OrgKind, string> = {
+  legalEntities: 'legal_entity',
+  branches: 'branch',
+  departments: 'department',
+  positions: 'position',
+  costCenters: 'cost_center',
+}
+
 /** Casos de uso da estrutura organizacional. Sem eliminação física: inactiva-se (o histórico e as referências ficam). */
 export class OrganizationService {
   list(
@@ -229,7 +239,8 @@ export class OrganizationService {
   create(context: TenantContext, kind: OrgKind, input: Values) {
     const { values, issues } = normalize(kind, input, null)
     if (issues.length > 0) throw ApiError.validation(issues)
-    return runInTenant(context, async ({ trx }) => {
+    return runInTenant(context, async (scope) => {
+      const { trx } = scope
       const s = crud(context, trx)
       await lockTree(s, kind)
       if (kind === 'legalEntities') {
@@ -242,7 +253,14 @@ export class OrganizationService {
         })
       }
       await checkReferences(s, kind, null, values)
-      return crudInsert(s, SPECS[kind], values)
+      const row = await crudInsert(s, SPECS[kind], values)
+      await audit(scope, {
+        action: `${ENTITY_TYPES[kind]}.created`,
+        entityType: ENTITY_TYPES[kind],
+        entityId: row.id,
+        changes: diff(null, row, Object.keys(SPECS[kind].columns)),
+      })
+      return row
     })
   }
 
@@ -252,8 +270,8 @@ export class OrganizationService {
     id: string,
     input: Values & { expectedVersion: number }
   ) {
-    return runInTenant(context, async ({ trx }) => {
-      const s = crud(context, trx)
+    return runInTenant(context, async (scope) => {
+      const s = crud(context, scope.trx)
       await lockTree(s, kind)
       const current = await crudFind(s, SPECS[kind], id, true)
       if (!current) throw ApiError.notFound()
@@ -261,7 +279,29 @@ export class OrganizationService {
       const { values, issues } = normalize(kind, rest, current)
       if (issues.length > 0) throw ApiError.validation(issues)
       await checkReferences(s, kind, id, { ...current, ...values })
-      return crudUpdate(s, SPECS[kind], id, expectedVersion, values)
+      const row = await crudUpdate(s, SPECS[kind], id, expectedVersion, values)
+      const changes = diff(current, row, Object.keys(SPECS[kind].columns))
+      if (changes) {
+        await audit(scope, {
+          action: `${ENTITY_TYPES[kind]}.updated`,
+          entityType: ENTITY_TYPES[kind],
+          entityId: id,
+          changes,
+        })
+      }
+      return row
     })
   }
+}
+
+const KIND_BY_ENTITY = new Map(
+  (Object.entries(ENTITY_TYPES) as [OrgKind, string][]).map(([kind, type]) => [type, kind])
+)
+
+/** O registo organizacional existe nesta empresa? (`entityType` no singular, ex.: `legal_entity`). */
+export async function organizationRecordExists(scope: TenantScope, entityType: string, id: string) {
+  const kind = KIND_BY_ENTITY.get(entityType)
+  if (!kind) return false
+  const s = crud(scope.context, scope.trx)
+  return (await crudFind(s, SPECS[kind], id)) !== null
 }
