@@ -237,6 +237,43 @@ router
               .use(accounting('accounting.settings'))
             router
               .group(() => {
+                router.get('accounting/dimensions', [AccountingController, 'dimensions'])
+                router.get('accounting/dimensions/:id', [AccountingController, 'dimension'])
+                router.get('accounting/allocation-keys', [AccountingController, 'keys'])
+                router.get('accounting/allocation-keys/:id', [AccountingController, 'key'])
+                router.get('accounting/entries/:id/allocations', [
+                  AccountingController,
+                  'allocations',
+                ])
+              })
+              .use(accounting('accounting.read'))
+            router
+              .group(() => {
+                router.post('accounting/dimensions', [AccountingController, 'createDimension'])
+                router.patch('accounting/dimensions/:id', [AccountingController, 'updateDimension'])
+                router.post('accounting/dimensions/:id/values', [
+                  AccountingController,
+                  'createValue',
+                ])
+                router.patch('accounting/dimensions/:id/values/:valueId', [
+                  AccountingController,
+                  'updateValue',
+                ])
+                router.post('accounting/allocation-keys', [AccountingController, 'createKey'])
+                router.patch('accounting/allocation-keys/:id', [AccountingController, 'updateKey'])
+              })
+              .use(accounting('accounting.settings'))
+            router
+              .group(() => {
+                router.put('accounting/entries/:id/lines/:lineNo/allocations', [
+                  AccountingController,
+                  'setAllocations',
+                ])
+                router.get('accounting/analytics', [AccountingController, 'analyticReport'])
+              })
+              .use(accounting('accounting.analytics'))
+            router
+              .group(() => {
                 router.get('accounting/trial-balance', [AccountingController, 'trialBalance'])
                 router.get('accounting/ledger', [AccountingController, 'ledger'])
               })

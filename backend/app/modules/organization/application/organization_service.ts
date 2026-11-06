@@ -544,13 +544,19 @@ export async function legalEntityFacts(scope: TenantScope, id: string) {
 
 /** Centros de custo (estado e entidade legal) por id, para validar imputações noutros módulos. */
 export async function costCenterFacts(scope: TenantScope, ids: string[]) {
-  if (ids.length === 0) return new Map<string, { status: string; legalEntityId: string }>()
+  if (ids.length === 0)
+    return new Map<
+      string,
+      { id: string; code: string; name: string; status: string; legalEntityId: string }
+    >()
   const r = await scope.trx.rawQuery(
-    `select id, status, legal_entity_id as "legalEntityId" from cost_centers where tenant_id = ? and id = any(?::uuid[])`,
+    `select id, code, name, status, legal_entity_id as "legalEntityId" from cost_centers where tenant_id = ? and id = any(?::uuid[])`,
     [scope.context.tenantId, ids]
   )
   return new Map(
-    (r.rows as { id: string; status: string; legalEntityId: string }[]).map((x) => [x.id, x])
+    (
+      r.rows as { id: string; code: string; name: string; status: string; legalEntityId: string }[]
+    ).map((x) => [x.id, x])
   )
 }
 

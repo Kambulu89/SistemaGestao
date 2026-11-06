@@ -572,6 +572,12 @@ export class JournalEntryService {
         ]
       )
       const conv = await conversion(scope, header.exchangeRate)
+      // Linhas novas num rascunho: as imputações antigas (por n.º de linha) deixam de fazer sentido.
+      if (lines)
+        await scope.trx.rawQuery(
+          'delete from journal_line_allocations where tenant_id = ? and entry_id = ?',
+          [context.tenantId, id]
+        )
       await writeLines(scope, id, lines ?? storedLines(await linesOf(scope, id)), conv)
       await audit(scope, {
         action: 'journal_entry.updated',

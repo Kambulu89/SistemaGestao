@@ -207,8 +207,34 @@ async function populate(client: any) {
   )
   const period = (await as(client, s).get(`/api/v1/accounting/fiscal-years/${fy.id}`)).body().data
     .periods[2]
+  const dimension = ok(
+    await as(client, s).post('/api/v1/accounting/dimensions', { code: 'PRJA', name: 'Projecto A' })
+  )
+  const dimValue = ok(
+    await as(client, s).post(`/api/v1/accounting/dimensions/${dimension.id}/values`, {
+      code: 'V1',
+      name: 'Valor A',
+    })
+  )[0]
+  const allocKey = ok(
+    await as(client, s).post('/api/v1/accounting/allocation-keys', {
+      legalEntityId: le.id,
+      code: 'KA',
+      name: 'Chave A',
+      lines: [{ percent: '100', values: { [dimension.id]: dimValue.id } }],
+    })
+  )
+  ok(
+    await as(client, s).put(`/api/v1/accounting/entries/${entry.id}/lines/1/allocations`, {
+      keyId: allocKey.id,
+    }),
+    200
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    dimension,
+    dimValue,
+    allocKey,
     rule,
     postingEvent,
     chart,
@@ -260,6 +286,26 @@ test.group('isolamento | matriz entre empresas', (group) => {
       ['PATCH perfil', B.patch(`/api/v1/roles/${a.role.id}`, { ...v, name: 'x' })],
       ['DELETE perfil', B.delete(`/api/v1/roles/${a.role.id}`)],
       ['GET membro', B.get(`/api/v1/members/${a.member}`)],
+      ['GET dimensão', B.get(`/api/v1/accounting/dimensions/${a.dimension.id}`)],
+      [
+        'PATCH dimensão',
+        B.patch(`/api/v1/accounting/dimensions/${a.dimension.id}`, { ...v, name: 'xx' }),
+      ],
+      [
+        'valor em dimensão de A',
+        B.post(`/api/v1/accounting/dimensions/${a.dimension.id}/values`, { code: 'Z', name: 'Zz' }),
+      ],
+      ['GET chave', B.get(`/api/v1/accounting/allocation-keys/${a.allocKey.id}`)],
+      [
+        'PATCH chave',
+        B.patch(`/api/v1/accounting/allocation-keys/${a.allocKey.id}`, { ...v, name: 'xx' }),
+      ],
+      ['imputações de A', B.get(`/api/v1/accounting/entries/${a.entry.id}/allocations`)],
+      [
+        'imputar linha de A',
+        B.put(`/api/v1/accounting/entries/${a.entry.id}/lines/1/allocations`, { allocations: [] }),
+      ],
+      ['analítica de A', B.get(`/api/v1/accounting/analytics?fiscalYearId=${a.fy.id}`)],
       ['balancete de A', B.get(`/api/v1/accounting/trial-balance?fiscalYearId=${a.fy.id}`)],
       [
         'razão de A',
@@ -371,6 +417,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       B.get('/api/v1/accounting/entries'),
       B.get('/api/v1/accounting/posting-rules'),
       B.get('/api/v1/accounting/posting-events'),
+      B.get('/api/v1/accounting/dimensions'),
+      B.get('/api/v1/accounting/allocation-keys'),
     ])
     const idsOfA = new Set(
       [
@@ -393,6 +441,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
         a.entry.id,
         a.rule.id,
         a.postingEvent.id,
+        a.dimension.id,
+        a.allocKey.id,
       ].map(String)
     )
     const leaked = lists.flatMap((r) =>

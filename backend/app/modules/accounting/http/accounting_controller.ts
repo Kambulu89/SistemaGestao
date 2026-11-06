@@ -8,6 +8,11 @@ import {
   type SetupKind,
 } from '#modules/accounting/application/setup_service'
 import { JournalEntryService } from '#modules/accounting/application/entries_service'
+import {
+  AllocationService,
+  AnalyticReportService,
+  AnalyticSetupService,
+} from '#modules/accounting/application/analytics_service'
 import { OpeningBalanceService } from '#modules/accounting/application/opening_service'
 import { AccountingReportsService } from '#modules/accounting/application/reports_service'
 import {
@@ -21,6 +26,23 @@ const rules = new PostingRuleService()
 const engine = new PostingEngineService()
 const opening = new OpeningBalanceService()
 const reports = new AccountingReportsService()
+const analyticSetup = new AnalyticSetupService()
+const allocations = new AllocationService()
+const analyticReport = new AnalyticReportService()
+const analyticReportValidator = vine.create(
+  vine.object({
+    fiscalYearId: vine.string().uuid(),
+    fromPeriod: vine.number().withoutDecimals().min(0).max(30).optional(),
+    toPeriod: vine.number().withoutDecimals().min(0).max(30).optional(),
+    groupBy: vine.enum(['costCenter', 'dimension'] as const).optional(),
+    dimensionId: vine.string().uuid().optional(),
+    natures: vine
+      .string()
+      .trim()
+      .regex(/^[A-Z_]+(,[A-Z_]+)*$/)
+      .optional(),
+  })
+)
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/
 const openingValidator = vine.create(
@@ -346,5 +368,99 @@ export default class AccountingController {
   async ledger(ctx: HttpContext) {
     const q = await ctx.request.validateUsing(ledgerValidator, { data: ctx.request.qs() })
     return ok(ctx, await reports.ledger(ctx.tenantContext!, q))
+  }
+
+  // ---- analítica (6.5)
+  async dimensions(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(listValidator, { data: ctx.request.qs() })
+    const page = await analyticSetup.listDimensions(ctx.tenantContext!, {
+      q: q.q,
+      limit: q.limit ?? 100,
+      offset: q.offset ?? 0,
+    })
+    return ok(ctx, page.items, { total: page.total })
+  }
+
+  async dimension(ctx: HttpContext) {
+    return ok(ctx, await analyticSetup.getDimension(ctx.tenantContext!, uuid(ctx)))
+  }
+
+  async createDimension(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(anyBody)) as Record<string, unknown>
+    return created(ctx, await analyticSetup.saveDimension(ctx.tenantContext!, null, body))
+  }
+
+  async updateDimension(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(versionValidator)) as Record<string, unknown>
+    return ok(ctx, await analyticSetup.saveDimension(ctx.tenantContext!, uuid(ctx), body))
+  }
+
+  async createValue(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(anyBody)) as Record<string, unknown>
+    return created(ctx, await analyticSetup.saveValue(ctx.tenantContext!, uuid(ctx), null, body))
+  }
+
+  async updateValue(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(versionValidator)) as Record<string, unknown>
+    return ok(
+      ctx,
+      await analyticSetup.saveValue(ctx.tenantContext!, uuid(ctx), uuid(ctx, 'valueId'), body)
+    )
+  }
+
+  async keys(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(listValidator, { data: ctx.request.qs() })
+    const equals: Record<string, unknown> = {}
+    for (const key of ['legalEntityId', 'status']) {
+      const v = filterValue(key, ctx.request.qs()[key])
+      if (v !== undefined) equals[key] = v
+    }
+    const page = await analyticSetup.listKeys(ctx.tenantContext!, {
+      equals,
+      q: q.q,
+      limit: q.limit ?? 100,
+      offset: q.offset ?? 0,
+    })
+    return ok(ctx, page.items, { total: page.total })
+  }
+
+  async key(ctx: HttpContext) {
+    return ok(ctx, await analyticSetup.getKey(ctx.tenantContext!, uuid(ctx)))
+  }
+
+  async createKey(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(anyBody)) as Record<string, unknown>
+    return created(ctx, await analyticSetup.saveKey(ctx.tenantContext!, null, body))
+  }
+
+  async updateKey(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(versionValidator)) as Record<string, unknown>
+    return ok(ctx, await analyticSetup.saveKey(ctx.tenantContext!, uuid(ctx), body))
+  }
+
+  async allocations(ctx: HttpContext) {
+    return ok(ctx, await allocations.get(ctx.tenantContext!, uuid(ctx)))
+  }
+
+  async setAllocations(ctx: HttpContext) {
+    const lineNo = Number(ctx.params.lineNo)
+    if (!Number.isInteger(lineNo) || lineNo < 1 || lineNo > 500) throw ApiError.notFound()
+    const body = (await ctx.request.validateUsing(anyBody)) as Record<string, unknown>
+    return ok(ctx, await allocations.set(ctx.tenantContext!, uuid(ctx), lineNo, body))
+  }
+
+  async analyticReport(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(analyticReportValidator, { data: ctx.request.qs() })
+    return ok(
+      ctx,
+      await analyticReport.report(ctx.tenantContext!, {
+        fiscalYearId: q.fiscalYearId,
+        fromPeriod: q.fromPeriod ?? 0,
+        toPeriod: q.toPeriod ?? 30,
+        groupBy: q.groupBy ?? 'costCenter',
+        dimensionId: q.dimensionId,
+        natures: q.natures?.split(','),
+      })
+    )
   }
 }
