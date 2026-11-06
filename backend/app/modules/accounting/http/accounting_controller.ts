@@ -29,6 +29,21 @@ const reports = new AccountingReportsService()
 const analyticSetup = new AnalyticSetupService()
 const allocations = new AllocationService()
 const analyticReport = new AnalyticReportService()
+const NATURE = /^(ASSET|LIABILITY|EQUITY|REVENUE|EXPENSE|OFF_BALANCE)$/
+/** `natures` chega como texto "A,B" ou já como lista (o parser da query divide por vírgulas). */
+const naturesOf = (raw: unknown) => {
+  if (raw === undefined || raw === null || raw === '') return undefined
+  const list = (Array.isArray(raw) ? raw : String(raw).split(',')).map((n) => String(n).trim())
+  if (list.some((n) => !NATURE.test(n)))
+    throw ApiError.validation([
+      {
+        path: 'natures',
+        code: 'INVALID',
+        message: 'Naturezas: ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE, OFF_BALANCE.',
+      },
+    ])
+  return list
+}
 const analyticReportValidator = vine.create(
   vine.object({
     fiscalYearId: vine.string().uuid(),
@@ -36,11 +51,6 @@ const analyticReportValidator = vine.create(
     toPeriod: vine.number().withoutDecimals().min(0).max(30).optional(),
     groupBy: vine.enum(['costCenter', 'dimension'] as const).optional(),
     dimensionId: vine.string().uuid().optional(),
-    natures: vine
-      .string()
-      .trim()
-      .regex(/^[A-Z_]+(,[A-Z_]+)*$/)
-      .optional(),
   })
 )
 
@@ -450,7 +460,8 @@ export default class AccountingController {
   }
 
   async analyticReport(ctx: HttpContext) {
-    const q = await ctx.request.validateUsing(analyticReportValidator, { data: ctx.request.qs() })
+    const { natures, ...rest } = ctx.request.qs()
+    const q = await ctx.request.validateUsing(analyticReportValidator, { data: rest })
     return ok(
       ctx,
       await analyticReport.report(ctx.tenantContext!, {
@@ -459,7 +470,7 @@ export default class AccountingController {
         toPeriod: q.toPeriod ?? 30,
         groupBy: q.groupBy ?? 'costCenter',
         dimensionId: q.dimensionId,
-        natures: q.natures?.split(','),
+        natures: naturesOf(natures),
       })
     )
   }

@@ -70,6 +70,23 @@ export const ACCOUNTING_ROUTES: Routes = [
     loadComponent: () => import('./ledger').then((m) => m.LedgerPage),
   },
   {
+    path: 'dimensoes',
+    title: 'Dimensões analíticas',
+    loadComponent: () => import('./dimensions').then((m) => m.Dimensions),
+  },
+  {
+    path: 'chaves',
+    title: 'Chaves de repartição',
+    loadComponent: () => import('./allocation-keys').then((m) => m.AllocationKeys),
+  },
+  {
+    path: 'analitica',
+    title: 'Analítica',
+    canActivate: [accessGuard],
+    data: { permission: 'accounting.analytics' },
+    loadComponent: () => import('./analytics-report').then((m) => m.AnalyticsReportPage),
+  },
+  {
     path: 'diarios',
     title: 'Diários',
     loadComponent: () => import('./journals').then((m) => m.Journals),

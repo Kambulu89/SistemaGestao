@@ -87,6 +87,27 @@ export const NAVIGATION: NavGroup[] = [
         feature: 'accounting',
       },
       {
+        label: 'Analítica',
+        path: '/contabilidade/analitica',
+        icon: 'grid',
+        permission: 'accounting.analytics',
+        feature: 'accounting',
+      },
+      {
+        label: 'Dimensões analíticas',
+        path: '/contabilidade/dimensoes',
+        icon: 'layers',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+      {
+        label: 'Chaves de repartição',
+        path: '/contabilidade/chaves',
+        icon: 'tree',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+      {
         label: 'Saldos de abertura',
         path: '/contabilidade/abertura',
         icon: 'download',

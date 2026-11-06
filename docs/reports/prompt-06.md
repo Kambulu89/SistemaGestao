@@ -1,7 +1,7 @@
 # Relatório — Prompt 06 (contabilidade)
 
-Estado: **6.1 a 6.4 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Os blocos 6.5 a 6.10
-dependem desta fundação e ficam para os blocos seguintes. Decisões D-014 e D-015.
+Estado: **6.1 a 6.5 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Os blocos 6.6 a 6.10
+dependem desta fundação e ficam para os blocos seguintes. Decisões D-014, D-015 e D-016.
 
 Nada aqui alega conformidade com o PGC angolano, a AGT ou o SAF-T (AO): o plano é definido pela empresa e a
 validação normativa (versão do PGC, SAF-T, critérios dos mapas) continua pendente antes de qualquer alegação fiscal.
@@ -14,8 +14,8 @@ validação normativa (versão do PGC, SAF-T, critérios dos mapas) continua pen
 | 6.2 Lançamentos         | Nada                                            | Cabeçalho completo (entidade, exercício, período, diário, datas, referência, moeda/câmbio, origem, estado, anexos) e linhas; validação de partidas dobradas; fluxo com segregação; imutável; estorno; idempotência                                                                                                     | Feito      |
 | 6.3 Posting engine      | —                                               | Regras por entidade, origem, evento e vigência (sem sobreposição), contas configuradas pela empresa, chaves de montante; `postAccountingEvent` na transacção de quem chama; idempotência; registo de eventos com mensagem de erro; reprocessamento; simulação                                                          | Feito      |
 | 6.4 Abertura/razão      | Período de abertura                             | Importação por código de conta validada linha a linha e equilibrada (rascunho no período de abertura, uma por exercício); razão por conta/subcontas, terceiro, centro de custo e datas com saldo anterior e acumulado; balancete analítico/sintético por intervalo de períodos sem duplicar contas-pai; exportação CSV | Feito      |
-| 6.5 Analítica           | Centros de custo por linha                      | Dimensões, imputações e repartições a 100%                                                                                                                                                                                                                                                                             | Próximo    |
-| 6.6 Activos fixos       | —                                               | Ficha, depreciação, abate, contabilização                                                                                                                                                                                                                                                                              | Por fazer  |
+| 6.5 Analítica           | Centros de custo por linha                      | Dimensões e valores, chaves de repartição, imputações a 100% (4 casas) por linha, também depois de contabilizar, repartição exacta pelo maior resto, relatório por centro ou dimensão que confere com o razão                                                                                                          | Feito      |
+| 6.6 Activos fixos       | —                                               | Ficha, depreciação, abate, contabilização                                                                                                                                                                                                                                                                              | Próximo    |
 | 6.7 Regularizações      | Período de regularizações existe                | Provisões, acréscimos, diferimentos, recorrências, diferenças cambiais                                                                                                                                                                                                                                                 | Por fazer  |
 | 6.8 Demonstrações       | `statementLine` por conta                       | Mapas versionados, PDF/Excel, conferência com o balancete                                                                                                                                                                                                                                                              | Por fazer  |
 | 6.9 Fiscalidade (SAF-T) | —                                               | Só com a especificação oficial verificada                                                                                                                                                                                                                                                                              | Bloqueado* |
@@ -43,6 +43,11 @@ reabertura), Diários.
 
 - 6.4: `POST /accounting/opening-balances/validate` e `POST /accounting/opening-balances` (`accounting.create`);
   `GET /accounting/trial-balance` e `GET /accounting/ledger` (`accounting.reports`, permissão nova).
+
+- 6.5: `GET|POST /accounting/dimensions`, `PATCH …/:id`, `POST …/:id/values`, `PATCH …/:id/values/:valueId`;
+  `GET|POST /accounting/allocation-keys`, `GET|PATCH …/:id` (`accounting.read` / `accounting.settings`);
+  `GET /accounting/entries/:id/allocations` (`accounting.read`); `PUT /accounting/entries/:id/lines/:lineNo/allocations`
+  e `GET /accounting/analytics` (`accounting.analytics`, permissão nova).
 
 ## Ecrãs do 6.3
 
@@ -78,9 +83,20 @@ não conseguia abrir um lançamento.
 | Frontend | 53/53; lint, formatação e build sem erros                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Browser  | 6/6 passos, 0 erros na consola: CSV com erros recusado linha a linha e corrigido, importação em rascunho na abertura, balancete equilibrado (6 000,00) com exportação CSV e vista sintética, do balancete para o razão com subcontas, saldo anterior de Março (5 300,00) e fecho iguais ao balancete, tema escuro e telemóvel                                                                                                                                                                                                                  |
 
+### Bloco 6.5
+
+| Lado     | Resultado                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Backend  | 114/114; lint, formatação, tipos e build sem erros. Novos: `analytics_domain.spec.ts` (percentagens, repartição exacta com sinal e restos) e `analytics.spec.ts` (dimensões e chaves, valores inactivos recusados, imputação de um lançamento contabilizado com repartição exacta, relatório por centro e por projecto igual ao razão, várias naturezas, balancete inalterado, chave aplicada, conta que exige centro, rascunho alterado perde imputações, permissões); matriz de isolamento com dimensões, chaves, imputações e relatório |
+| Frontend | 54/54; lint, formatação e build sem erros                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Browser  | 6/6 passos, 0 erros na consola: dimensão e valores na UI, imputação de 1 000,01 a três centros ("repartir por igual" 33,3333/33,3333/33,3334), soma diferente de 100 bloqueada na UI e recusada pelo servidor, relatório por centro (333,34/333,33/333,34) e por projecto (666,67/333,34) a conferir com o razão, tema escuro e telemóvel                                                                                                                                                                                                  |
+
+Defeito encontrado pela verificação e corrigido: o filtro de várias naturezas ("REVENUE,EXPENSE") era recusado porque o
+parser da query o entrega como lista; o teste da API só usava uma natureza.
+
 ## Pendências
 
-- 6.5 a 6.10 (acima). Os módulos de negócio (Facturação, Compras, Inventário, RH, Finanças) ainda não existem neste
+- 6.6 a 6.10 (acima). Os módulos de negócio (Facturação, Compras, Inventário, RH, Finanças) ainda não existem neste
   repositório; quando existirem, chamam `postAccountingEvent` — nenhum evento é emitido hoje por outro módulo. 6.9 só com a especificação oficial do SAF-T (AO) verificada.
 - Terceiros são uma referência textual (`thirdPartyRef`) até existir o módulo de terceiros/partes.
 - Depois de implantar, `node ace catalog:sync` dá as permissões novas ao perfil `tenant_admin` das empresas existentes.

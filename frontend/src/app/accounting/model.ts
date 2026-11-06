@@ -458,3 +458,73 @@ export function splitBalance(value: string): { debit: string; credit: string } {
   if (value.startsWith('-')) return { debit: '', credit: value.slice(1) };
   return { debit: /^0(\.0+)?$/.test(value) ? '' : value, credit: '' };
 }
+
+export interface DimensionValue {
+  id: string;
+  version: number;
+  dimensionId: string;
+  code: string;
+  name: string;
+  status: string;
+}
+
+export interface Dimension {
+  id: string;
+  version: number;
+  code: string;
+  name: string;
+  status: string;
+  values: DimensionValue[];
+}
+
+/** Destino de uma repartição (linha de chave ou imputação de linha): percentagem, centro de custo e valores. */
+export interface AllocationTarget {
+  lineNo?: number;
+  percent: string;
+  costCenterId: string | null;
+  values: { dimensionId: string; valueId: string; valueCode?: string; valueName?: string }[];
+}
+
+export interface AllocationKey {
+  id: string;
+  version: number;
+  legalEntityId: string;
+  code: string;
+  name: string;
+  status: string;
+  lines?: AllocationTarget[];
+}
+
+export interface AnalyticReport {
+  groupBy: 'costCenter' | 'dimension';
+  rows: { key: string | null; label: string; debit: string; credit: string; net: string }[];
+  totals: { debit: string; credit: string; net: string };
+  ledger: { debit: string; credit: string };
+  consistent: boolean;
+}
+
+/** Soma das percentagens (4 casas, sem `float`) e se é exactamente 100. */
+export function percentTotal(targets: Pick<AllocationTarget, 'percent'>[]) {
+  let total = 0n;
+  let invalid = false;
+  for (const t of targets) {
+    const v = toScaled(normalizeAmount(t.percent), 4);
+    if (v === null || v <= 0n) invalid = true;
+    else total += v;
+  }
+  return {
+    total: fromScaled(total, 4).replace(/\.?0+$/, '') || '0',
+    complete: !invalid && total === 1000000n,
+    invalid,
+  };
+}
+
+/** Percentagens iguais para `n` destinos que somam exactamente 100 (o resto de 0,0001 vai para o último). */
+export function evenPercents(n: number): string[] {
+  if (n <= 0) return [];
+  const each = 1000000n / BigInt(n);
+  const last = 1000000n - each * BigInt(n - 1);
+  return Array.from({ length: n }, (_, i) =>
+    fromScaled(i === n - 1 ? last : each, 4).replace(/\.?0+$/, ''),
+  );
+}

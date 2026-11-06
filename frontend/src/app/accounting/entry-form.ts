@@ -30,6 +30,7 @@ import {
   type Period,
 } from './model';
 import { accountingDeps, legalEntityOptions } from './shared';
+import { EntryAllocations } from './entry-allocations';
 
 interface LineForm {
   accountId: string | null;
@@ -68,6 +69,7 @@ const today = () => new Date().toISOString().slice(0, 10);
     FieldControl,
     Attachments,
     AuditHistory,
+    EntryAllocations,
   ],
   template: `
     @if (loadError()) {
@@ -388,6 +390,14 @@ const today = () => new Date().toISOString().slice(0, 10);
         </form>
 
         @if (entry(); as e) {
+          @if (workspace.can('accounting.read')) {
+            <app-entry-allocations
+              [entryId]="e.id"
+              [legalEntityId]="e.legalEntityId"
+              [lines]="e.lines"
+              [costCenters]="costCenters()"
+            />
+          }
           @if (actions().approve || actions().post || actions().reject || actions().reverse) {
             <section class="card space-y-3" aria-labelledby="actions-title">
               <h2 id="actions-title" class="font-semibold">Acções</h2>

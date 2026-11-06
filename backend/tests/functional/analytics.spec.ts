@@ -183,6 +183,15 @@ test.group('contabilidade | analítica', (group) => {
       ]
     )
     assert.isTrue(byProject.consistent)
+    // Várias naturezas (o parser da query transforma "A,B" numa lista).
+    const two = ok(
+      await L.api.get(`${A}/analytics?fiscalYearId=${L.year.id}&natures=EXPENSE,ASSET`),
+      200
+    )
+    assert.deepInclude(two.totals, { debit: '1000.01', credit: '1000.01' })
+    ;(
+      await L.api.get(`${A}/analytics?fiscalYearId=${L.year.id}&natures=EXPENSE,NOPE`)
+    ).assertStatus(422)
     // A analítica não mexe no razão.
     const tbAfter = ok(await L.api.get(`${A}/trial-balance?fiscalYearId=${L.year.id}`), 200)
     assert.deepEqual(tbAfter.totals, tbBefore.totals)

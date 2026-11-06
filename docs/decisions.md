@@ -113,3 +113,12 @@ pela referência, para que reenvios (rede, reprocessamento, integrações) nunca
 servidor o evento corre na transacção do módulo que o emite (tudo ou nada); pela API, as falhas ficam registadas com a
 mensagem para poderem ser corrigidas e reprocessadas. A entrega assíncrona (fila/outbox) só entra se houver
 necessidade medida — hoje o PostgreSQL e a transacção partilhada bastam.
+
+## D-016 Analítica como camada sobre o razão, editável depois de contabilizar (aceite)
+
+As imputações a centros de custo e dimensões não geram lançamentos nem alteram linhas: repartem o valor de cada linha
+em percentagens que somam 100%, e a repartição é exacta (maior resto). Assim o razão e o balancete nunca mudam por
+causa da analítica, e o relatório analítico confere sempre com eles. Por não tocarem no razão, as imputações podem ser
+corrigidas depois da contabilização, com auditoria de cada alteração (antes/depois), o que é a prática comum em
+controlo de gestão. Ficam ligadas por (lançamento, n.º de linha) e não ao id físico das linhas; alterar as linhas de
+um rascunho apaga-as.

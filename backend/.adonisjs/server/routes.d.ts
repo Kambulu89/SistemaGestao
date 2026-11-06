@@ -87,6 +87,19 @@ export type ScannedRoutes = {
     'accounting.journals.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.create_rule': { paramsTuple?: []; params?: {} }
     'accounting.update_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.dimensions': { paramsTuple?: []; params?: {} }
+    'accounting.dimension': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.keys': { paramsTuple?: []; params?: {} }
+    'accounting.key': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.allocations': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.create_dimension': { paramsTuple?: []; params?: {} }
+    'accounting.update_dimension': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.create_value': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.update_value': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'valueId': ParamValue} }
+    'accounting.create_key': { paramsTuple?: []; params?: {} }
+    'accounting.update_key': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.set_allocations': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineNo': ParamValue} }
+    'accounting.analytic_report': { paramsTuple?: []; params?: {} }
     'accounting.trial_balance': { paramsTuple?: []; params?: {} }
     'accounting.ledger': { paramsTuple?: []; params?: {} }
     'accounting.validate_opening': { paramsTuple?: []; params?: {} }
@@ -190,6 +203,12 @@ export type ScannedRoutes = {
     'accounting.rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.events': { paramsTuple?: []; params?: {} }
     'accounting.event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.dimensions': { paramsTuple?: []; params?: {} }
+    'accounting.dimension': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.keys': { paramsTuple?: []; params?: {} }
+    'accounting.key': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.allocations': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.analytic_report': { paramsTuple?: []; params?: {} }
     'accounting.trial_balance': { paramsTuple?: []; params?: {} }
     'accounting.ledger': { paramsTuple?: []; params?: {} }
     'audit.index': { paramsTuple?: []; params?: {} }
@@ -255,6 +274,12 @@ export type ScannedRoutes = {
     'accounting.rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.events': { paramsTuple?: []; params?: {} }
     'accounting.event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.dimensions': { paramsTuple?: []; params?: {} }
+    'accounting.dimension': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.keys': { paramsTuple?: []; params?: {} }
+    'accounting.key': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.allocations': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.analytic_report': { paramsTuple?: []; params?: {} }
     'accounting.trial_balance': { paramsTuple?: []; params?: {} }
     'accounting.ledger': { paramsTuple?: []; params?: {} }
     'audit.index': { paramsTuple?: []; params?: {} }
@@ -301,6 +326,9 @@ export type ScannedRoutes = {
     'accounting.fiscal_years.store': { paramsTuple?: []; params?: {} }
     'accounting.journals.store': { paramsTuple?: []; params?: {} }
     'accounting.create_rule': { paramsTuple?: []; params?: {} }
+    'accounting.create_dimension': { paramsTuple?: []; params?: {} }
+    'accounting.create_value': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.create_key': { paramsTuple?: []; params?: {} }
     'accounting.validate_opening': { paramsTuple?: []; params?: {} }
     'accounting.import_opening': { paramsTuple?: []; params?: {} }
     'accounting.submit_event': { paramsTuple?: []; params?: {} }
@@ -354,6 +382,9 @@ export type ScannedRoutes = {
     'accounting.fiscal_years.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.journals.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.update_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.update_dimension': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.update_value': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'valueId': ParamValue} }
+    'accounting.update_key': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.update_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -362,6 +393,7 @@ export type ScannedRoutes = {
   PUT: {
     'settings.update_profile': { paramsTuple?: []; params?: {} }
     'settings.update_settings': { paramsTuple?: []; params?: {} }
+    'accounting.set_allocations': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineNo': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

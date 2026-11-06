@@ -163,7 +163,7 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 ## Contabilidade (módulo `accounting`, Prompt 06)
 
-Blocos 6.1 a 6.4 feitos; 6.5–6.10 por fazer (ver `docs/reports/prompt-06.md`).
+Blocos 6.1 a 6.5 feitos; 6.6–6.10 por fazer (ver `docs/reports/prompt-06.md`).
 
 - **Plano de contas** por entidade legal (um activo, índice parcial único). Contas em árvore: classe → conta →
   subconta; o código do filho começa pelo do pai; só contas sem subcontas são movimentáveis; natureza, saldo normal,
@@ -203,7 +203,16 @@ Blocos 6.1 a 6.4 feitos; 6.5–6.10 por fazer (ver `docs/reports/prompt-06.md`).
   saldo anterior, débitos, créditos e saldos devedor/credor; analítico ou sintético até um nível. As contas-mãe são
   somas da subárvore e **não entram nos totais** (só as folhas), por isso nada é contado duas vezes. Ambos só contam
   lançamentos contabilizados, na moeda funcional, com somas em BigInt; testes garantem balancete = razão.
-- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports`; funcionalidade `accounting`. Regras:
+- **Analítica (6.5)**: dimensões (projecto, região, …) com valores, chaves de repartição por entidade legal e
+  imputações de linhas por (lançamento, n.º de linha), cada destino com percentagem (4 casas), centro de custo da
+  entidade e no máximo um valor por dimensão (FK composta valor+dimensão). As percentagens somam exactamente 100; a
+  repartição de um valor usa o maior resto, para que a soma das partes seja sempre o valor da linha. As imputações
+  são uma camada sobre o razão: não criam nem alteram movimentos, por isso podem ser corrigidas depois de
+  contabilizar (auditadas). Sem imputação, a linha conta 100% para o seu centro de custo. Mudar as linhas de um
+  rascunho apaga as imputações antigas. O relatório (`GET /accounting/analytics`) reparte os movimentos
+  contabilizados por centro de custo ou por valor de uma dimensão, mostra "Sem imputação" e confirma que os totais
+  coincidem com o razão filtrado.
+- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics`; funcionalidade `accounting`. Regras:
   `accounting.settings`; enviar/reprocessar eventos: `accounting.post`; simular e consultar: `accounting.read`.
 
 ## Anexos

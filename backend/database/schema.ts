@@ -81,6 +81,137 @@ export class AccountSchema extends BaseModel {
   declare version: number
 }
 
+export class AllocationKeyLineValueSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'dimensionId', 'id', 'keyLineId', 'tenantId', 'updatedAt', 'updatedBy', 'valueId', 'version'] as const
+  $columns = AllocationKeyLineValueSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare dimensionId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare keyLineId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare valueId: string
+  @column()
+  declare version: number
+}
+
+export class AllocationKeyLineSchema extends BaseModel {
+  static $columns = ['costCenterId', 'createdAt', 'createdBy', 'id', 'keyId', 'percent', 'seq', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AllocationKeyLineSchema.$columns
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare keyId: string
+  @column()
+  declare percent: string
+  @column()
+  declare seq: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AllocationKeySchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'name', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AllocationKeySchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AnalyticDimensionValueSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'dimensionId', 'id', 'name', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AnalyticDimensionValueSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare dimensionId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AnalyticDimensionSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'id', 'name', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AnalyticDimensionSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class ApprovalDecisionSchema extends BaseModel {
   static $columns = ['comment', 'createdAt', 'createdBy', 'decidedByMembershipId', 'decision', 'id', 'onBehalfOfMembershipId', 'requestId', 'stepSequence', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = ApprovalDecisionSchema.$columns
@@ -795,6 +926,60 @@ export class JournalEntrySchema extends BaseModel {
   declare totalCredit: string
   @column()
   declare totalDebit: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class JournalLineAllocationValueSchema extends BaseModel {
+  static $columns = ['allocationId', 'createdAt', 'createdBy', 'dimensionId', 'id', 'tenantId', 'updatedAt', 'updatedBy', 'valueId', 'version'] as const
+  $columns = JournalLineAllocationValueSchema.$columns
+  @column()
+  declare allocationId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare dimensionId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare valueId: string
+  @column()
+  declare version: number
+}
+
+export class JournalLineAllocationSchema extends BaseModel {
+  static $columns = ['costCenterId', 'createdAt', 'createdBy', 'entryId', 'id', 'lineNo', 'percent', 'seq', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = JournalLineAllocationSchema.$columns
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare entryId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare percent: string
+  @column()
+  declare seq: number
+  @column()
+  declare tenantId: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
   @column()

@@ -168,3 +168,17 @@ describe('contabilidade: abertura e relatórios', () => {
     expect(splitBalance('0.00')).toEqual({ debit: '', credit: '' });
   });
 });
+
+describe('contabilidade: analítica', () => {
+  it('soma de percentagens exacta e repartição igual que soma 100', async () => {
+    const { percentTotal, evenPercents } = await import('./model');
+    expect(
+      percentTotal([{ percent: '33,3333' }, { percent: '33.3333' }, { percent: '33.3334' }]),
+    ).toEqual({ total: '100', complete: true, invalid: false });
+    expect(percentTotal([{ percent: '50' }, { percent: '40' }]).complete).toBe(false);
+    expect(percentTotal([{ percent: '-1' }, { percent: '101' }]).invalid).toBe(true);
+    expect(evenPercents(3)).toEqual(['33.3333', '33.3333', '33.3334']);
+    expect(evenPercents(4)).toEqual(['25', '25', '25', '25']);
+    expect(percentTotal(evenPercents(7).map((percent) => ({ percent }))).complete).toBe(true);
+  });
+});
