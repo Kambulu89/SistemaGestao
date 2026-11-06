@@ -30,6 +30,25 @@ export const ACCOUNTING_ROUTES: Routes = [
     ],
   },
   {
+    path: 'regras',
+    title: 'Regras de contabilização',
+    children: [
+      { path: '', loadComponent: () => import('./posting-rules').then((m) => m.PostingRules) },
+      {
+        path: ':id',
+        title: (r: ActivatedRouteSnapshot) =>
+          r.paramMap.get('id') === 'novo' ? 'Nova regra' : 'Regra',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () => import('./posting-rule-form').then((m) => m.PostingRuleForm),
+      },
+    ],
+  },
+  {
+    path: 'eventos',
+    title: 'Eventos contabilísticos',
+    loadComponent: () => import('./posting-events').then((m) => m.PostingEvents),
+  },
+  {
     path: 'diarios',
     title: 'Diários',
     loadComponent: () => import('./journals').then((m) => m.Journals),

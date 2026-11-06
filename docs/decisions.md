@@ -102,3 +102,14 @@ ficam no servidor e, para a imutabilidade, também na base de dados (triggers): 
 corrige-se por estorno. O equilíbrio exige-se nas duas moedas para que o razão funcional nunca fique desequilibrado
 por arredondamentos. O fluxo de aprovação é interno ao lançamento (segregação de funções), sem passar pelos workflows
 genéricos, para não depender da funcionalidade de aprovações; poderá ligar-se a eles mais tarde se for pedido.
+
+## D-015 Motor de contabilização por regras configuráveis e eventos idempotentes (aceite)
+
+Os módulos de negócio não escrevem lançamentos nem conhecem contas: publicam eventos (origem, evento, referência,
+data, montantes nomeados, dimensões) e a contabilidade aplica a regra activa da entidade legal nessa data. As contas
+ficam na regra, escolhidas pela empresa no seu plano (sem códigos fixos no código, coerente com D-014). Uma regra
+usada é imutável e a mudança faz-se por vigência, para que o histórico continue explicável. O evento é idempotente
+pela referência, para que reenvios (rede, reprocessamento, integrações) nunca dupliquem lançamentos. Dentro do
+servidor o evento corre na transacção do módulo que o emite (tudo ou nada); pela API, as falhas ficam registadas com a
+mensagem para poderem ser corrigidas e reprocessadas. A entrega assíncrona (fila/outbox) só entra se houver
+necessidade medida — hoje o PostgreSQL e a transacção partilhada bastam.

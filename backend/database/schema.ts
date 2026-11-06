@@ -1133,6 +1133,127 @@ export class PositionSchema extends BaseModel {
   declare version: number
 }
 
+export class PostingEventSchema extends BaseModel {
+  static $columns = ['attempts', 'createdAt', 'createdBy', 'entryId', 'error', 'event', 'id', 'idempotencyKey', 'legalEntityId', 'occurredOn', 'payload', 'ruleId', 'source', 'sourceRef', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PostingEventSchema.$columns
+  @column()
+  declare attempts: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare entryId: string | null
+  @column()
+  declare error: any | null
+  @column()
+  declare event: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare legalEntityId: string
+  @column.date()
+  declare occurredOn: DateTime
+  @column()
+  declare payload: any
+  @column()
+  declare ruleId: string | null
+  @column()
+  declare source: string
+  @column()
+  declare sourceRef: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PostingRuleLineSchema extends BaseModel {
+  static $columns = ['accountId', 'amountKey', 'costCenterId', 'createdAt', 'createdBy', 'description', 'id', 'lineNo', 'ruleId', 'side', 'tenantId', 'updatedAt', 'updatedBy', 'useEventCostCenter', 'useEventThirdParty', 'version'] as const
+  $columns = PostingRuleLineSchema.$columns
+  @column()
+  declare accountId: string
+  @column()
+  declare amountKey: string
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare ruleId: string
+  @column()
+  declare side: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare useEventCostCenter: boolean
+  @column()
+  declare useEventThirdParty: boolean
+  @column()
+  declare version: number
+}
+
+export class PostingRuleSchema extends BaseModel {
+  static $columns = ['autoPost', 'code', 'createdAt', 'createdBy', 'descriptionTemplate', 'event', 'id', 'journalId', 'legalEntityId', 'name', 'source', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = PostingRuleSchema.$columns
+  @column()
+  declare autoPost: boolean
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare descriptionTemplate: string | null
+  @column()
+  declare event: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare journalId: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare name: string
+  @column()
+  declare source: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
 export class RateLimitCounterSchema extends BaseModel {
   static $columns = ['createdAt', 'hits', 'id', 'key', 'updatedAt', 'windowEndsAt'] as const
   $columns = RateLimitCounterSchema.$columns

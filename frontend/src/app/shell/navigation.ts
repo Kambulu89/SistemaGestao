@@ -87,6 +87,20 @@ export const NAVIGATION: NavGroup[] = [
         feature: 'accounting',
       },
       {
+        label: 'Regras de contabilização',
+        path: '/contabilidade/regras',
+        icon: 'flow',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+      {
+        label: 'Eventos contabilísticos',
+        path: '/contabilidade/eventos',
+        icon: 'history',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+      {
         label: 'Diários',
         path: '/contabilidade/diarios',
         icon: 'layers',

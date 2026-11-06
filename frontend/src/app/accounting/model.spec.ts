@@ -103,3 +103,26 @@ describe('contabilidade: valores escritos', () => {
     ).toBe(true);
   });
 });
+
+describe('contabilidade: motor', () => {
+  it('chaves de montante únicas e mensagem de erro do evento', async () => {
+    const { amountKeys, eventErrorText } = await import('./model');
+    expect(
+      amountKeys([
+        { amountKey: 'total' },
+        { amountKey: 'net' },
+        { amountKey: ' total ' },
+        { amountKey: '' },
+      ]),
+    ).toEqual(['total', 'net']);
+    const failed = {
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Verifique os campos indicados.',
+        details: [{ path: 'event', code: 'NO_RULE', message: 'Não há regra activa.' }],
+      },
+    } as never;
+    expect(eventErrorText(failed)).toBe('Verifique os campos indicados. Não há regra activa.');
+    expect(eventErrorText({ error: null } as never)).toBe('');
+  });
+});

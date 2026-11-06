@@ -247,3 +247,75 @@ export function entryActions(
       actor.can('accounting.reverse'),
   };
 }
+
+export interface PostingRuleLine {
+  lineNo?: number;
+  side: 'DEBIT' | 'CREDIT';
+  accountId: string | null;
+  accountCode?: string;
+  accountName?: string;
+  amountKey: string;
+  description: string | null;
+  costCenterId: string | null;
+  useEventCostCenter: boolean;
+  useEventThirdParty: boolean;
+}
+
+export interface PostingRule {
+  id: string;
+  version: number;
+  legalEntityId: string;
+  code: string;
+  name: string;
+  source: string;
+  event: string;
+  journalId: string;
+  autoPost: boolean;
+  descriptionTemplate: string | null;
+  validFrom: string;
+  validTo: string | null;
+  status: string;
+  inUse?: boolean;
+  lines?: PostingRuleLine[];
+}
+
+export interface PostingEventView {
+  id: string;
+  legalEntityId: string;
+  ruleId: string | null;
+  ruleCode: string | null;
+  source: string;
+  event: string;
+  sourceRef: string;
+  idempotencyKey: string;
+  occurredOn: string;
+  status: 'POSTED' | 'DRAFTED' | 'FAILED';
+  entryId: string | null;
+  entryNumber: string | null;
+  entryStatus: EntryStatus | null;
+  error: {
+    code: string;
+    message: string;
+    details: { path: string; code: string; message: string }[];
+  } | null;
+  attempts: number;
+  updatedAt: string;
+}
+
+export const EVENT_STATUS: Record<PostingEventView['status'], string> = {
+  POSTED: 'Contabilizado',
+  DRAFTED: 'Rascunho criado',
+  FAILED: 'Falhou',
+};
+
+/** Chaves de montante distintas pedidas pelas linhas de uma regra (os campos a preencher na simulação). */
+export function amountKeys(lines: Pick<PostingRuleLine, 'amountKey'>[]) {
+  return [...new Set(lines.map((l) => l.amountKey.trim()).filter(Boolean))];
+}
+
+/** Mensagem legível de um erro registado num evento (primeiro detalhe, se houver). */
+export function eventErrorText(e: PostingEventView) {
+  if (!e.error) return '';
+  const first = e.error.details?.[0];
+  return first ? `${e.error.message} ${first.message}` : e.error.message;
+}

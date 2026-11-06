@@ -163,7 +163,7 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 ## Contabilidade (módulo `accounting`, Prompt 06)
 
-Blocos 6.1 e 6.2 feitos; 6.3–6.10 por fazer (ver `docs/reports/prompt-06.md`).
+Blocos 6.1, 6.2 e 6.3 feitos; 6.4–6.10 por fazer (ver `docs/reports/prompt-06.md`).
 
 - **Plano de contas** por entidade legal (um activo, índice parcial único). Contas em árvore: classe → conta →
   subconta; o código do filho começa pelo do pai; só contas sem subcontas são movimentáveis; natureza, saldo normal,
@@ -182,7 +182,19 @@ Blocos 6.1 e 6.2 feitos; 6.3–6.10 por fazer (ver `docs/reports/prompt-06.md`).
   corrige-se por estorno (lados trocados, mesmo diário, numerado, uma única vez, nunca de um estorno).
   `idempotencyKey` devolve o lançamento já criado (bloqueio consultivo + índice único). Montantes guardados em
   `numeric(24,6)` e devolvidos na precisão da empresa. Anexos (`journal_entry`) até à contabilização.
-- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings`; funcionalidade `accounting`.
+- **Motor de contabilização (6.3)**: `posting_rules` por entidade legal, origem (`SALES_INVOICE`, …) e evento
+  (`ISSUED`, …), com diário e vigência; duas regras activas da mesma origem/evento não se sobrepõem (restrição de
+  exclusão). As linhas da regra indicam lado, **conta configurada pela empresa** (nunca códigos no código) e a chave do
+  montante no evento (`total`, `net`, `tax`, …); montante zero omite a linha, montante em falta é erro. Uma regra que
+  já contabilizou eventos não muda (só nome, data fim, descrição, automático e estado): fecha-se a vigência e cria-se
+  outra. `postAccountingEvent(scope, evento)` é o contrato para os módulos: corre na transacção de quem chama, cria o
+  lançamento com as mesmas validações dos manuais e, se a regra o pedir, contabiliza-o (numerado); senão fica em
+  rascunho para o fluxo normal. Idempotente pela chave (por omissão `origem:evento:referência`, bloqueio consultivo +
+  índice único). Pela API (`POST /accounting/posting-events`) uma falha fica registada em `posting_events` como
+  `FAILED` com a mensagem (numa transacção à parte) e pode ser reprocessada; `…/simulate` mostra as linhas e os
+  problemas sem gravar.
+- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings`; funcionalidade `accounting`. Regras:
+  `accounting.settings`; enviar/reprocessar eventos: `accounting.post`; simular e consultar: `accounting.read`.
 
 ## Anexos
 
