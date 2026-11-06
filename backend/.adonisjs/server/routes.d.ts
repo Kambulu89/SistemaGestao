@@ -87,6 +87,10 @@ export type ScannedRoutes = {
     'accounting.journals.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.create_rule': { paramsTuple?: []; params?: {} }
     'accounting.update_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.trial_balance': { paramsTuple?: []; params?: {} }
+    'accounting.ledger': { paramsTuple?: []; params?: {} }
+    'accounting.validate_opening': { paramsTuple?: []; params?: {} }
+    'accounting.import_opening': { paramsTuple?: []; params?: {} }
     'accounting.submit_event': { paramsTuple?: []; params?: {} }
     'accounting.retry_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -186,6 +190,8 @@ export type ScannedRoutes = {
     'accounting.rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.events': { paramsTuple?: []; params?: {} }
     'accounting.event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.trial_balance': { paramsTuple?: []; params?: {} }
+    'accounting.ledger': { paramsTuple?: []; params?: {} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
@@ -249,6 +255,8 @@ export type ScannedRoutes = {
     'accounting.rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.events': { paramsTuple?: []; params?: {} }
     'accounting.event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'accounting.trial_balance': { paramsTuple?: []; params?: {} }
+    'accounting.ledger': { paramsTuple?: []; params?: {} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
@@ -293,6 +301,8 @@ export type ScannedRoutes = {
     'accounting.fiscal_years.store': { paramsTuple?: []; params?: {} }
     'accounting.journals.store': { paramsTuple?: []; params?: {} }
     'accounting.create_rule': { paramsTuple?: []; params?: {} }
+    'accounting.validate_opening': { paramsTuple?: []; params?: {} }
+    'accounting.import_opening': { paramsTuple?: []; params?: {} }
     'accounting.submit_event': { paramsTuple?: []; params?: {} }
     'accounting.retry_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

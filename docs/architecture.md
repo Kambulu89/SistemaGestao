@@ -163,7 +163,7 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 ## Contabilidade (módulo `accounting`, Prompt 06)
 
-Blocos 6.1, 6.2 e 6.3 feitos; 6.4–6.10 por fazer (ver `docs/reports/prompt-06.md`).
+Blocos 6.1 a 6.4 feitos; 6.5–6.10 por fazer (ver `docs/reports/prompt-06.md`).
 
 - **Plano de contas** por entidade legal (um activo, índice parcial único). Contas em árvore: classe → conta →
   subconta; o código do filho começa pelo do pai; só contas sem subcontas são movimentáveis; natureza, saldo normal,
@@ -193,7 +193,17 @@ Blocos 6.1, 6.2 e 6.3 feitos; 6.4–6.10 por fazer (ver `docs/reports/prompt-06.
   índice único). Pela API (`POST /accounting/posting-events`) uma falha fica registada em `posting_events` como
   `FAILED` com a mensagem (numa transacção à parte) e pode ser reprocessada; `…/simulate` mostra as linhas e os
   problemas sem gravar.
-- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings`; funcionalidade `accounting`. Regras:
+- **Abertura, razão e balancete (6.4)**: a importação de saldos recebe linhas por **código** de conta (CSV colado
+  ou carregado e lido no browser), valida-as todas (conta existente e movimentável, um só lado, centro de custo e
+  terceiro quando exigidos, duplicados, equilíbrio) e cria um rascunho no período de abertura com origem
+  `OPENING_BALANCE`; uma importação activa por exercício (bloqueio consultivo), nova só depois de estornada a anterior.
+  O razão (`GET /accounting/ledger`) é por exercício: conta (com subcontas, por CTE recursiva), datas, terceiro e
+  centro de custo; saldo anterior = movimentos do exercício antes da data inicial; totais calculados no SQL, linhas
+  limitadas a 5000. O balancete (`GET /accounting/trial-balance`) usa intervalos de períodos (0 = abertura) com
+  saldo anterior, débitos, créditos e saldos devedor/credor; analítico ou sintético até um nível. As contas-mãe são
+  somas da subárvore e **não entram nos totais** (só as folhas), por isso nada é contado duas vezes. Ambos só contam
+  lançamentos contabilizados, na moeda funcional, com somas em BigInt; testes garantem balancete = razão.
+- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports`; funcionalidade `accounting`. Regras:
   `accounting.settings`; enviar/reprocessar eventos: `accounting.post`; simular e consultar: `accounting.read`.
 
 ## Anexos

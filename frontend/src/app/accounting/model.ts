@@ -319,3 +319,142 @@ export function eventErrorText(e: PostingEventView) {
   const first = e.error.details?.[0];
   return first ? `${e.error.message} ${first.message}` : e.error.message;
 }
+
+export interface OpeningLine {
+  accountCode: string;
+  debit: string | null;
+  credit: string | null;
+  costCenterCode: string | null;
+  thirdPartyRef: string | null;
+  description: string | null;
+}
+
+const HEADER_ALIASES: Record<string, keyof OpeningLine> = {
+  conta: 'accountCode',
+  account: 'accountCode',
+  codigo: 'accountCode',
+  debito: 'debit',
+  devedor: 'debit',
+  debit: 'debit',
+  credito: 'credit',
+  credor: 'credit',
+  credit: 'credit',
+  centro: 'costCenterCode',
+  centrodecusto: 'costCenterCode',
+  terceiro: 'thirdPartyRef',
+  nif: 'thirdPartyRef',
+  descricao: 'description',
+};
+const ORDER: (keyof OpeningLine)[] = [
+  'accountCode',
+  'debit',
+  'credit',
+  'costCenterCode',
+  'thirdPartyRef',
+  'description',
+];
+const plain = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+
+/**
+ * Lê saldos de abertura colados de uma folha de cálculo ou CSV: separador `;`, tab ou `,` (detectado na primeira
+ * linha), cabeçalho opcional (conta, débito, crédito, centro, terceiro, descrição; por omissão esta ordem), valores com
+ * vírgula decimal. Linhas vazias são ignoradas. A validação é do servidor.
+ */
+export function parseOpeningCsv(text: string): OpeningLine[] {
+  const rows = text.split(/\r?\n/).filter((r) => r.trim() !== '');
+  if (rows.length === 0) return [];
+  const first = rows[0];
+  const sep = first.includes(';') ? ';' : first.includes('\t') ? '\t' : ',';
+  const cells = (r: string) => r.split(sep).map((c) => c.trim().replace(/^"(.*)"$/, '$1'));
+  let order = ORDER;
+  const head = cells(first).map(plain);
+  if (head.some((h) => h in HEADER_ALIASES)) {
+    order = head.map((h) => HEADER_ALIASES[h] ?? ('' as keyof OpeningLine));
+    rows.shift();
+  }
+  return rows.map((r) => {
+    const values = cells(r);
+    const line: OpeningLine = {
+      accountCode: '',
+      debit: null,
+      credit: null,
+      costCenterCode: null,
+      thirdPartyRef: null,
+      description: null,
+    };
+    order.forEach((key, i) => {
+      if (!key) return;
+      const v = values[i] ?? '';
+      if (key === 'accountCode') line.accountCode = v;
+      else if (key === 'debit' || key === 'credit') line[key] = v ? normalizeAmount(v) : null;
+      else line[key] = v || null;
+    });
+    return line;
+  });
+}
+
+export interface TrialBalanceRow {
+  accountId: string;
+  code: string;
+  name: string;
+  level: string;
+  depth: number;
+  postable: boolean;
+  opening: string;
+  debit: string;
+  credit: string;
+  closing: string;
+}
+
+export interface TrialBalance {
+  fiscalYear: { id: string; code: string; legalEntityId: string };
+  fromPeriod: number;
+  toPeriod: number;
+  mode: 'analytic' | 'synthetic';
+  balanced: boolean;
+  rows: TrialBalanceRow[];
+  totals: {
+    opening: string;
+    debit: string;
+    credit: string;
+    closingDebit: string;
+    closingCredit: string;
+  };
+}
+
+export interface LedgerLine {
+  entryId: string;
+  number: string;
+  date: string;
+  entryDescription: string;
+  description: string | null;
+  accountCode: string;
+  thirdPartyRef: string | null;
+  debit: string;
+  credit: string;
+  balance: string;
+}
+
+export interface Ledger {
+  account: { id: string; code: string; name: string; includesSubaccounts: boolean };
+  fiscalYear: { id: string; code: string };
+  from: string;
+  to: string;
+  opening: string;
+  debit: string;
+  credit: string;
+  closing: string;
+  lines: LedgerLine[];
+  truncated: boolean;
+}
+
+/** Saldo com sinal → coluna devedora/credora para apresentação. */
+export function splitBalance(value: string): { debit: string; credit: string } {
+  if (value.startsWith('-')) return { debit: '', credit: value.slice(1) };
+  return { debit: /^0(\.0+)?$/.test(value) ? '' : value, credit: '' };
+}

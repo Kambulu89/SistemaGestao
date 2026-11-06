@@ -126,3 +126,45 @@ describe('contabilidade: motor', () => {
     expect(eventErrorText({ error: null } as never)).toBe('');
   });
 });
+
+describe('contabilidade: abertura e relatórios', () => {
+  it('lê CSV com ; e cabeçalho, vírgula decimal e linhas vazias', async () => {
+    const { parseOpeningCsv } = await import('./model');
+    const lines = parseOpeningCsv(
+      'Conta;Débito;Crédito;Centro\n111;1 000,50;;CC1\n\n21;;1000,50;\n',
+    );
+    expect(lines).toEqual([
+      {
+        accountCode: '111',
+        debit: '1000.50',
+        credit: null,
+        costCenterCode: 'CC1',
+        thirdPartyRef: null,
+        description: null,
+      },
+      {
+        accountCode: '21',
+        debit: null,
+        credit: '1000.50',
+        costCenterCode: null,
+        thirdPartyRef: null,
+        description: null,
+      },
+    ]);
+  });
+
+  it('sem cabeçalho usa a ordem conta, débito, crédito; separador tab', async () => {
+    const { parseOpeningCsv } = await import('./model');
+    expect(parseOpeningCsv('111\t10\t\n21\t\t10')).toMatchObject([
+      { accountCode: '111', debit: '10', credit: null },
+      { accountCode: '21', debit: null, credit: '10' },
+    ]);
+  });
+
+  it('saldo com sinal dividido em devedor/credor', async () => {
+    const { splitBalance } = await import('./model');
+    expect(splitBalance('-150.00')).toEqual({ debit: '', credit: '150.00' });
+    expect(splitBalance('20.00')).toEqual({ debit: '20.00', credit: '' });
+    expect(splitBalance('0.00')).toEqual({ debit: '', credit: '' });
+  });
+});

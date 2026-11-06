@@ -49,6 +49,27 @@ export const ACCOUNTING_ROUTES: Routes = [
     loadComponent: () => import('./posting-events').then((m) => m.PostingEvents),
   },
   {
+    path: 'abertura',
+    title: 'Saldos de abertura',
+    canActivate: [accessGuard],
+    data: { permission: 'accounting.create' },
+    loadComponent: () => import('./opening-balances').then((m) => m.OpeningBalances),
+  },
+  {
+    path: 'balancete',
+    title: 'Balancete',
+    canActivate: [accessGuard],
+    data: { permission: 'accounting.reports' },
+    loadComponent: () => import('./trial-balance').then((m) => m.TrialBalancePage),
+  },
+  {
+    path: 'razao',
+    title: 'Razão',
+    canActivate: [accessGuard],
+    data: { permission: 'accounting.reports' },
+    loadComponent: () => import('./ledger').then((m) => m.LedgerPage),
+  },
+  {
     path: 'diarios',
     title: 'Diários',
     loadComponent: () => import('./journals').then((m) => m.Journals),

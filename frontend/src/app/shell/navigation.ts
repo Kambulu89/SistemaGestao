@@ -73,6 +73,27 @@ export const NAVIGATION: NavGroup[] = [
         feature: 'accounting',
       },
       {
+        label: 'Balancete',
+        path: '/contabilidade/balancete',
+        icon: 'grid',
+        permission: 'accounting.reports',
+        feature: 'accounting',
+      },
+      {
+        label: 'Razão',
+        path: '/contabilidade/razao',
+        icon: 'file',
+        permission: 'accounting.reports',
+        feature: 'accounting',
+      },
+      {
+        label: 'Saldos de abertura',
+        path: '/contabilidade/abertura',
+        icon: 'download',
+        permission: 'accounting.create',
+        feature: 'accounting',
+      },
+      {
         label: 'Planos de contas',
         path: '/contabilidade/planos',
         icon: 'tree',
