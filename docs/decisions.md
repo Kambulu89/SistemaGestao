@@ -122,3 +122,14 @@ causa da analítica, e o relatório analítico confere sempre com eles. Por não
 corrigidas depois da contabilização, com auditoria de cada alteração (antes/depois), o que é a prática comum em
 controlo de gestão. Ficam ligadas por (lançamento, n.º de linha) e não ao id físico das linhas; alterar as linhas de
 um rascunho apaga-as.
+
+## D-017 Activos fixos geram lançamentos directamente, com contas na classe (aceite)
+
+Os activos fixos não passam pelo motor de regras (6.3): as contas vêm da classe do activo, configurada pela empresa,
+porque cada classe tem as suas contas (equipamento, viaturas, edifícios…) e uma regra por origem/evento não as
+distingue. O módulo cria e contabiliza o lançamento na mesma transacção que muda a ficha (origem `FIXED_ASSETS`),
+sem fluxo de aprovação: a permissão `fixed_assets.post` é a autorização. Para a ficha e o razão nunca divergirem,
+estes lançamentos só se estornam pela ficha ou pela anulação do mês de depreciação; o estorno genérico recusa-os.
+O mapa de depreciação é recalculado a partir da ficha (nunca guardado) e as depreciações feitas ficam numa tabela com
+uma linha por activo e mês (UNIQUE), que é o que impede depreciar duas vezes. Vidas úteis, métodos e coeficientes são
+configurados pela empresa; não se assumem taxas fiscais angolanas sem validação normativa.

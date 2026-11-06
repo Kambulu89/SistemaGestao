@@ -17,6 +17,7 @@ export const STATUS_LABELS: Record<string, string> = {
   REJECTED: 'Rejeitado',
   PENDING_APPROVAL: 'Aguarda aprovação',
   CLOSED: 'Fechada',
+  DISPOSED: 'Abatido',
 };
 
 const TONES: Record<string, string> = {

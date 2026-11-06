@@ -230,8 +230,33 @@ async function populate(client: any) {
     }),
     200
   )
+  const assetClass = ok(
+    await as(client, s).post('/api/v1/accounting/fixed-asset-classes', {
+      legalEntityId: le.id,
+      code: 'FA',
+      name: 'Classe A',
+      usefulLifeMonths: 12,
+      journalId: journal.id,
+      assetAccountId: accountA.id,
+      accumulatedAccountId: accountB.id,
+      expenseAccountId: accountA.id,
+      gainAccountId: accountB.id,
+      lossAccountId: accountA.id,
+    })
+  )
+  const asset = ok(
+    await as(client, s).post('/api/v1/accounting/fixed-assets', {
+      classId: assetClass.id,
+      number: 'AF-A',
+      name: 'Activo A',
+      acquisitionDate: '2026-01-01',
+      cost: '12',
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    assetClass,
+    asset,
     dimension,
     dimValue,
     allocKey,
@@ -306,6 +331,56 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.put(`/api/v1/accounting/entries/${a.entry.id}/lines/1/allocations`, { allocations: [] }),
       ],
       ['analítica de A', B.get(`/api/v1/accounting/analytics?fiscalYearId=${a.fy.id}`)],
+      ['GET classe de activos', B.get(`/api/v1/accounting/fixed-asset-classes/${a.assetClass.id}`)],
+      [
+        'PATCH classe de activos',
+        B.patch(`/api/v1/accounting/fixed-asset-classes/${a.assetClass.id}`, { ...v, name: 'xx' }),
+      ],
+      ['GET activo', B.get(`/api/v1/accounting/fixed-assets/${a.asset.id}`)],
+      [
+        'PATCH activo',
+        B.patch(`/api/v1/accounting/fixed-assets/${a.asset.id}`, { ...v, name: 'xx' }),
+      ],
+      ['DELETE activo', B.delete(`/api/v1/accounting/fixed-assets/${a.asset.id}`)],
+      [
+        'adquirir activo',
+        B.post(`/api/v1/accounting/fixed-assets/${a.asset.id}/acquire`, {
+          ...v,
+          counterpartAccountId: a.accountA.id,
+        }),
+      ],
+      [
+        'transferir activo',
+        B.post(`/api/v1/accounting/fixed-assets/${a.asset.id}/transfer`, {
+          ...v,
+          date: '2026-02-01',
+        }),
+      ],
+      [
+        'abater activo',
+        B.post(`/api/v1/accounting/fixed-assets/${a.asset.id}/dispose`, {
+          ...v,
+          date: '2026-02-01',
+          reason: 'xx',
+        }),
+      ],
+      [
+        'simular depreciação de A',
+        B.get(
+          `/api/v1/accounting/fixed-assets/depreciation/preview?legalEntityId=${a.le.id}&upTo=2026-12`
+        ),
+      ],
+      [
+        'depreciar entidade de A',
+        B.post('/api/v1/accounting/fixed-assets/depreciation/run', {
+          legalEntityId: a.le.id,
+          upTo: '2026-12',
+        }),
+      ],
+      [
+        'mapa de depreciação de A',
+        B.get(`/api/v1/accounting/fixed-assets/depreciation-map?fiscalYearId=${a.fy.id}`),
+      ],
       ['balancete de A', B.get(`/api/v1/accounting/trial-balance?fiscalYearId=${a.fy.id}`)],
       [
         'razão de A',
@@ -419,6 +494,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       B.get('/api/v1/accounting/posting-events'),
       B.get('/api/v1/accounting/dimensions'),
       B.get('/api/v1/accounting/allocation-keys'),
+      B.get('/api/v1/accounting/fixed-asset-classes'),
+      B.get('/api/v1/accounting/fixed-assets'),
     ])
     const idsOfA = new Set(
       [
@@ -443,6 +520,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
         a.postingEvent.id,
         a.dimension.id,
         a.allocKey.id,
+        a.assetClass.id,
+        a.asset.id,
       ].map(String)
     )
     const leaked = lists.flatMap((r) =>

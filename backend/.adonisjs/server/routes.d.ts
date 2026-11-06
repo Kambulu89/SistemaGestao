@@ -116,6 +116,24 @@ export type ScannedRoutes = {
     'accounting.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.post': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.classes': { paramsTuple?: []; params?: {} }
+    'fixed_assets.show_class': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.index': { paramsTuple?: []; params?: {} }
+    'fixed_assets.preview': { paramsTuple?: []; params?: {} }
+    'fixed_assets.map': { paramsTuple?: []; params?: {} }
+    'fixed_assets.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.create_class': { paramsTuple?: []; params?: {} }
+    'fixed_assets.update_class': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.store': { paramsTuple?: []; params?: {} }
+    'fixed_assets.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.transfer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.acquire': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.dispose': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.reverse_acquisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.reverse_disposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.run': { paramsTuple?: []; params?: {} }
+    'fixed_assets.undo': { paramsTuple?: []; params?: {} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'notifications.read_all': { paramsTuple?: []; params?: {} }
@@ -211,6 +229,12 @@ export type ScannedRoutes = {
     'accounting.analytic_report': { paramsTuple?: []; params?: {} }
     'accounting.trial_balance': { paramsTuple?: []; params?: {} }
     'accounting.ledger': { paramsTuple?: []; params?: {} }
+    'fixed_assets.classes': { paramsTuple?: []; params?: {} }
+    'fixed_assets.show_class': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.index': { paramsTuple?: []; params?: {} }
+    'fixed_assets.preview': { paramsTuple?: []; params?: {} }
+    'fixed_assets.map': { paramsTuple?: []; params?: {} }
+    'fixed_assets.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
@@ -282,6 +306,12 @@ export type ScannedRoutes = {
     'accounting.analytic_report': { paramsTuple?: []; params?: {} }
     'accounting.trial_balance': { paramsTuple?: []; params?: {} }
     'accounting.ledger': { paramsTuple?: []; params?: {} }
+    'fixed_assets.classes': { paramsTuple?: []; params?: {} }
+    'fixed_assets.show_class': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.index': { paramsTuple?: []; params?: {} }
+    'fixed_assets.preview': { paramsTuple?: []; params?: {} }
+    'fixed_assets.map': { paramsTuple?: []; params?: {} }
+    'fixed_assets.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
@@ -341,6 +371,15 @@ export type ScannedRoutes = {
     'accounting.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.post': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.create_class': { paramsTuple?: []; params?: {} }
+    'fixed_assets.store': { paramsTuple?: []; params?: {} }
+    'fixed_assets.transfer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.acquire': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.dispose': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.reverse_acquisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.reverse_disposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.run': { paramsTuple?: []; params?: {} }
+    'fixed_assets.undo': { paramsTuple?: []; params?: {} }
     'notifications.read_all': { paramsTuple?: []; params?: {} }
     'notifications.read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.create_workflow': { paramsTuple?: []; params?: {} }
@@ -366,6 +405,7 @@ export type ScannedRoutes = {
     'members.unassign_role': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'assignmentId': ParamValue} }
     'settings.remove_holiday': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'holidayId': ParamValue} }
     'accounting.delete_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.delete_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.remove_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
@@ -386,6 +426,8 @@ export type ScannedRoutes = {
     'accounting.update_value': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'valueId': ParamValue} }
     'accounting.update_key': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.update_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.update_class': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fixed_assets.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

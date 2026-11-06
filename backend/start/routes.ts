@@ -25,6 +25,7 @@ const TasksController = () => import('#modules/tasks/http/tasks_controller')
 const DashboardController = () => import('#modules/dashboard/http/dashboard_controller')
 const SettingsController = () => import('#modules/settings/http/settings_controller')
 const AccountingController = () => import('#modules/accounting/http/accounting_controller')
+const FixedAssetsController = () => import('#modules/accounting/http/fixed_assets_controller')
 
 router
   .group(() => {
@@ -324,6 +325,54 @@ router
                 .post('accounting/entries/:id/reverse', [AccountingController, 'reverse'])
                 .use(accounting('accounting.reverse'))
             })
+
+            // Activos fixos (6.6): consulta, gestão das fichas e contabilização (aquisição, depreciação, abate).
+            const FA = 'accounting/fixed-assets'
+            router
+              .group(() => {
+                router.get('accounting/fixed-asset-classes', [FixedAssetsController, 'classes'])
+                router.get('accounting/fixed-asset-classes/:id', [
+                  FixedAssetsController,
+                  'showClass',
+                ])
+                router.get(FA, [FixedAssetsController, 'index'])
+                router.get(`${FA}/depreciation/preview`, [FixedAssetsController, 'preview'])
+                router.get(`${FA}/depreciation-map`, [FixedAssetsController, 'map'])
+                router.get(`${FA}/:id`, [FixedAssetsController, 'show'])
+              })
+              .use(accounting('fixed_assets.read'))
+            router
+              .group(() => {
+                router.post('accounting/fixed-asset-classes', [
+                  FixedAssetsController,
+                  'createClass',
+                ])
+                router.patch('accounting/fixed-asset-classes/:id', [
+                  FixedAssetsController,
+                  'updateClass',
+                ])
+                router.post(FA, [FixedAssetsController, 'store'])
+                router.patch(`${FA}/:id`, [FixedAssetsController, 'update'])
+                router.delete(`${FA}/:id`, [FixedAssetsController, 'destroy'])
+                router.post(`${FA}/:id/transfer`, [FixedAssetsController, 'transfer'])
+              })
+              .use(accounting('fixed_assets.manage'))
+            router
+              .group(() => {
+                router.post(`${FA}/:id/acquire`, [FixedAssetsController, 'acquire'])
+                router.post(`${FA}/:id/dispose`, [FixedAssetsController, 'dispose'])
+                router.post(`${FA}/:id/reverse-acquisition`, [
+                  FixedAssetsController,
+                  'reverseAcquisition',
+                ])
+                router.post(`${FA}/:id/reverse-disposal`, [
+                  FixedAssetsController,
+                  'reverseDisposal',
+                ])
+                router.post(`${FA}/depreciation/run`, [FixedAssetsController, 'run'])
+                router.post(`${FA}/depreciation/undo`, [FixedAssetsController, 'undo'])
+              })
+              .use(accounting('fixed_assets.post'))
 
             router
               .get('audit-events', [AuditController, 'index'])

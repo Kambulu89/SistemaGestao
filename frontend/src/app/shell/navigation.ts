@@ -108,6 +108,27 @@ export const NAVIGATION: NavGroup[] = [
         feature: 'accounting',
       },
       {
+        label: 'Activos fixos',
+        path: '/contabilidade/activos',
+        icon: 'building',
+        permission: 'fixed_assets.read',
+        feature: 'accounting',
+      },
+      {
+        label: 'Depreciações',
+        path: '/contabilidade/depreciacoes',
+        icon: 'coins',
+        permission: 'fixed_assets.read',
+        feature: 'accounting',
+      },
+      {
+        label: 'Classes de activos',
+        path: '/contabilidade/classes-activos',
+        icon: 'layers',
+        permission: 'fixed_assets.read',
+        feature: 'accounting',
+      },
+      {
         label: 'Saldos de abertura',
         path: '/contabilidade/abertura',
         icon: 'download',

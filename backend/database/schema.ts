@@ -861,6 +861,182 @@ export class FiscalYearSchema extends BaseModel {
   declare version: number
 }
 
+export class FixedAssetClassSchema extends BaseModel {
+  static $columns = ['accumulatedAccountId', 'assetAccountId', 'code', 'createdAt', 'createdBy', 'decliningFactor', 'expenseAccountId', 'gainAccountId', 'id', 'journalId', 'legalEntityId', 'lossAccountId', 'method', 'name', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'usefulLifeMonths', 'version'] as const
+  $columns = FixedAssetClassSchema.$columns
+  @column()
+  declare accumulatedAccountId: string
+  @column()
+  declare assetAccountId: string
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare decliningFactor: string | null
+  @column()
+  declare expenseAccountId: string
+  @column()
+  declare gainAccountId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare journalId: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare lossAccountId: string
+  @column()
+  declare method: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare usefulLifeMonths: number
+  @column()
+  declare version: number
+}
+
+export class FixedAssetDepreciationSchema extends BaseModel {
+  static $columns = ['amount', 'assetId', 'costCenterId', 'createdAt', 'createdBy', 'entryId', 'id', 'month', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FixedAssetDepreciationSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare assetId: string
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare entryId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare month: DateTime
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class FixedAssetMovementSchema extends BaseModel {
+  static $columns = ['assetId', 'createdAt', 'createdBy', 'entryId', 'fromCostCenterId', 'fromLocation', 'id', 'movementDate', 'notes', 'tenantId', 'toCostCenterId', 'toLocation', 'type', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FixedAssetMovementSchema.$columns
+  @column()
+  declare assetId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare entryId: string | null
+  @column()
+  declare fromCostCenterId: string | null
+  @column()
+  declare fromLocation: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare movementDate: DateTime
+  @column()
+  declare notes: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare toCostCenterId: string | null
+  @column()
+  declare toLocation: string | null
+  @column()
+  declare type: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class FixedAssetSchema extends BaseModel {
+  static $columns = ['acquisitionDate', 'acquisitionDocument', 'acquisitionEntryId', 'classId', 'cost', 'costCenterId', 'createdAt', 'createdBy', 'decliningFactor', 'depreciationStart', 'description', 'disposalDate', 'disposalEntryId', 'disposalProceeds', 'disposalReason', 'id', 'legalEntityId', 'location', 'method', 'name', 'number', 'residualValue', 'serialNumber', 'status', 'supplierName', 'tenantId', 'updatedAt', 'updatedBy', 'usefulLifeMonths', 'version'] as const
+  $columns = FixedAssetSchema.$columns
+  @column.date()
+  declare acquisitionDate: DateTime
+  @column()
+  declare acquisitionDocument: string | null
+  @column()
+  declare acquisitionEntryId: string | null
+  @column()
+  declare classId: string
+  @column()
+  declare cost: string
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare decliningFactor: string | null
+  @column.date()
+  declare depreciationStart: DateTime
+  @column()
+  declare description: string | null
+  @column.date()
+  declare disposalDate: DateTime | null
+  @column()
+  declare disposalEntryId: string | null
+  @column()
+  declare disposalProceeds: string | null
+  @column()
+  declare disposalReason: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare location: string | null
+  @column()
+  declare method: string
+  @column()
+  declare name: string
+  @column()
+  declare number: string
+  @column()
+  declare residualValue: string
+  @column()
+  declare serialNumber: string | null
+  @column()
+  declare status: string
+  @column()
+  declare supplierName: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare usefulLifeMonths: number
+  @column()
+  declare version: number
+}
+
 export class JournalEntrySchema extends BaseModel {
   static $columns = ['approvedAt', 'approvedBy', 'chartId', 'createdAt', 'createdBy', 'currency', 'description', 'documentDate', 'entryDate', 'exchangeRate', 'fiscalYearId', 'id', 'idempotencyKey', 'journalId', 'legalEntityId', 'number', 'periodId', 'postedAt', 'postedBy', 'reference', 'rejectionReason', 'reversalOfId', 'reversedById', 'source', 'sourceRef', 'status', 'submittedAt', 'submittedBy', 'tenantId', 'totalCredit', 'totalDebit', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = JournalEntrySchema.$columns

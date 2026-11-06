@@ -87,6 +87,35 @@ export const ACCOUNTING_ROUTES: Routes = [
     loadComponent: () => import('./analytics-report').then((m) => m.AnalyticsReportPage),
   },
   {
+    path: 'activos',
+    title: 'Activos fixos',
+    canActivate: [accessGuard],
+    data: { permission: 'fixed_assets.read' },
+    children: [
+      { path: '', loadComponent: () => import('./assets').then((m) => m.Assets) },
+      {
+        path: ':id',
+        title: (r: ActivatedRouteSnapshot) =>
+          r.paramMap.get('id') === 'novo' ? 'Novo activo' : 'Activo fixo',
+        loadComponent: () => import('./asset-detail').then((m) => m.AssetDetail),
+      },
+    ],
+  },
+  {
+    path: 'classes-activos',
+    title: 'Classes de activos',
+    canActivate: [accessGuard],
+    data: { permission: 'fixed_assets.read' },
+    loadComponent: () => import('./asset-classes').then((m) => m.AssetClasses),
+  },
+  {
+    path: 'depreciacoes',
+    title: 'Depreciações',
+    canActivate: [accessGuard],
+    data: { permission: 'fixed_assets.read' },
+    loadComponent: () => import('./depreciation').then((m) => m.DepreciationPage),
+  },
+  {
     path: 'diarios',
     title: 'Diários',
     loadComponent: () => import('./journals').then((m) => m.Journals),

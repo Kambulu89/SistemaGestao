@@ -528,3 +528,179 @@ export function evenPercents(n: number): string[] {
     fromScaled(i === n - 1 ? last : each, 4).replace(/\.?0+$/, ''),
   );
 }
+
+// ---------------------------------------------------------------- activos fixos (6.6)
+
+export type DepreciationMethod = 'STRAIGHT_LINE' | 'DECLINING_BALANCE';
+export const METHOD_LABELS: Record<DepreciationMethod, string> = {
+  STRAIGHT_LINE: 'Linha recta',
+  DECLINING_BALANCE: 'Degressivo',
+};
+
+export interface AssetClass {
+  id: string;
+  version: number;
+  legalEntityId: string;
+  code: string;
+  name: string;
+  method: DepreciationMethod;
+  usefulLifeMonths: number;
+  decliningFactor: string | null;
+  journalId: string;
+  assetAccountId: string;
+  accumulatedAccountId: string;
+  expenseAccountId: string;
+  gainAccountId: string;
+  lossAccountId: string;
+  status: string;
+}
+
+export type AssetStatus = 'DRAFT' | 'ACTIVE' | 'DISPOSED';
+export const ASSET_STATUS: Record<AssetStatus, string> = {
+  DRAFT: 'Por contabilizar',
+  ACTIVE: 'Em uso',
+  DISPOSED: 'Abatido',
+};
+
+export interface ScheduleLine {
+  month: string;
+  amount: string;
+  accumulated: string;
+  bookValue: string;
+  posted: boolean;
+  entryId: string | null;
+  entryNumber: string | null;
+}
+
+export interface AssetMovement {
+  id: string;
+  type: string;
+  date: string;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromCostCenterId: string | null;
+  toCostCenterId: string | null;
+  entryId: string | null;
+  entryNumber: string | null;
+  notes: string | null;
+}
+
+export const MOVEMENT_LABELS: Record<string, string> = {
+  ACQUISITION: 'Aquisição',
+  TRANSFER: 'Transferência',
+  DISPOSAL: 'Abate',
+  ACQUISITION_REVERSED: 'Aquisição anulada',
+  DISPOSAL_REVERSED: 'Abate anulado',
+};
+
+export interface FixedAsset {
+  id: string;
+  version: number;
+  legalEntityId: string;
+  classId: string;
+  number: string;
+  name: string;
+  description: string | null;
+  serialNumber: string | null;
+  supplierName: string | null;
+  acquisitionDocument: string | null;
+  acquisitionDate: string;
+  cost: string;
+  residualValue: string;
+  usefulLifeMonths: number;
+  method: DepreciationMethod;
+  decliningFactor: string | null;
+  depreciationStart: string;
+  location: string | null;
+  costCenterId: string | null;
+  status: AssetStatus;
+  acquisitionEntryId: string | null;
+  disposalDate: string | null;
+  disposalProceeds: string | null;
+  disposalReason: string | null;
+  disposalEntryId: string | null;
+  accumulated: string;
+  bookValue: string;
+  class?: { id: string; code: string; name: string } | null;
+  acquisitionEntryNumber?: string | null;
+  disposalEntryNumber?: string | null;
+  schedule?: ScheduleLine[];
+  movements?: AssetMovement[];
+}
+
+export interface DepreciationPreview {
+  rows: {
+    assetId: string;
+    number: string;
+    name: string;
+    month: string;
+    amount: string;
+    costCenterId: string | null;
+  }[];
+  months: { month: string; assets: number; total: string }[];
+  total: string;
+  entries?: { id: string; number: string; month: string; total: string; assets: number }[];
+}
+
+export interface DepreciationMapRow {
+  assetId: string;
+  number: string;
+  name: string;
+  classCode: string;
+  status: AssetStatus;
+  acquisitionDate: string;
+  disposalDate: string | null;
+  cost: string;
+  opening: string;
+  period: string;
+  closing: string;
+  bookValue: string;
+  forecast: string;
+}
+
+export interface DepreciationMap {
+  fiscalYear: string;
+  from: string;
+  to: string;
+  rows: DepreciationMapRow[];
+  classes: ({ classId: string; code: string; name: string } & Record<string, string>)[];
+  totals: Record<string, string>;
+}
+
+/**
+ * Acções disponíveis na ficha, conforme o estado e as permissões (a API volta a verificar tudo). Anular a aquisição
+ * só faz sentido sem depreciações; anular o abate, só com o activo abatido.
+ */
+export function assetActions(
+  a: Pick<FixedAsset, 'status' | 'schedule'>,
+  can: (permission: string) => boolean,
+) {
+  const manage = can('fixed_assets.manage');
+  const post = can('fixed_assets.post');
+  const depreciated = (a.schedule ?? []).some((s) => s.posted);
+  return {
+    edit: manage && a.status !== 'DISPOSED',
+    remove: manage && a.status === 'DRAFT',
+    acquire: post && a.status === 'DRAFT',
+    transfer: manage && a.status === 'ACTIVE',
+    dispose: post && a.status === 'ACTIVE',
+    reverseAcquisition: post && a.status === 'ACTIVE' && !depreciated,
+    reverseDisposal: post && a.status === 'DISPOSED',
+  };
+}
+
+/** Mês corrente (AAAA-MM) no fuso local, para pré-preencher a depreciação. */
+export function currentMonth(now = new Date()) {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Vida útil legível: "5 anos", "18 meses", "2 anos e 6 meses". */
+export function lifeText(months: number) {
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  const parts = [
+    y ? `${y} ano${y > 1 ? 's' : ''}` : '',
+    m ? `${m} ${m > 1 ? 'meses' : 'mês'}` : '',
+  ];
+  return parts.filter(Boolean).join(' e ') || '—';
+}

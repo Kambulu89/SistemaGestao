@@ -1,4 +1,15 @@
-import { type Account, accountTree, entryActions, fromScaled, lineTotals, toScaled } from './model';
+import {
+  type Account,
+  type ScheduleLine,
+  accountTree,
+  assetActions,
+  currentMonth,
+  entryActions,
+  fromScaled,
+  lifeText,
+  lineTotals,
+  toScaled,
+} from './model';
 
 describe('contabilidade: modelo', () => {
   it('decimais sem float', () => {
@@ -180,5 +191,38 @@ describe('contabilidade: analítica', () => {
     expect(evenPercents(3)).toEqual(['33.3333', '33.3333', '33.3334']);
     expect(evenPercents(4)).toEqual(['25', '25', '25', '25']);
     expect(percentTotal(evenPercents(7).map((percent) => ({ percent }))).complete).toBe(true);
+  });
+});
+
+describe('contabilidade: activos fixos', () => {
+  const can = (allowed: string[]) => (p: string) => allowed.includes(p);
+  const all = can(['fixed_assets.manage', 'fixed_assets.post']);
+
+  it('acções por estado e permissão', () => {
+    expect(assetActions({ status: 'DRAFT', schedule: [] }, all)).toEqual({
+      edit: true,
+      remove: true,
+      acquire: true,
+      transfer: false,
+      dispose: false,
+      reverseAcquisition: false,
+      reverseDisposal: false,
+    });
+    const posted = [{ posted: true } as ScheduleLine];
+    const active = assetActions({ status: 'ACTIVE', schedule: posted }, all);
+    expect(active.transfer && active.dispose).toBe(true);
+    expect(active.reverseAcquisition).toBe(false);
+    expect(assetActions({ status: 'ACTIVE', schedule: [] }, all).reverseAcquisition).toBe(true);
+    expect(assetActions({ status: 'DISPOSED', schedule: posted }, all).reverseDisposal).toBe(true);
+    const reader = assetActions({ status: 'ACTIVE', schedule: [] }, can([]));
+    expect(Object.values(reader).some(Boolean)).toBe(false);
+    expect(assetActions({ status: 'DRAFT' }, can(['fixed_assets.manage'])).acquire).toBe(false);
+  });
+
+  it('textos de vida útil e mês corrente', () => {
+    expect(lifeText(60)).toBe('5 anos');
+    expect(lifeText(18)).toBe('1 ano e 6 meses');
+    expect(lifeText(1)).toBe('1 mês');
+    expect(currentMonth(new Date(2026, 0, 31))).toBe('2026-01');
   });
 });

@@ -704,94 +704,109 @@ export class JournalEntryService {
     return runInTenant(context, async (scope) => {
       const entry = await loadEntry(scope, id, true)
       if (!entry) throw ApiError.notFound()
-      expectStatus(entry, undefined, 'POSTED')
-      if (entry.reversed_by_id)
-        throw ApiError.conflict('ALREADY_REVERSED', 'O lançamento já foi estornado.')
-      if (entry.reversal_of_id)
+      if (entry.source === MANAGED_SOURCE)
         throw ApiError.conflict(
-          'IS_REVERSAL',
-          'Um estorno não se estorna; faça um novo lançamento.'
+          'MANAGED_BY_FIXED_ASSETS',
+          'Lançamento dos activos fixos: anule-o na ficha do activo ou nas depreciações.'
         )
-      if (!ISO.test(input.date) || input.date < entry.entry_date)
-        throw ApiError.validation([
-          {
-            path: 'date',
-            code: 'INVALID',
-            message: 'Data do estorno igual ou posterior à do lançamento.',
-          },
-        ])
-      const period = await resolvePeriod(scope, entry.legal_entity_id, input.date)
-      if (!period)
-        throw ApiError.validation([
-          { path: 'date', code: 'NO_PERIOD', message: 'Não há exercício para esta data.' },
-        ])
-      await assertPeriodOpen(scope, period.id)
-      const description = (
-        text(input.description) || `Estorno de ${entry.number}: ${entry.description}`
-      ).slice(0, 500)
-      const r = await scope.trx.rawQuery(
-        `insert into journal_entries (tenant_id, created_by, updated_by, legal_entity_id, chart_id, fiscal_year_id, period_id,
-           journal_id, entry_date, reference, description, currency, exchange_rate, source, source_ref, reversal_of_id)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REVERSAL', ?, ?) returning id`,
-        [
-          context.tenantId,
-          context.userId,
-          context.userId,
-          entry.legal_entity_id,
-          entry.chart_id,
-          period.fiscal_year_id,
-          period.id,
-          entry.journal_id,
-          input.date,
-          entry.number,
-          description,
-          entry.currency,
-          entry.exchange_rate,
-          entry.id,
-          entry.id,
-        ] as never[]
-      )
-      const reversalId = (r.rows[0] as { id: string }).id
-      const lines = storedLines(await linesOf(scope, entry.id)).map((l) => ({
-        ...l,
-        debit: l.credit,
-        credit: l.debit,
-      }))
-      await writeLines(
-        scope,
-        reversalId,
-        lines,
-        await conversion(scope, parseDecimal(entry.exchange_rate, RATE_SCALE)!)
-      )
-      const number = await numberFor(scope, entry.journal_id, input.date)
-      await setStatus(
-        scope,
-        reversalId,
-        `status = 'POSTED', number = ?, submitted_by = ?, submitted_at = now(), approved_by = ?, approved_at = now(),
-         posted_by = ?, posted_at = now()`,
-        [number, context.userId, context.userId, context.userId]
-      )
-      await scope.trx.rawQuery(
-        `update journal_entries set reversed_by_id = ?, updated_at = now(), updated_by = ?, version = version + 1
-          where tenant_id = ? and id = ?`,
-        [reversalId, context.userId, context.tenantId, entry.id]
-      )
-      await audit(scope, {
-        action: 'journal_entry.reversed',
-        entityType: 'journal_entry',
-        entityId: entry.id,
-        metadata: { reversalId, reversalNumber: number },
-      })
-      await audit(scope, {
-        action: 'journal_entry.posted',
-        entityType: 'journal_entry',
-        entityId: reversalId,
-        changes: { number: { from: null, to: number } },
-        metadata: { reversalOf: entry.id },
-      })
-      return detail(scope, reversalId)
+      return reverseInScope(scope, entry, input)
     })
   }
+}
+
+/** Lançamentos gerados pelos activos fixos: só se estornam por lá, para a ficha e o razão nunca divergirem. */
+export const MANAGED_SOURCE = 'FIXED_ASSETS'
+
+/** Estorno na transacção de quem chama (manual ou pelos activos fixos). */
+export async function reverseInScope(
+  scope: TenantScope,
+  entry: EntryRow,
+  input: { date: string; description?: string | null }
+) {
+  const context = scope.context
+  expectStatus(entry, undefined, 'POSTED')
+  if (entry.reversed_by_id)
+    throw ApiError.conflict('ALREADY_REVERSED', 'O lançamento já foi estornado.')
+  if (entry.reversal_of_id)
+    throw ApiError.conflict('IS_REVERSAL', 'Um estorno não se estorna; faça um novo lançamento.')
+  if (!ISO.test(input.date) || input.date < entry.entry_date)
+    throw ApiError.validation([
+      {
+        path: 'date',
+        code: 'INVALID',
+        message: 'Data do estorno igual ou posterior à do lançamento.',
+      },
+    ])
+  const period = await resolvePeriod(scope, entry.legal_entity_id, input.date)
+  if (!period)
+    throw ApiError.validation([
+      { path: 'date', code: 'NO_PERIOD', message: 'Não há exercício para esta data.' },
+    ])
+  await assertPeriodOpen(scope, period.id)
+  const description = (
+    text(input.description) || `Estorno de ${entry.number}: ${entry.description}`
+  ).slice(0, 500)
+  const r = await scope.trx.rawQuery(
+    `insert into journal_entries (tenant_id, created_by, updated_by, legal_entity_id, chart_id, fiscal_year_id, period_id,
+         journal_id, entry_date, reference, description, currency, exchange_rate, source, source_ref, reversal_of_id)
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REVERSAL', ?, ?) returning id`,
+    [
+      context.tenantId,
+      context.userId,
+      context.userId,
+      entry.legal_entity_id,
+      entry.chart_id,
+      period.fiscal_year_id,
+      period.id,
+      entry.journal_id,
+      input.date,
+      entry.number,
+      description,
+      entry.currency,
+      entry.exchange_rate,
+      entry.id,
+      entry.id,
+    ] as never[]
+  )
+  const reversalId = (r.rows[0] as { id: string }).id
+  const lines = storedLines(await linesOf(scope, entry.id)).map((l) => ({
+    ...l,
+    debit: l.credit,
+    credit: l.debit,
+  }))
+  await writeLines(
+    scope,
+    reversalId,
+    lines,
+    await conversion(scope, parseDecimal(entry.exchange_rate, RATE_SCALE)!)
+  )
+  const number = await numberFor(scope, entry.journal_id, input.date)
+  await setStatus(
+    scope,
+    reversalId,
+    `status = 'POSTED', number = ?, submitted_by = ?, submitted_at = now(), approved_by = ?, approved_at = now(),
+       posted_by = ?, posted_at = now()`,
+    [number, context.userId, context.userId, context.userId]
+  )
+  await scope.trx.rawQuery(
+    `update journal_entries set reversed_by_id = ?, updated_at = now(), updated_by = ?, version = version + 1
+        where tenant_id = ? and id = ?`,
+    [reversalId, context.userId, context.tenantId, entry.id]
+  )
+  await audit(scope, {
+    action: 'journal_entry.reversed',
+    entityType: 'journal_entry',
+    entityId: entry.id,
+    metadata: { reversalId, reversalNumber: number },
+  })
+  await audit(scope, {
+    action: 'journal_entry.posted',
+    entityType: 'journal_entry',
+    entityId: reversalId,
+    changes: { number: { from: null, to: number } },
+    metadata: { reversalOf: entry.id },
+  })
+  return detail(scope, reversalId)
 }
 
 async function numberFor(scope: TenantScope, journalId: string, date: string) {

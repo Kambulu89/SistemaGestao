@@ -163,7 +163,7 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 ## Contabilidade (módulo `accounting`, Prompt 06)
 
-Blocos 6.1 a 6.5 feitos; 6.6–6.10 por fazer (ver `docs/reports/prompt-06.md`).
+Blocos 6.1 a 6.6 feitos; 6.7–6.10 por fazer (ver `docs/reports/prompt-06.md`).
 
 - **Plano de contas** por entidade legal (um activo, índice parcial único). Contas em árvore: classe → conta →
   subconta; o código do filho começa pelo do pai; só contas sem subcontas são movimentáveis; natureza, saldo normal,
@@ -212,7 +212,24 @@ Blocos 6.1 a 6.5 feitos; 6.6–6.10 por fazer (ver `docs/reports/prompt-06.md`).
   rascunho apaga as imputações antigas. O relatório (`GET /accounting/analytics`) reparte os movimentos
   contabilizados por centro de custo ou por valor de uma dimensão, mostra "Sem imputação" e confirma que os totais
   coincidem com o razão filtrado.
-- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics`; funcionalidade `accounting`. Regras:
+- **Activos fixos (6.6)**: classes por entidade (diário, conta do activo, amortizações acumuladas, gasto, ganho e
+  perda; vida útil, método e coeficiente por omissão) e fichas (n.º de inventário, n.º de série, fornecedor,
+  documento, data e custo de aquisição, residual, vida útil em meses, método, início da depreciação, localização e
+  centro de custo). Estados `DRAFT` → `ACTIVE` (aquisição contabilizada) → `DISPOSED` (abate contabilizado). O mapa
+  de depreciação é calculado (puro, BigInt): linha recta com acumulado arredondado mês a mês (soma exacta) ou
+  degressivo por blocos de 12 meses com passagem à linha recta; mês inteiro no início, nada no mês do abate. O
+  processamento mensal gera um lançamento contabilizado por mês e diário (gasto por conta e centro de custo em vigor
+  no fim do mês, crédito das amortizações acumuladas) e uma linha por activo e mês em `fixed_asset_depreciations`
+  (UNIQUE activo+mês). Bloqueio de duplicados: n.º de inventário e n.º de série (sem maiúsculas) únicos por
+  entidade, depreciação única por mês, aquisição e abate só uma vez (estado + chave de idempotência). Concorrência:
+  advisory lock por entidade e fichas `FOR UPDATE`. Transferências (localização/centro de custo) ficam no histórico
+  de movimentos e não podem cair num mês já depreciado. O abate exige as depreciações até ao mês anterior e lança
+  custo, acumulado, valor de venda e ganho/perda. Os lançamentos têm origem `FIXED_ASSETS` e só se estornam pela
+  ficha (anular aquisição sem depreciações, anular abate, anular o último mês de depreciação); o estorno genérico
+  recusa-os (409). Mapa por exercício: custo, acumulado inicial, do exercício, final, valor líquido e previsto.
+  Permissões `fixed_assets.read|manage|post`. Vidas úteis e taxas são as que a empresa configura — não se assumem
+  taxas fiscais.
+- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics` e `fixed_assets.read|manage|post`; funcionalidade `accounting`. Regras:
   `accounting.settings`; enviar/reprocessar eventos: `accounting.post`; simular e consultar: `accounting.read`.
 
 ## Anexos

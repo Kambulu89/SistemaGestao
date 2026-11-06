@@ -137,6 +137,21 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     module: 'accounting',
     description: 'Imputar linhas a centros de custo e dimensões e consultar o relatório analítico.',
   },
+  {
+    code: 'fixed_assets.read',
+    module: 'accounting',
+    description: 'Consultar activos fixos, classes, mapa de depreciação e movimentos.',
+  },
+  {
+    code: 'fixed_assets.manage',
+    module: 'accounting',
+    description: 'Gerir classes e fichas de activos fixos e registar transferências.',
+  },
+  {
+    code: 'fixed_assets.post',
+    module: 'accounting',
+    description: 'Contabilizar aquisições, depreciações e abates de activos fixos (e anulá-los).',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))
