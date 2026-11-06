@@ -237,6 +237,21 @@ router
               .use(accounting('accounting.settings'))
             router
               .group(() => {
+                router.get('accounting/trial-balance', [AccountingController, 'trialBalance'])
+                router.get('accounting/ledger', [AccountingController, 'ledger'])
+              })
+              .use(accounting('accounting.reports'))
+            router
+              .group(() => {
+                router.post('accounting/opening-balances/validate', [
+                  AccountingController,
+                  'validateOpening',
+                ])
+                router.post('accounting/opening-balances', [AccountingController, 'importOpening'])
+              })
+              .use(accounting('accounting.create'))
+            router
+              .group(() => {
                 router.post('accounting/posting-events', [AccountingController, 'submitEvent'])
                 router.post('accounting/posting-events/:id/retry', [
                   AccountingController,

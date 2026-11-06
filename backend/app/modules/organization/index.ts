@@ -6,6 +6,7 @@ export {
   organizationCounts,
   legalEntityFacts,
   costCenterFacts,
+  costCentersByCode,
   searchOrganization,
   SPECS as ORGANIZATION_SPECS,
 } from '#modules/organization/application/organization_service'

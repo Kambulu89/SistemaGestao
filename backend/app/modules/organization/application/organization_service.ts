@@ -553,3 +553,22 @@ export async function costCenterFacts(scope: TenantScope, ids: string[]) {
     (r.rows as { id: string; status: string; legalEntityId: string }[]).map((x) => [x.id, x])
   )
 }
+
+/** Centros de custo de uma entidade legal por código (importações noutros módulos). */
+export async function costCentersByCode(
+  scope: TenantScope,
+  legalEntityId: string,
+  codes: string[]
+) {
+  if (codes.length === 0) return new Map<string, { id: string; status: string }>()
+  const r = await scope.trx.rawQuery(
+    `select id, code, status from cost_centers where tenant_id = ? and legal_entity_id = ? and code = any(?::text[])`,
+    [scope.context.tenantId, legalEntityId, codes]
+  )
+  return new Map(
+    (r.rows as { id: string; code: string; status: string }[]).map((x) => [
+      x.code,
+      { id: x.id, status: x.status },
+    ])
+  )
+}

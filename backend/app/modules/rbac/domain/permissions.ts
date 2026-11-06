@@ -127,6 +127,11 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     module: 'accounting',
     description: 'Gerir planos de contas, contas, exercícios e diários.',
   },
+  {
+    code: 'accounting.reports',
+    module: 'accounting',
+    description: 'Consultar razão e balancete (só lançamentos contabilizados).',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

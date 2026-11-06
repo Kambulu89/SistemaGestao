@@ -8,6 +8,8 @@ import {
   type SetupKind,
 } from '#modules/accounting/application/setup_service'
 import { JournalEntryService } from '#modules/accounting/application/entries_service'
+import { OpeningBalanceService } from '#modules/accounting/application/opening_service'
+import { AccountingReportsService } from '#modules/accounting/application/reports_service'
 import {
   PostingEngineService,
   PostingRuleService,
@@ -17,6 +19,39 @@ const setup = new AccountingSetupService()
 const entries = new JournalEntryService()
 const rules = new PostingRuleService()
 const engine = new PostingEngineService()
+const opening = new OpeningBalanceService()
+const reports = new AccountingReportsService()
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/
+const openingValidator = vine.create(
+  vine
+    .object({
+      fiscalYearId: vine.string().uuid(),
+      journalId: vine.string().uuid(),
+      description: vine.string().trim().maxLength(500).optional(),
+    })
+    .allowUnknownProperties()
+)
+const trialBalanceValidator = vine.create(
+  vine.object({
+    fiscalYearId: vine.string().uuid(),
+    fromPeriod: vine.number().withoutDecimals().min(0).max(30).optional(),
+    toPeriod: vine.number().withoutDecimals().min(0).max(30).optional(),
+    mode: vine.enum(['analytic', 'synthetic'] as const).optional(),
+    maxDepth: vine.number().withoutDecimals().min(1).max(10).optional(),
+    includeZero: vine.boolean().optional(),
+  })
+)
+const ledgerValidator = vine.create(
+  vine.object({
+    legalEntityId: vine.string().uuid(),
+    accountId: vine.string().uuid(),
+    from: vine.string().trim().regex(ISO),
+    to: vine.string().trim().regex(ISO),
+    thirdPartyRef: vine.string().trim().maxLength(60).optional(),
+    costCenterId: vine.string().uuid().optional(),
+  })
+)
 
 /** Segmento do URL → tipo e filtros de igualdade aceites (o tipo vem da rota, nunca de um parâmetro livre). */
 const KINDS: Record<string, { kind: SetupKind; filters: string[] }> = {
@@ -274,5 +309,42 @@ export default class AccountingController {
   async simulate(ctx: HttpContext) {
     const body = (await ctx.request.validateUsing(anyBody)) as Record<string, unknown>
     return ok(ctx, await engine.simulate(ctx.tenantContext!, body))
+  }
+
+  // ---- abertura, razão e balancete (6.4)
+  async validateOpening(ctx: HttpContext) {
+    const body = await ctx.request.validateUsing(openingValidator)
+    return ok(
+      ctx,
+      await opening.validate(ctx.tenantContext!, { ...body, lines: ctx.request.input('lines') })
+    )
+  }
+
+  async importOpening(ctx: HttpContext) {
+    const body = await ctx.request.validateUsing(openingValidator)
+    return created(
+      ctx,
+      await opening.import(ctx.tenantContext!, { ...body, lines: ctx.request.input('lines') })
+    )
+  }
+
+  async trialBalance(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(trialBalanceValidator, { data: ctx.request.qs() })
+    return ok(
+      ctx,
+      await reports.trialBalance(ctx.tenantContext!, {
+        fiscalYearId: q.fiscalYearId,
+        fromPeriod: q.fromPeriod ?? 0,
+        toPeriod: q.toPeriod ?? 30,
+        mode: q.mode ?? 'analytic',
+        maxDepth: q.maxDepth,
+        includeZero: q.includeZero,
+      })
+    )
+  }
+
+  async ledger(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(ledgerValidator, { data: ctx.request.qs() })
+    return ok(ctx, await reports.ledger(ctx.tenantContext!, q))
   }
 }

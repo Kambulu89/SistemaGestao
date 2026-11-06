@@ -260,6 +260,21 @@ test.group('isolamento | matriz entre empresas', (group) => {
       ['PATCH perfil', B.patch(`/api/v1/roles/${a.role.id}`, { ...v, name: 'x' })],
       ['DELETE perfil', B.delete(`/api/v1/roles/${a.role.id}`)],
       ['GET membro', B.get(`/api/v1/members/${a.member}`)],
+      ['balancete de A', B.get(`/api/v1/accounting/trial-balance?fiscalYearId=${a.fy.id}`)],
+      [
+        'razão de A',
+        B.get(
+          `/api/v1/accounting/ledger?legalEntityId=${a.le.id}&accountId=${a.accountA.id}&from=2026-01-01&to=2026-12-31`
+        ),
+      ],
+      [
+        'abertura em exercício de A',
+        B.post('/api/v1/accounting/opening-balances/validate', {
+          fiscalYearId: a.fy.id,
+          journalId: a.journal.id,
+          lines: [],
+        }),
+      ],
       ['suspender membro', B.post(`/api/v1/members/${a.member}/suspend`, v)],
       ['GET workflow', B.get(`/api/v1/approvals/workflows/${a.wf.id}`)],
       ['retirar workflow', B.post(`/api/v1/approvals/workflows/${a.wf.id}/retire`, v)],
