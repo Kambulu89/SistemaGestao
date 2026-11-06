@@ -531,61 +531,7 @@ export class JournalEntryService {
    * para que um pedido repetido (rede, integração) não duplique o lançamento.
    */
   create(context: TenantContext, input: Record<string, unknown>) {
-    return runInTenant(context, async (scope) => {
-      const key = text(input.idempotencyKey).slice(0, 120) || null
-      if (key) {
-        await scope.trx.rawQuery('select pg_advisory_xact_lock(hashtext(?))', [
-          `${context.tenantId}:je:${key}`,
-        ])
-        const existing = await scope.trx.rawQuery(
-          'select id from journal_entries where tenant_id = ? and idempotency_key = ?',
-          [context.tenantId, key]
-        )
-        if (existing.rows.length > 0)
-          return {
-            entry: await detail(scope, (existing.rows[0] as { id: string }).id),
-            created: false,
-          }
-      }
-      const { issues, header } = await resolveHeader(scope, input, null)
-      const settings = await tenantSettings(scope)
-      const { lines, issues: lineIssues } = normalizeLines(input.lines ?? [], settings.amountScale)
-      issues.push(...lineIssues)
-      if (header) issues.push(...(await checkCostCenters(scope, lines, header.legalEntityId)))
-      if (issues.length > 0 || !header) throw ApiError.validation(issues)
-      const r = await scope.trx.rawQuery(
-        `insert into journal_entries (tenant_id, created_by, updated_by, legal_entity_id, chart_id, fiscal_year_id, period_id,
-           journal_id, entry_date, document_date, reference, description, currency, exchange_rate, source, source_ref, idempotency_key)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'MANUAL', ?, ?) returning id`,
-        [
-          context.tenantId,
-          context.userId,
-          context.userId,
-          header.legalEntityId,
-          header.chartId,
-          header.fiscalYearId,
-          header.periodId,
-          header.journalId,
-          header.entryDate,
-          header.documentDate,
-          header.reference,
-          header.description,
-          header.currency,
-          formatDecimal(header.exchangeRate, RATE_SCALE),
-          text(input.sourceRef).slice(0, 120) || null,
-          key,
-        ] as never[]
-      )
-      const id = (r.rows[0] as { id: string }).id
-      await writeLines(scope, id, lines, await conversion(scope, header.exchangeRate))
-      await audit(scope, {
-        action: 'journal_entry.created',
-        entityType: 'journal_entry',
-        entityId: id,
-        metadata: { lines: lines.length, idempotencyKey: key },
-      })
-      return { entry: await detail(scope, id), created: true }
-    })
+    return runInTenant(context, (scope) => createEntryInScope(scope, input, 'MANUAL'))
   }
 
   update(
@@ -736,23 +682,7 @@ export class JournalEntryService {
       const entry = await loadEntry(scope, id, true)
       if (!entry) throw ApiError.notFound()
       expectStatus(entry, expectedVersion, 'APPROVED')
-      await assertPeriodOpen(scope, entry.period_id)
-      const { lines, conv } = await assertPostingRules(scope, entry)
-      await writeLines(scope, id, lines, conv)
-      const number = await numberFor(scope, entry.journal_id, entry.entry_date)
-      await setStatus(
-        scope,
-        id,
-        `status = 'POSTED', number = ?, posted_by = ?, posted_at = now()`,
-        [number, context.userId]
-      )
-      await audit(scope, {
-        action: 'journal_entry.posted',
-        entityType: 'journal_entry',
-        entityId: id,
-        changes: { status: { from: 'APPROVED', to: 'POSTED' }, number: { from: null, to: number } },
-      })
-      return detail(scope, id)
+      return postInScope(scope, entry)
     })
   }
 
@@ -866,3 +796,95 @@ async function numberFor(scope: TenantScope, journalId: string, date: string) {
   const seriesId = (r.rows[0] as { document_series_id: string }).document_series_id
   return (await reserveDocumentNumber(scope, seriesId, date)).formatted
 }
+
+/**
+ * Cria um rascunho na transacção de quem chama (lançamento manual ou motor de contabilização). Com `idempotencyKey`
+ * repetida devolve o lançamento já criado com essa chave (`created: false`).
+ */
+export async function createEntryInScope(
+  scope: TenantScope,
+  input: Record<string, unknown>,
+  source: string
+): Promise<{ entry: Awaited<ReturnType<typeof detail>>; created: boolean }> {
+  const key = text(input.idempotencyKey).slice(0, 120) || null
+  if (key) {
+    await scope.trx.rawQuery('select pg_advisory_xact_lock(hashtext(?))', [
+      `${scope.context.tenantId}:je:${key}`,
+    ])
+    const existing = await scope.trx.rawQuery(
+      'select id from journal_entries where tenant_id = ? and idempotency_key = ?',
+      [scope.context.tenantId, key]
+    )
+    if (existing.rows.length > 0)
+      return {
+        entry: await detail(scope, (existing.rows[0] as { id: string }).id),
+        created: false,
+      }
+  }
+  const { issues, header } = await resolveHeader(scope, input, null)
+  const settings = await tenantSettings(scope)
+  const { lines, issues: lineIssues } = normalizeLines(input.lines ?? [], settings.amountScale)
+  issues.push(...lineIssues)
+  if (header) issues.push(...(await checkCostCenters(scope, lines, header.legalEntityId)))
+  if (issues.length > 0 || !header) throw ApiError.validation(issues)
+  const r = await scope.trx.rawQuery(
+    `insert into journal_entries (tenant_id, created_by, updated_by, legal_entity_id, chart_id, fiscal_year_id, period_id,
+       journal_id, entry_date, document_date, reference, description, currency, exchange_rate, source, source_ref, idempotency_key)
+     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
+    [
+      scope.context.tenantId,
+      scope.context.userId,
+      scope.context.userId,
+      header.legalEntityId,
+      header.chartId,
+      header.fiscalYearId,
+      header.periodId,
+      header.journalId,
+      header.entryDate,
+      header.documentDate,
+      header.reference,
+      header.description,
+      header.currency,
+      formatDecimal(header.exchangeRate, RATE_SCALE),
+      source,
+      text(input.sourceRef).slice(0, 120) || null,
+      key,
+    ] as never[]
+  )
+  const id = (r.rows[0] as { id: string }).id
+  await writeLines(scope, id, lines, await conversion(scope, header.exchangeRate))
+  await audit(scope, {
+    action: 'journal_entry.created',
+    entityType: 'journal_entry',
+    entityId: id,
+    metadata: { lines: lines.length, idempotencyKey: key, source },
+  })
+  return { entry: await detail(scope, id), created: true }
+}
+
+/**
+ * Contabiliza na transacção de quem chama: valida de novo (contas e período podem ter mudado), numera pela série do
+ * diário e fica imutável. Usado pelo fluxo manual (depois de aprovado) e pelo motor de contabilização automática.
+ */
+export async function postInScope(scope: TenantScope, entry: EntryRow) {
+  await assertPeriodOpen(scope, entry.period_id)
+  const { lines, conv } = await assertPostingRules(scope, entry)
+  await writeLines(scope, entry.id, lines, conv)
+  const number = await numberFor(scope, entry.journal_id, entry.entry_date)
+  await setStatus(
+    scope,
+    entry.id,
+    `status = 'POSTED', number = ?, posted_by = ?, posted_at = now()`,
+    [number, scope.context.userId]
+  )
+  await audit(scope, {
+    action: 'journal_entry.posted',
+    entityType: 'journal_entry',
+    entityId: entry.id,
+    changes: { status: { from: entry.status, to: 'POSTED' }, number: { from: null, to: number } },
+  })
+  return detail(scope, entry.id)
+}
+
+/** Lançamento (cabeçalho bloqueado) para o motor de contabilização. */
+export { loadEntry as lockEntry }

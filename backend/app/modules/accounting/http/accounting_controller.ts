@@ -8,9 +8,15 @@ import {
   type SetupKind,
 } from '#modules/accounting/application/setup_service'
 import { JournalEntryService } from '#modules/accounting/application/entries_service'
+import {
+  PostingEngineService,
+  PostingRuleService,
+} from '#modules/accounting/application/posting_service'
 
 const setup = new AccountingSetupService()
 const entries = new JournalEntryService()
+const rules = new PostingRuleService()
+const engine = new PostingEngineService()
 
 /** Segmento do URL → tipo e filtros de igualdade aceites (o tipo vem da rota, nunca de um parâmetro livre). */
 const KINDS: Record<string, { kind: SetupKind; filters: string[] }> = {
@@ -192,5 +198,81 @@ export default class AccountingController {
   async reverse(ctx: HttpContext) {
     const body = await ctx.request.validateUsing(reverseValidator)
     return created(ctx, await entries.reverse(ctx.tenantContext!, uuid(ctx), body))
+  }
+
+  // ---- motor de contabilização (6.3)
+  async rules(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(listValidator, { data: ctx.request.qs() })
+    const qs = ctx.request.qs()
+    const equals: Record<string, unknown> = {}
+    for (const key of ['legalEntityId', 'source', 'event', 'status']) {
+      const v = filterValue(key, qs[key])
+      if (v !== undefined)
+        equals[key] = key === 'source' || key === 'event' ? String(v).toUpperCase() : v
+    }
+    const page = await rules.list(ctx.tenantContext!, {
+      equals,
+      q: q.q,
+      limit: q.limit ?? 50,
+      offset: q.offset ?? 0,
+    })
+    return ok(ctx, page.items, { total: page.total })
+  }
+
+  async rule(ctx: HttpContext) {
+    return ok(ctx, await rules.get(ctx.tenantContext!, uuid(ctx)))
+  }
+
+  async createRule(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(anyBody)) as Record<string, unknown>
+    return created(ctx, await rules.create(ctx.tenantContext!, body))
+  }
+
+  async updateRule(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(versionValidator)) as Record<string, unknown> & {
+      expectedVersion: number
+    }
+    return ok(ctx, await rules.update(ctx.tenantContext!, uuid(ctx), body))
+  }
+
+  async events(ctx: HttpContext) {
+    const q = await ctx.request.validateUsing(listValidator, { data: ctx.request.qs() })
+    const qs = ctx.request.qs()
+    const status = filterValue('status', qs.status) as string | undefined
+    if (status && !['POSTED', 'DRAFTED', 'FAILED'].includes(status))
+      throw ApiError.validation([
+        { path: 'status', code: 'INVALID', message: 'POSTED, DRAFTED ou FAILED.' },
+      ])
+    const page = await engine.list(ctx.tenantContext!, {
+      status,
+      source: filterValue('source', qs.source) as string | undefined,
+      legalEntityId: filterValue('legalEntityId', qs.legalEntityId) as string | undefined,
+      q: q.q,
+      limit: q.limit ?? 50,
+      offset: q.offset ?? 0,
+    })
+    return ok(ctx, page.items, { total: page.total })
+  }
+
+  async event(ctx: HttpContext) {
+    return ok(ctx, await engine.get(ctx.tenantContext!, uuid(ctx)))
+  }
+
+  async submitEvent(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(anyBody)) as Record<string, unknown>
+    const result = await engine.submit(ctx.tenantContext!, body)
+    return result.replay
+      ? ok(ctx, result.event, { idempotentReplay: true })
+      : created(ctx, result.event)
+  }
+
+  async retryEvent(ctx: HttpContext) {
+    const result = await engine.retry(ctx.tenantContext!, uuid(ctx))
+    return ok(ctx, result.event)
+  }
+
+  async simulate(ctx: HttpContext) {
+    const body = (await ctx.request.validateUsing(anyBody)) as Record<string, unknown>
+    return ok(ctx, await engine.simulate(ctx.tenantContext!, body))
   }
 }

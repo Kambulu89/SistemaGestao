@@ -180,10 +180,37 @@ async function populate(client: any) {
       ],
     })
   )
+  const rule = ok(
+    await as(client, s).post('/api/v1/accounting/posting-rules', {
+      legalEntityId: le.id,
+      code: 'REGA',
+      name: 'Regra A',
+      source: 'SALES_INVOICE',
+      event: 'ISSUED',
+      journalId: journal.id,
+      validFrom: '2026-01-01',
+      lines: [
+        { side: 'DEBIT', accountId: accountA.id, amountKey: 'total' },
+        { side: 'CREDIT', accountId: accountB.id, amountKey: 'total' },
+      ],
+    })
+  )
+  const postingEvent = ok(
+    await as(client, s).post('/api/v1/accounting/posting-events', {
+      legalEntityId: le.id,
+      source: 'SALES_INVOICE',
+      event: 'ISSUED',
+      sourceRef: 'FT A1',
+      occurredOn: '2026-02-11',
+      amounts: { total: '5' },
+    })
+  )
   const period = (await as(client, s).get(`/api/v1/accounting/fiscal-years/${fy.id}`)).body().data
     .periods[2]
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    rule,
+    postingEvent,
     chart,
     accountA,
     fy,
@@ -327,6 +354,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       B.get('/api/v1/accounting/fiscal-years'),
       B.get('/api/v1/accounting/journals'),
       B.get('/api/v1/accounting/entries'),
+      B.get('/api/v1/accounting/posting-rules'),
+      B.get('/api/v1/accounting/posting-events'),
     ])
     const idsOfA = new Set(
       [
@@ -347,6 +376,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
         a.fy.id,
         a.journal.id,
         a.entry.id,
+        a.rule.id,
+        a.postingEvent.id,
       ].map(String)
     )
     const leaked = lists.flatMap((r) =>
@@ -418,6 +449,21 @@ test.group('isolamento | matriz entre empresas', (group) => {
       nature: 'ASSET',
     })
     crossAccount.assertStatus(422)
+    // Eventos de B com a entidade legal de A não usam as regras de A.
+    const crossEvent = await B.post('/api/v1/accounting/posting-events', {
+      legalEntityId: a.le.id,
+      source: 'SALES_INVOICE',
+      event: 'ISSUED',
+      sourceRef: 'FT X',
+      occurredOn: '2026-02-11',
+      amounts: { total: '5' },
+    })
+    assert.include([404, 422], crossEvent.status())
+    const eventsOfA = await owner.rawQuery(
+      'select count(*)::int as n from posting_events where tenant_id = ?',
+      [a.tenantId]
+    )
+    assert.equal(eventsOfA.rows[0].n, 1)
     const entryA = await owner.rawQuery(
       'select status, description from journal_entries where id = ?',
       [a.entry.id]

@@ -206,6 +206,14 @@ router
                 }
                 router.get('accounting/entries', [AccountingController, 'entries'])
                 router.get('accounting/entries/:id', [AccountingController, 'entry'])
+                router.get('accounting/posting-rules', [AccountingController, 'rules'])
+                router.get('accounting/posting-rules/:id', [AccountingController, 'rule'])
+                router.get('accounting/posting-events', [AccountingController, 'events'])
+                router.get('accounting/posting-events/:id', [AccountingController, 'event'])
+                router.post('accounting/posting-events/simulate', [
+                  AccountingController,
+                  'simulate',
+                ])
               })
               .use(accounting('accounting.read'))
             router
@@ -221,6 +229,21 @@ router
                 }
               })
               .use(accounting('accounting.settings'))
+            router
+              .group(() => {
+                router.post('accounting/posting-rules', [AccountingController, 'createRule'])
+                router.patch('accounting/posting-rules/:id', [AccountingController, 'updateRule'])
+              })
+              .use(accounting('accounting.settings'))
+            router
+              .group(() => {
+                router.post('accounting/posting-events', [AccountingController, 'submitEvent'])
+                router.post('accounting/posting-events/:id/retry', [
+                  AccountingController,
+                  'retryEvent',
+                ])
+              })
+              .use(accounting('accounting.post'))
             router
               .post('accounting/periods/:id/close', [AccountingController, 'closePeriod'])
               .use(accounting('accounting.close'))
