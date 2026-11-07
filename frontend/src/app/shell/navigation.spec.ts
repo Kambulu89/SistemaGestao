@@ -1,4 +1,4 @@
-import { visibleNavigation } from './navigation';
+import { NAVIGATION, flatNavigation, sectionsOf, visibleNavigation } from './navigation';
 
 const labels = (groups: ReturnType<typeof visibleNavigation>) =>
   groups.flatMap((g) => g.items.map((i) => i.label));
@@ -56,5 +56,35 @@ describe('visibleNavigation', () => {
       true,
     );
     expect(platform.map((g) => g.label)).toEqual(['Plataforma']);
+  });
+});
+
+describe('navegação por domínios', () => {
+  it('agrupa por domínio do ERP e só com ecrãs reais', () => {
+    expect(NAVIGATION.map((g) => g.label)).toEqual([
+      'Início',
+      'Gestão Financeira',
+      'Administração e Plataforma',
+      'Integrações e Compliance',
+    ]);
+    const paths = flatNavigation(NAVIGATION).map((i) => i.path);
+    expect(new Set(paths).size).toBe(paths.length);
+  });
+
+  it('secções pela ordem de aparição e filtradas com o resto', () => {
+    const finance = NAVIGATION.find((g) => g.label === 'Gestão Financeira')!;
+    expect(sectionsOf(finance).map((s) => s.title)).toEqual([
+      'Contabilidade',
+      'Relatórios financeiros',
+      'Activos e regularizações',
+      'Configuração financeira',
+    ]);
+    const reportsOnly = visibleNavigation(
+      (p) => p === 'accounting.reports',
+      (f) => f === 'accounting',
+      true,
+      false,
+    ).find((g) => g.label === 'Gestão Financeira')!;
+    expect(sectionsOf(reportsOnly).map((s) => s.title)).toEqual(['Relatórios financeiros']);
   });
 });

@@ -21,6 +21,7 @@ técnico partilhado e não depende de módulos.
 | `subscription`, `platform`                                    | Funcionalidades, planos, subscrições, limites; administração da plataforma                |
 | `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
 | `dashboard`                                                   | Painel e pesquisa global                                                                  |
+| `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                     |
 
 ## Multi-tenancy
 
@@ -290,6 +291,13 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
   contexto. Só in-app: o email espera fornecedor (D-009).
 - `GET /me/tasks` deriva as tarefas das fontes de verdade (hoje: etapas de aprovação que o membro pode decidir, por si ou
   por delegação); não há tabela de tarefas duplicada.
+
+## Preferências do membro
+
+- `member_preferences` (tenant, membership, chave, valor JSON), uma linha por chave. `GET/PUT /me/preferences/:key`
+  só lê e escreve a membership em contexto; chaves conhecidas (`favorites`, `dashboard`) com validação própria
+  (caminhos internos, ids de widgets, limites de tamanho); chave desconhecida é 404. Sem dados de negócio, por isso
+  sem auditoria (D-021).
 
 ## Frontend
 

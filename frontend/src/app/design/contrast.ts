@@ -46,4 +46,11 @@ export const REQUIRED_PAIRS: [fg: string, bg: string, min: number][] = [
   ['focus', 'surface', 3],
   ['focus', 'bg', 3],
   ['border-strong', 'surface', 3],
+  // Cores de estado usadas em ícones, barras e indicadores (componentes, 3:1); o texto usa os pares `*-text`.
+  ['interactive', 'surface', 3],
+  ['success', 'surface', 3],
+  ['warning', 'surface', 3],
+  ['danger', 'surface', 3],
+  ['primary', 'surface', 3],
+  ['link', 'surface-2', 4.5],
 ];

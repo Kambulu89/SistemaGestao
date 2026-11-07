@@ -1602,6 +1602,31 @@ export class LegalEntitySchema extends BaseModel {
   declare website: string | null
 }
 
+export class MemberPreferenceSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'key', 'membershipId', 'tenantId', 'updatedAt', 'updatedBy', 'value', 'version'] as const
+  $columns = MemberPreferenceSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare key: string
+  @column()
+  declare membershipId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare value: any
+  @column()
+  declare version: number
+}
+
 export class MembershipRoleSchema extends BaseModel {
   static $columns = ['branchId', 'createdAt', 'createdBy', 'departmentId', 'id', 'legalEntityId', 'membershipId', 'roleId', 'scopeType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = MembershipRoleSchema.$columns

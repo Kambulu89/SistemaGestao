@@ -168,3 +168,15 @@ contabilizados normais (origens `YEAR_CLOSE` e `YEAR_OPENING`), por isso o balan
 ambos os exercícios continuam a vir só dos lançamentos. Reabrir estorna esses lançamentos (nunca os apaga) e o registo
 do encerramento fica no histórico. O transporte é na moeda funcional; o detalhe por moeda estrangeira não passa para
 o exercício seguinte (a actualização cambial do 6.7 continua a funcionar sobre os saldos em moeda dos lançamentos).
+
+## D-021 Identidade "Corporate Blue", navegação por domínios e preferências do membro no servidor (aceite)
+
+O prompt de interface profissional fixa a identidade (primária `#174EA6`, interactiva `#2563EB`, sucesso `#0D9488`,
+aviso `#D97706`, erro `#DC2626`, fundo `#F6F8FB`, Inter). Os tokens semânticos mantêm-se e só mudam os valores, por isso
+os ecrãs existentes herdam a identidade sem alterações; o sucesso e o aviso indicados não têm 4.5:1 com texto branco nem
+sobre branco, por isso são usados em preenchimentos, ícones e barras (3:1) e o texto de estado usa variantes mais
+escuras — o teste de contraste verifica os dois usos nos dois temas. A Inter é auto-alojada (pacote npm, sem CDN) para
+não depender nem informar terceiros. A navegação passa a domínios do ERP com secções e mostra só domínios com módulos
+reais (sem entradas fictícias). Favoritos e disposição do painel são preferências do membro guardadas no PostgreSQL
+(`member_preferences`, por membership, com RLS, validadas por chave e sem dados de negócio — por isso fora da auditoria),
+para seguirem o utilizador entre browsers; os recentes ficam no browser, por serem só histórico local de navegação.

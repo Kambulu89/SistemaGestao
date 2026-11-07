@@ -22,6 +22,7 @@ const NotificationsController = () => import('#modules/notifications/http/notifi
 const ApprovalsController = () => import('#modules/approvals/http/approvals_controller')
 const AttachmentsController = () => import('#modules/attachments/http/attachments_controller')
 const TasksController = () => import('#modules/tasks/http/tasks_controller')
+const PreferencesController = () => import('#modules/preferences/http/preferences_controller')
 const DashboardController = () => import('#modules/dashboard/http/dashboard_controller')
 const SettingsController = () => import('#modules/settings/http/settings_controller')
 const AccountingController = () => import('#modules/accounting/http/accounting_controller')
@@ -505,6 +506,8 @@ router
             router.post('me/notifications/read-all', [NotificationsController, 'readAll'])
             router.post('me/notifications/:id/read', [NotificationsController, 'read'])
             router.get('me/tasks', [TasksController, 'index'])
+            router.get('me/preferences/:key', [PreferencesController, 'show'])
+            router.put('me/preferences/:key', [PreferencesController, 'update'])
             // Painel e pesquisa: cada secção/fonte aplica as permissões e funcionalidades do módulo dono.
             router.get('dashboard', [DashboardController, 'summary'])
             router.get('search', [DashboardController, 'search'])

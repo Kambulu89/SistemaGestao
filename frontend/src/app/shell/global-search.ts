@@ -51,7 +51,7 @@ export function hitGroup(hit: SearchHit): string {
 }
 
 /**
- * Pesquisa global (Ctrl+K ou "/"): o servidor só procura nas fontes que o membro pode ler na empresa em contexto.
+ * Pesquisa global ("/"; a paleta de comandos, Ctrl+K, também a usa): o servidor só procura nas fontes que o membro pode ler na empresa em contexto.
  * Combobox ARIA com resultados agrupados; ↑/↓ e Enter navegam.
  */
 @Component({
@@ -77,7 +77,7 @@ export function hitGroup(hit: SearchHit): string {
           aria-describedby="global-search-hint"
           [attr.aria-expanded]="open()"
           [attr.aria-activedescendant]="active() >= 0 ? 'search-hit-' + active() : null"
-          placeholder="Pesquisar (Ctrl+K)"
+          placeholder="Pesquisar registos ( / )"
           [value]="q()"
           (input)="onInput($any($event.target).value)"
           (keydown)="onKeydown($event)"
@@ -150,7 +150,7 @@ export class GlobalSearch {
     const target = event.target as HTMLElement;
     const typing =
       ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
-    if ((event.key === 'k' && (event.ctrlKey || event.metaKey)) || (event.key === '/' && !typing)) {
+    if (event.key === '/' && !typing) {
       event.preventDefault();
       this.input()?.nativeElement.focus();
     }

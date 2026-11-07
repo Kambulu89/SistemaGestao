@@ -12,14 +12,23 @@ import { Toasts } from '../ui/toasts';
 import { GlobalSearch } from './global-search';
 import { ConfirmHost } from '../ui/confirm';
 import { Breadcrumbs } from '../core/breadcrumbs';
+import { Recents } from '../core/personal';
+import { Workspace } from '../core/workspace';
+import { RouterLink } from '@angular/router';
+import { CommandPalette } from './command-palette';
 
-/** Moldura autenticada: barra lateral, barra superior (empresa, âmbito, pesquisa, notificações, conta) e conteúdo. */
+/**
+ * AppShell: barra lateral por domínios (com favoritos), barra superior (empresa, entidade legal e filial, pesquisa,
+ * paleta de comandos, aprovações, notificações, conta), trilho com favorito e conteúdo.
+ */
 @Component({
   selector: 'app-shell',
   // Não devolver `false` aqui: o Angular faria preventDefault e anularia o Escape dos diálogos nativos.
   host: { '(document:keydown.escape)': 'onEscape()' },
   imports: [
     RouterOutlet,
+    RouterLink,
+    CommandPalette,
     Icon,
     Sidebar,
     TenantSwitcher,
@@ -82,6 +91,17 @@ import { Breadcrumbs } from '../core/breadcrumbs';
             <app-global-search />
           </div>
           <div class="ml-auto flex items-center gap-1">
+            <app-command-palette />
+            @if (workspace.context() && workspace.has('approvals')) {
+              <a
+                routerLink="/aprovacoes"
+                class="btn-ghost px-2"
+                aria-label="Centro de aprovações"
+                title="Centro de aprovações"
+              >
+                <app-icon name="approvals" />
+              </a>
+            }
             <app-notification-menu />
             <app-user-menu />
           </div>
@@ -104,6 +124,9 @@ export class Shell {
   protected readonly prefs = inject(Preferences);
   // Instancia o trilho cedo, para acompanhar a primeira navegação.
   protected readonly breadcrumbs = inject(Breadcrumbs);
+  // Regista as páginas visitadas desde o arranque (paleta de comandos).
+  protected readonly recents = inject(Recents);
+  protected readonly workspace = inject(Workspace);
   protected readonly drawerOpen = signal(false);
   private readonly menuButton = viewChild<{ nativeElement: HTMLButtonElement }>('menuButton');
   private readonly drawer = viewChild<{ nativeElement: HTMLElement }>('drawer');

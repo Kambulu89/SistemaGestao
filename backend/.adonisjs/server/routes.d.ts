@@ -177,6 +177,8 @@ export type ScannedRoutes = {
     'notifications.read_all': { paramsTuple?: []; params?: {} }
     'notifications.read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'tasks.index': { paramsTuple?: []; params?: {} }
+    'preferences.show': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
+    'preferences.update': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
     'dashboard.summary': { paramsTuple?: []; params?: {} }
     'dashboard.search': { paramsTuple?: []; params?: {} }
     'approvals.workflows': { paramsTuple?: []; params?: {} }
@@ -291,6 +293,7 @@ export type ScannedRoutes = {
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
+    'preferences.show': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
     'dashboard.summary': { paramsTuple?: []; params?: {} }
     'dashboard.search': { paramsTuple?: []; params?: {} }
     'approvals.workflows': { paramsTuple?: []; params?: {} }
@@ -383,6 +386,7 @@ export type ScannedRoutes = {
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
+    'preferences.show': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
     'dashboard.summary': { paramsTuple?: []; params?: {} }
     'dashboard.search': { paramsTuple?: []; params?: {} }
     'approvals.workflows': { paramsTuple?: []; params?: {} }
@@ -527,6 +531,7 @@ export type ScannedRoutes = {
     'settings.update_profile': { paramsTuple?: []; params?: {} }
     'settings.update_settings': { paramsTuple?: []; params?: {} }
     'accounting.set_allocations': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineNo': ParamValue} }
+    'preferences.update': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

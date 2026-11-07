@@ -4,10 +4,11 @@ import { Preferences } from '../core/preferences';
 import { Session } from '../core/session';
 import { Workspace } from '../core/workspace';
 import { Icon } from '../ui/icon';
-import { visibleNavigation } from './navigation';
+import { Favorites } from '../core/personal';
+import { sectionsOf, visibleNavigation } from './navigation';
 
 /**
- * Navegação principal: grupos recolhíveis, só com o que o membro pode usar e a empresa contratou. Em ecrã largo pode
+ * Navegação principal: favoritos do membro no topo e depois os domínios (com secções), recolhíveis, só com o que o membro pode usar e a empresa contratou. Em ecrã largo pode
  * ficar estreita (só ícones, com o nome em `aria-label` e dica); em ecrã pequeno abre como gaveta.
  */
 @Component({
@@ -40,17 +41,53 @@ import { visibleNavigation } from './navigation';
         </button>
       </div>
       <div class="flex-1 overflow-y-auto px-2 pb-4">
+        @if (favorites.list().length > 0) {
+          <div class="mt-1" data-testid="nav-favorites">
+            @if (!collapsed()) {
+              <p
+                class="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold tracking-wide text-muted uppercase"
+              >
+                <app-icon name="star" [size]="14" /> Favoritos
+              </p>
+            }
+            <ul class="mt-1 space-y-0.5" aria-label="Favoritos">
+              @for (f of favorites.list(); track f.path) {
+                <li>
+                  <a
+                    [routerLink]="f.path"
+                    routerLinkActive="bg-primary-soft text-on-primary-soft font-medium"
+                    #fla="routerLinkActive"
+                    [attr.aria-current]="fla.isActive ? 'page' : null"
+                    [attr.aria-label]="collapsed() ? f.title : null"
+                    [attr.title]="collapsed() ? f.title : null"
+                    class="focus-ring flex items-center gap-3 rounded-control px-2 py-1.5 text-sm text-fg hover:bg-surface-2"
+                    [class.justify-center]="collapsed()"
+                    (click)="navigated.emit()"
+                  >
+                    <app-icon name="star" />
+                    @if (!collapsed()) {
+                      <span class="truncate">{{ f.title }}</span>
+                    }
+                  </a>
+                </li>
+              }
+            </ul>
+          </div>
+        }
         @for (group of groups(); track group.label) {
           <div class="mt-2">
             @if (!collapsed()) {
               <button
                 type="button"
-                class="focus-ring flex w-full items-center justify-between rounded px-2 py-1 text-xs font-semibold tracking-wide text-muted uppercase hover:text-fg"
+                class="focus-ring flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs font-semibold tracking-wide text-muted uppercase hover:text-fg"
                 [attr.aria-expanded]="!folded().has(group.label)"
                 [attr.aria-controls]="'grp-' + $index"
                 (click)="toggle(group.label)"
               >
-                {{ group.label }}
+                @if (group.icon) {
+                  <app-icon [name]="group.icon" [size]="14" />
+                }
+                <span class="flex-1">{{ group.label }}</span>
                 <app-icon
                   [name]="folded().has(group.label) ? 'chevronRight' : 'chevronDown'"
                   [size]="14"
@@ -60,29 +97,45 @@ import { visibleNavigation } from './navigation';
               <hr class="mx-2 my-2 border-border" />
             }
             @if (collapsed() || !folded().has(group.label)) {
-              <ul [id]="'grp-' + $index" class="mt-1 space-y-0.5">
-                @for (item of group.items; track item.path) {
-                  <li>
-                    <a
-                      [routerLink]="item.path"
-                      routerLinkActive="bg-primary-soft text-on-primary-soft font-medium"
-                      [routerLinkActiveOptions]="{ exact: item.path === '/aprovacoes' }"
-                      #rla="routerLinkActive"
-                      [attr.aria-current]="rla.isActive ? 'page' : null"
-                      [attr.aria-label]="collapsed() ? item.label : null"
-                      [attr.title]="collapsed() ? item.label : null"
-                      class="focus-ring flex items-center gap-3 rounded-control px-2 py-1.5 text-sm text-fg hover:bg-surface-2"
-                      [class.justify-center]="collapsed()"
-                      (click)="navigated.emit()"
-                    >
-                      <app-icon [name]="item.icon" />
-                      @if (!collapsed()) {
-                        <span class="truncate">{{ item.label }}</span>
-                      }
-                    </a>
-                  </li>
+              <div [id]="'grp-' + $index">
+                @for (section of sections(group); track section.title) {
+                  @if (section.title && !collapsed()) {
+                    <p class="mt-2 px-2 pb-0.5 text-xs text-subtle" aria-hidden="true">
+                      {{ section.title }}
+                    </p>
+                  }
+                  <ul
+                    class="mt-0.5 space-y-0.5"
+                    [attr.aria-label]="
+                      section.title ? group.label + ': ' + section.title : group.label
+                    "
+                  >
+                    @for (item of section.items; track item.path) {
+                      <li>
+                        <a
+                          [routerLink]="item.path"
+                          routerLinkActive="bg-primary-soft text-on-primary-soft font-medium"
+                          [routerLinkActiveOptions]="{
+                            exact: item.path === '/aprovacoes' || item.path === '/perfis',
+                          }"
+                          #rla="routerLinkActive"
+                          [attr.aria-current]="rla.isActive ? 'page' : null"
+                          [attr.aria-label]="collapsed() ? item.label : null"
+                          [attr.title]="collapsed() ? item.label : null"
+                          class="focus-ring flex items-center gap-3 rounded-control px-2 py-1.5 text-sm text-fg hover:bg-surface-2"
+                          [class.justify-center]="collapsed()"
+                          (click)="navigated.emit()"
+                        >
+                          <app-icon [name]="item.icon" />
+                          @if (!collapsed()) {
+                            <span class="truncate">{{ item.label }}</span>
+                          }
+                        </a>
+                      </li>
+                    }
+                  </ul>
                 }
-              </ul>
+              </div>
             }
           </div>
         }
@@ -96,6 +149,8 @@ export class Sidebar {
   readonly closed = output();
   readonly navigated = output();
   protected readonly prefs = inject(Preferences);
+  protected readonly favorites = inject(Favorites);
+  protected readonly sections = sectionsOf;
   private readonly session = inject(Session);
   private readonly workspace = inject(Workspace);
   protected readonly folded = signal<ReadonlySet<string>>(new Set());

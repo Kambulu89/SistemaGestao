@@ -73,3 +73,42 @@ export class ErrorState {
 export class Skeleton {
   protected readonly rows = [0, 1, 2];
 }
+
+/**
+ * Acesso negado dentro de uma página (permissão em falta, funcionalidade não contratada ou fora do âmbito
+ * organizacional). Diz o que falta sem expor dados; a API continua a ser quem decide.
+ */
+@Component({
+  selector: 'app-access-denied',
+  imports: [Icon],
+  template: `
+    <div class="card flex flex-col items-center gap-2 py-10 text-center" role="status">
+      <app-icon name="lock" [size]="28" />
+      <p class="font-medium">{{ title() }}</p>
+      <p class="max-w-md text-sm text-muted">
+        @switch (reason()) {
+          @case ('feature') {
+            Esta funcionalidade não está incluída na subscrição da empresa.
+          }
+          @case ('scope') {
+            O registo está fora do seu âmbito organizacional (entidade legal ou filial).
+          }
+          @default {
+            Não tem permissão para esta área. Peça acesso a um administrador da empresa.
+          }
+        }
+      </p>
+      @if (permission()) {
+        <p class="text-xs text-muted">
+          Permissão necessária: <code>{{ permission() }}</code>
+        </p>
+      }
+      <ng-content />
+    </div>
+  `,
+})
+export class AccessDenied {
+  readonly title = input('Sem acesso');
+  readonly reason = input<'permission' | 'feature' | 'scope'>('permission');
+  readonly permission = input<string | null>(null);
+}

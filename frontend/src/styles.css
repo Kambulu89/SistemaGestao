@@ -1,7 +1,9 @@
 @import 'tailwindcss';
 
 /*
- * Design system (Prompt 04). Fonte de verdade dos tokens: este ficheiro; os pares de cor são verificados por
+ * Design system (Prompt 04; identidade "Corporate Blue" do prompt de interface: primária #174EA6, interactiva
+ * #2563EB, sucesso #0D9488, aviso #D97706, erro #DC2626, fundo #F6F8FB, letra Inter auto-alojada).
+ * Fonte de verdade dos tokens: este ficheiro; os pares de cor são verificados por
  * `src/app/design/contrast.spec.ts` (WCAG 2.2 AA: 4.5:1 texto, 3:1 componentes/foco).
  *
  * - Cores semânticas como variáveis `--c-*`, redefinidas no tema escuro (`[data-theme=dark]` no <html>, escolhido
@@ -15,33 +17,36 @@
 
 :root {
   color-scheme: light;
-  --c-bg: #f5f7fa;
+  --c-bg: #f6f8fb;
   --c-surface: #ffffff;
-  --c-surface-2: #eef1f5;
-  --c-fg: #111827;
-  --c-muted: #4b5563;
-  --c-subtle: #6b7280;
-  --c-border: #d6dbe3;
-  --c-border-strong: #8a93a3;
-  --c-primary: #4338ca;
-  --c-primary-hover: #3730a3;
+  --c-surface-2: #eef2f7;
+  --c-fg: #0f172a;
+  --c-muted: #475569;
+  --c-subtle: #64748b;
+  --c-border: #dbe1ea;
+  --c-border-strong: #8792a6;
+  --c-primary: #174ea6;
+  --c-primary-hover: #123f87;
   --c-on-primary: #ffffff;
-  --c-primary-soft: #e0e7ff;
-  --c-on-primary-soft: #312e81;
-  --c-link: #4338ca;
-  --c-focus: #4338ca;
-  --c-danger: #b91c1c;
-  --c-danger-hover: #991b1b;
+  --c-primary-soft: #e6eefb;
+  --c-on-primary-soft: #123f87;
+  --c-interactive: #2563eb;
+  --c-link: #2563eb;
+  --c-focus: #2563eb;
+  --c-danger: #dc2626;
+  --c-danger-hover: #b91c1c;
   --c-on-danger: #ffffff;
   --c-danger-soft: #fef2f2;
   --c-danger-border: #fecaca;
-  --c-danger-text: #991b1b;
-  --c-success-soft: #dcfce7;
-  --c-success-text: #166534;
-  --c-warning-soft: #fef3c7;
+  --c-danger-text: #b91c1c;
+  --c-success: #0d9488;
+  --c-success-soft: #d5f5f0;
+  --c-success-text: #0f766e;
+  --c-warning: #d97706;
+  --c-warning-soft: #fdf0d5;
   --c-warning-text: #92400e;
-  --c-info-soft: #e0f2fe;
-  --c-info-text: #075985;
+  --c-info-soft: #e3edfd;
+  --c-info-text: #1e40af;
   --c-overlay: rgb(15 23 42 / 0.45);
 
   --control-py: 0.5rem;
@@ -52,33 +57,36 @@
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --c-bg: #0b1120;
-  --c-surface: #131c2e;
-  --c-surface-2: #1c2638;
-  --c-fg: #e5e9f0;
-  --c-muted: #a8b1c2;
-  --c-subtle: #8f99ab;
-  --c-border: #2c3749;
+  --c-bg: #0b1220;
+  --c-surface: #111a2b;
+  --c-surface-2: #1a2538;
+  --c-fg: #e6ebf2;
+  --c-muted: #a7b1c2;
+  --c-subtle: #8e99ab;
+  --c-border: #2a3549;
   --c-border-strong: #66728a;
-  --c-primary: #4f46e5;
-  --c-primary-hover: #4338ca;
+  --c-primary: #2563eb;
+  --c-primary-hover: #1d4ed8;
   --c-on-primary: #ffffff;
-  --c-primary-soft: #23284a;
-  --c-on-primary-soft: #c7d2fe;
-  --c-link: #a5b4fc;
-  --c-focus: #a5b4fc;
+  --c-primary-soft: #172a4d;
+  --c-on-primary-soft: #c4d6fd;
+  --c-interactive: #7da2f7;
+  --c-link: #7da2f7;
+  --c-focus: #7da2f7;
   --c-danger: #dc2626;
   --c-danger-hover: #b91c1c;
   --c-on-danger: #ffffff;
   --c-danger-soft: #2a1215;
   --c-danger-border: #7f1d1d;
   --c-danger-text: #fca5a5;
-  --c-success-soft: #0f2a1c;
-  --c-success-text: #86efac;
+  --c-success: #2dd4bf;
+  --c-success-soft: #0d2a28;
+  --c-success-text: #5eead4;
+  --c-warning: #f59e0b;
   --c-warning-soft: #2e2208;
   --c-warning-text: #fcd34d;
-  --c-info-soft: #0c2536;
-  --c-info-text: #7dd3fc;
+  --c-info-soft: #10233f;
+  --c-info-text: #93c5fd;
   --c-overlay: rgb(0 0 0 / 0.6);
 }
 
@@ -101,7 +109,9 @@
 }
 
 @theme inline {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans:
+    'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
   --color-bg: var(--c-bg);
   --color-surface: var(--c-surface);
   --color-surface-2: var(--c-surface-2);
@@ -115,6 +125,7 @@
   --color-on-primary: var(--c-on-primary);
   --color-primary-soft: var(--c-primary-soft);
   --color-on-primary-soft: var(--c-on-primary-soft);
+  --color-interactive: var(--c-interactive);
   --color-link: var(--c-link);
   --color-focus: var(--c-focus);
   --color-danger: var(--c-danger);
@@ -123,6 +134,8 @@
   --color-danger-soft: var(--c-danger-soft);
   --color-danger-border: var(--c-danger-border);
   --color-danger-text: var(--c-danger-text);
+  --color-success: var(--c-success);
+  --color-warning: var(--c-warning);
   --color-success-soft: var(--c-success-soft);
   --color-success-text: var(--c-success-text);
   --color-warning-soft: var(--c-warning-soft);
