@@ -40,7 +40,7 @@ import { Breadcrumbs } from '../core/breadcrumbs';
     </a>
     <div class="flex min-h-screen bg-bg text-fg">
       <div
-        class="hidden shrink-0 border-r border-border bg-surface transition-[width] duration-[var(--motion-base)] lg:block"
+        class="no-print hidden shrink-0 border-r border-border bg-surface transition-[width] duration-[var(--motion-base)] lg:block"
         [class.w-64]="!prefs.sidebarCollapsed()"
         [class.w-16]="prefs.sidebarCollapsed()"
       >
@@ -64,7 +64,7 @@ import { Breadcrumbs } from '../core/breadcrumbs';
       }
       <div class="flex min-w-0 flex-1 flex-col">
         <header
-          class="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2"
+          class="no-print sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2"
         >
           <button
             #menuButton

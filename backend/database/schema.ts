@@ -1985,6 +1985,132 @@ export class RoleSchema extends BaseModel {
   declare version: number
 }
 
+export class StatementNoteSchema extends BaseModel {
+  static $columns = ['body', 'createdAt', 'createdBy', 'fiscalYearId', 'id', 'number', 'tenantId', 'title', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StatementNoteSchema.$columns
+  @column()
+  declare body: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare fiscalYearId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare number: number
+  @column()
+  declare tenantId: string
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StatementTemplateLineSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'formula', 'id', 'kind', 'label', 'lineNo', 'noteRef', 'sign', 'templateId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StatementTemplateLineSchema.$columns
+  @column()
+  declare code: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare formula: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare label: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare noteRef: string | null
+  @column()
+  declare sign: number
+  @column()
+  declare templateId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StatementTemplateMappingSchema extends BaseModel {
+  static $columns = ['accountPrefix', 'balanceRule', 'createdAt', 'createdBy', 'id', 'lineCode', 'templateId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StatementTemplateMappingSchema.$columns
+  @column()
+  declare accountPrefix: string
+  @column()
+  declare balanceRule: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineCode: string
+  @column()
+  declare templateId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StatementTemplateSchema extends BaseModel {
+  static $columns = ['chartId', 'checkA', 'checkB', 'code', 'createdAt', 'createdBy', 'id', 'kind', 'name', 'publishedAt', 'status', 'templateVersion', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StatementTemplateSchema.$columns
+  @column()
+  declare chartId: string
+  @column()
+  declare checkA: string | null
+  @column()
+  declare checkB: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare name: string
+  @column.dateTime()
+  declare publishedAt: DateTime | null
+  @column()
+  declare status: string
+  @column()
+  declare templateVersion: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class SubscriptionEventSchema extends BaseModel {
   static $columns = ['action', 'actorUserId', 'createdAt', 'fromStatus', 'id', 'planId', 'reason', 'subscriptionId', 'tenantId', 'toStatus', 'updatedAt'] as const
   $columns = SubscriptionEventSchema.$columns

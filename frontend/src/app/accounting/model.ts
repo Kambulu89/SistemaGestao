@@ -885,3 +885,118 @@ export function selectionTotals(items: OpenItem[], selected: ReadonlySet<string>
     ready: chosen.length >= 2 && debit === credit && thirds.size <= 1,
   };
 }
+
+// ---------------------------------------------------------------- demonstrações (6.8)
+
+export type StatementKind = 'BALANCE_SHEET' | 'INCOME_STATEMENT';
+export const STATEMENT_KIND_LABELS: Record<StatementKind, string> = {
+  BALANCE_SHEET: 'Balanço',
+  INCOME_STATEMENT: 'Demonstração de resultados',
+};
+export type StatementLineKind = 'HEADER' | 'ACCOUNTS' | 'TOTAL' | 'NET_INCOME';
+export const STATEMENT_LINE_LABELS: Record<StatementLineKind, string> = {
+  HEADER: 'Título',
+  ACCOUNTS: 'Contas',
+  TOTAL: 'Total',
+  NET_INCOME: 'Resultado líquido',
+};
+export const TEMPLATE_STATUS: Record<string, string> = {
+  DRAFT: 'Rascunho',
+  PUBLISHED: 'Publicado',
+  RETIRED: 'Retirado',
+};
+
+export interface StatementMapping {
+  prefix: string;
+  rule: 'ANY' | 'DEBIT' | 'CREDIT';
+}
+
+export interface StatementTemplateLine {
+  lineNo?: number;
+  code: string | null;
+  label: string;
+  kind: StatementLineKind;
+  sign: 1 | -1;
+  formula: string | null;
+  noteRef: string | null;
+}
+
+export interface StatementTemplate {
+  id: string;
+  version: number;
+  chartId: string;
+  code: string;
+  name: string;
+  kind: StatementKind;
+  status: 'DRAFT' | 'PUBLISHED' | 'RETIRED';
+  checkA: string | null;
+  checkB: string | null;
+  publishedAt: string | null;
+  lines?: StatementTemplateLine[];
+  mappings?: (StatementMapping & { lineCode: string })[];
+}
+
+export interface StatementResult {
+  template: {
+    id: string;
+    code: string;
+    name: string;
+    kind: StatementKind;
+    version: number;
+    status: string;
+  };
+  fiscalYear: { id: string; code: string; toPeriod: number };
+  compareFiscalYear: { id: string; code: string } | null;
+  lines: {
+    lineNo: number;
+    code: string | null;
+    label: string;
+    kind: StatementLineKind;
+    noteRef: string | null;
+    value: string | null;
+    previous: string | null;
+    accounts: { code: string; name: string; amount: string }[];
+  }[];
+  unmapped: { code: string; name: string; balance: string }[];
+  previousUnmapped: number;
+  netIncome: string;
+  check: { a: string; b: string; ok: boolean } | null;
+  consistent: boolean;
+  notes: StatementNote[];
+}
+
+export interface StatementNote {
+  id: string;
+  version?: number;
+  number: number;
+  title: string;
+  body: string;
+}
+
+const RULE_SUFFIX: Record<StatementMapping['rule'], string> = {
+  ANY: '',
+  DEBIT: ':D',
+  CREDIT: ':C',
+};
+
+/** "111, 113:D, 113:C" ↔ prefixos com regra de saldo (D = devedor, C = credor). */
+export function formatMappings(mappings: StatementMapping[]) {
+  return mappings.map((m) => m.prefix + RULE_SUFFIX[m.rule]).join(', ');
+}
+
+export function parseMappings(text: string): StatementMapping[] | null {
+  const parts = text
+    .split(/[,;\s]+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const out: StatementMapping[] = [];
+  for (const p of parts) {
+    const m = /^([0-9A-Za-z.]{1,30})(?::([DC]))?$/i.exec(p);
+    if (!m) return null;
+    out.push({
+      prefix: m[1],
+      rule: !m[2] ? 'ANY' : m[2].toUpperCase() === 'D' ? 'DEBIT' : 'CREDIT',
+    });
+  }
+  return out;
+}

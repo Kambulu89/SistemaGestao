@@ -87,6 +87,20 @@ export const NAVIGATION: NavGroup[] = [
         feature: 'accounting',
       },
       {
+        label: 'Demonstrações financeiras',
+        path: '/contabilidade/demonstracoes',
+        icon: 'file',
+        permission: 'accounting.reports',
+        feature: 'accounting',
+      },
+      {
+        label: 'Modelos de demonstrações',
+        path: '/contabilidade/modelos-demonstracoes',
+        icon: 'template',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+      {
         label: 'Analítica',
         path: '/contabilidade/analitica',
         icon: 'grid',

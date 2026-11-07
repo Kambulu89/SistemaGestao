@@ -163,7 +163,7 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 ## Contabilidade (módulo `accounting`, Prompt 06)
 
-Blocos 6.1 a 6.7 feitos; 6.8–6.10 por fazer (ver `docs/reports/prompt-06.md`).
+Blocos 6.1 a 6.8 feitos; 6.9–6.10 por fazer (ver `docs/reports/prompt-06.md`).
 
 - **Plano de contas** por entidade legal (um activo, índice parcial único). Contas em árvore: classe → conta →
   subconta; o código do filho começa pelo do pai; só contas sem subcontas são movimentáveis; natureza, saldo normal,
@@ -243,7 +243,19 @@ Blocos 6.1 a 6.7 feitos; 6.8–6.10 por fazer (ver `docs/reports/prompt-06.md`).
   entidade e data, nunca com outra por contabilizar, nunca sem câmbio. Reconciliação de contas: grupos de linhas
   contabilizadas da mesma conta, entidade e terceiro cujos débitos igualam os créditos (funcional); UNIQUE por
   linha do razão e FK para `journal_lines`; desfazer é auditado.
-- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics|adjustments|reconcile` e `fixed_assets.read|manage|post`; funcionalidade `accounting`. Regras:
+- **Demonstrações financeiras (6.8)**: modelos por plano de contas, versionados (`DRAFT` → `PUBLISHED` → `RETIRED`;
+  um publicado e um rascunho por código; publicar retira o anterior; o publicado não muda). Linhas: títulos, contas
+  (prefixos de código com regra de saldo qualquer/devedor/credor), totais por fórmula (`A1+A2-A3`, sem ciclos) e
+  resultado líquido (só no balanço). Cada conta vai para a linha do **prefixo mais longo** que aceita o sinal do seu
+  saldo — nunca duas linhas — e o mesmo prefixo com regras sobrepostas em duas linhas é recusado. A demonstração é
+  calculada a pedido dos lançamentos contabilizados (balanço: períodos até ao indicado, abertura incluída;
+  resultados: só períodos normais), com coluna comparativa opcional e detalhe por conta; confere quando não há contas
+  com saldo sem linha e as linhas de controlo coincidem (activo = capital próprio + passivo; resultado = resultado do
+  razão). Notas numeradas por exercício. Exportação Excel (.xlsx gerado no browser, sem dependências) e
+  impressão/PDF pelo browser (a moldura da aplicação não é impressa). Não há modelos pré-definidos nem alegação de
+  conformidade com o PGC: os mapas são configurados pela empresa. Fluxos de caixa ficam para quando houver
+  classificação de fluxos (Finanças).
+- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics|adjustments|reconcile|statements` e `fixed_assets.read|manage|post`; funcionalidade `accounting`. Regras:
   `accounting.settings`; enviar/reprocessar eventos: `accounting.post`; simular e consultar: `accounting.read`.
 
 ## Anexos

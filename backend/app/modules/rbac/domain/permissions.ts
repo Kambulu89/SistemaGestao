@@ -149,6 +149,11 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description: 'Reconciliar linhas contabilizadas de uma conta e desfazer reconciliações.',
   },
   {
+    code: 'accounting.statements',
+    module: 'accounting',
+    description: 'Redigir as notas às demonstrações financeiras.',
+  },
+  {
     code: 'fixed_assets.read',
     module: 'accounting',
     description: 'Consultar activos fixos, classes, mapa de depreciação e movimentos.',

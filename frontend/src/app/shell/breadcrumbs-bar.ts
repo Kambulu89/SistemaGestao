@@ -8,7 +8,7 @@ import { Icon } from '../ui/icon';
   imports: [RouterLink, Icon],
   template: `
     @if (breadcrumbs.crumbs().length > 0) {
-      <nav aria-label="Localização" class="mb-3 text-sm">
+      <nav aria-label="Localização" class="no-print mb-3 text-sm">
         <ol class="flex flex-wrap items-center gap-1 text-muted">
           @for (c of breadcrumbs.crumbs(); track c.url; let last = $last) {
             <li class="flex items-center gap-1">

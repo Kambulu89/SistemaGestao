@@ -1,7 +1,7 @@
 # Relatório — Prompt 06 (contabilidade)
 
-Estado: **6.1 a 6.7 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Os blocos 6.8 a 6.10
-dependem desta fundação e ficam para os blocos seguintes. Decisões D-014 a D-018.
+Estado: **6.1 a 6.8 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Os blocos 6.9 e 6.10
+dependem desta fundação e ficam para os blocos seguintes. Decisões D-014 a D-019.
 
 Nada aqui alega conformidade com o PGC angolano, a AGT ou o SAF-T (AO): o plano é definido pela empresa e a
 validação normativa (versão do PGC, SAF-T, critérios dos mapas) continua pendente antes de qualquer alegação fiscal.
@@ -17,9 +17,9 @@ validação normativa (versão do PGC, SAF-T, critérios dos mapas) continua pen
 | 6.5 Analítica           | Centros de custo por linha                      | Dimensões e valores, chaves de repartição, imputações a 100% (4 casas) por linha, também depois de contabilizar, repartição exacta pelo maior resto, relatório por centro ou dimensão que confere com o razão                                                                                                          | Feito      |
 | 6.6 Activos fixos       | —                                               | Classes com contas e diário; fichas (inventário, série, aquisição, localização, vida útil, residual, método); mapa linha recta/degressivo exacto; aquisição, transferência, depreciação mensal, abate com ganho/perda contabilizados; anulações pela ficha; duplicados e concorrência bloqueados; mapa por exercício   | Feito      |
 | 6.7 Regularizações      | Período de regularizações existe                | Planos de recorrência, acréscimo e diferimento (repartição exacta) e provisões com saldo protegido, a gerar rascunhos; diferenças cambiais não realizadas e realizadas por saldo em moeda; reconciliação de contas por linha do razão                                                                                  | Feito      |
-| 6.8 Demonstrações       | `statementLine` por conta                       | Mapas versionados, PDF/Excel, conferência com o balancete                                                                                                                                                                                                                                                              | Próximo    |
+| 6.8 Demonstrações       | `statementLine` por conta                       | Modelos versionados por plano (prefixos com regra de saldo, totais por fórmula, resultado líquido, linhas de controlo); balanço e resultados com comparativo, detalhe por conta e notas; conferência com o razão; Excel e impressão/PDF. Fluxos de caixa: não (sem classificação de fluxos)                            | Feito      |
 | 6.9 Fiscalidade (SAF-T) | —                                               | Só com a especificação oficial verificada                                                                                                                                                                                                                                                                              | Bloqueado* |
-| 6.10 Fecho              | Fecho/reabertura de períodos auditados          | Checklist, encerramento do exercício, concorrência                                                                                                                                                                                                                                                                     | Parcial    |
+| 6.10 Fecho              | Fecho/reabertura de períodos auditados          | Checklist, encerramento do exercício, concorrência                                                                                                                                                                                                                                                                     | Próximo    |
 
 \* Bloqueado pela validação normativa, não por código.
 
@@ -59,6 +59,11 @@ reabertura), Diários.
   `POST|PATCH` de planos e provisões, `GET /accounting/adjustments/preview`, `POST /accounting/adjustments/generate`,
   `POST /accounting/provisions/:id/movements`, `GET /accounting/fx-revaluations/preview`, `POST /accounting/fx-revaluations`
   (`accounting.adjustments`, nova); `POST /accounting/reconciliations`, `DELETE …/:id` (`accounting.reconcile`, nova).
+
+- 6.8: `GET /accounting/statement-templates`, `GET …/:id` (`accounting.read`); `POST|PATCH|DELETE` de modelos,
+  `POST …/:id/publish`, `POST …/:id/versions` (`accounting.settings`); `GET /accounting/statements`,
+  `GET /accounting/statement-notes` (`accounting.reports`); `POST|PATCH|DELETE /accounting/statement-notes`
+  (`accounting.statements`, nova).
 
 ## Ecrãs do 6.3
 
@@ -129,9 +134,21 @@ Defeito encontrado pela verificação no browser e corrigido: ao mudar de entida
 escolhíveis até chegarem as novas e a escolha antiga era enviada (recusada pelo servidor). Agora as listas são
 limpas logo e as escolhas que não existem na nova entidade são apagadas (também nas classes de activos).
 
+### Bloco 6.8
+
+| Lado     | Resultado                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend  | 141/141; lint, formatação, tipos e build sem erros. Novos: `statements_domain.spec.ts` (fórmulas, prefixo mais longo com regra de saldo, validação de códigos/fórmulas/ciclos/prefixos ambíguos, valores com sinal) e `statements.spec.ts` (prefixo ambíguo e controlo incompleto recusados; versões: rascunho editável, publicado imutável e não apagável, código repetido, nova versão e uma só em rascunho, publicar retira a anterior; balanço 1 300,00 = 1 300,00 com descoberto bancário no passivo, conta sem linha impede a conferência, resultados 500/350/150 iguais ao razão, até Fevereiro sem movimentos, comparativo; notas numeradas e na demonstração; permissões separadas); matriz de isolamento com modelos, demonstração e notas |
+| Frontend | 60/60 (inclui o .xlsx: CRC-32, partes do livro, números, neutralização de fórmulas); lint, formatação e build sem erros                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Browser  | 5/5 passos, 0 erros na consola: modelo de balanço de 8 linhas criado e publicado na UI, balanço que confere (1 300,00 = 1 300,00) com detalhe por conta, nota acrescentada e mostrada, Excel descarregado e lido pelo openpyxl com os valores, impressão sem menu nem formulário (PDF de 1 página), tema escuro e telemóvel                                                                                                                                                                                                                                                                                                                                                                                                                          |
+
+Defeitos encontrados pelos testes e corrigidos: uma fórmula "A1 A2" (sem operador) era aceite como o código "A1A2";
+a versão do modelo colidia com a coluna `version` de bloqueio optimista das tabelas de tenant (passou a
+`template_version`); o Excel não tinha o estilo por omissão.
+
 ## Pendências
 
-- 6.8 a 6.10 (acima). Regularizações: diferenças cambiais realizadas por documento (factura/recebimento) esperam
+- 6.9 e 6.10 (acima). Demonstrações: fluxos de caixa e modelos oficiais do PGC por confirmar na fonte oficial. Regularizações: diferenças cambiais realizadas por documento (factura/recebimento) esperam
   pelas Finanças (Prompt 11); a reconciliação bancária (extractos) também. Activos fixos: saldos de abertura de activos já depreciados (migração de fichas antigas),
   abates parciais, reavaliações e transferências entre entidades ainda não existem. Os módulos de negócio (Facturação, Compras, Inventário, RH, Finanças) ainda não existem neste
   repositório; quando existirem, chamam `postAccountingEvent` — nenhum evento é emitido hoje por outro módulo. 6.9 só com a especificação oficial do SAF-T (AO) verificada.

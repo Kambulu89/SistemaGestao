@@ -144,3 +144,15 @@ sem estados paralelos. As diferenças cambiais são calculadas sobre os saldos c
 das contas que o utilizador escolhe (itens monetários; activos não monetários não se actualizam), e as diferenças
 realizadas são o resíduo funcional de um saldo já liquidado em moeda — não dependem do módulo de Finanças, que ainda
 não existe. Não se assumem câmbios nem critérios fiscais: o câmbio é o registado pela empresa.
+
+## D-019 Demonstrações por modelos versionados e prefixos, sem modelo oficial embutido (aceite)
+
+O balanço e a demonstração de resultados vêm de modelos configurados pela empresa por plano de contas, não de mapas
+fixos no código: o PGC angolano e os critérios dos mapas têm de ser confirmados na fonte oficial antes de qualquer
+alegação, e cada empresa tem o seu plano. As contas entram por prefixo de código (com regra de saldo devedor/credor
+para contas que mudam de lado, como bancos), e cada conta vai para o prefixo mais longo — uma única linha —, por isso a
+demonstração nunca conta duas vezes um saldo e o que ficar sem linha é mostrado e impede a conferência. Os modelos são
+versionados: publicar fixa a versão (as demonstrações de um exercício podem sempre ser refeitas com a versão usada) e
+uma alteração é uma nova versão. As demonstrações não se guardam: são recalculadas do razão. Fluxos de caixa não são
+gerados enquanto não houver classificação dos fluxos de tesouraria (Prompt 11); o Excel é gerado no browser sem novas
+dependências e o PDF é o da impressão do browser.

@@ -278,3 +278,22 @@ describe('contabilidade: mudança de entidade', () => {
     });
   });
 });
+
+describe('contabilidade: demonstrações', () => {
+  it('prefixos das linhas: texto ↔ regras de saldo', async () => {
+    const { formatMappings, parseMappings } = await import('./model');
+    expect(parseMappings('111, 113:D; 113:c')).toEqual([
+      { prefix: '111', rule: 'ANY' },
+      { prefix: '113', rule: 'DEBIT' },
+      { prefix: '113', rule: 'CREDIT' },
+    ]);
+    expect(parseMappings('')).toEqual([]);
+    expect(parseMappings('11:X')).toBeNull();
+    expect(
+      formatMappings([
+        { prefix: '22', rule: 'ANY' },
+        { prefix: '113', rule: 'CREDIT' },
+      ]),
+    ).toBe('22, 113:C');
+  });
+});

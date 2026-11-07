@@ -27,6 +27,7 @@ const SettingsController = () => import('#modules/settings/http/settings_control
 const AccountingController = () => import('#modules/accounting/http/accounting_controller')
 const FixedAssetsController = () => import('#modules/accounting/http/fixed_assets_controller')
 const AdjustmentsController = () => import('#modules/accounting/http/adjustments_controller')
+const StatementsController = () => import('#modules/accounting/http/statements_controller')
 
 router
   .group(() => {
@@ -326,6 +327,41 @@ router
                 .post('accounting/entries/:id/reverse', [AccountingController, 'reverse'])
                 .use(accounting('accounting.reverse'))
             })
+
+            // Demonstrações financeiras (6.8): modelos (accounting.read / accounting.settings), demonstrações e notas
+            // (accounting.reports), redacção das notas (accounting.statements).
+            const ST = 'accounting/statement-templates'
+            router
+              .group(() => {
+                router.get(ST, [StatementsController, 'templates'])
+                router.get(`${ST}/:id`, [StatementsController, 'template'])
+              })
+              .use(accounting('accounting.read'))
+            router
+              .group(() => {
+                router.post(ST, [StatementsController, 'createTemplate'])
+                router.patch(`${ST}/:id`, [StatementsController, 'updateTemplate'])
+                router.delete(`${ST}/:id`, [StatementsController, 'deleteTemplate'])
+                router.post(`${ST}/:id/publish`, [StatementsController, 'publishTemplate'])
+                router.post(`${ST}/:id/versions`, [StatementsController, 'newVersion'])
+              })
+              .use(accounting('accounting.settings'))
+            router
+              .group(() => {
+                router.get('accounting/statements', [StatementsController, 'generate'])
+                router.get('accounting/statement-notes', [StatementsController, 'notes'])
+              })
+              .use(accounting('accounting.reports'))
+            router
+              .group(() => {
+                router.post('accounting/statement-notes', [StatementsController, 'createNote'])
+                router.patch('accounting/statement-notes/:id', [StatementsController, 'updateNote'])
+                router.delete('accounting/statement-notes/:id', [
+                  StatementsController,
+                  'deleteNote',
+                ])
+              })
+              .use(accounting('accounting.statements'))
 
             // Regularizações (6.7): consulta com accounting.read; gerar rascunhos com accounting.adjustments;
             // reconciliar com accounting.reconcile.

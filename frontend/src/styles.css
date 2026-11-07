@@ -197,3 +197,10 @@ body {
     @apply animate-pulse rounded bg-surface-2;
   }
 }
+
+/* Impressão (demonstrações, mapas): sem barra lateral, topo nem trilho; o conteúdo ocupa a página. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
