@@ -8,7 +8,7 @@ import { PageHeader } from '../ui/page-header';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import { type AssetClass, lifeText, METHOD_LABELS } from './model';
-import { accountingDeps, entityReferences, legalEntityOptions } from './shared';
+import { accountingDeps, entityReferences, keepKnown, legalEntityOptions } from './shared';
 
 interface Option {
   id: string;
@@ -254,6 +254,12 @@ export class AssetClasses {
     if (request !== this.refRequest) return;
     this.journals.set(refs.journals);
     this.accounts.set(refs.accounts);
+    keepKnown(this.form, ['journalId'], refs.journals);
+    keepKnown(
+      this.form,
+      ACCOUNT_FIELDS.map((f) => f[0]),
+      refs.accounts,
+    );
     if (!this.form.journalId && refs.journals.length === 1)
       this.form.journalId = refs.journals[0].id;
   }

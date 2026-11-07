@@ -163,7 +163,7 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 ## Contabilidade (módulo `accounting`, Prompt 06)
 
-Blocos 6.1 a 6.6 feitos; 6.7–6.10 por fazer (ver `docs/reports/prompt-06.md`).
+Blocos 6.1 a 6.7 feitos; 6.8–6.10 por fazer (ver `docs/reports/prompt-06.md`).
 
 - **Plano de contas** por entidade legal (um activo, índice parcial único). Contas em árvore: classe → conta →
   subconta; o código do filho começa pelo do pai; só contas sem subcontas são movimentáveis; natureza, saldo normal,
@@ -229,7 +229,21 @@ Blocos 6.1 a 6.6 feitos; 6.7–6.10 por fazer (ver `docs/reports/prompt-06.md`).
   recusa-os (409). Mapa por exercício: custo, acumulado inicial, do exercício, final, valor líquido e previsto.
   Permissões `fixed_assets.read|manage|post`. Vidas úteis e taxas são as que a empresa configura — não se assumem
   taxas fiscais.
-- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics` e `fixed_assets.read|manage|post`; funcionalidade `accounting`. Regras:
+- **Regularizações (6.7)**: tudo o que mexe no razão é um **rascunho** que segue a aprovação normal (quem gera não
+  aprova); as tabelas do bloco só o referenciam e apagar o rascunho liberta a ocorrência (FK `ON DELETE CASCADE`).
+  Planos (`adjustment_schedules`): recorrências com linhas fixas (mensal/trimestral/anual, com ou sem fim) e
+  acréscimos/diferimentos com um total repartido exactamente por N meses (acumulado arredondado mês a mês); geração
+  até um mês com simulação, advisory lock por entidade e UNIQUE plano+mês. Com meses gerados, o
+  acréscimo/diferimento já não muda total, meses, início nem contas. Provisões: constituição/reforço (gasto →
+  provisão), reversão (provisão → rendimento) e utilização (provisão → conta indicada); a provisão fica bloqueada e
+  reversões/utilizações nunca excedem o saldo (que conta rascunhos e exclui estornados). Diferenças cambiais: para as
+  contas escolhidas, saldos contabilizados por conta+moeda+terceiro; saldo em moeda ≠ 0 → não realizada (moeda ×
+  câmbio de fecho de `rateOn`), saldo em moeda = 0 com resíduo funcional → realizada; o rascunho é em moeda funcional
+  e cada diferença fica em `fx_revaluation_lines`, somada às seguintes quando contabilizada e não estornada. Uma por
+  entidade e data, nunca com outra por contabilizar, nunca sem câmbio. Reconciliação de contas: grupos de linhas
+  contabilizadas da mesma conta, entidade e terceiro cujos débitos igualam os créditos (funcional); UNIQUE por
+  linha do razão e FK para `journal_lines`; desfazer é auditado.
+- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics|adjustments|reconcile` e `fixed_assets.read|manage|post`; funcionalidade `accounting`. Regras:
   `accounting.settings`; enviar/reprocessar eventos: `accounting.post`; simular e consultar: `accounting.read`.
 
 ## Anexos

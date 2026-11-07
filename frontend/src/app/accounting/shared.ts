@@ -67,3 +67,17 @@ export function moneyText(v: string | null | undefined) {
   const text = formatMoney(abs, abs.includes('.') ? abs.split('.')[1].length : 0);
   return negative ? `-${text}` : text;
 }
+
+/**
+ * Depois de mudar de entidade legal: limpa as escolhas (diário, contas, centro de custo) que não existem nas listas
+ * da nova entidade, para nunca se enviar uma referência de outra entidade.
+ */
+export function keepKnown<T extends object>(
+  form: T,
+  keys: readonly (keyof T)[],
+  options: readonly { id: string }[],
+) {
+  const known = new Set(options.map((o) => o.id));
+  const target = form as Record<keyof T, unknown>;
+  for (const k of keys) if (target[k] && !known.has(target[k] as string)) target[k] = null;
+}

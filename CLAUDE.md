@@ -1,7 +1,7 @@
 # CLAUDE.md — instruções de desenvolvimento
 
 Aplicação web nova: `frontend/` (Angular 22 + Tailwind CSS 4) e `backend/` (AdonisJS 7, kit API, PostgreSQL 16).
-Objectivo: ERP SaaS multiempresa (Prompts 01–22 do utilizador). Estado: Prompts 03, 04 e 05 concluídos; Prompt 06 (contabilidade) com 6.1 a 6.6 feitos (tenants com RLS,
+Objectivo: ERP SaaS multiempresa (Prompts 01–22 do utilizador). Estado: Prompts 03, 04 e 05 concluídos; Prompt 06 (contabilidade) com 6.1 a 6.7 feitos (tenants com RLS,
 identidade, sessão, contexto de tenant, RBAC com âmbitos, convites, recuperação, estrutura organizacional, planos,
 subscrições e entitlements, auditoria, aprovações com delegações, anexos, notificações e centro de tarefas; interface de todas estas áreas com design system, painel e pesquisa global; administração empresarial: perfil e
 configurações da empresa, câmbios, séries documentais, calendários, contas bancárias com aprovação, organograma e matriz

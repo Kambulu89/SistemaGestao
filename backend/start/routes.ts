@@ -26,6 +26,7 @@ const DashboardController = () => import('#modules/dashboard/http/dashboard_cont
 const SettingsController = () => import('#modules/settings/http/settings_controller')
 const AccountingController = () => import('#modules/accounting/http/accounting_controller')
 const FixedAssetsController = () => import('#modules/accounting/http/fixed_assets_controller')
+const AdjustmentsController = () => import('#modules/accounting/http/adjustments_controller')
 
 router
   .group(() => {
@@ -325,6 +326,69 @@ router
                 .post('accounting/entries/:id/reverse', [AccountingController, 'reverse'])
                 .use(accounting('accounting.reverse'))
             })
+
+            // Regularizações (6.7): consulta com accounting.read; gerar rascunhos com accounting.adjustments;
+            // reconciliar com accounting.reconcile.
+            router
+              .group(() => {
+                router.get('accounting/adjustment-schedules', [AdjustmentsController, 'schedules'])
+                router.get('accounting/adjustment-schedules/:id', [
+                  AdjustmentsController,
+                  'schedule',
+                ])
+                router.get('accounting/provisions', [AdjustmentsController, 'provisions'])
+                router.get('accounting/provisions/:id', [AdjustmentsController, 'provision'])
+                router.get('accounting/fx-revaluations', [AdjustmentsController, 'revaluations'])
+                router.get('accounting/reconciliations', [AdjustmentsController, 'reconciliations'])
+                router.get('accounting/reconciliations/open-items', [
+                  AdjustmentsController,
+                  'openItems',
+                ])
+              })
+              .use(accounting('accounting.read'))
+            router
+              .group(() => {
+                router.post('accounting/adjustment-schedules', [
+                  AdjustmentsController,
+                  'createSchedule',
+                ])
+                router.patch('accounting/adjustment-schedules/:id', [
+                  AdjustmentsController,
+                  'updateSchedule',
+                ])
+                router.get('accounting/adjustments/preview', [
+                  AdjustmentsController,
+                  'previewSchedules',
+                ])
+                router.post('accounting/adjustments/generate', [
+                  AdjustmentsController,
+                  'generateSchedules',
+                ])
+                router.post('accounting/provisions', [AdjustmentsController, 'createProvision'])
+                router.patch('accounting/provisions/:id', [
+                  AdjustmentsController,
+                  'updateProvision',
+                ])
+                router.post('accounting/provisions/:id/movements', [
+                  AdjustmentsController,
+                  'moveProvision',
+                ])
+                router.get('accounting/fx-revaluations/preview', [
+                  AdjustmentsController,
+                  'previewRevaluation',
+                ])
+                router.post('accounting/fx-revaluations', [AdjustmentsController, 'revalue'])
+              })
+              .use(accounting('accounting.adjustments'))
+            router
+              .group(() => {
+                router.post('accounting/reconciliations', [AdjustmentsController, 'reconcile'])
+                router.delete('accounting/reconciliations/:id', [
+                  AdjustmentsController,
+                  'undoReconciliation',
+                ])
+              })
+              .use(accounting('accounting.reconcile'))
 
             // Activos fixos (6.6): consulta, gestão das fichas e contabilização (aquisição, depreciação, abate).
             const FA = 'accounting/fixed-assets'

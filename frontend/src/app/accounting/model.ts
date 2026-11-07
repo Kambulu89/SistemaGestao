@@ -704,3 +704,184 @@ export function lifeText(months: number) {
   ];
   return parts.filter(Boolean).join(' e ') || '—';
 }
+
+// ---------------------------------------------------------------- regularizações (6.7)
+
+export type ScheduleKind = 'RECURRING' | 'ACCRUAL' | 'DEFERRAL';
+export const SCHEDULE_KIND_LABELS: Record<ScheduleKind, string> = {
+  RECURRING: 'Recorrência',
+  ACCRUAL: 'Acréscimo',
+  DEFERRAL: 'Diferimento',
+};
+export const FREQUENCY_LABELS: Record<string, string> = {
+  MONTHLY: 'Mensal',
+  QUARTERLY: 'Trimestral',
+  ANNUAL: 'Anual',
+};
+
+export interface ScheduleLineInput {
+  accountId: string | null;
+  debit: string | null;
+  credit: string | null;
+  costCenterId: string | null;
+  thirdPartyRef: string | null;
+  description: string | null;
+}
+
+export interface AdjustmentSchedule {
+  id: string;
+  version: number;
+  legalEntityId: string;
+  code: string;
+  name: string;
+  kind: ScheduleKind;
+  frequency: string;
+  journalId: string;
+  startMonth: string;
+  endMonth: string | null;
+  months: number | null;
+  totalAmount: string | null;
+  debitAccountId: string | null;
+  creditAccountId: string | null;
+  costCenterId: string | null;
+  description: string | null;
+  status: string;
+  lastMonth?: string | null;
+  lines?: ScheduleLineInput[];
+  occurrences?: {
+    month: string;
+    amount: string;
+    entryId: string;
+    entryNumber: string | null;
+    entryStatus: string | null;
+  }[];
+}
+
+export interface AdjustmentPreview {
+  rows: {
+    scheduleId: string;
+    code: string;
+    name: string;
+    kind: ScheduleKind;
+    month: string;
+    total: string;
+  }[];
+  total: string;
+  entries?: { entryId: string; scheduleCode: string; month: string; total: string }[];
+}
+
+export type ProvisionMovementType = 'CONSTITUTION' | 'REVERSAL' | 'USE';
+export const PROVISION_MOVEMENT_LABELS: Record<ProvisionMovementType, string> = {
+  CONSTITUTION: 'Constituição / reforço',
+  REVERSAL: 'Reversão',
+  USE: 'Utilização',
+};
+
+export interface Provision {
+  id: string;
+  version: number;
+  legalEntityId: string;
+  code: string;
+  name: string;
+  description: string | null;
+  journalId: string;
+  expenseAccountId: string;
+  provisionAccountId: string;
+  reversalAccountId: string;
+  costCenterId: string | null;
+  status: string;
+  balance: string;
+  postedBalance: string;
+  movements?: {
+    id: string;
+    type: ProvisionMovementType;
+    date: string;
+    amount: string;
+    reason: string;
+    entryId: string;
+    entryNumber: string | null;
+    entryStatus: string | null;
+    reversed: boolean;
+  }[];
+}
+
+export interface FxLine {
+  kind: 'UNREALIZED' | 'REALIZED';
+  accountId: string;
+  accountCode: string | null;
+  accountName: string | null;
+  currency: string;
+  thirdPartyRef: string | null;
+  foreignBalance: string;
+  functionalBefore: string;
+  rate: string | null;
+  functionalAfter: string;
+  difference: string;
+}
+
+export interface FxPreview {
+  functionalCurrency: string;
+  missingRates: string[];
+  lines: FxLine[];
+  gains: string;
+  losses: string;
+  pendingRevaluation?: string | null;
+  entryId?: string;
+}
+
+export interface FxRevaluation {
+  id: string;
+  date: string;
+  entryId: string;
+  entryNumber: string | null;
+  entryStatus: string | null;
+  reversed: boolean;
+  lines: number;
+  gains: string;
+  losses: string;
+}
+
+export interface OpenItem {
+  entryId: string;
+  lineNo: number;
+  date: string;
+  number: string | null;
+  description: string;
+  thirdPartyRef: string | null;
+  debit: string;
+  credit: string;
+}
+
+export interface ReconciliationGroup {
+  id: string;
+  thirdPartyRef: string | null;
+  total: string;
+  note: string | null;
+  createdAt: string;
+  lines: { entryId: string; lineNo: number; number: string | null; date: string }[];
+}
+
+export const itemKey = (i: Pick<OpenItem, 'entryId' | 'lineNo'>) => `${i.entryId}#${i.lineNo}`;
+
+/**
+ * Totais da selecção de linhas a reconciliar (decimais exactos): só se pode reconciliar com 2+ linhas, todas do
+ * mesmo terceiro e com débitos iguais aos créditos.
+ */
+export function selectionTotals(items: OpenItem[], selected: ReadonlySet<string>, scale: number) {
+  const chosen = items.filter((i) => selected.has(itemKey(i)));
+  let debit = 0n;
+  let credit = 0n;
+  for (const i of chosen) {
+    debit += toScaled(i.debit, scale) ?? 0n;
+    credit += toScaled(i.credit, scale) ?? 0n;
+  }
+  const thirds = new Set(chosen.map((i) => i.thirdPartyRef ?? ''));
+  return {
+    count: chosen.length,
+    debit: fromScaled(debit, scale),
+    credit: fromScaled(credit, scale),
+    difference: fromScaled(debit - credit, scale),
+    sameThirdParty: thirds.size <= 1,
+    ready: chosen.length >= 2 && debit === credit && thirds.size <= 1,
+  };
+}

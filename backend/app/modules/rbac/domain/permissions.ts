@@ -138,6 +138,17 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description: 'Imputar linhas a centros de custo e dimensões e consultar o relatório analítico.',
   },
   {
+    code: 'accounting.adjustments',
+    module: 'accounting',
+    description:
+      'Gerir planos de regularização e provisões e gerar os seus rascunhos e as diferenças cambiais.',
+  },
+  {
+    code: 'accounting.reconcile',
+    module: 'accounting',
+    description: 'Reconciliar linhas contabilizadas de uma conta e desfazer reconciliações.',
+  },
+  {
     code: 'fixed_assets.read',
     module: 'accounting',
     description: 'Consultar activos fixos, classes, mapa de depreciação e movimentos.',

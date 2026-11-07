@@ -87,6 +87,28 @@ export const ACCOUNTING_ROUTES: Routes = [
     loadComponent: () => import('./analytics-report').then((m) => m.AnalyticsReportPage),
   },
   {
+    path: 'regularizacoes',
+    title: 'Regularizações',
+    loadComponent: () => import('./adjustment-schedules').then((m) => m.AdjustmentSchedules),
+  },
+  {
+    path: 'provisoes',
+    title: 'Provisões',
+    loadComponent: () => import('./provisions').then((m) => m.Provisions),
+  },
+  {
+    path: 'diferencas-cambiais',
+    title: 'Diferenças cambiais',
+    canActivate: [accessGuard],
+    data: { permission: 'accounting.adjustments' },
+    loadComponent: () => import('./fx-revaluation').then((m) => m.FxRevaluationPage),
+  },
+  {
+    path: 'reconciliacao',
+    title: 'Reconciliação de contas',
+    loadComponent: () => import('./reconciliation').then((m) => m.ReconciliationPage),
+  },
+  {
     path: 'activos',
     title: 'Activos fixos',
     canActivate: [accessGuard],

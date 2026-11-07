@@ -226,3 +226,55 @@ describe('contabilidade: activos fixos', () => {
     expect(currentMonth(new Date(2026, 0, 31))).toBe('2026-01');
   });
 });
+
+describe('contabilidade: regularizações', () => {
+  it('totais da reconciliação: só com 2+ linhas do mesmo terceiro a anularem-se', async () => {
+    const { selectionTotals, itemKey } = await import('./model');
+    const item = (lineNo: number, debit: string, credit: string, thirdPartyRef = 'F1') => ({
+      entryId: `e${lineNo}`,
+      lineNo,
+      date: '2026-03-01',
+      number: null,
+      description: '',
+      thirdPartyRef,
+      debit,
+      credit,
+    });
+    const items = [
+      item(1, '0.00', '500.00'),
+      item(2, '300.00', '0.00'),
+      item(3, '200.00', '0.00'),
+      item(4, '500.00', '0.00', 'F2'),
+    ];
+    const pick = (...n: number[]) => new Set(n.map((i) => itemKey(items[i - 1])));
+    expect(selectionTotals(items, pick(1, 2), 2)).toMatchObject({
+      difference: '-200.00',
+      ready: false,
+    });
+    expect(selectionTotals(items, pick(1, 2, 3), 2)).toMatchObject({
+      debit: '500.00',
+      credit: '500.00',
+      ready: true,
+    });
+    expect(selectionTotals(items, pick(1, 4), 2)).toMatchObject({
+      sameThirdParty: false,
+      ready: false,
+    });
+    expect(selectionTotals(items, pick(1), 2).ready).toBe(false);
+  });
+});
+
+describe('contabilidade: mudança de entidade', () => {
+  it('limpa as escolhas que não existem nas listas da nova entidade', async () => {
+    const { keepKnown } = await import('./shared');
+    const form = { journalId: 'j-old', debitAccountId: 'a1', creditAccountId: 'a-old', name: 'x' };
+    keepKnown(form, ['journalId'], [{ id: 'j-new' }]);
+    keepKnown(form, ['debitAccountId', 'creditAccountId'], [{ id: 'a1' }]);
+    expect(form).toEqual({
+      journalId: null,
+      debitAccountId: 'a1',
+      creditAccountId: null,
+      name: 'x',
+    });
+  });
+});

@@ -38,6 +38,60 @@ export class AccountChartSchema extends BaseModel {
   declare version: number
 }
 
+export class AccountReconciliationLineSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'entryId', 'id', 'lineNo', 'reconciliationId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AccountReconciliationLineSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare entryId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare reconciliationId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AccountReconciliationSchema extends BaseModel {
+  static $columns = ['accountId', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'note', 'tenantId', 'thirdPartyRef', 'total', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AccountReconciliationSchema.$columns
+  @column()
+  declare accountId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare note: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare thirdPartyRef: string | null
+  @column()
+  declare total: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class AccountSchema extends BaseModel {
   static $columns = ['chartId', 'code', 'createdAt', 'createdBy', 'id', 'level', 'name', 'nature', 'normalBalance', 'parentId', 'postable', 'requiresCostCenter', 'requiresThirdParty', 'statementLine', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = AccountSchema.$columns
@@ -73,6 +127,117 @@ export class AccountSchema extends BaseModel {
   declare status: string
   @column()
   declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AdjustmentOccurrenceSchema extends BaseModel {
+  static $columns = ['amount', 'createdAt', 'createdBy', 'entryId', 'id', 'month', 'scheduleId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AdjustmentOccurrenceSchema.$columns
+  @column()
+  declare amount: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare entryId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare month: DateTime
+  @column()
+  declare scheduleId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AdjustmentScheduleLineSchema extends BaseModel {
+  static $columns = ['accountId', 'costCenterId', 'createdAt', 'createdBy', 'credit', 'debit', 'description', 'id', 'lineNo', 'scheduleId', 'tenantId', 'thirdPartyRef', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AdjustmentScheduleLineSchema.$columns
+  @column()
+  declare accountId: string
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare credit: string
+  @column()
+  declare debit: string
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare scheduleId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare thirdPartyRef: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class AdjustmentScheduleSchema extends BaseModel {
+  static $columns = ['code', 'costCenterId', 'createdAt', 'createdBy', 'creditAccountId', 'debitAccountId', 'description', 'endMonth', 'frequency', 'id', 'journalId', 'kind', 'legalEntityId', 'months', 'name', 'startMonth', 'status', 'tenantId', 'totalAmount', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = AdjustmentScheduleSchema.$columns
+  @column()
+  declare code: string
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare creditAccountId: string | null
+  @column()
+  declare debitAccountId: string | null
+  @column()
+  declare description: string | null
+  @column.date()
+  declare endMonth: DateTime | null
+  @column()
+  declare frequency: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare journalId: string
+  @column()
+  declare kind: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare months: number | null
+  @column()
+  declare name: string
+  @column.date()
+  declare startMonth: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string | null
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
   @column()
@@ -1037,6 +1202,70 @@ export class FixedAssetSchema extends BaseModel {
   declare version: number
 }
 
+export class FxRevaluationLineSchema extends BaseModel {
+  static $columns = ['accountId', 'createdAt', 'createdBy', 'currency', 'difference', 'foreignBalance', 'functionalAfter', 'functionalBefore', 'id', 'kind', 'rate', 'revaluationId', 'tenantId', 'thirdPartyRef', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FxRevaluationLineSchema.$columns
+  @column()
+  declare accountId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare difference: string
+  @column()
+  declare foreignBalance: string
+  @column()
+  declare functionalAfter: string
+  @column()
+  declare functionalBefore: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare rate: string | null
+  @column()
+  declare revaluationId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare thirdPartyRef: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class FxRevaluationSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'entryId', 'id', 'legalEntityId', 'revaluationDate', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FxRevaluationSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare entryId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column.date()
+  declare revaluationDate: DateTime
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class JournalEntrySchema extends BaseModel {
   static $columns = ['approvedAt', 'approvedBy', 'chartId', 'createdAt', 'createdBy', 'currency', 'description', 'documentDate', 'entryDate', 'exchangeRate', 'fiscalYearId', 'id', 'idempotencyKey', 'journalId', 'legalEntityId', 'number', 'periodId', 'postedAt', 'postedBy', 'reference', 'rejectionReason', 'reversalOfId', 'reversedById', 'source', 'sourceRef', 'status', 'submittedAt', 'submittedBy', 'tenantId', 'totalCredit', 'totalDebit', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = JournalEntrySchema.$columns
@@ -1611,6 +1840,78 @@ export class PostingRuleSchema extends BaseModel {
   declare validFrom: DateTime
   @column.date()
   declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class ProvisionMovementSchema extends BaseModel {
+  static $columns = ['amount', 'counterAccountId', 'createdAt', 'createdBy', 'entryId', 'id', 'movementDate', 'provisionId', 'reason', 'tenantId', 'type', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ProvisionMovementSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare counterAccountId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare entryId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare movementDate: DateTime
+  @column()
+  declare provisionId: string
+  @column()
+  declare reason: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare type: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class ProvisionSchema extends BaseModel {
+  static $columns = ['code', 'costCenterId', 'createdAt', 'createdBy', 'description', 'expenseAccountId', 'id', 'journalId', 'legalEntityId', 'name', 'provisionAccountId', 'reversalAccountId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ProvisionSchema.$columns
+  @column()
+  declare code: string
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string | null
+  @column()
+  declare expenseAccountId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare journalId: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare name: string
+  @column()
+  declare provisionAccountId: string
+  @column()
+  declare reversalAccountId: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
   @column()
   declare version: number
 }

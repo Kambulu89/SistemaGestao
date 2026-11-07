@@ -253,8 +253,35 @@ async function populate(client: any) {
       cost: '12',
     })
   )
+  const schedule = ok(
+    await as(client, s).post('/api/v1/accounting/adjustment-schedules', {
+      legalEntityId: le.id,
+      code: 'RA',
+      name: 'Plano A',
+      kind: 'DEFERRAL',
+      journalId: journal.id,
+      startMonth: '2026-01',
+      months: 2,
+      totalAmount: '10',
+      debitAccountId: accountA.id,
+      creditAccountId: accountB.id,
+    })
+  )
+  const provision = ok(
+    await as(client, s).post('/api/v1/accounting/provisions', {
+      legalEntityId: le.id,
+      code: 'PA',
+      name: 'Provisão A',
+      journalId: journal.id,
+      expenseAccountId: accountA.id,
+      provisionAccountId: accountB.id,
+      reversalAccountId: accountA.id,
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    schedule,
+    provision,
     assetClass,
     asset,
     dimension,
@@ -331,6 +358,62 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.put(`/api/v1/accounting/entries/${a.entry.id}/lines/1/allocations`, { allocations: [] }),
       ],
       ['analítica de A', B.get(`/api/v1/accounting/analytics?fiscalYearId=${a.fy.id}`)],
+      [
+        'GET plano de regularização',
+        B.get(`/api/v1/accounting/adjustment-schedules/${a.schedule.id}`),
+      ],
+      [
+        'PATCH plano de regularização',
+        B.patch(`/api/v1/accounting/adjustment-schedules/${a.schedule.id}`, { ...v, name: 'xx' }),
+      ],
+      [
+        'gerar regularizações de A',
+        B.post('/api/v1/accounting/adjustments/generate', {
+          legalEntityId: a.le.id,
+          upTo: '2026-12',
+        }),
+      ],
+      [
+        'simular regularizações de A',
+        B.get(`/api/v1/accounting/adjustments/preview?legalEntityId=${a.le.id}&upTo=2026-12`),
+      ],
+      ['GET provisão', B.get(`/api/v1/accounting/provisions/${a.provision.id}`)],
+      [
+        'PATCH provisão',
+        B.patch(`/api/v1/accounting/provisions/${a.provision.id}`, { ...v, name: 'xx' }),
+      ],
+      [
+        'movimentar provisão',
+        B.post(`/api/v1/accounting/provisions/${a.provision.id}/movements`, {
+          type: 'CONSTITUTION',
+          date: '2026-02-01',
+          amount: '1',
+          reason: 'xxx',
+        }),
+      ],
+      [
+        'actualização cambial de A',
+        B.get(
+          `/api/v1/accounting/fx-revaluations/preview?legalEntityId=${a.le.id}&date=2026-03-31&accountIds=${a.accountA.id}`
+        ),
+      ],
+      [
+        'linhas em aberto de A',
+        B.get(
+          `/api/v1/accounting/reconciliations/open-items?legalEntityId=${a.le.id}&accountId=${a.accountA.id}`
+        ),
+      ],
+      [
+        'reconciliar linhas de A',
+        B.post('/api/v1/accounting/reconciliations', {
+          legalEntityId: a.le.id,
+          accountId: a.accountA.id,
+          lines: [
+            { entryId: a.entry.id, lineNo: 1 },
+            { entryId: a.entry.id, lineNo: 2 },
+          ],
+        }),
+      ],
       ['GET classe de activos', B.get(`/api/v1/accounting/fixed-asset-classes/${a.assetClass.id}`)],
       [
         'PATCH classe de activos',
@@ -496,6 +579,9 @@ test.group('isolamento | matriz entre empresas', (group) => {
       B.get('/api/v1/accounting/allocation-keys'),
       B.get('/api/v1/accounting/fixed-asset-classes'),
       B.get('/api/v1/accounting/fixed-assets'),
+      B.get('/api/v1/accounting/adjustment-schedules'),
+      B.get('/api/v1/accounting/provisions'),
+      B.get('/api/v1/accounting/fx-revaluations'),
     ])
     const idsOfA = new Set(
       [
@@ -522,6 +608,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
         a.allocKey.id,
         a.assetClass.id,
         a.asset.id,
+        a.schedule.id,
+        a.provision.id,
       ].map(String)
     )
     const leaked = lists.flatMap((r) =>

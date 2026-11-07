@@ -133,3 +133,14 @@ estes lançamentos só se estornam pela ficha ou pela anulação do mês de depr
 O mapa de depreciação é recalculado a partir da ficha (nunca guardado) e as depreciações feitas ficam numa tabela com
 uma linha por activo e mês (UNIQUE), que é o que impede depreciar duas vezes. Vidas úteis, métodos e coeficientes são
 configurados pela empresa; não se assumem taxas fiscais angolanas sem validação normativa.
+
+## D-018 Regularizações geram rascunhos; diferenças cambiais por saldo em moeda (aceite)
+
+Recorrências, acréscimos, diferimentos, provisões e diferenças cambiais não contabilizam directamente: criam
+lançamentos em rascunho, origem própria (`ADJUSTMENT`, `PROVISION`, `FX_REVALUATION`), que seguem submissão, aprovação
+e contabilização com segregação de funções — são estimativas e julgamentos de fecho, não factos de outro módulo. Cada
+ocorrência referencia o seu rascunho com `ON DELETE CASCADE`, por isso apagar o rascunho liberta o mês ou o movimento
+sem estados paralelos. As diferenças cambiais são calculadas sobre os saldos contabilizados por conta, moeda e terceiro
+das contas que o utilizador escolhe (itens monetários; activos não monetários não se actualizam), e as diferenças
+realizadas são o resíduo funcional de um saldo já liquidado em moeda — não dependem do módulo de Finanças, que ainda
+não existe. Não se assumem câmbios nem critérios fiscais: o câmbio é o registado pela empresa.

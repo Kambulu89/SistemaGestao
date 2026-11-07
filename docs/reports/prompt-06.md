@@ -1,7 +1,7 @@
 # Relatório — Prompt 06 (contabilidade)
 
-Estado: **6.1 a 6.6 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Os blocos 6.7 a 6.10
-dependem desta fundação e ficam para os blocos seguintes. Decisões D-014, D-015, D-016 e D-017.
+Estado: **6.1 a 6.7 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Os blocos 6.8 a 6.10
+dependem desta fundação e ficam para os blocos seguintes. Decisões D-014 a D-018.
 
 Nada aqui alega conformidade com o PGC angolano, a AGT ou o SAF-T (AO): o plano é definido pela empresa e a
 validação normativa (versão do PGC, SAF-T, critérios dos mapas) continua pendente antes de qualquer alegação fiscal.
@@ -16,8 +16,8 @@ validação normativa (versão do PGC, SAF-T, critérios dos mapas) continua pen
 | 6.4 Abertura/razão      | Período de abertura                             | Importação por código de conta validada linha a linha e equilibrada (rascunho no período de abertura, uma por exercício); razão por conta/subcontas, terceiro, centro de custo e datas com saldo anterior e acumulado; balancete analítico/sintético por intervalo de períodos sem duplicar contas-pai; exportação CSV | Feito      |
 | 6.5 Analítica           | Centros de custo por linha                      | Dimensões e valores, chaves de repartição, imputações a 100% (4 casas) por linha, também depois de contabilizar, repartição exacta pelo maior resto, relatório por centro ou dimensão que confere com o razão                                                                                                          | Feito      |
 | 6.6 Activos fixos       | —                                               | Classes com contas e diário; fichas (inventário, série, aquisição, localização, vida útil, residual, método); mapa linha recta/degressivo exacto; aquisição, transferência, depreciação mensal, abate com ganho/perda contabilizados; anulações pela ficha; duplicados e concorrência bloqueados; mapa por exercício   | Feito      |
-| 6.7 Regularizações      | Período de regularizações existe                | Provisões, acréscimos, diferimentos, recorrências, diferenças cambiais                                                                                                                                                                                                                                                 | Próximo    |
-| 6.8 Demonstrações       | `statementLine` por conta                       | Mapas versionados, PDF/Excel, conferência com o balancete                                                                                                                                                                                                                                                              | Por fazer  |
+| 6.7 Regularizações      | Período de regularizações existe                | Planos de recorrência, acréscimo e diferimento (repartição exacta) e provisões com saldo protegido, a gerar rascunhos; diferenças cambiais não realizadas e realizadas por saldo em moeda; reconciliação de contas por linha do razão                                                                                  | Feito      |
+| 6.8 Demonstrações       | `statementLine` por conta                       | Mapas versionados, PDF/Excel, conferência com o balancete                                                                                                                                                                                                                                                              | Próximo    |
 | 6.9 Fiscalidade (SAF-T) | —                                               | Só com a especificação oficial verificada                                                                                                                                                                                                                                                                              | Bloqueado* |
 | 6.10 Fecho              | Fecho/reabertura de períodos auditados          | Checklist, encerramento do exercício, concorrência                                                                                                                                                                                                                                                                     | Parcial    |
 
@@ -53,6 +53,12 @@ reabertura), Diários.
   `GET …/depreciation/preview`, `GET …/depreciation-map` (`fixed_assets.read`); `POST|PATCH` de classes, `POST|PATCH|DELETE`
   de fichas e `POST …/:id/transfer` (`fixed_assets.manage`); `POST …/:id/acquire`, `…/dispose`, `…/reverse-acquisition`,
   `…/reverse-disposal`, `POST …/depreciation/run` e `…/depreciation/undo` (`fixed_assets.post`). Permissões novas.
+
+- 6.7: `GET /accounting/adjustment-schedules`, `GET …/:id`, `GET /accounting/provisions`, `GET …/:id`,
+  `GET /accounting/fx-revaluations`, `GET /accounting/reconciliations`, `GET …/open-items` (`accounting.read`);
+  `POST|PATCH` de planos e provisões, `GET /accounting/adjustments/preview`, `POST /accounting/adjustments/generate`,
+  `POST /accounting/provisions/:id/movements`, `GET /accounting/fx-revaluations/preview`, `POST /accounting/fx-revaluations`
+  (`accounting.adjustments`, nova); `POST /accounting/reconciliations`, `DELETE …/:id` (`accounting.reconcile`, nova).
 
 ## Ecrãs do 6.3
 
@@ -111,9 +117,22 @@ Defeitos encontrados pela verificação e corrigidos: a depreciação/simulaçã
 devolvia 422 em vez de 404 (matriz de isolamento); o movimento de anulação lia a data do estorno com o nome errado
 (500); o botão "Processar" continuava visível depois de processar.
 
+### Bloco 6.7
+
+| Lado     | Resultado                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend  | 134/134; lint, formatação, tipos e build sem erros. Novos: `adjustments_domain.spec.ts` (meses devidos por periodicidade, repartição exacta, diferenças não realizadas/realizadas e câmbio em falta) e `adjustments.spec.ts` (linhas desequilibradas e contas iguais recusadas; recorrência e diferimento 333,33/333,34/333,33; segunda geração sem nada; total imutável com meses gerados; rascunho apagado volta a ser gerado; **duas gerações em simultâneo**; provisão com utilização sem conta recusada, reversão acima do saldo recusada, **duas reversões em simultâneo** sobre o mesmo saldo; diferença não realizada de 5 000,00 e realizada de 1 000,00 após o recebimento, outra actualização bloqueada com rascunho pendente; reconciliação desequilibrada, de terceiros diferentes, de outra conta e de rascunho recusadas, repetição recusada, desfazer); matriz de isolamento com planos, provisões, câmbios e reconciliações |
+| Frontend | 58/58; lint, formatação e build sem erros                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Browser  | 6/6 passos, 0 erros na consola: diferimento de 1 000,00 em 3 meses simulado e gerado (2 rascunhos, 666,67), provisão de 500,00 com reversão de 600,00 recusada, diferença cambial de 100 GBP de 900 para 950 (5 000,00) com rascunho gerado, reconciliação de factura e pagamento e desfazer, tema escuro e telemóvel                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+
+Defeito encontrado pela verificação no browser e corrigido: ao mudar de entidade, as listas da entidade anterior ficavam
+escolhíveis até chegarem as novas e a escolha antiga era enviada (recusada pelo servidor). Agora as listas são
+limpas logo e as escolhas que não existem na nova entidade são apagadas (também nas classes de activos).
+
 ## Pendências
 
-- 6.7 a 6.10 (acima). Activos fixos: saldos de abertura de activos já depreciados (migração de fichas antigas),
+- 6.8 a 6.10 (acima). Regularizações: diferenças cambiais realizadas por documento (factura/recebimento) esperam
+  pelas Finanças (Prompt 11); a reconciliação bancária (extractos) também. Activos fixos: saldos de abertura de activos já depreciados (migração de fichas antigas),
   abates parciais, reavaliações e transferências entre entidades ainda não existem. Os módulos de negócio (Facturação, Compras, Inventário, RH, Finanças) ainda não existem neste
   repositório; quando existirem, chamam `postAccountingEvent` — nenhum evento é emitido hoje por outro módulo. 6.9 só com a especificação oficial do SAF-T (AO) verificada.
 - Terceiros são uma referência textual (`thirdPartyRef`) até existir o módulo de terceiros/partes.
