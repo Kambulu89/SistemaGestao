@@ -87,6 +87,13 @@ export const NAVIGATION: NavGroup[] = [
         feature: 'accounting',
       },
       {
+        label: 'Fecho',
+        path: '/contabilidade/fecho',
+        icon: 'check',
+        permission: 'accounting.read',
+        feature: 'accounting',
+      },
+      {
         label: 'Demonstrações financeiras',
         path: '/contabilidade/demonstracoes',
         icon: 'file',

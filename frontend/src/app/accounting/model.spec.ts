@@ -297,3 +297,19 @@ describe('contabilidade: demonstrações', () => {
     ).toBe('22, 113:C');
   });
 });
+
+describe('contabilidade: fecho', () => {
+  it('resumo da checklist', async () => {
+    const { checklistSummary } = await import('./model');
+    const s = (...st: ('OK' | 'WARNING' | 'BLOCKING')[]) =>
+      checklistSummary(st.map((status) => ({ status })));
+    expect(s('OK', 'OK').text).toBe('Tudo em ordem');
+    expect(s('WARNING', 'OK').text).toBe('1 aviso(s)');
+    expect(s('BLOCKING', 'WARNING', 'WARNING')).toMatchObject({
+      blocking: 1,
+      warnings: 2,
+      ok: 0,
+      text: '1 bloqueio(s) e 2 aviso(s)',
+    });
+  });
+});

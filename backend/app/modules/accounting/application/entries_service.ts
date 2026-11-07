@@ -177,9 +177,13 @@ async function assertPeriodOpen(scope: TenantScope, periodId: string) {
   const r = await scope.trx.rawQuery(
     `select p.status, y.status as year_status from fiscal_periods p
        join fiscal_years y on y.tenant_id = p.tenant_id and y.id = p.fiscal_year_id
-      where p.tenant_id = ? and p.id = ?`,
+      where p.tenant_id = ? and p.id = ?
+      for share of p`,
     [scope.context.tenantId, periodId]
   )
+  // FOR SHARE: fechar o período (FOR UPDATE, também no encerramento do exercício) espera por quem está a
+  // contabilizar e vice-versa, por isso nunca fica um lançamento contabilizado num período que outra transacção acabou
+  // de fechar.
   const p = r.rows[0] as { status: string; year_status: string } | undefined
   if (!p || p.status !== 'OPEN' || p.year_status !== 'OPEN')
     throw ApiError.conflict('PERIOD_CLOSED', 'O período do lançamento está fechado.')
@@ -709,6 +713,11 @@ export class JournalEntryService {
           'MANAGED_BY_FIXED_ASSETS',
           'Lançamento dos activos fixos: anule-o na ficha do activo ou nas depreciações.'
         )
+      if (entry.source === 'YEAR_CLOSE' || entry.source === 'YEAR_OPENING')
+        throw ApiError.conflict(
+          'MANAGED_BY_YEAR_CLOSE',
+          'Lançamento do encerramento do exercício: anule-o reabrindo o exercício.'
+        )
       return reverseInScope(scope, entry, input)
     })
   }
@@ -721,7 +730,7 @@ export const MANAGED_SOURCE = 'FIXED_ASSETS'
 export async function reverseInScope(
   scope: TenantScope,
   entry: EntryRow,
-  input: { date: string; description?: string | null }
+  input: { date: string; description?: string | null; periodId?: string }
 ) {
   const context = scope.context
   expectStatus(entry, undefined, 'POSTED')
@@ -737,7 +746,7 @@ export async function reverseInScope(
         message: 'Data do estorno igual ou posterior à do lançamento.',
       },
     ])
-  const period = await resolvePeriod(scope, entry.legal_entity_id, input.date)
+  const period = await resolvePeriod(scope, entry.legal_entity_id, input.date, input.periodId)
   if (!period)
     throw ApiError.validation([
       { path: 'date', code: 'NO_PERIOD', message: 'Não há exercício para esta data.' },

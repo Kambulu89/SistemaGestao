@@ -248,10 +248,13 @@ test.group('contabilidade | lançamentos', (group) => {
     )
     const blocked = await api.post(`${A}/periods/${march.id}/close`, {})
     blocked.assertStatus(409)
-    assert.equal(blocked.body().error.code, 'PERIOD_HAS_PENDING')
+    assert.equal(blocked.body().error.code, 'CLOSE_BLOCKED')
 
     const april = year.periods.find((p: any) => p.name === 'Abr 2026')
-    ok(await api.post(`${A}/periods/${april.id}/close`, {}), 200)
+    // Os períodos anteriores ainda abertos são um aviso: fechar exige reconhecê-lo.
+    const warned = await api.post(`${A}/periods/${april.id}/close`, {})
+    assert.equal(warned.body().error.code, 'CLOSE_WARNINGS')
+    ok(await api.post(`${A}/periods/${april.id}/close`, { acknowledgeWarnings: true }), 200)
     const late = ok(await api.post(`${A}/entries`, entryBody(L, '10', { entryDate: '2026-04-15' })))
     const refused = await api.post(`${A}/entries/${late.id}/submit`, {
       expectedVersion: late.version,

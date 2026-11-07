@@ -295,8 +295,14 @@ async function populate(client: any) {
       body: 'Texto A',
     })
   )
+  const closeTask = ok(
+    await as(client, s).post(`/api/v1/accounting/periods/${period.id}/tasks`, {
+      title: 'Tarefa A',
+    })
+  )[0]
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    closeTask,
     stmtTemplate,
     stmtNote,
     schedule,
@@ -432,6 +438,23 @@ test.group('isolamento | matriz entre empresas', (group) => {
             { entryId: a.entry.id, lineNo: 2 },
           ],
         }),
+      ],
+      ['checklist de período de A', B.get(`/api/v1/accounting/periods/${a.period.id}/checklist`)],
+      [
+        'tarefa em período de A',
+        B.post(`/api/v1/accounting/periods/${a.period.id}/tasks`, { title: 'xxx' }),
+      ],
+      ['copiar tarefas de A', B.post(`/api/v1/accounting/periods/${a.period.id}/tasks/copy`)],
+      [
+        'PATCH tarefa de A',
+        B.patch(`/api/v1/accounting/close-tasks/${a.closeTask.id}`, { ...v, done: true }),
+      ],
+      ['DELETE tarefa de A', B.delete(`/api/v1/accounting/close-tasks/${a.closeTask.id}`)],
+      ['encerramento de A', B.get(`/api/v1/accounting/fiscal-years/${a.fy.id}/closing`)],
+      ['encerrar exercício de A', B.post(`/api/v1/accounting/fiscal-years/${a.fy.id}/close`, {})],
+      [
+        'reabrir exercício de A',
+        B.post(`/api/v1/accounting/fiscal-years/${a.fy.id}/reopen`, { reason: 'xxxxx' }),
       ],
       [
         'GET modelo de demonstração',

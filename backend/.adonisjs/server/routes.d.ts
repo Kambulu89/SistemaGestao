@@ -106,7 +106,7 @@ export type ScannedRoutes = {
     'accounting.import_opening': { paramsTuple?: []; params?: {} }
     'accounting.submit_event': { paramsTuple?: []; params?: {} }
     'accounting.retry_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'accounting.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reopen_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.create_entry': { paramsTuple?: []; params?: {} }
     'accounting.update_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -116,6 +116,14 @@ export type ScannedRoutes = {
     'accounting.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.post': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.checklist': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.year_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.add_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.copy_tasks': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.update_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.delete_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.close_year': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.reopen_year': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.templates': { paramsTuple?: []; params?: {} }
     'statements.template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.create_template': { paramsTuple?: []; params?: {} }
@@ -259,6 +267,8 @@ export type ScannedRoutes = {
     'accounting.analytic_report': { paramsTuple?: []; params?: {} }
     'accounting.trial_balance': { paramsTuple?: []; params?: {} }
     'accounting.ledger': { paramsTuple?: []; params?: {} }
+    'closing.checklist': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.year_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.templates': { paramsTuple?: []; params?: {} }
     'statements.template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.generate': { paramsTuple?: []; params?: {} }
@@ -349,6 +359,8 @@ export type ScannedRoutes = {
     'accounting.analytic_report': { paramsTuple?: []; params?: {} }
     'accounting.trial_balance': { paramsTuple?: []; params?: {} }
     'accounting.ledger': { paramsTuple?: []; params?: {} }
+    'closing.checklist': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.year_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.templates': { paramsTuple?: []; params?: {} }
     'statements.template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.generate': { paramsTuple?: []; params?: {} }
@@ -419,7 +431,7 @@ export type ScannedRoutes = {
     'accounting.import_opening': { paramsTuple?: []; params?: {} }
     'accounting.submit_event': { paramsTuple?: []; params?: {} }
     'accounting.retry_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'accounting.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reopen_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.create_entry': { paramsTuple?: []; params?: {} }
     'accounting.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -427,6 +439,10 @@ export type ScannedRoutes = {
     'accounting.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.post': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.add_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.copy_tasks': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.close_year': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.reopen_year': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.create_template': { paramsTuple?: []; params?: {} }
     'statements.publish_template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.new_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -471,6 +487,7 @@ export type ScannedRoutes = {
     'members.unassign_role': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'assignmentId': ParamValue} }
     'settings.remove_holiday': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'holidayId': ParamValue} }
     'accounting.delete_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.delete_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.delete_template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.delete_note': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'adjustments.undo_reconciliation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -495,6 +512,7 @@ export type ScannedRoutes = {
     'accounting.update_value': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'valueId': ParamValue} }
     'accounting.update_key': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.update_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.update_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.update_template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'statements.update_note': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'adjustments.update_schedule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

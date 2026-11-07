@@ -156,3 +156,15 @@ versionados: publicar fixa a versão (as demonstrações de um exercício podem 
 uma alteração é uma nova versão. As demonstrações não se guardam: são recalculadas do razão. Fluxos de caixa não são
 gerados enquanto não houver classificação dos fluxos de tesouraria (Prompt 11); o Excel é gerado no browser sem novas
 dependências e o PDF é o da impressão do browser.
+
+## D-020 Fecho por checklist com avisos reconhecidos; encerramento por lançamentos normais (aceite)
+
+O fecho de um período corre uma checklist calculada no momento: o que torna o razão errado (lançamentos a meio do
+fluxo, desequilíbrio) bloqueia; o que é provável esquecimento (rascunhos, eventos falhados, depreciações, regularizações
+ou diferenças cambiais por fazer, tarefas manuais) é aviso, que se pode reconhecer de forma explícita e auditada —
+bloquear sempre impediria fechar quando um módulo externo falha, e não avisar deixaria esquecimentos silenciosos. O
+encerramento do exercício não guarda saldos noutra tabela: apura os resultados e transporta os saldos com lançamentos
+contabilizados normais (origens `YEAR_CLOSE` e `YEAR_OPENING`), por isso o balancete, o razão e as demonstrações de
+ambos os exercícios continuam a vir só dos lançamentos. Reabrir estorna esses lançamentos (nunca os apaga) e o registo
+do encerramento fica no histórico. O transporte é na moeda funcional; o detalhe por moeda estrangeira não passa para
+o exercício seguinte (a actualização cambial do 6.7 continua a funcionar sobre os saldos em moeda dos lançamentos).

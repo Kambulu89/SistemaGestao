@@ -956,3 +956,8 @@ async function provisionDetail(scope: TenantScope, p: ProvisionRow) {
     })),
   }
 }
+
+/** Regularizações (planos) por gerar até ao mês (para a checklist de fecho). */
+export async function adjustmentsDue(scope: TenantScope, legalEntityId: string, month: string) {
+  return (await due(scope, legalEntityId, month, false)).items.length
+}

@@ -799,6 +799,37 @@ export class CalendarSchema extends BaseModel {
   declare weekendDays: any
 }
 
+export class CloseTaskSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'done', 'doneAt', 'doneBy', 'id', 'note', 'periodId', 'tenantId', 'title', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CloseTaskSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare done: boolean
+  @column.dateTime()
+  declare doneAt: DateTime | null
+  @column()
+  declare doneBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare note: string | null
+  @column()
+  declare periodId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class CostCenterSchema extends BaseModel {
   static $columns = ['code', 'createdAt', 'createdBy', 'departmentId', 'id', 'legalEntityId', 'managerMembershipId', 'name', 'parentId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = CostCenterSchema.$columns
@@ -985,6 +1016,49 @@ export class FiscalPeriodSchema extends BaseModel {
   declare number: number
   @column.date()
   declare startDate: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class FiscalYearClosingSchema extends BaseModel {
+  static $columns = ['acknowledged', 'closingEntryId', 'createdAt', 'createdBy', 'fiscalYearId', 'id', 'journalId', 'netResult', 'nextFiscalYearId', 'openingEntryId', 'reopenReason', 'reopenedAt', 'reopenedBy', 'resultAccountId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FiscalYearClosingSchema.$columns
+  @column()
+  declare acknowledged: any | null
+  @column()
+  declare closingEntryId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare fiscalYearId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare journalId: string
+  @column()
+  declare netResult: string
+  @column()
+  declare nextFiscalYearId: string | null
+  @column()
+  declare openingEntryId: string | null
+  @column()
+  declare reopenReason: string | null
+  @column.dateTime()
+  declare reopenedAt: DateTime | null
+  @column()
+  declare reopenedBy: string | null
+  @column()
+  declare resultAccountId: string
   @column()
   declare status: string
   @column()

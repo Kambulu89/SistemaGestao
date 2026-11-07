@@ -163,7 +163,7 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 ## Contabilidade (módulo `accounting`, Prompt 06)
 
-Blocos 6.1 a 6.8 feitos; 6.9–6.10 por fazer (ver `docs/reports/prompt-06.md`).
+Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificação oficial verificada (ver `docs/reports/prompt-06.md`).
 
 - **Plano de contas** por entidade legal (um activo, índice parcial único). Contas em árvore: classe → conta →
   subconta; o código do filho começa pelo do pai; só contas sem subcontas são movimentáveis; natureza, saldo normal,
@@ -255,6 +255,19 @@ Blocos 6.1 a 6.8 feitos; 6.9–6.10 por fazer (ver `docs/reports/prompt-06.md`).
   impressão/PDF pelo browser (a moldura da aplicação não é impressa). Não há modelos pré-definidos nem alegação de
   conformidade com o PGC: os mapas são configurados pela empresa. Fluxos de caixa ficam para quando houver
   classificação de fluxos (Finanças).
+- **Fecho (6.10)**: checklist por período, calculada a pedido — bloqueios (lançamentos submetidos/aprovados por
+  contabilizar, débitos ≠ créditos) e avisos (rascunhos, eventos de integração falhados, depreciações e regularizações
+  por gerar, actualizações cambiais em rascunho, períodos anteriores abertos, tarefas manuais por concluir) — e tarefas
+  manuais (`close_tasks`, copiáveis do período anterior). Fechar um período com bloqueios é recusado
+  (`CLOSE_BLOCKED`); com avisos exige `acknowledgeWarnings` (`CLOSE_WARNINGS`), que fica na auditoria. Concorrência:
+  contabilizar bloqueia o período `FOR SHARE` e fechar bloqueia-o `FOR UPDATE`, por isso nunca entra um lançamento num
+  período que outra transacção acabou de fechar. Encerramento do exercício (`fiscal_year_closings`, um em vigor por
+  exercício): exige todos os períodos fechados menos o de regularizações; gera e contabiliza no período de
+  regularizações o apuramento (contas de resultados por conta e centro de custo saldadas contra uma conta de capital
+  próprio) e, se pedido, o transporte dos saldos de balanço (por conta, terceiro e centro de custo) para o período de
+  abertura do exercício seguinte (vazio de lançamentos em vigor); fecha o período de regularizações e o exercício. A
+  reabertura (motivo obrigatório, `accounting.reopen`) estorna o transporte na abertura seguinte (que tem de estar
+  aberta) e o apuramento no período de regularizações; os lançamentos `YEAR_CLOSE`/`YEAR_OPENING` só se estornam assim.
 - Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics|adjustments|reconcile|statements` e `fixed_assets.read|manage|post`; funcionalidade `accounting`. Regras:
   `accounting.settings`; enviar/reprocessar eventos: `accounting.post`; simular e consultar: `accounting.read`.
 

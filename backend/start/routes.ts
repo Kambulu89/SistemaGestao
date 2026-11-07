@@ -28,6 +28,7 @@ const AccountingController = () => import('#modules/accounting/http/accounting_c
 const FixedAssetsController = () => import('#modules/accounting/http/fixed_assets_controller')
 const AdjustmentsController = () => import('#modules/accounting/http/adjustments_controller')
 const StatementsController = () => import('#modules/accounting/http/statements_controller')
+const ClosingController = () => import('#modules/accounting/http/closing_controller')
 
 router
   .group(() => {
@@ -300,7 +301,7 @@ router
               })
               .use(accounting('accounting.post'))
             router
-              .post('accounting/periods/:id/close', [AccountingController, 'closePeriod'])
+              .post('accounting/periods/:id/close', [ClosingController, 'closePeriod'])
               .use(accounting('accounting.close'))
             router
               .post('accounting/periods/:id/reopen', [AccountingController, 'reopenPeriod'])
@@ -327,6 +328,27 @@ router
                 .post('accounting/entries/:id/reverse', [AccountingController, 'reverse'])
                 .use(accounting('accounting.reverse'))
             })
+
+            // Fecho (6.10): checklist (accounting.read), tarefas e encerramento (accounting.close), reabertura do
+            // exercício (accounting.reopen).
+            router
+              .group(() => {
+                router.get('accounting/periods/:id/checklist', [ClosingController, 'checklist'])
+                router.get('accounting/fiscal-years/:id/closing', [ClosingController, 'yearStatus'])
+              })
+              .use(accounting('accounting.read'))
+            router
+              .group(() => {
+                router.post('accounting/periods/:id/tasks', [ClosingController, 'addTask'])
+                router.post('accounting/periods/:id/tasks/copy', [ClosingController, 'copyTasks'])
+                router.patch('accounting/close-tasks/:id', [ClosingController, 'updateTask'])
+                router.delete('accounting/close-tasks/:id', [ClosingController, 'deleteTask'])
+                router.post('accounting/fiscal-years/:id/close', [ClosingController, 'closeYear'])
+              })
+              .use(accounting('accounting.close'))
+            router
+              .post('accounting/fiscal-years/:id/reopen', [ClosingController, 'reopenYear'])
+              .use(accounting('accounting.reopen'))
 
             // Demonstrações financeiras (6.8): modelos (accounting.read / accounting.settings), demonstrações e notas
             // (accounting.reports), redacção das notas (accounting.statements).

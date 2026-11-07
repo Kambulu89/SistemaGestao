@@ -182,14 +182,6 @@ export default class AccountingController {
     return ok(ctx, await setup.update(ctx.tenantContext!, kindOf(ctx).kind, uuid(ctx), body))
   }
 
-  async closePeriod(ctx: HttpContext) {
-    const body = await ctx.request.validateUsing(periodValidator)
-    return ok(
-      ctx,
-      await setup.setPeriodStatus(ctx.tenantContext!, uuid(ctx), 'CLOSED', body.reason ?? null)
-    )
-  }
-
   async reopenPeriod(ctx: HttpContext) {
     const body = await ctx.request.validateUsing(periodValidator)
     return ok(

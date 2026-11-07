@@ -1000,3 +1000,64 @@ export function parseMappings(text: string): StatementMapping[] | null {
   }
   return out;
 }
+
+// ---------------------------------------------------------------- fecho (6.10)
+
+export type CheckStatus = 'OK' | 'WARNING' | 'BLOCKING';
+export interface ChecklistItem {
+  code: string;
+  label: string;
+  status: CheckStatus;
+  count: number;
+  message: string;
+}
+export interface CloseTask {
+  id: string;
+  version: number;
+  title: string;
+  done: boolean;
+  doneAt: string | null;
+  note: string | null;
+}
+export interface PeriodChecklist {
+  period: { id: string; number: number; kind: string; name: string; status: string };
+  items: ChecklistItem[];
+  tasks: CloseTask[];
+  canClose: boolean;
+}
+export interface YearClosing {
+  fiscalYear: { id: string; code: string; status: string; endDate: string };
+  openPeriods: string[];
+  profitAndLoss: { accountId: string; code: string; name: string; balance: string }[];
+  netResult: string;
+  nextFiscalYears: { id: string; code: string; startDate: string; status: string }[];
+  checklist: ChecklistItem[];
+  history: {
+    id: string;
+    status: 'ACTIVE' | 'REVERSED';
+    closedAt: string;
+    reopenedAt: string | null;
+    reopenReason: string | null;
+    netResult: string;
+    closingEntryId: string | null;
+    closingEntryNumber: string | null;
+    openingEntryId: string | null;
+    openingEntryNumber: string | null;
+  }[];
+}
+
+/** Resumo da checklist: bloqueios, avisos e o que está em ordem. */
+export function checklistSummary(items: Pick<ChecklistItem, 'status'>[]) {
+  const blocking = items.filter((i) => i.status === 'BLOCKING').length;
+  const warnings = items.filter((i) => i.status === 'WARNING').length;
+  return {
+    blocking,
+    warnings,
+    ok: items.length - blocking - warnings,
+    text: blocking
+      ? `${blocking} bloqueio(s)${warnings ? ` e ${warnings} aviso(s)` : ''}`
+      : warnings
+        ? `${warnings} aviso(s)`
+        : 'Tudo em ordem',
+  };
+}

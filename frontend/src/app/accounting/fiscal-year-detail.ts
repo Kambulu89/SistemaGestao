@@ -11,7 +11,7 @@ import { PageDetail } from '../ui/page-detail';
 import { ErrorState, Skeleton } from '../ui/states';
 import { ToastService } from '../ui/toasts';
 import type { FiscalYear, Period } from './model';
-import { accountingDeps } from './shared';
+import { accountingDeps, closeWithWarnings } from './shared';
 
 const KIND: Record<string, string> = {
   OPENING: 'Abertura',
@@ -161,7 +161,7 @@ export class FiscalYearDetail {
     });
     if (!ok) return;
     const result = await this.action.run(() =>
-      this.deps.api.post<Period[]>(`accounting/periods/${p.id}/close`, {}),
+      closeWithWarnings<Period[]>(this.deps.api, this.confirm, p.id, p.name),
     );
     if (!result) return;
     this.periods.set(result);
