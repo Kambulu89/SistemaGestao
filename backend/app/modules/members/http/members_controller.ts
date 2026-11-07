@@ -10,10 +10,14 @@ const listValidator = vine.create({
   q: vine.string().trim().maxLength(100).optional(),
   limit: vine.number().withoutDecimals().min(1).max(100).optional(),
   offset: vine.number().withoutDecimals().min(0).optional(),
+  sort: vine.enum(['fullName', 'email', 'status', 'joinedAt'] as const).optional(),
+  direction: vine.enum(['asc', 'desc'] as const).optional(),
 })
+const scopeTypes = ['TENANT', 'OWN', 'LEGAL_ENTITY', 'BRANCH', 'DEPARTMENT'] as const
 const roleRef = vine.object({
   roleId: vine.string().uuid(),
-  scopeType: vine.enum(['TENANT', 'OWN']).optional(),
+  scopeType: vine.enum(scopeTypes).optional(),
+  scopeId: vine.string().uuid().nullable().optional(),
 })
 const inviteValidator = vine.create({
   email: vine.string().trim().maxLength(254),
@@ -23,7 +27,8 @@ const inviteValidator = vine.create({
 const versionValidator = vine.create({ expectedVersion: vine.number().withoutDecimals().min(1) })
 const assignValidator = vine.create({
   roleId: vine.string().uuid(),
-  scopeType: vine.enum(['TENANT', 'OWN']).optional(),
+  scopeType: vine.enum(scopeTypes).optional(),
+  scopeId: vine.string().uuid().nullable().optional(),
 })
 
 const members = new MemberService()
@@ -36,7 +41,11 @@ const uuid = (ctx: HttpContext, name: string) => {
 export default class MembersController {
   async index(ctx: HttpContext) {
     const filter = await ctx.request.validateUsing(listValidator, { data: ctx.request.qs() })
-    const page = await members.list(ctx.tenantContext!, filter)
+    const { sort, direction, ...rest } = filter
+    const page = await members.list(ctx.tenantContext!, {
+      ...rest,
+      sort: sort ? { field: sort, direction: direction ?? 'asc' } : undefined,
+    })
     return ok(ctx, page.items, { total: page.total })
   }
 
@@ -48,6 +57,14 @@ export default class MembersController {
     const body = await ctx.request.validateUsing(inviteValidator)
     const result = await members.invite(ctx.tenantContext!, body)
     return created(ctx, result, `/api/v1/members/${result.member.id}`)
+  }
+
+  async resendInvitation(ctx: HttpContext) {
+    return ok(ctx, await members.resendInvitation(ctx.tenantContext!, uuid(ctx, 'id')))
+  }
+
+  async revokeInvitation(ctx: HttpContext) {
+    return ok(ctx, await members.revokeInvitation(ctx.tenantContext!, uuid(ctx, 'id')))
   }
 
   async suspend(ctx: HttpContext) {

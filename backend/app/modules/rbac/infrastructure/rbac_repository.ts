@@ -39,6 +39,14 @@ export interface Assignment {
   roleId: string
   roleCode: string
   scopeType: ScopeType
+  /** Entidade legal, filial ou departamento do âmbito; nulo em TENANT e OWN. */
+  scopeId: string | null
+}
+
+const SCOPE_COLUMN: Partial<Record<ScopeType, string>> = {
+  LEGAL_ENTITY: 'legal_entity_id',
+  BRANCH: 'branch_id',
+  DEPARTMENT: 'department_id',
 }
 
 /** Perfis e atribuições do tenant em contexto (a RLS garante o tenant; os filtros repetem-no por clareza). */
@@ -168,7 +176,8 @@ export class RbacRepository {
     membershipIds?: readonly string[]
   ): Promise<Assignment[]> {
     const result = await trx.rawQuery(
-      `select mr.id, mr.membership_id, mr.role_id, r.code as role_code, mr.scope_type
+      `select mr.id, mr.membership_id, mr.role_id, r.code as role_code, mr.scope_type,
+              coalesce(mr.legal_entity_id, mr.branch_id, mr.department_id) as scope_id
          from membership_roles mr join roles r on r.tenant_id = mr.tenant_id and r.id = mr.role_id
         where mr.tenant_id = ? ${membershipIds ? 'and mr.membership_id = any(?::uuid[])' : ''}
         order by r.code`,
@@ -181,6 +190,7 @@ export class RbacRepository {
         role_id: string
         role_code: string
         scope_type: ScopeType
+        scope_id: string | null
       }[]
     ).map((r) => ({
       id: r.id,
@@ -188,6 +198,7 @@ export class RbacRepository {
       roleId: r.role_id,
       roleCode: r.role_code,
       scopeType: r.scope_type,
+      scopeId: r.scope_id,
     }))
   }
 
@@ -195,13 +206,65 @@ export class RbacRepository {
     { trx, context }: TenantScope,
     membershipId: string,
     roleId: string,
-    scopeType: ScopeType
+    scopeType: ScopeType,
+    scopeId: string | null = null
   ) {
-    await trx.rawQuery(
-      `insert into membership_roles (tenant_id, membership_id, role_id, scope_type, created_by)
-       values (?, ?, ?, ?, ?) on conflict (tenant_id, membership_id, role_id, scope_type) do nothing`,
-      [context.tenantId, membershipId, roleId, scopeType, context.userId]
+    const column = SCOPE_COLUMN[scopeType]
+    await trx.rawQuery('savepoint assign_role')
+    try {
+      await trx.rawQuery(
+        `insert into membership_roles (tenant_id, membership_id, role_id, scope_type, created_by${column ? `, ${column}` : ''})
+         values (?, ?, ?, ?, ?${column ? ', ?' : ''}) on conflict do nothing`,
+        [
+          context.tenantId,
+          membershipId,
+          roleId,
+          scopeType,
+          context.userId,
+          ...(column ? [scopeId] : []),
+        ] as never[]
+      )
+      await trx.rawQuery('release savepoint assign_role')
+    } catch (error) {
+      if ((error as { code?: string }).code === '23503') {
+        await trx.rawQuery('rollback to savepoint assign_role')
+        throw ApiError.validation([
+          {
+            path: 'scopeId',
+            code: 'SCOPE_TARGET_NOT_FOUND',
+            message: 'O alvo do âmbito não existe nesta empresa.',
+          },
+        ])
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Alvos com âmbito para uma permissão (perfis e membership activos). Os departamentos incluem os descendentes (lê a
+   * árvore de departamentos só para resolver o âmbito; não escreve nela).
+   */
+  async scopedGrants({ trx, context }: TenantScope, membershipId: string, permission: string) {
+    const result = await trx.rawQuery(
+      `with recursive grants as (
+         select mr.scope_type, mr.legal_entity_id, mr.branch_id, mr.department_id
+           from membership_roles mr
+           join tenant_memberships m on m.tenant_id = mr.tenant_id and m.id = mr.membership_id and m.status = 'ACTIVE'
+           join roles r on r.tenant_id = mr.tenant_id and r.id = mr.role_id and r.status = 'ACTIVE'
+           join role_permissions rp on rp.tenant_id = r.tenant_id and rp.role_id = r.id and rp.permission_code = ?
+          where mr.tenant_id = ? and mr.membership_id = ?),
+       subtree as (
+         select d.id from departments d join grants g on g.department_id = d.id where d.tenant_id = ?
+         union select d.id from departments d join subtree s on d.parent_id = s.id where d.tenant_id = ?)
+       select 'GRANT' as kind, scope_type, coalesce(legal_entity_id, branch_id, department_id) as target from grants
+       union all select 'DEPARTMENT_TREE', 'DEPARTMENT', id from subtree`,
+      [permission, context.tenantId, membershipId, context.tenantId, context.tenantId]
     )
+    return result.rows as {
+      kind: 'GRANT' | 'DEPARTMENT_TREE'
+      scope_type: ScopeType
+      target: string | null
+    }[]
   }
 
   async unassign({ trx, context }: TenantScope, assignmentId: string): Promise<boolean> {

@@ -10,6 +10,8 @@ import {
   MembershipRepository,
 } from '#modules/tenancy/index'
 import { bootstrapTenantAdmin, syncPermissionCatalog } from '#modules/rbac/index'
+import { syncFeatureCatalog } from '#modules/subscription/index'
+import { audit } from '#modules/audit/index'
 
 /** Cria um tenant, a membership activa do administrador e o perfil `tenant_admin`, tudo ou nada. */
 export async function createTenantWithAdmin(input: {
@@ -33,6 +35,7 @@ export async function createTenantWithAdmin(input: {
       { path: 'adminEmail', code: 'UNKNOWN_USER', message: 'A conta não existe.' },
     ])
   await syncPermissionCatalog()
+  await syncFeatureCatalog()
   const tenant = await new TenantRepository().insert(values)
   const membershipId = randomUUID()
   const context = { tenantId: tenant.id, userId: adminId, membershipId, requestId: 'bootstrap' }
@@ -40,6 +43,12 @@ export async function createTenantWithAdmin(input: {
     await runInTenant(context, async (scope) => {
       await new MembershipRepository().insertActive(scope, membershipId, adminId)
       await bootstrapTenantAdmin(scope, membershipId)
+      await audit(scope, {
+        action: 'tenant.created',
+        entityType: 'tenant',
+        entityId: tenant.id,
+        metadata: { code: tenant.code, adminMembershipId: membershipId },
+      })
     })
   } catch (error) {
     await db.connection('owner').rawQuery('delete from tenants where id = ?', [tenant.id])

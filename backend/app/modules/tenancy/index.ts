@@ -8,6 +8,8 @@ export { userTenantLinks } from '#modules/tenancy/infrastructure/membership_look
 export { PLATFORM_TABLES, FRAMEWORK_TABLES } from '#modules/tenancy/domain/platform_tables'
 export {
   MembershipRepository,
+  MEMBER_SORT,
+  type MemberSortField,
   type Member,
   type MembershipStatus,
 } from '#modules/tenancy/infrastructure/membership_repository'

@@ -6,9 +6,13 @@ import {
   TenantRepository,
   type Member,
   type MembershipStatus,
+  type MemberSortField,
   type TenantContext,
 } from '#modules/tenancy/index'
 import { AssignmentService, type Assignment } from '#modules/rbac/index'
+import { assertWithinLimit } from '#modules/subscription/index'
+import { audit, writeAudit } from '#modules/audit/index'
+import { tenantSettings } from '#modules/settings/index'
 
 const memberships = new MembershipRepository()
 const assignments = new AssignmentService()
@@ -16,21 +20,43 @@ const accounts = new AccountService()
 const tenants = new TenantRepository()
 
 export interface MemberView extends Member {
-  roles: Pick<Assignment, 'id' | 'roleId' | 'roleCode' | 'scopeType'>[]
+  roles: Pick<Assignment, 'id' | 'roleId' | 'roleCode' | 'scopeType' | 'scopeId'>[]
+  /** Validade do convite pendente (só membros convidados). */
+  invitationExpiresAt?: Date | null
+}
+
+async function withExpiry(views: MemberView[]) {
+  const invited = views.filter((v) => v.status === 'INVITED').map((v) => v.id)
+  const expiry = await accounts.invitationExpiry(invited)
+  return views.map((v) =>
+    v.status === 'INVITED' ? { ...v, invitationExpiresAt: expiry.get(v.id) ?? null } : v
+  )
 }
 
 const withRoles = (member: Member, all: Assignment[]): MemberView => ({
   ...member,
   roles: all
     .filter((a) => a.membershipId === member.id)
-    .map(({ id, roleId, roleCode, scopeType }) => ({ id, roleId, roleCode, scopeType })),
+    .map(({ id, roleId, roleCode, scopeType, scopeId }) => ({
+      id,
+      roleId,
+      roleCode,
+      scopeType,
+      scopeId,
+    })),
 })
 
 /** Membros da empresa: convites, aceitação, suspensão e perfis. As regras de perfis vivem no RBAC. */
 export class MemberService {
   list(
     context: TenantContext,
-    filter: { status?: MembershipStatus; q?: string; limit?: number; offset?: number }
+    filter: {
+      status?: MembershipStatus
+      q?: string
+      limit?: number
+      offset?: number
+      sort?: { field: MemberSortField; direction: 'asc' | 'desc' }
+    }
   ) {
     return runInTenant(context, async (scope) => {
       const page = await memberships.list(scope, {
@@ -43,7 +69,7 @@ export class MemberService {
         page.items.map((m) => m.id)
       )
       return { items: page.items.map((m) => withRoles(m, roles)), total: page.total }
-    })
+    }).then(async (page) => ({ ...page, items: await withExpiry(page.items) }))
   }
 
   get(context: TenantContext, id: string): Promise<MemberView> {
@@ -51,7 +77,7 @@ export class MemberService {
       const member = await memberships.find(scope, id)
       if (!member) throw ApiError.notFound()
       return withRoles(member, await assignments.assignments(scope, [id]))
-    })
+    }).then(async (view) => (await withExpiry([view]))[0])
   }
 
   /**
@@ -63,14 +89,36 @@ export class MemberService {
     input: {
       email: string
       fullName?: string | null
-      roles?: { roleId: string; scopeType?: string }[]
+      roles?: { roleId: string; scopeType?: string; scopeId?: string | null }[]
     }
   ): Promise<{ member: MemberView; delivery: DeliveryStatus }> {
     const user = await accounts.findOrCreateForInvitation(input.email, input.fullName)
+    let ttlDays = 7
     const membershipId = await runInTenant(context, async (scope) => {
+      ttlDays = (await tenantSettings(scope)).invitationTtlDays
+      // Limite contratado de membros: contam todos os que não foram revogados (convidados incluídos).
+      await assertWithinLimit(scope.trx, context.tenantId, 'members.max', async () => {
+        const r = await scope.trx.rawQuery(
+          `select count(*)::int as n from tenant_memberships where tenant_id = ? and status <> 'REVOKED'`,
+          [context.tenantId]
+        )
+        return (r.rows[0] as { n: number }).n
+      })
       const id = await memberships.insertInvited(scope, user.id)
       for (const role of input.roles ?? [])
-        await assignments.assign(scope, id, role.roleId, role.scopeType ?? 'TENANT')
+        await assignments.assign(
+          scope,
+          id,
+          role.roleId,
+          role.scopeType ?? 'TENANT',
+          role.scopeId ?? null
+        )
+      await audit(scope, {
+        action: 'member.invited',
+        entityType: 'membership',
+        entityId: id,
+        metadata: { email: user.email, roles: input.roles ?? [] },
+      })
       return id
     })
     const tenant = await tenants.find(context.tenantId)
@@ -78,9 +126,61 @@ export class MemberService {
       user,
       context.tenantId,
       membershipId,
-      tenant!.name
+      tenant!.name,
+      ttlDays
     )
     return { member: await this.get(context, membershipId), delivery }
+  }
+
+  /** Reenvia o convite de um membro ainda convidado (o anterior deixa de valer). */
+  async resendInvitation(context: TenantContext, id: string) {
+    const { member, ttlDays } = await runInTenant(context, async (scope) => {
+      const found = await memberships.find(scope, id, true)
+      if (!found) throw ApiError.notFound()
+      if (found.status !== 'INVITED')
+        throw ApiError.conflict(
+          'NOT_INVITED',
+          'Só se reenvia o convite de quem ainda não o aceitou.'
+        )
+      await audit(scope, {
+        action: 'member.invitation_resent',
+        entityType: 'membership',
+        entityId: id,
+      })
+      return { member: found, ttlDays: (await tenantSettings(scope)).invitationTtlDays }
+    })
+    const tenant = await tenants.find(context.tenantId)
+    const user = { id: member.userId, email: member.email } as Parameters<
+      AccountService['issueInvitation']
+    >[0]
+    const delivery = await accounts.issueInvitation(
+      user,
+      context.tenantId,
+      id,
+      tenant!.name,
+      ttlDays
+    )
+    return { member: await this.get(context, id), delivery }
+  }
+
+  /** Revoga um convite pendente: a membership fica REVOKED e a ligação do email deixa de funcionar. */
+  async revokeInvitation(context: TenantContext, id: string) {
+    const member = await runInTenant(context, async (scope) => {
+      const found = await memberships.find(scope, id, true)
+      if (!found) throw ApiError.notFound()
+      if (found.status !== 'INVITED')
+        throw ApiError.conflict('NOT_INVITED', 'Só se revoga um convite ainda não aceite.')
+      await memberships.setStatus(scope, id, found.version, 'REVOKED')
+      await audit(scope, {
+        action: 'member.invitation_revoked',
+        entityType: 'membership',
+        entityId: id,
+        changes: { status: { from: 'INVITED', to: 'REVOKED' } },
+      })
+      return found
+    })
+    await accounts.revokeInvitations(member.userId, context.tenantId)
+    return this.get(context, id)
   }
 
   /** Público: aceita o convite (activa a membership na mesma transacção que consome o token). */
@@ -89,13 +189,29 @@ export class MemberService {
       input.token,
       input.password,
       input.fullName,
-      (trx, invitation) =>
-        memberships.activateInvited(
+      async (trx, invitation) => {
+        await memberships.activateInvited(
           trx,
           invitation.tenantId,
           invitation.membershipId,
           invitation.userId
         )
+        await writeAudit(
+          trx,
+          {
+            tenantId: invitation.tenantId,
+            userId: invitation.userId,
+            membershipId: invitation.membershipId,
+            requestId: null,
+          },
+          {
+            action: 'member.invitation_accepted',
+            entityType: 'membership',
+            entityId: invitation.membershipId,
+            changes: { status: { from: 'INVITED', to: 'ACTIVE' } },
+          }
+        )
+      }
     )
   }
 
@@ -119,6 +235,12 @@ export class MemberService {
       }
       if (status === 'SUSPENDED') await assignments.assertNotLastAdmin(scope, id)
       await memberships.setStatus(scope, id, expectedVersion, status)
+      await audit(scope, {
+        action: status === 'SUSPENDED' ? 'member.suspended' : 'member.reactivated',
+        entityType: 'membership',
+        entityId: id,
+        changes: { status: { from: member.status, to: status } },
+      })
       return withRoles(
         (await memberships.find(scope, id))!,
         await assignments.assignments(scope, [id])
@@ -126,12 +248,41 @@ export class MemberService {
     })
   }
 
-  assignRole(context: TenantContext, id: string, input: { roleId: string; scopeType?: string }) {
+  assignRole(
+    context: TenantContext,
+    id: string,
+    input: { roleId: string; scopeType?: string; scopeId?: string | null }
+  ) {
     return runInTenant(context, async (scope) => {
       const member = await memberships.find(scope, id, true)
       if (!member) throw ApiError.notFound()
-      await assignments.assign(scope, id, input.roleId, input.scopeType ?? 'TENANT')
-      return withRoles(member, await assignments.assignments(scope, [id]))
+      await assignments.assign(
+        scope,
+        id,
+        input.roleId,
+        input.scopeType ?? 'TENANT',
+        input.scopeId ?? null
+      )
+      const after = await assignments.assignments(scope, [id])
+      const added = after.find(
+        (a) =>
+          a.roleId === input.roleId &&
+          a.scopeType === (input.scopeType ?? 'TENANT') &&
+          a.scopeId === (input.scopeId ?? null)
+      )
+      await audit(scope, {
+        action: 'member.role_assigned',
+        entityType: 'membership',
+        entityId: id,
+        metadata: {
+          assignmentId: added?.id ?? null,
+          roleId: input.roleId,
+          roleCode: added?.roleCode ?? null,
+          scopeType: input.scopeType ?? 'TENANT',
+          scopeId: input.scopeId ?? null,
+        },
+      })
+      return withRoles(member, after)
     })
   }
 
@@ -139,7 +290,24 @@ export class MemberService {
     return runInTenant(context, async (scope) => {
       const member = await memberships.find(scope, id, true)
       if (!member) throw ApiError.notFound()
+      const removed = (await assignments.assignments(scope, [id])).find(
+        (a) => a.id === assignmentId
+      )
       await assignments.unassign(scope, id, assignmentId)
+      await audit(scope, {
+        action: 'member.role_unassigned',
+        entityType: 'membership',
+        entityId: id,
+        metadata: removed
+          ? {
+              assignmentId,
+              roleId: removed.roleId,
+              roleCode: removed.roleCode,
+              scopeType: removed.scopeType,
+              scopeId: removed.scopeId,
+            }
+          : { assignmentId },
+      })
       return withRoles(member, await assignments.assignments(scope, [id]))
     })
   }

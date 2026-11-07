@@ -45,3 +45,40 @@ export async function assertCan(
   if (allowOwn && granted.own.has(permission)) return 'OWN'
   throw ApiError.forbidden()
 }
+
+/** Onde uma permissão vale para a membership em contexto (negar por omissão quando tudo vem vazio). */
+export interface PermissionScope {
+  tenant: boolean
+  own: boolean
+  legalEntityIds: Set<string>
+  branchIds: Set<string>
+  /** Departamentos atribuídos e todos os seus descendentes. */
+  departmentIds: Set<string>
+}
+
+export async function permissionScope(
+  scope: TenantScope,
+  permission: string,
+  membershipId?: string
+): Promise<PermissionScope> {
+  const rows = await repository.scopedGrants(
+    scope,
+    membershipId ?? scope.context.membershipId,
+    permission
+  )
+  const result: PermissionScope = {
+    tenant: false,
+    own: false,
+    legalEntityIds: new Set(),
+    branchIds: new Set(),
+    departmentIds: new Set(),
+  }
+  for (const row of rows) {
+    if (row.kind === 'DEPARTMENT_TREE') result.departmentIds.add(row.target!)
+    else if (row.scope_type === 'TENANT') result.tenant = true
+    else if (row.scope_type === 'OWN') result.own = true
+    else if (row.scope_type === 'LEGAL_ENTITY') result.legalEntityIds.add(row.target!)
+    else if (row.scope_type === 'BRANCH') result.branchIds.add(row.target!)
+  }
+  return result
+}

@@ -32,3 +32,115 @@ falsa. A coluna `scope_type` aceita hoje `TENANT` e `OWN` (CHECK); o 3.4 alarga-
 
 O fornecedor de email é uma decisão pendente. Convites e recuperação funcionam ponta a ponta, mas com `MAIL_DRIVER=none` a
 resposta diz `NOT_CONFIGURED`; nunca se apresenta um envio que não aconteceu.
+
+## D-007 Estrutura organizacional sem eliminação física (aceite)
+
+Entidades legais, filiais, departamentos, cargos e centros de custo vão ser referenciados por documentos, contratos e
+lançamentos; apagar quebraria o histórico. Desactiva-se (`status = INACTIVE`) e a vigência regista o período. Anexos,
+moradas, responsáveis e histórico de alterações entram no Prompt 05.
+
+## D-008 Subscrições como plano de controlo global; entitlement separado do RBAC (aceite)
+
+Planos, subscrições e excepções pertencem à plataforma e não a uma empresa, por isso são tabelas globais alteradas só por
+administradores da plataforma (`users.is_platform_admin`, concedido por comando). Ter a funcionalidade contratada não dá
+acesso a ninguém: a rota exige o entitlement **e** a permissão. Não há planos, preços nem cobrança semeados: os planos
+criam-se em ambiente local com `plan:create` ou pela API da plataforma; faturação e pagamentos aguardam decisão comercial.
+Sem subscrição activa o tenant não tem funcionalidades (negar por omissão).
+
+## D-009 Transversais: auditoria na transacção, aprovações sem permissão de decisão, anexos herdam acesso (aceite)
+
+- A auditoria é gravada na mesma transacção da operação (não num log assíncrono) para nunca haver operação sem rasto
+  nem rasto sem operação; a tabela é só de acrescentar, por privilégios e por trigger.
+- Decidir uma aprovação é uma atribuição (aprovador da etapa ou delegado), não uma permissão RBAC; as permissões só
+  regem ver tudo, pedir e gerir workflows. Requerente nunca aprova o próprio pedido.
+- Os anexos não têm permissões próprias: herdam a autorização e a funcionalidade contratada do registo a que pertencem,
+  para não haver um caminho paralelo de acesso aos dados.
+- Notificações só in-app enquanto não houver fornecedor de email escolhido; o centro de tarefas é uma vista derivada.
+- O único tipo de assunto é `manual`: não se criam assuntos provisórios de módulos que ainda não existem.
+
+## D-010 Frontend sem biblioteca de estado e com primitivas mínimas até ao design system (aceite)
+
+O estado partilhado é pequeno (sessão, empresa, permissões) e cabe em dois serviços com sinais; não se adiciona NgRx ou
+semelhante. Os componentes usam primitivas CSS mínimas para não antecipar o design system (Prompt 04), que as vai
+substituir. `GET /context` passou a devolver as funcionalidades activas e o estado da subscrição (só para a navegação) e
+`GET /platform/tenants/:id` foi acrescentado para o detalhe da empresa na plataforma. A delegação de aprovações exige
+ver a lista de membros (`members.read`); um directório mínimo de colegas fica para decisão posterior.
+
+## D-011 Qualidade da fundação: protecção de rotas verificada e dados de demonstração isolados (aceite)
+
+A protecção de cada rota é verificada a partir do próprio router (não de uma lista mantida à mão): uma rota nova sem
+sessão, sem contexto de empresa ou sem `can()` falha o teste, salvo se constar das listas explícitas com justificação.
+Os dados de demonstração são um seeder Lucid limitado a desenvolvimento/testes, construído só com as APIs públicas dos
+módulos (passam pelas mesmas regras e ficam auditados), com contas `@demo.invalid` e sem efeito se a empresa `DEMO`
+já existir.
+
+## D-012 Design system próprio sobre Tailwind, sem biblioteca de componentes (aceite)
+
+Tokens semânticos em CSS (`--c-*`) com tema escuro por atributo e utilidades Tailwind ligadas por `@theme inline`;
+componentes próprios pequenos, construídos sobre elementos nativos acessíveis (`<dialog>`, `<select>`, inputs) e os
+padrões ARIA de combobox, menu e tabs. Evita uma dependência grande e mantém controlo sobre contraste (testado),
+densidade e comportamento de teclado. Gráficos simples em HTML/CSS; uma biblioteca de gráficos entra só quando houver
+relatórios que a justifiquem (Prompt 26). O âmbito de trabalho (entidade legal/filial) é preferência de apresentação,
+não autorização.
+
+## D-013 Configurações da empresa como contratos para os módulos de negócio (aceite)
+
+Perfil, precisões, câmbios, séries, calendários e contas bancárias ficam num módulo `settings` que expõe funções
+(`tenantSettings`, `rateOn`, `reserveDocumentNumber`, dias úteis) em vez de tabelas partilhadas: Facturação,
+Compras, Inventário, Finanças, Contabilidade, RH e Assiduidade chamam-nas na sua transacção. A numeração documental é
+atribuída sob bloqueio da série, sem lacunas e sem recuo. Contas bancárias passam por aprovação configurável (o efeito
+é registado pelo módulo dono no arranque, `start/module_hooks.ts`) e os dados bancários não se editam (protecção
+contra fraude). Câmbios são introduzidos pela empresa (sem fonte externa automática até haver integração validada).
+Nenhuma regra fiscal ou laboral é implementada aqui; o regime fiscal é só identificação.
+
+## D-014 Contabilidade sem plano oficial pré-carregado e com controlo de partidas dobradas no servidor (aceite)
+
+O plano de contas é criado (ou, no bloco 6.4, importado) pela empresa: não se pré-carrega o PGC angolano nem se
+alega conformidade AGT/SAF-T, porque a versão em vigor e os critérios dos mapas têm de ser confirmados com a norma
+oficial antes de qualquer alegação. O campo "modelo de referência" é só texto. As regras que garantem a integridade
+ficam no servidor e, para a imutabilidade, também na base de dados (triggers): um lançamento contabilizado não muda e
+corrige-se por estorno. O equilíbrio exige-se nas duas moedas para que o razão funcional nunca fique desequilibrado
+por arredondamentos. O fluxo de aprovação é interno ao lançamento (segregação de funções), sem passar pelos workflows
+genéricos, para não depender da funcionalidade de aprovações; poderá ligar-se a eles mais tarde se for pedido.
+
+## D-015 Motor de contabilização por regras configuráveis e eventos idempotentes (aceite)
+
+Os módulos de negócio não escrevem lançamentos nem conhecem contas: publicam eventos (origem, evento, referência,
+data, montantes nomeados, dimensões) e a contabilidade aplica a regra activa da entidade legal nessa data. As contas
+ficam na regra, escolhidas pela empresa no seu plano (sem códigos fixos no código, coerente com D-014). Uma regra
+usada é imutável e a mudança faz-se por vigência, para que o histórico continue explicável. O evento é idempotente
+pela referência, para que reenvios (rede, reprocessamento, integrações) nunca dupliquem lançamentos. Dentro do
+servidor o evento corre na transacção do módulo que o emite (tudo ou nada); pela API, as falhas ficam registadas com a
+mensagem para poderem ser corrigidas e reprocessadas. A entrega assíncrona (fila/outbox) só entra se houver
+necessidade medida — hoje o PostgreSQL e a transacção partilhada bastam.
+
+## D-016 Analítica como camada sobre o razão, editável depois de contabilizar (aceite)
+
+As imputações a centros de custo e dimensões não geram lançamentos nem alteram linhas: repartem o valor de cada linha
+em percentagens que somam 100%, e a repartição é exacta (maior resto). Assim o razão e o balancete nunca mudam por
+causa da analítica, e o relatório analítico confere sempre com eles. Por não tocarem no razão, as imputações podem ser
+corrigidas depois da contabilização, com auditoria de cada alteração (antes/depois), o que é a prática comum em
+controlo de gestão. Ficam ligadas por (lançamento, n.º de linha) e não ao id físico das linhas; alterar as linhas de
+um rascunho apaga-as.
+
+## D-017 Activos fixos geram lançamentos directamente, com contas na classe (aceite)
+
+Os activos fixos não passam pelo motor de regras (6.3): as contas vêm da classe do activo, configurada pela empresa,
+porque cada classe tem as suas contas (equipamento, viaturas, edifícios…) e uma regra por origem/evento não as
+distingue. O módulo cria e contabiliza o lançamento na mesma transacção que muda a ficha (origem `FIXED_ASSETS`),
+sem fluxo de aprovação: a permissão `fixed_assets.post` é a autorização. Para a ficha e o razão nunca divergirem,
+estes lançamentos só se estornam pela ficha ou pela anulação do mês de depreciação; o estorno genérico recusa-os.
+O mapa de depreciação é recalculado a partir da ficha (nunca guardado) e as depreciações feitas ficam numa tabela com
+uma linha por activo e mês (UNIQUE), que é o que impede depreciar duas vezes. Vidas úteis, métodos e coeficientes são
+configurados pela empresa; não se assumem taxas fiscais angolanas sem validação normativa.
+
+## D-018 Regularizações geram rascunhos; diferenças cambiais por saldo em moeda (aceite)
+
+Recorrências, acréscimos, diferimentos, provisões e diferenças cambiais não contabilizam directamente: criam
+lançamentos em rascunho, origem própria (`ADJUSTMENT`, `PROVISION`, `FX_REVALUATION`), que seguem submissão, aprovação
+e contabilização com segregação de funções — são estimativas e julgamentos de fecho, não factos de outro módulo. Cada
+ocorrência referencia o seu rascunho com `ON DELETE CASCADE`, por isso apagar o rascunho liberta o mês ou o movimento
+sem estados paralelos. As diferenças cambiais são calculadas sobre os saldos contabilizados por conta, moeda e terceiro
+das contas que o utilizador escolhe (itens monetários; activos não monetários não se actualizam), e as diferenças
+realizadas são o resíduo funcional de um saldo já liquidado em moeda — não dependem do módulo de Finanças, que ainda
+não existe. Não se assumem câmbios nem critérios fiscais: o câmbio é o registado pela empresa.

@@ -1,21 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { Preferences } from './core/preferences';
 
-/** Moldura da aplicação: cabeçalho e área de conteúdo das rotas. */
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet],
-  template: `
-    <div class="min-h-screen bg-slate-50 text-slate-900">
-      <header class="border-b border-slate-200 bg-white">
-        <div class="mx-auto flex max-w-5xl items-center px-4 py-3">
-          <span class="text-lg font-semibold">Aplicação</span>
-        </div>
-      </header>
-      <main class="mx-auto max-w-5xl px-4 py-8">
-        <router-outlet />
-      </main>
-    </div>
-  `,
+  template: `<router-outlet />`,
 })
-export class App {}
+export class App {
+  // Aplica tema e densidade desde o primeiro ecrã (incluindo o login).
+  protected readonly preferences = inject(Preferences);
+}

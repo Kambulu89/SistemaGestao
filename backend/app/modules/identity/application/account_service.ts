@@ -116,12 +116,14 @@ export class AccountService {
     user: User,
     tenantId: string,
     membershipId: string,
-    tenantName: string
+    tenantName: string,
+    ttlDays = 7
   ): Promise<DeliveryStatus> {
+    // Emitir um convite novo invalida os anteriores da mesma pessoa nesta empresa.
     const token = await tokens.issue({
       userId: user.id,
       purpose: 'INVITATION',
-      ttlMinutes: 7 * 24 * 60,
+      ttlMinutes: ttlDays * 24 * 60,
       tenantId,
       membershipId,
     })
@@ -131,6 +133,32 @@ export class AccountService {
       subject: `Convite para ${tenantName}`,
       link: `${frontendUrl()}/aceitar-convite?token=${encodeURIComponent(token)}`,
     })
+  }
+
+  /** Invalida os convites pendentes de uma pessoa numa empresa (convite revogado). */
+  async revokeInvitations(userId: string, tenantId: string) {
+    await db.connection('runtime').rawQuery(
+      `update one_time_tokens set consumed_at = now(), updated_at = now()
+          where user_id = ? and tenant_id = ? and purpose = 'INVITATION' and consumed_at is null`,
+      [userId, tenantId]
+    )
+  }
+
+  /** Validade do convite pendente de cada membership (para mostrar "expira em"/"expirado"). */
+  async invitationExpiry(membershipIds: readonly string[]): Promise<Map<string, Date>> {
+    if (membershipIds.length === 0) return new Map()
+    const r = await db.connection('runtime').rawQuery(
+      `select membership_id, max(expires_at) as expires_at from one_time_tokens
+          where purpose = 'INVITATION' and consumed_at is null and membership_id = any(?::uuid[])
+          group by membership_id`,
+      [membershipIds as string[]] as never[]
+    )
+    return new Map(
+      (r.rows as { membership_id: string; expires_at: Date }[]).map((x) => [
+        x.membership_id,
+        x.expires_at,
+      ])
+    )
   }
 
   /**

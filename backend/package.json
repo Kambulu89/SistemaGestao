@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check .",
     "migrate": "node ace migration:run --connection=owner",
-    "migrate:rollback": "node ace migration:rollback --connection=owner"
+    "migrate:rollback": "node ace migration:rollback --connection=owner",
+    "seed:demo": "node ace db:seed --files ./database/seeders/demo_seeder.ts"
   },
   "imports": {
     "#exceptions/*": "./app/exceptions/*.js",

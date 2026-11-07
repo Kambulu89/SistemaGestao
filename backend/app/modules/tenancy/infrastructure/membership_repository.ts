@@ -40,11 +40,26 @@ const toMember = (r: MemberRow): Member => ({
   version: r.version,
 })
 
+/** Campos de ordenação aceites (nome da API → expressão SQL fixa). */
+export const MEMBER_SORT = {
+  fullName: 'lower(u.full_name)',
+  email: 'lower(u.email)',
+  status: 'm.status',
+  joinedAt: 'm.joined_at',
+} as const
+export type MemberSortField = keyof typeof MEMBER_SORT
+
 /** Memberships do tenant em contexto (dono: tenancy). */
 export class MembershipRepository {
   async list(
     { trx, context }: TenantScope,
-    filter: { status?: MembershipStatus; q?: string; limit: number; offset: number }
+    filter: {
+      status?: MembershipStatus
+      q?: string
+      limit: number
+      offset: number
+      sort?: { field: MemberSortField; direction: 'asc' | 'desc' }
+    }
   ) {
     const where = ['m.tenant_id = ?']
     const params: unknown[] = [context.tenantId]
@@ -59,7 +74,11 @@ export class MembershipRepository {
     }
     const clause = where.join(' and ')
     const rows = await trx.rawQuery(
-      `${SELECT} where ${clause} order by lower(u.full_name) limit ? offset ?`,
+      `${SELECT} where ${clause} order by ${
+        filter.sort
+          ? `${MEMBER_SORT[filter.sort.field]} ${filter.sort.direction === 'desc' ? 'desc' : 'asc'} nulls last, m.id`
+          : 'lower(u.full_name), m.id'
+      } limit ? offset ?`,
       [...params, filter.limit, filter.offset] as never[]
     )
     const count = await trx.rawQuery(
@@ -160,5 +179,16 @@ export class MembershipRepository {
     if (result.rows.length === 0) {
       throw ApiError.conflict('INVITATION_NOT_PENDING', 'O convite já não está pendente.')
     }
+  }
+
+  /** Memberships por estado (para o painel). */
+  async countsByStatus({ trx, context }: TenantScope): Promise<Record<string, number>> {
+    const result = await trx.rawQuery(
+      'select status, count(*)::int as n from tenant_memberships where tenant_id = ? group by status',
+      [context.tenantId]
+    )
+    return Object.fromEntries(
+      (result.rows as { status: string; n: number }[]).map((r) => [r.status, r.n])
+    )
   }
 }

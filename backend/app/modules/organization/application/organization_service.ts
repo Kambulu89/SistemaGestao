@@ -1,0 +1,580 @@
+import { ApiError, type ErrorDetail } from '#shared/http/api_error'
+import {
+  crudFind,
+  crudInsert,
+  crudList,
+  crudUpdate,
+  wouldCreateCycle,
+  type CrudScope,
+  type CrudSpec,
+  type Row,
+} from '#shared/db/tenant_crud'
+import { runInTenant, type TenantContext, type TenantScope } from '#modules/tenancy/index'
+import { assertWithinLimit } from '#modules/subscription/index'
+import { audit, diff } from '#modules/audit/index'
+import { normalize, type OrgKind, type Values } from '#modules/organization/domain/organization'
+
+const common = { status: 'status', validFrom: 'valid_from', validTo: 'valid_to' }
+const dates = ['valid_from', 'valid_to']
+const taken = (code: string, what: string) => ({
+  code,
+  message: `Já existe ${what} com este código.`,
+})
+
+export const SPECS: Record<OrgKind, CrudSpec> = {
+  legalEntities: {
+    table: 'legal_entities',
+    columns: {
+      code: 'code',
+      legalName: 'legal_name',
+      tradeName: 'trade_name',
+      taxId: 'tax_id',
+      countryCode: 'country_code',
+      functionalCurrency: 'functional_currency',
+      taxRegime: 'tax_regime',
+      vatRegistered: 'vat_registered',
+      fiscalYearStartMonth: 'fiscal_year_start_month',
+      email: 'email',
+      phone: 'phone',
+      website: 'website',
+      addressLine: 'address_line',
+      neighbourhood: 'neighbourhood',
+      commune: 'commune',
+      municipality: 'municipality',
+      province: 'province',
+      postalCode: 'postal_code',
+      representativeName: 'representative_name',
+      representativeRole: 'representative_role',
+      ...common,
+    },
+    dateColumns: dates,
+    searchColumns: ['code', 'legal_name', 'tax_id'],
+    orderBy: 'code',
+    uniqueErrors: {
+      legal_entities_code_unique: taken('LEGAL_ENTITY_CODE_TAKEN', 'uma entidade legal'),
+      legal_entities_tax_id_unique: {
+        code: 'TAX_ID_TAKEN',
+        message: 'Já existe uma entidade legal com este NIF neste país.',
+      },
+    },
+  },
+  branches: {
+    table: 'branches',
+    columns: {
+      code: 'code',
+      name: 'name',
+      legalEntityId: 'legal_entity_id',
+      type: 'type',
+      email: 'email',
+      phone: 'phone',
+      addressLine: 'address_line',
+      neighbourhood: 'neighbourhood',
+      commune: 'commune',
+      municipality: 'municipality',
+      province: 'province',
+      postalCode: 'postal_code',
+      managerMembershipId: 'manager_membership_id',
+      costCenterId: 'cost_center_id',
+      ...common,
+    },
+    dateColumns: dates,
+    searchColumns: ['code', 'name'],
+    orderBy: 'code',
+    uniqueErrors: { branches_code_unique: taken('BRANCH_CODE_TAKEN', 'uma filial') },
+  },
+  departments: {
+    table: 'departments',
+    columns: {
+      code: 'code',
+      name: 'name',
+      legalEntityId: 'legal_entity_id',
+      branchId: 'branch_id',
+      parentId: 'parent_id',
+      managerMembershipId: 'manager_membership_id',
+      costCenterId: 'cost_center_id',
+      ...common,
+    },
+    dateColumns: dates,
+    searchColumns: ['code', 'name'],
+    orderBy: 'code',
+    uniqueErrors: { departments_code_unique: taken('DEPARTMENT_CODE_TAKEN', 'um departamento') },
+  },
+  positions: {
+    table: 'positions',
+    columns: {
+      code: 'code',
+      name: 'name',
+      departmentId: 'department_id',
+      jobFamily: 'job_family',
+      category: 'category',
+      level: 'level',
+      description: 'description',
+      jobFunction: 'job_function',
+      requirements: 'requirements',
+      responsibilities: 'responsibilities',
+      ...common,
+    },
+    dateColumns: dates,
+    searchColumns: ['code', 'name', 'job_family'],
+    orderBy: 'code',
+    uniqueErrors: { positions_code_unique: taken('POSITION_CODE_TAKEN', 'um cargo') },
+  },
+  costCenters: {
+    table: 'cost_centers',
+    columns: {
+      code: 'code',
+      name: 'name',
+      legalEntityId: 'legal_entity_id',
+      parentId: 'parent_id',
+      departmentId: 'department_id',
+      managerMembershipId: 'manager_membership_id',
+      ...common,
+    },
+    dateColumns: dates,
+    searchColumns: ['code', 'name'],
+    orderBy: 'code',
+    uniqueErrors: {
+      cost_centers_code_unique: taken(
+        'COST_CENTER_CODE_TAKEN',
+        'um centro de custo nesta entidade legal'
+      ),
+    },
+  },
+}
+
+/** Filtros aceites por tipo (campo da API → só igualdade). */
+export const FILTERS: Record<OrgKind, readonly string[]> = {
+  legalEntities: ['status', 'countryCode'],
+  branches: ['status', 'legalEntityId', 'type'],
+  departments: ['status', 'legalEntityId', 'branchId', 'parentId'],
+  positions: ['status', 'departmentId'],
+  costCenters: ['status', 'legalEntityId', 'parentId', 'departmentId'],
+}
+
+const crud = (context: TenantContext, trx: CrudScope['trx']): CrudScope => ({
+  trx,
+  tenantId: context.tenantId,
+  userId: context.userId,
+})
+
+/**
+ * Referências entre entidades: tudo da mesma empresa (FKs compostas) **e** da mesma entidade legal; árvores sem ciclos.
+ * As alterações de pai serializam-se por empresa e tabela (advisory lock), para que dois pedidos simultâneos não formem um
+ * ciclo que nenhum deles via sozinho.
+ */
+const TREES: readonly OrgKind[] = ['departments', 'costCenters']
+
+/**
+ * Serializa as escritas numa árvore por empresa. Tem de ser pedido **antes** de bloquear a linha: ao gravar o novo pai, a
+ * FK pede um bloqueio partilhado na linha do pai; se outro pedido a tivesse bloqueado (FOR UPDATE) e esperasse por este
+ * bloqueio, haveria deadlock.
+ */
+async function lockTree(s: CrudScope, kind: OrgKind) {
+  if (!TREES.includes(kind)) return
+  await s.trx.rawQuery('select pg_advisory_xact_lock(hashtext(?))', [
+    `${s.tenantId}:${SPECS[kind].table}:tree`,
+  ])
+}
+
+async function checkReferences(s: CrudScope, kind: OrgKind, id: string | null, merged: Values) {
+  const issues: ErrorDetail[] = []
+  const legalEntityOf = async (target: OrgKind, refId: unknown, path: string) => {
+    if (refId === null || refId === undefined) return null
+    const row = await crudFind(s, SPECS[target], refId as string)
+    if (!row) {
+      issues.push({ path, code: 'NOT_FOUND', message: 'Não existe nesta empresa.' })
+      return null
+    }
+    return row
+  }
+  const sameLegalEntity = (row: Row | null, path: string) => {
+    if (row && row.legalEntityId !== merged.legalEntityId) {
+      issues.push({ path, code: 'OTHER_LEGAL_ENTITY', message: 'Pertence a outra entidade legal.' })
+    }
+  }
+  if (merged.legalEntityId !== undefined) {
+    const le = await crudFind(s, SPECS.legalEntities, merged.legalEntityId as string)
+    if (!le)
+      issues.push({
+        path: 'legalEntityId',
+        code: 'NOT_FOUND',
+        message: 'A entidade legal não existe nesta empresa.',
+      })
+  }
+  if (kind === 'departments') {
+    sameLegalEntity(await legalEntityOf('branches', merged.branchId, 'branchId'), 'branchId')
+  }
+  if (kind === 'positions' && merged.departmentId) {
+    await legalEntityOf('departments', merged.departmentId, 'departmentId')
+  }
+  if (kind === 'costCenters') {
+    sameLegalEntity(
+      await legalEntityOf('departments', merged.departmentId, 'departmentId'),
+      'departmentId'
+    )
+  }
+  if (merged.managerMembershipId) {
+    const m = await s.trx.rawQuery(
+      'select status from tenant_memberships where tenant_id = ? and id = ?',
+      [s.tenantId, merged.managerMembershipId as string]
+    )
+    const status = (m.rows[0] as { status: string } | undefined)?.status
+    if (!status)
+      issues.push({
+        path: 'managerMembershipId',
+        code: 'NOT_FOUND',
+        message: 'O responsável não é membro desta empresa.',
+      })
+    else if (status !== 'ACTIVE')
+      issues.push({
+        path: 'managerMembershipId',
+        code: 'NOT_ACTIVE',
+        message: 'O responsável não está activo.',
+      })
+  }
+  if ((kind === 'branches' || kind === 'departments') && merged.costCenterId) {
+    sameLegalEntity(
+      await legalEntityOf('costCenters', merged.costCenterId, 'costCenterId'),
+      'costCenterId'
+    )
+  }
+  if ((kind === 'departments' || kind === 'costCenters') && merged.parentId) {
+    const table = SPECS[kind].table
+    const parent = await crudFind(s, SPECS[kind], merged.parentId as string)
+    if (!parent)
+      issues.push({
+        path: 'parentId',
+        code: 'NOT_FOUND',
+        message: 'O pai não existe nesta empresa.',
+      })
+    else {
+      sameLegalEntity(parent, 'parentId')
+      if (id && (await wouldCreateCycle(s, table, id, merged.parentId as string))) {
+        issues.push({ path: 'parentId', code: 'CYCLE', message: 'Criaria um ciclo na hierarquia.' })
+      }
+    }
+  }
+  if (issues.length > 0) throw ApiError.validation(issues)
+}
+
+/**
+ * Dependências activas que impedem inactivar um registo (rótulo → SQL de contagem com `?` = tenant, id). Inclui
+ * tabelas de outros módulos que referem a estrutura (séries, contas bancárias): é só leitura de contagens, as FKs
+ * compostas continuam a garantir a integridade.
+ */
+const DEPENDENTS: Record<OrgKind, { label: string; sql: string }[]> = {
+  legalEntities: [
+    {
+      label: 'Filiais activas',
+      sql: `select count(*)::int as n from branches where tenant_id = ? and legal_entity_id = ? and status = 'ACTIVE'`,
+    },
+    {
+      label: 'Departamentos activos',
+      sql: `select count(*)::int as n from departments where tenant_id = ? and legal_entity_id = ? and status = 'ACTIVE'`,
+    },
+    {
+      label: 'Centros de custo activos',
+      sql: `select count(*)::int as n from cost_centers where tenant_id = ? and legal_entity_id = ? and status = 'ACTIVE'`,
+    },
+    {
+      label: 'Séries documentais abertas',
+      sql: `select count(*)::int as n from document_series where tenant_id = ? and legal_entity_id = ? and status = 'ACTIVE'`,
+    },
+    {
+      label: 'Contas bancárias activas',
+      sql: `select count(*)::int as n from bank_accounts where tenant_id = ? and legal_entity_id = ? and status in ('ACTIVE', 'PENDING_APPROVAL')`,
+    },
+  ],
+  branches: [
+    {
+      label: 'Departamentos activos',
+      sql: `select count(*)::int as n from departments where tenant_id = ? and branch_id = ? and status = 'ACTIVE'`,
+    },
+    {
+      label: 'Séries documentais abertas',
+      sql: `select count(*)::int as n from document_series where tenant_id = ? and branch_id = ? and status = 'ACTIVE'`,
+    },
+  ],
+  departments: [
+    {
+      label: 'Subdepartamentos activos',
+      sql: `select count(*)::int as n from departments where tenant_id = ? and parent_id = ? and status = 'ACTIVE'`,
+    },
+    {
+      label: 'Cargos activos',
+      sql: `select count(*)::int as n from positions where tenant_id = ? and department_id = ? and status = 'ACTIVE'`,
+    },
+    {
+      label: 'Centros de custo activos',
+      sql: `select count(*)::int as n from cost_centers where tenant_id = ? and department_id = ? and status = 'ACTIVE'`,
+    },
+  ],
+  positions: [],
+  costCenters: [
+    {
+      label: 'Centros de custo filhos activos',
+      sql: `select count(*)::int as n from cost_centers where tenant_id = ? and parent_id = ? and status = 'ACTIVE'`,
+    },
+    {
+      label: 'Filiais activas',
+      sql: `select count(*)::int as n from branches where tenant_id = ? and cost_center_id = ? and status = 'ACTIVE'`,
+    },
+    {
+      label: 'Departamentos activos',
+      sql: `select count(*)::int as n from departments where tenant_id = ? and cost_center_id = ? and status = 'ACTIVE'`,
+    },
+  ],
+}
+
+async function activeDependents(s: CrudScope, kind: OrgKind, id: string) {
+  const out: { label: string; count: number }[] = []
+  for (const d of DEPENDENTS[kind]) {
+    const r = await s.trx.rawQuery(d.sql, [s.tenantId, id])
+    out.push({ label: d.label, count: (r.rows[0] as { n: number }).n })
+  }
+  return out
+}
+
+/** Tipo da entidade na auditoria e nos anexos (singular, snake_case). */
+export const ENTITY_TYPES: Record<OrgKind, string> = {
+  legalEntities: 'legal_entity',
+  branches: 'branch',
+  departments: 'department',
+  positions: 'position',
+  costCenters: 'cost_center',
+}
+
+/** Casos de uso da estrutura organizacional. Sem eliminação física: inactiva-se (o histórico e as referências ficam). */
+export class OrganizationService {
+  list(
+    context: TenantContext,
+    kind: OrgKind,
+    filter: {
+      equals: Values
+      q?: string
+      limit?: number
+      offset?: number
+      sort?: { field: string; direction: 'asc' | 'desc' }
+    }
+  ) {
+    return runInTenant(context, ({ trx }) =>
+      crudList(crud(context, trx), SPECS[kind], {
+        equals: filter.equals,
+        q: filter.q,
+        limit: Math.min(filter.limit ?? 50, 200),
+        offset: filter.offset ?? 0,
+        sort: filter.sort,
+      })
+    )
+  }
+
+  get(context: TenantContext, kind: OrgKind, id: string) {
+    return runInTenant(context, async ({ trx }) => {
+      const row = await crudFind(crud(context, trx), SPECS[kind], id)
+      if (!row) throw ApiError.notFound()
+      return row
+    })
+  }
+
+  create(context: TenantContext, kind: OrgKind, input: Values) {
+    const { values, issues } = normalize(kind, input, null)
+    if (issues.length > 0) throw ApiError.validation(issues)
+    return runInTenant(context, async (scope) => {
+      const { trx } = scope
+      const s = crud(context, trx)
+      await lockTree(s, kind)
+      if (kind === 'legalEntities') {
+        await assertWithinLimit(trx, context.tenantId, 'legal_entities.max', async () => {
+          const r = await trx.rawQuery(
+            'select count(*)::int as n from legal_entities where tenant_id = ?',
+            [context.tenantId]
+          )
+          return (r.rows[0] as { n: number }).n
+        })
+      }
+      await checkReferences(s, kind, null, values)
+      const row = await crudInsert(s, SPECS[kind], values)
+      await audit(scope, {
+        action: `${ENTITY_TYPES[kind]}.created`,
+        entityType: ENTITY_TYPES[kind],
+        entityId: row.id,
+        changes: diff(null, row, Object.keys(SPECS[kind].columns)),
+      })
+      return row
+    })
+  }
+
+  /** Dependências activas do registo (para o detalhe e antes de inactivar). */
+  dependents(context: TenantContext, kind: OrgKind, id: string) {
+    return runInTenant(context, async ({ trx }) => {
+      const s = crud(context, trx)
+      if (!(await crudFind(s, SPECS[kind], id))) throw ApiError.notFound()
+      return activeDependents(s, kind, id)
+    })
+  }
+
+  /** Árvore completa (departamentos ou centros de custo) para o organograma, com o nome do responsável. */
+  tree(context: TenantContext, kind: OrgKind, legalEntityId?: string) {
+    if (kind !== 'departments' && kind !== 'costCenters') throw ApiError.notFound()
+    const table = SPECS[kind].table
+    return runInTenant(context, async ({ trx }) => {
+      const r = await trx.rawQuery(
+        `select t.id, t.code, t.name, t.parent_id, t.legal_entity_id, t.status, u.full_name as manager_name
+           from ${table} t
+           left join tenant_memberships m on m.tenant_id = t.tenant_id and m.id = t.manager_membership_id
+           left join users u on u.id = m.user_id
+          where t.tenant_id = ?${legalEntityId ? ' and t.legal_entity_id = ?' : ''}
+          order by t.code`,
+        (legalEntityId ? [context.tenantId, legalEntityId] : [context.tenantId]) as never[]
+      )
+      return (r.rows as any[]).map((x) => ({
+        id: x.id as string,
+        code: x.code as string,
+        name: x.name as string,
+        parentId: x.parent_id as string | null,
+        legalEntityId: x.legal_entity_id as string,
+        status: x.status as string,
+        managerName: x.manager_name as string | null,
+      }))
+    })
+  }
+
+  update(
+    context: TenantContext,
+    kind: OrgKind,
+    id: string,
+    input: Values & { expectedVersion: number }
+  ) {
+    return runInTenant(context, async (scope) => {
+      const s = crud(context, scope.trx)
+      await lockTree(s, kind)
+      const current = await crudFind(s, SPECS[kind], id, true)
+      if (!current) throw ApiError.notFound()
+      const { expectedVersion, ...rest } = input
+      const { values, issues } = normalize(kind, rest, current)
+      if (issues.length > 0) throw ApiError.validation(issues)
+      await checkReferences(s, kind, id, { ...current, ...values })
+      // Inactivar exige que não haja dependências activas (inactivam-se primeiro, de baixo para cima).
+      if (values.status === 'INACTIVE' && current.status !== 'INACTIVE') {
+        const blocking = (await activeDependents(s, kind, id)).filter((d) => d.count > 0)
+        if (blocking.length > 0) {
+          throw new ApiError(
+            409,
+            'HAS_ACTIVE_DEPENDENTS',
+            'Há registos activos que dependem deste. Inactive-os primeiro.',
+            blocking.map((d) => ({
+              path: 'status',
+              code: 'DEPENDENT',
+              message: `${d.label}: ${d.count}`,
+            }))
+          )
+        }
+      }
+      const row = await crudUpdate(s, SPECS[kind], id, expectedVersion, values)
+      const changes = diff(current, row, Object.keys(SPECS[kind].columns))
+      if (changes) {
+        await audit(scope, {
+          action: `${ENTITY_TYPES[kind]}.updated`,
+          entityType: ENTITY_TYPES[kind],
+          entityId: id,
+          changes,
+        })
+      }
+      return row
+    })
+  }
+}
+
+const KIND_BY_ENTITY = new Map(
+  (Object.entries(ENTITY_TYPES) as [OrgKind, string][]).map(([kind, type]) => [type, kind])
+)
+
+/** O registo organizacional existe nesta empresa? (`entityType` no singular, ex.: `legal_entity`). */
+export async function organizationRecordExists(scope: TenantScope, entityType: string, id: string) {
+  const kind = KIND_BY_ENTITY.get(entityType)
+  if (!kind) return false
+  const s = crud(scope.context, scope.trx)
+  return (await crudFind(s, SPECS[kind], id)) !== null
+}
+
+/** Registos activos de cada tipo (para o painel). */
+export async function organizationCounts(scope: TenantScope) {
+  const result = await scope.trx.rawQuery(
+    `select 'legalEntities' as kind, count(*)::int as n from legal_entities where tenant_id = ? and status = 'ACTIVE'
+     union all select 'branches', count(*)::int from branches where tenant_id = ? and status = 'ACTIVE'
+     union all select 'departments', count(*)::int from departments where tenant_id = ? and status = 'ACTIVE'
+     union all select 'positions', count(*)::int from positions where tenant_id = ? and status = 'ACTIVE'
+     union all select 'costCenters', count(*)::int from cost_centers where tenant_id = ? and status = 'ACTIVE'`,
+    Array(5).fill(scope.context.tenantId)
+  )
+  return Object.fromEntries(
+    (result.rows as { kind: string; n: number }[]).map((r) => [r.kind, r.n])
+  ) as Record<OrgKind, number>
+}
+
+/** Pesquisa por código/nome em todos os tipos (até `limit` por tipo). */
+export async function searchOrganization(scope: TenantScope, q: string, limit: number) {
+  const s = crud(scope.context, scope.trx)
+  const out: { kind: OrgKind; id: string; title: string; subtitle: string | null }[] = []
+  for (const kind of Object.keys(SPECS) as OrgKind[]) {
+    const page = await crudList(s, SPECS[kind], { q, limit, offset: 0 })
+    for (const r of page.items)
+      out.push({
+        kind,
+        id: r.id,
+        title: `${r.code as string} — ${(r.name ?? r.legalName) as string}`,
+        subtitle: (r.status as string) === 'INACTIVE' ? 'Inactivo' : null,
+      })
+  }
+  return out
+}
+
+/** Dados mínimos de uma entidade legal para outros módulos (contabilidade): estado e moeda funcional. */
+export async function legalEntityFacts(scope: TenantScope, id: string) {
+  const r = await scope.trx.rawQuery(
+    `select id, code, status, functional_currency as "functionalCurrency"
+       from legal_entities where tenant_id = ? and id = ?`,
+    [scope.context.tenantId, id]
+  )
+  return (
+    (r.rows[0] as
+      { id: string; code: string; status: string; functionalCurrency: string } | undefined) ?? null
+  )
+}
+
+/** Centros de custo (estado e entidade legal) por id, para validar imputações noutros módulos. */
+export async function costCenterFacts(scope: TenantScope, ids: string[]) {
+  if (ids.length === 0)
+    return new Map<
+      string,
+      { id: string; code: string; name: string; status: string; legalEntityId: string }
+    >()
+  const r = await scope.trx.rawQuery(
+    `select id, code, name, status, legal_entity_id as "legalEntityId" from cost_centers where tenant_id = ? and id = any(?::uuid[])`,
+    [scope.context.tenantId, ids]
+  )
+  return new Map(
+    (
+      r.rows as { id: string; code: string; name: string; status: string; legalEntityId: string }[]
+    ).map((x) => [x.id, x])
+  )
+}
+
+/** Centros de custo de uma entidade legal por código (importações noutros módulos). */
+export async function costCentersByCode(
+  scope: TenantScope,
+  legalEntityId: string,
+  codes: string[]
+) {
+  if (codes.length === 0) return new Map<string, { id: string; status: string }>()
+  const r = await scope.trx.rawQuery(
+    `select id, code, status from cost_centers where tenant_id = ? and legal_entity_id = ? and code = any(?::text[])`,
+    [scope.context.tenantId, legalEntityId, codes]
+  )
+  return new Map(
+    (r.rows as { id: string; code: string; status: string }[]).map((x) => [
+      x.code,
+      { id: x.id, status: x.status },
+    ])
+  )
+}
