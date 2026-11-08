@@ -62,7 +62,7 @@ export class FieldControl {
         <p class="mt-0.5 text-sm text-muted">{{ description() }}</p>
       }
       <div
-        class="mt-4 grid gap-4"
+        class="mt-4 grid grid-cols-1 gap-4"
         [class.md:grid-cols-2]="columns() === 2"
         [class.md:grid-cols-3]="columns() === 3"
       >

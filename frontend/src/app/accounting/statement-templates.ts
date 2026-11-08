@@ -183,7 +183,7 @@ const blankLine = (kind: StatementLineKind = 'ACCOUNTS'): LineDraft => ({
             }
           </app-form-section>
 
-          <fieldset class="card space-y-2 overflow-x-auto">
+          <fieldset class="card min-w-0 space-y-2 overflow-x-auto">
             <legend class="font-semibold">Linhas</legend>
             <p class="text-sm text-muted">
               Contas: prefixos de código separados por vírgulas; <code>:D</code> só saldo devedor,
@@ -315,7 +315,7 @@ const blankLine = (kind: StatementLineKind = 'ACCOUNTS'): LineDraft => ({
               </tbody>
             </table>
             @if (!readOnly()) {
-              <div class="flex gap-2">
+              <div class="flex flex-wrap gap-2">
                 <button
                   type="button"
                   class="btn-secondary"

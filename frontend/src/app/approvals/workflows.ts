@@ -2,60 +2,56 @@ import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Api } from '../core/api';
 import { formatDateTime } from '../ui/dates';
-import { ErrorAlert } from '../ui/error-alert';
+import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
 import { StatusBadge } from '../ui/status-badge';
 import type { Workflow } from './types';
 
 @Component({
   selector: 'app-workflows',
-  imports: [RouterLink, PageHeader, ErrorAlert, StatusBadge],
+  imports: [RouterLink, EntityListPage, DataTable, CellDef, StatusBadge],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Workflows de aprovação"
       subtitle="Etapas e aprovadores. Publicado, não se altera: retire e crie outro."
+      permission="approvals.manage"
+      feature="approvals"
     >
-      <a routerLink="/aprovacoes/workflows/novo" class="btn-primary">Novo workflow</a>
-    </app-page-header>
-    <app-error-alert [error]="list.error()" />
-    @if ((list.value() ?? []).length === 0 && !list.loading()) {
-      <p class="card text-sm text-muted">Ainda não há workflows.</p>
-    } @else {
-      <div class="card overflow-x-auto p-0">
-        <table class="table" aria-label="Workflows">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Código</th>
-              <th>Etapas</th>
-              <th>Estado</th>
-              <th>Publicado</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (w of list.value(); track w.id) {
-              <tr>
-                <td>
-                  <a class="btn-link" [routerLink]="['/aprovacoes/workflows', w.id]">{{
-                    w.name
-                  }}</a>
-                </td>
-                <td class="font-mono text-xs">{{ w.code }}</td>
-                <td>{{ w.steps.length }}</td>
-                <td><app-status-badge [status]="w.status" /></td>
-                <td>{{ when(w.publishedAt) }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
+      <a actions routerLink="/aprovacoes/workflows/novo" class="btn-primary">Novo workflow</a>
+      <app-data-table
+        label="Workflows"
+        tableId="approval-workflows"
+        [columns]="columns"
+        [rows]="list.value() ?? []"
+        [total]="(list.value() ?? []).length"
+        [limit]="1000"
+        [loading]="list.loading()"
+        [error]="list.error()"
+        emptyText="Ainda não há workflows."
+        (retry)="list.load()"
+      >
+        <ng-template appCell="status" let-row
+          ><app-status-badge [status]="row.status"
+        /></ng-template>
+      </app-data-table>
+    </app-entity-list-page>
   `,
 })
 export class Workflows {
   private readonly api = inject(Api);
-  protected readonly when = formatDateTime;
+  protected readonly columns: Column<Workflow>[] = [
+    { key: 'name', label: 'Nome', required: true, link: (w) => ['/aprovacoes/workflows', w.id] },
+    { key: 'code', label: 'Código' },
+    { key: 'steps', label: 'Etapas', align: 'end', value: (w) => w.steps.length },
+    { key: 'status', label: 'Estado' },
+    {
+      key: 'publishedAt',
+      label: 'Publicado',
+      hideOnMobile: true,
+      value: (w) => (w.publishedAt ? formatDateTime(w.publishedAt) : null),
+    },
+  ];
   protected readonly list = new Loadable(() => this.api.get<Workflow[]>('approvals/workflows'));
 
   constructor() {

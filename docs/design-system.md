@@ -112,6 +112,13 @@ Classes base: `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-danger`, `btn-li
 - **`EntityFormPage`**: barra de acções fixa no fundo (Cancelar/Guardar, "A guardar…", sem submissão dupla) e
   "Alterações por guardar".
 
+## Regras de layout (verificadas na varredura do UI-6)
+
+- Grelhas de formulário e de detalhe com `grid-cols-1` em ecrã pequeno (colunas `minmax(0, 1fr)`): conteúdo largo
+  (tabelas de linhas, editores) fica no seu contentor com scroll e não alarga a página.
+- `table { position: relative }` (em `styles.css`): as legendas só para leitores de ecrã ficam dentro da tabela.
+- `fieldset` com tabelas largas leva `min-w-0`; filas de botões usam `flex-wrap`.
+
 ## Padrões
 
 - **Formulários**: etiquetas visíveis, obrigatórios marcados, validação do servidor junto do campo, botão desactivado

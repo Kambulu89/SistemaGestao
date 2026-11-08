@@ -167,3 +167,31 @@ acontecia durante a construção e falhava nos ecrãs que servem vários tipos).
 
 - Formulário de lançamento e de regras de contabilização com as suas barras próprias (acções de fluxo); dimensões e
   depreciações/regularizações por período com layouts próprios.
+
+## UI-6 — Últimas listas nos modelos e varredura de acessibilidade e responsividade
+
+**Ecrãs**
+
+- Centro de aprovações: "Para decidir" + pedidos em `DataTable` com estado na URL e colunas configuráveis.
+- Workflows de aprovação, planos e empresas da plataforma (pesquisa na URL) em EntityListPage com `DataTable`.
+- Notificações em EntityListPage: filtro "Só por ler" na URL, contador de por ler, abrir e marcar como lida.
+
+**Varredura** (script Playwright, ambiente de desenvolvimento): os 47 ecrãs da navegação e formulários de criação, a
+1366 px no tema claro e a 390 px no tema escuro, verificando um só `h1`, nome acessível em todos os campos, botões e
+ligações, `alt` em imagens, ids únicos, ausência de deslocamento horizontal e de erros de consola.
+
+- Encontrado e corrigido: 4 ecrãs com deslocamento horizontal a 390 px (chaves de repartição, modelos de
+  demonstrações, a minha conta, novo lançamento). Causas: grelhas sem largura mínima zero e legendas `sr-only` das
+  tabelas posicionadas fora do contentor com scroll. Correcção na base (`FormSection`, `PageDetail`, regra global de
+  `table`) e em dois pontos (`fieldset` e fila de botões).
+- Depois da correcção: sem problemas nas 94 combinações.
+
+**APIs** (sem alterações): `approvals/requests`, `me/tasks`, `approvals/workflows`, `me/notifications`,
+`platform/tenants`, `platform/plans`.
+
+**Testes e evidências**: testes do frontend inalterados e verdes; browser: estado dos pedidos na URL (só cancelados),
+workflows com colunas, notificações "só por ler" na URL, empresas com pesquisa e planos da plataforma; UI-2/UI-4/UI-5
+continuam verdes.
+
+**Pendências**: delegações, dimensões, depreciações e o formulário de lançamento mantêm layouts próprios (fluxos
+específicos); a varredura não substitui uma auditoria com leitor de ecrã real.

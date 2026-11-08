@@ -158,6 +158,14 @@ body {
   @apply bg-bg font-sans text-fg antialiased;
 }
 
+/*
+ * As legendas só para leitores de ecrã (`caption.sr-only`) são posicionadas em absoluto; sem um antepassado
+ * posicionado ficam fora do contentor com scroll da tabela e alargam a página em ecrãs estreitos.
+ */
+table {
+  position: relative;
+}
+
 @utility focus-ring {
   @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus;
 }
