@@ -106,3 +106,33 @@
 - Aplicar ReportPage ao razão, analítica e demonstrações; KanbanPage a outros fluxos quando existirem estados com
   mais colunas (ex.: pedidos, futuros módulos comerciais).
 - Aplicar EntityListPage/EntityFormPage às restantes listas e formulários.
+
+## UI-4 — Modelos aplicados aos restantes ecrãs de administração e relatórios
+
+**Ecrãs**
+
+- EntityListPage (filtros e ordenação na URL, etiquetas, colunas configuráveis, exportação das colunas visíveis):
+  entidades legais, filiais, departamentos, cargos, centros de custo (com o âmbito de trabalho e o organograma),
+  câmbios, séries documentais, calendários, contas bancárias, perfis e auditoria (filtros de texto e datas, sem
+  pesquisa livre porque a API não a tem).
+- ReportPage: razão e analítica (estado vazio, metadados dos parâmetros também na impressão, CSV, imprimir).
+- Botões "Nova …" da organização passam a "Criar …" (concordância com o tipo).
+
+**APIs** (sem alterações): `organization/:kind`, `exchange-rates`, `document-series`, `calendars`, `bank-accounts`,
+`roles`, `audit-events`, `accounting/ledger`, `accounting/analytics`.
+
+**Correcção**: o `ListState` passa a ler a URL depois de o componente receber as entradas (a primeira leitura
+acontecia durante a construção e falhava nos ecrãs que servem vários tipos).
+
+**Testes e evidências**
+
+- Frontend: `audit.spec.ts` (datas para ISO); restantes testes inalterados e verdes.
+- Browser: filtro e ordenação da organização na URL e após recarregar, mudar de tipo começa sem filtros, filtro por
+  tipo de documento nas séries, auditoria filtrada por acção e data, perfis com colunas, razão e analítica como
+  relatório (analítica gerada com metadados); repetida a verificação do UI-2 (7/7); sem erros de consola.
+
+**Pendências**
+
+- Listas da contabilidade (diários, planos, exercícios, activos, regras, eventos, regularizações, provisões,
+  modelos) e demonstrações financeiras ainda com o cabeçalho e filtros antigos; formulários de edição ainda com
+  `PageDetail` sem barra fixa.

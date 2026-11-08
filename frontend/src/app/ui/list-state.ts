@@ -58,11 +58,17 @@ export function toApiQuery(state: ListSnapshot, limit: number, extra: ListQuery 
   return q;
 }
 
+type Dynamic<T> = T | (() => T);
+const resolve = <T>(v: Dynamic<T>): T => (typeof v === 'function' ? (v as () => T)() : v);
+
 export interface ListStateOptions {
-  url: string;
-  filterKeys?: readonly string[];
-  sortFields?: readonly string[];
+  /** Rota da API (função quando o mesmo ecrã serve vários tipos, ex.: `organization/:kind`). */
+  url: Dynamic<string>;
+  filterKeys?: Dynamic<readonly string[]>;
+  sortFields?: Dynamic<readonly string[]>;
   limit?: number;
+  /** Ajuste final da consulta para a API (ex.: datas do filtro para instantes ISO). */
+  transform?: (query: ListQuery) => ListQuery;
   /** Parâmetros sempre enviados (ex.: âmbito da entidade legal) e que não vão para a URL. */
   extra?: () => ListQuery;
 }
@@ -91,15 +97,23 @@ export class ListState<T> {
     private readonly options: ListStateOptions,
   ) {
     this.limit = options.limit ?? 25;
-    this.page = new Loadable(() => this.api.page<T>(options.url, this.query()));
-    const sub = this.route.queryParams.subscribe((params) => {
-      const s = fromQueryParams(params, options.filterKeys ?? [], options.sortFields ?? []);
-      this.q.set(s.q);
-      this.filters.set(s.filters);
-      this.sort.set(s.sort);
-      this.offset.set(s.offset);
-      void this.page.load();
-    });
+    this.page = new Loadable(() => this.api.page<T>(resolve(options.url), this.query()));
+    // A primeira emissão chega durante a construção do componente, antes de as entradas (ex.: `kind`) existirem:
+    // processa-se sempre depois (microtarefa), quando a rota e as entradas já estão definidas.
+    const sub = this.route.queryParams.subscribe((params) =>
+      queueMicrotask(() => {
+        const s = fromQueryParams(
+          params,
+          resolve(options.filterKeys ?? []),
+          resolve(options.sortFields ?? []),
+        );
+        this.q.set(s.q);
+        this.filters.set(s.filters);
+        this.sort.set(s.sort);
+        this.offset.set(s.offset);
+        void this.page.load();
+      }),
+    );
     inject(DestroyRef).onDestroy(() => {
       sub.unsubscribe();
       if (this.timer) clearTimeout(this.timer);
@@ -112,7 +126,8 @@ export class ListState<T> {
 
   /** Consulta actual para a API (também usada na exportação, sem paginação). */
   query(): ListQuery {
-    return toApiQuery(this.snapshot(), this.limit, this.options.extra?.() ?? {});
+    const q = toApiQuery(this.snapshot(), this.limit, this.options.extra?.() ?? {});
+    return this.options.transform ? this.options.transform(q) : q;
   }
 
   /** Pesquisa com espera (300 ms); volta à primeira página. */
@@ -136,6 +151,11 @@ export class ListState<T> {
 
   goTo(offset: number) {
     this.apply({ offset });
+  }
+
+  /** Rota actual da API (exportação). */
+  url() {
+    return resolve(this.options.url);
   }
 
   /** Recarrega sem mexer na URL (ex.: âmbito mudou). */

@@ -85,7 +85,7 @@ Classes base: `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-danger`, `btn-li
 | SettingsPage                      | `SettingsPage` (índice de secções + secções)               | Configurações da empresa                                           |
 
 | ApprovalWorkflowPage | `ApprovalWorkflowPage` + `ApprovalTimeline` + `Stepper` | Pedido de aprovação |
-| ReportPage | `ReportPage` (parâmetros, Gerar, vazio, exportar, imprimir, metadados) | Balancete |
+| ReportPage | `ReportPage` (parâmetros, Gerar, vazio, exportar, imprimir, metadados) | Balancete, Razão, Analítica |
 | WizardPage | `WizardPage` (passos, Anterior/Seguinte, Concluir uma vez) | Encerramento do exercício |
 | CalendarPage | `CalendarPage` (mês, descanso, hoje, acontecimentos; `monthGrid`) | Calendários da empresa (feriados + dias úteis do servidor) |
 | KanbanPage | `KanbanPage` + `KanbanCard` (arrastar ou botões "Mover para…") | Tarefas de fecho (por fazer / feitas) |
@@ -96,7 +96,9 @@ Classes base: `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-danger`, `btn-li
 - **`ListState`** (`ui/list-state.ts`): pesquisa (300 ms de espera), filtros, ordenação e página na URL (ligação
   partilhável, "voltar" repõe a vista); só aceita da URL filtros e campos de ordenação declarados; parâmetros fixos
   (ex.: entidade legal da barra superior) vão em `extra` e não na URL. Só a resposta do último pedido conta.
-- **`FilterBar`** (SearchAndFilterBar): pesquisa + filtros declarados (lista ou data) + etiquetas removíveis dos
+- **`ListState` dinâmico**: `url`, `filterKeys` e `sortFields` podem ser funções (um ecrã que serve vários tipos, ex.:
+  `organization/:kind`); `transform` ajusta a consulta (ex.: datas da auditoria para instantes ISO).
+- **`FilterBar`** (SearchAndFilterBar): pesquisa (opcional, `searchable`) + filtros declarados (lista, data ou texto) + etiquetas removíveis dos
   filtros activos e "Limpar filtros".
 - **`DataTable` com `tableId`**: menu "Colunas" (mostrar/esconder, guardado neste browser; colunas `required` não se
   escondem; `hiddenByDefault` começam escondidas); a exportação recebe as colunas visíveis.

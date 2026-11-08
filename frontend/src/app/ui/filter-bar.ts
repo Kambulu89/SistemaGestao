@@ -10,8 +10,9 @@ export interface FilterOption {
 export interface FilterDef {
   key: string;
   label: string;
-  /** `select` com opções (por omissão) ou `date` (AAAA-MM-DD). */
-  type?: 'select' | 'date';
+  /** `select` com opções (por omissão), `date` (AAAA-MM-DD) ou `text` (aplicado ao sair do campo ou Enter). */
+  type?: 'select' | 'date' | 'text';
+  placeholder?: string;
   options?: FilterOption[];
 }
 
@@ -34,28 +35,39 @@ export function chipText(def: FilterDef, value: string): string {
   template: `
     <div class="mb-3 space-y-2" role="search" [attr.aria-label]="'Filtrar ' + label()">
       <div class="flex flex-wrap items-end gap-2">
-        <div class="min-w-56 flex-1 sm:flex-none">
-          <label class="label" [for]="id() + '-q'">Pesquisar</label>
-          <div class="relative">
-            <span
-              class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-subtle"
-              aria-hidden="true"
-              ><app-icon name="search" [size]="16"
-            /></span>
-            <input
-              [id]="id() + '-q'"
-              type="search"
-              class="input w-full pl-9 sm:w-72"
-              [placeholder]="placeholder()"
-              [value]="state().q()"
-              (input)="state().search($any($event.target).value)"
-            />
+        @if (searchable()) {
+          <div class="min-w-56 flex-1 sm:flex-none">
+            <label class="label" [for]="id() + '-q'">Pesquisar</label>
+            <div class="relative">
+              <span
+                class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-subtle"
+                aria-hidden="true"
+                ><app-icon name="search" [size]="16"
+              /></span>
+              <input
+                [id]="id() + '-q'"
+                type="search"
+                class="input w-full pl-9 sm:w-72"
+                [placeholder]="placeholder()"
+                [value]="state().q()"
+                (input)="state().search($any($event.target).value)"
+              />
+            </div>
           </div>
-        </div>
+        }
         @for (f of filters(); track f.key) {
           <div>
             <label class="label" [for]="id() + '-' + f.key">{{ f.label }}</label>
-            @if (f.type === 'date') {
+            @if (f.type === 'text') {
+              <input
+                [id]="id() + '-' + f.key"
+                type="text"
+                class="input w-48"
+                [placeholder]="f.placeholder ?? ''"
+                [value]="state().filters()[f.key] ?? ''"
+                (change)="state().setFilter(f.key, $any($event.target).value.trim())"
+              />
+            } @else if (f.type === 'date') {
               <input
                 [id]="id() + '-' + f.key"
                 type="date"
@@ -112,6 +124,8 @@ export class FilterBar {
   readonly label = input('lista');
   readonly placeholder = input('Pesquisar…');
   readonly id = input('lista');
+  /** Sem pesquisa livre quando a API não a tem (ex.: auditoria). */
+  readonly searchable = input(true);
   protected readonly chips = computed(() => {
     const values = this.state().filters();
     const out: { key: string; text: string }[] = [];
