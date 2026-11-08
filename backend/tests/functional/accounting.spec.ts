@@ -304,6 +304,36 @@ test.group('contabilidade | lançamentos', (group) => {
     assert.equal(count.rows[0].n, 1)
   })
 
+  test('lista: ordenação no servidor (lista fechada) e intervalo de datas', async ({
+    client,
+    assert,
+  }) => {
+    const L = await ledger(client)
+    ok(await L.api.post(`${A}/entries`, entryBody(L, '300', { entryDate: '2026-01-15' })))
+    ok(await L.api.post(`${A}/entries`, entryBody(L, '100', { entryDate: '2026-03-10' })))
+    ok(await L.api.post(`${A}/entries`, entryBody(L, '200', { entryDate: '2026-02-20' })))
+    const list = async (qs: string) => {
+      const r = await L.api.get(`${A}/entries?${qs}`)
+      r.assertStatus(200)
+      return r.body()
+    }
+    const byDefault = await list('')
+    assert.deepEqual(
+      byDefault.data.map((e: any) => e.entryDate),
+      ['2026-03-10', '2026-02-20', '2026-01-15']
+    )
+    const byAmount = await list('sort=totalDebit&direction=asc')
+    assert.deepEqual(
+      byAmount.data.map((e: any) => e.totalDebit),
+      ['100.00', '200.00', '300.00']
+    )
+    const ranged = await list('dateFrom=2026-02-01&dateTo=2026-03-01')
+    assert.equal(ranged.meta.total, 1)
+    assert.equal(ranged.data[0].entryDate, '2026-02-20')
+    ;(await L.api.get(`${A}/entries?sort=description;drop`)).assertStatus(422)
+    ;(await L.api.get(`${A}/entries?dateFrom=10-02-2026`)).assertStatus(422)
+  })
+
   test('moeda estrangeira: câmbio indicado ou o em vigor, totais na moeda funcional', async ({
     client,
     assert,

@@ -7,17 +7,22 @@ export class Loadable<T> {
   readonly loading = signal(false);
   readonly error = signal<ApiError | null>(null);
 
+  private seq = 0;
+
   constructor(private readonly fn: () => Promise<T>) {}
 
+  /** Só a resposta do último pedido conta (pesquisa rápida não mostra resultados antigos). */
   async load() {
+    const seq = ++this.seq;
     this.loading.set(true);
     this.error.set(null);
     try {
-      this.value.set(await this.fn());
+      const value = await this.fn();
+      if (seq === this.seq) this.value.set(value);
     } catch (error) {
-      this.error.set(ApiError.from(error));
+      if (seq === this.seq) this.error.set(ApiError.from(error));
     } finally {
-      this.loading.set(false);
+      if (seq === this.seq) this.loading.set(false);
     }
   }
 }

@@ -8,7 +8,7 @@ import { AuditHistory } from '../ui/audit-history';
 import { ErrorAlert } from '../ui/error-alert';
 import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { Action } from '../ui/load';
-import { PageDetail } from '../ui/page-detail';
+import { SettingsPage, type SettingsSection } from '../ui/templates';
 import { ErrorState, Skeleton } from '../ui/states';
 import { ToastService } from '../ui/toasts';
 
@@ -56,7 +56,7 @@ interface Workflow {
 }
 
 /**
- * Configurações gerais da empresa: precisões e arredondamento (contrato para os módulos de valores), validade dos
+ * Configurações gerais da empresa (SettingsPage): precisões e arredondamento (contrato para os módulos de valores), validade dos
  * convites, notificações de aprovação e workflow de aprovação de contas bancárias. Sem cálculo fiscal nem tesouraria.
  */
 @Component({
@@ -64,7 +64,7 @@ interface Workflow {
   imports: [
     FormsModule,
     RouterLink,
-    PageDetail,
+    SettingsPage,
     ErrorAlert,
     ErrorState,
     Skeleton,
@@ -79,10 +79,16 @@ interface Workflow {
     } @else if (!settings()) {
       <div class="card"><app-skeleton /></div>
     } @else {
-      <app-page-detail title="Configurações da empresa">
+      <app-settings-page
+        title="Configurações da empresa"
+        subtitle="Regras gerais usadas por todos os módulos desta empresa."
+        [sections]="sections"
+      >
         <form class="space-y-4" (ngSubmit)="save()" novalidate>
           <app-error-alert [error]="action.error()" [showDetails]="false" />
           <app-form-section
+            id="precisao"
+            tabindex="-1"
             title="Precisão e arredondamento"
             description="Casas decimais usadas pelos módulos de valores (facturação, compras, inventário…)."
           >
@@ -147,7 +153,12 @@ interface Workflow {
               </select>
             </app-field>
           </app-form-section>
-          <app-form-section title="Segurança" description="Convites para novos membros.">
+          <app-form-section
+            id="seguranca"
+            tabindex="-1"
+            title="Segurança"
+            description="Convites para novos membros."
+          >
             <app-field
               label="Validade dos convites (dias)"
               hint="1 a 30."
@@ -166,6 +177,8 @@ interface Workflow {
             </app-field>
           </app-form-section>
           <app-form-section
+            id="notificacoes"
+            tabindex="-1"
             title="Notificações"
             description="As tarefas de aprovação existem sempre; aqui decide-se se também há aviso."
           >
@@ -189,6 +202,8 @@ interface Workflow {
             </label>
           </app-form-section>
           <app-form-section
+            id="contas-bancarias"
+            tabindex="-1"
             title="Aprovação de contas bancárias"
             description="Com um workflow escolhido, cada conta nova fica pendente até ser aprovada."
           >
@@ -221,7 +236,9 @@ interface Workflow {
             }
           </app-form-section>
           @if (canManage()) {
-            <div class="flex items-center gap-3">
+            <div
+              class="no-print sticky bottom-0 z-20 flex items-center gap-3 border-t border-border bg-surface py-3"
+            >
               <button type="submit" class="btn-primary" [disabled]="action.busy()">
                 {{ action.busy() ? 'A guardar…' : 'Guardar configurações' }}
               </button>
@@ -231,14 +248,14 @@ interface Workflow {
             </div>
           }
         </form>
-        <div aside>
+        <section id="historico" tabindex="-1" aria-label="Histórico de alterações">
           <app-audit-history
             entityType="tenant_settings"
             [entityId]="workspace.tenantId() ?? ''"
             [refreshKey]="settings()!.version"
           />
-        </div>
-      </app-page-detail>
+        </section>
+      </app-settings-page>
     }
   `,
 })
@@ -251,6 +268,13 @@ export class CompanySettingsPage implements HasUnsavedChanges {
   protected readonly workflows = signal<Workflow[]>([]);
   protected readonly loadError = signal<ApiError | null>(null);
   protected readonly action = new Action();
+  protected readonly sections: SettingsSection[] = [
+    { id: 'precisao', label: 'Precisão e arredondamento' },
+    { id: 'seguranca', label: 'Segurança' },
+    { id: 'notificacoes', label: 'Notificações' },
+    { id: 'contas-bancarias', label: 'Contas bancárias' },
+    { id: 'historico', label: 'Histórico' },
+  ];
   protected form: Record<string, unknown> = {};
   private initial = '';
 

@@ -75,6 +75,29 @@ Classes base: `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-danger`, `btn-li
 | `BarChart`                                             | gráficos simples                                                                               | `role=img` com descrição e tabela equivalente                   |
 | `unsavedChangesGuard` + `warnOnUnload`                 | aviso de alterações por guardar (navegação e fecho do separador)                               | confirmação acessível                                           |
 
+## Modelos de ecrã (`ui/templates/`)
+
+| Modelo                            | Componente                                                 | Onde já se usa                                                     |
+| --------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| EntityListPage                    | `EntityListPage` + `ListState` + `FilterBar` + `DataTable` | Membros, Lançamentos                                               |
+| EntityCreatePage / EntityEditPage | `EntityFormPage` (+ `Drafts`/`DraftBanner`)                | Criar entidade legal, filial, departamento, cargo, centro de custo |
+| EntityDetailPage                  | `PageDetail` (+ `Tabs`, `Attachments`, `AuditHistory`)     | detalhe da organização, lançamento, activo…                        |
+| SettingsPage                      | `SettingsPage` (índice de secções + secções)               | Configurações da empresa                                           |
+
+- **`ListState`** (`ui/list-state.ts`): pesquisa (300 ms de espera), filtros, ordenação e página na URL (ligação
+  partilhável, "voltar" repõe a vista); só aceita da URL filtros e campos de ordenação declarados; parâmetros fixos
+  (ex.: entidade legal da barra superior) vão em `extra` e não na URL. Só a resposta do último pedido conta.
+- **`FilterBar`** (SearchAndFilterBar): pesquisa + filtros declarados (lista ou data) + etiquetas removíveis dos
+  filtros activos e "Limpar filtros".
+- **`DataTable` com `tableId`**: menu "Colunas" (mostrar/esconder, guardado neste browser; colunas `required` não se
+  escondem; `hiddenByDefault` começam escondidas); a exportação recebe as colunas visíveis.
+- **`DetailDrawer`** + **`FieldList`**: vista rápida numa gaveta lateral com carregamento/erro e "Abrir página".
+- **`Drafts`** (`core/drafts.ts`): rascunhos locais por utilizador e empresa (7 dias), guardados 1 s após a última
+  alteração e só com alterações por guardar; o aviso "Recuperar/Descartar" aparece ao voltar ao formulário. Usado no
+  formulário de lançamento (novo e por versão do rascunho) e na criação de registos organizacionais.
+- **`EntityFormPage`**: barra de acções fixa no fundo (Cancelar/Guardar, "A guardar…", sem submissão dupla) e
+  "Alterações por guardar".
+
 ## Padrões
 
 - **Formulários**: etiquetas visíveis, obrigatórios marcados, validação do servidor junto do campo, botão desactivado

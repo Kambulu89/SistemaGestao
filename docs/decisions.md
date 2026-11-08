@@ -180,3 +180,12 @@ não depender nem informar terceiros. A navegação passa a domínios do ERP com
 reais (sem entradas fictícias). Favoritos e disposição do painel são preferências do membro guardadas no PostgreSQL
 (`member_preferences`, por membership, com RLS, validadas por chave e sem dados de negócio — por isso fora da auditoria),
 para seguirem o utilizador entre browsers; os recentes ficam no browser, por serem só histórico local de navegação.
+
+## D-022 Estado das listas na URL e preferências de vista no browser (aceite)
+
+As listagens guardam pesquisa, filtros, ordenação e página nos parâmetros da URL: uma ligação abre a mesma vista,
+voltar atrás repõe-na e o servidor faz sempre a filtragem, a ordenação (lista fechada de campos por recurso) e a
+paginação. A escolha de colunas e os rascunhos de formulários ficam no browser, por utilizador e empresa: são
+conveniências de um posto de trabalho, não dados de negócio, e um rascunho só passa a registo quando a API o aceita.
+Rascunhos de um registo existente ficam associados à versão, para não se reaplicarem sobre uma alteração feita
+entretanto por outra pessoa.

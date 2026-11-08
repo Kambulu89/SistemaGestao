@@ -36,3 +36,40 @@
   avançado, DetailDrawer, ApprovalTimeline dedicada, NotificationCenter em painel lateral, rascunhos de formulário.
 - Domínios sem módulos (Operações Comerciais, Pessoas e Talento, Operações Empresariais, Inteligência e Automação)
   ficam fora da navegação até existirem backend e ecrãs reais.
+
+## UI-2 — Modelos de ecrã, filtros, colunas, vista rápida e rascunhos
+
+**Ecrãs**
+
+- Membros e Lançamentos passam a EntityListPage: filtros e ordenação na URL, etiquetas de filtros, colunas
+  configuráveis, exportação das colunas visíveis; Lançamentos ganha intervalo de datas, ordenação no servidor e vista
+  rápida (gaveta) com as linhas.
+- Criar registos organizacionais passa a EntityCreatePage com rascunho local e barra de acções fixa.
+- Configurações da empresa passa a SettingsPage (índice de secções, barra de guardar fixa).
+- Formulário de lançamento com rascunho local (recuperar/descartar).
+
+**APIs**
+
+- Alterada: `GET /api/v1/accounting/entries` aceita `dateFrom`, `dateTo`, `sort` (`entryDate`, `number`,
+  `totalDebit`, `status`, `journalCode`) e `direction`; valores fora da lista são 422.
+- Usadas: `members`, `accounting/entries`, `accounting/entries/:id`, `accounting/journals`, `organization/*`,
+  `settings`.
+
+**Correcção**
+
+- O formulário de registos organizacionais pedia `members?limit=200` (máximo 100): com `members.read`, criar ou abrir
+  departamentos, entidades e centros de custo falhava. Passou a 100.
+
+**Testes e evidências**
+
+- Backend: `accounting.spec.ts` (ordenação, intervalo de datas, 422 para campo ou data inválidos).
+- Frontend: `list-state.spec.ts`, `templates.spec.ts` (colunas, etiquetas, rascunhos, valores).
+- Browser: filtros/ordenação na URL e após recarregar, pesquisa com espera, colunas (esconder, persistir, obrigatória,
+  repor), datas e ordenação nos lançamentos, gaveta com linhas e Escape, rascunho recuperado e descartado após
+  recarregar, índice das configurações, 390 px sem deslocamento horizontal; sem erros de consola.
+
+**Pendências**
+
+- Modelos ApprovalWorkflowPage, ReportPage, WizardPage, CalendarPage, KanbanPage e DocumentPreviewPage (UI-3).
+- Aplicar EntityListPage às restantes listas (organização, perfis, auditoria, contabilidade) e EntityFormPage aos
+  restantes formulários; NotificationCenter em painel lateral; ApprovalTimeline dedicada.
