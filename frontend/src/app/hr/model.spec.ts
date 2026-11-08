@@ -41,6 +41,25 @@ describe('colaborador: envio da ficha', () => {
       true,
       false,
     );
-    expect(none.some((g) => g.label === 'Pessoas e Talento')).toBe(false);
+    // Sem permissões de RH fica só "As minhas entrevistas" (qualquer membro pode ser entrevistador).
+    expect(none.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label)).toEqual([
+      'As minhas entrevistas',
+    ]);
+    const recruiter = visibleNavigation(
+      (p, any) => (any ? p === 'hr.recruitment.read' : false),
+      (f) => f === 'hr',
+      true,
+      false,
+    );
+    expect(
+      recruiter.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
+    ).toEqual(['Vagas', 'Candidatos', 'As minhas entrevistas']);
+    const noFeature = visibleNavigation(
+      () => true,
+      () => false,
+      true,
+      false,
+    );
+    expect(noFeature.some((g) => g.label === 'Pessoas e Talento')).toBe(false);
   });
 });

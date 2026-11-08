@@ -257,55 +257,62 @@ export class EmployeeService {
   }
 
   create(context: TenantContext, input: Record<string, unknown>) {
-    return runInTenant(context, async (scope) => {
-      const { values: v, issues } = this.normalize(input)
-      for (const key of ['code', 'fullName', 'legalEntityId', 'hireDate'])
-        if (v[key] === undefined || v[key] === null)
-          issues.push({ path: key, code: 'REQUIRED', message: 'Obrigatório.' })
-      if ('status' in v && v.status !== 'ACTIVE')
-        issues.push({
-          path: 'status',
-          code: 'INVALID',
-          message: 'Um colaborador novo fica activo.',
-        })
-      if (issues.length) throw ApiError.validation(issues)
-      const place: Placement = {
-        legalEntityId: v.legalEntityId as string,
-        branchId: (v.branchId as string) ?? null,
-        departmentId: (v.departmentId as string) ?? null,
-        membershipId: (v.membershipId as string) ?? null,
-      }
-      const s = await scopes(scope)
-      this.assertManage(s, place, context.membershipId)
-      this.assertSensitive(s, place, context.membershipId, v)
-      await this.checkReferences(scope, { ...v }, null)
-      const columns: string[] = []
-      const params: unknown[] = []
-      for (const [key, column] of Object.entries({ ...GENERAL_FIELDS, ...SENSITIVE_FIELDS }))
-        if (v[key] !== undefined) {
-          columns.push(column)
-          params.push(v[key])
-        }
-      let id: string
-      try {
-        const r = await scope.trx.rawQuery(
-          `insert into employees (tenant_id, created_by, updated_by, ${columns.join(', ')})
-           values (?, ?, ?, ${columns.map(() => '?').join(', ')}) returning id`,
-          [context.tenantId, context.userId, context.userId, ...params] as never[]
-        )
-        id = (r.rows[0] as { id: string }).id
-      } catch (error) {
-        mapUnique(error)
-      }
-      await audit(scope, {
-        action: 'hr.employee.created',
-        entityType: 'employee',
-        entityId: id,
-        changes: employeeChanges({}, v),
+    return runInTenant(context, (scope) => this.createIn(scope, input))
+  }
+
+  /**
+   * Cria a ficha na transacção de quem chama (usado também pela contratação do recrutamento): mesmas regras de
+   * âmbito, dados pessoais e coerência com a estrutura.
+   */
+  async createIn(scope: TenantScope, input: Record<string, unknown>) {
+    const context = scope.context
+    const { values: v, issues } = this.normalize(input)
+    for (const key of ['code', 'fullName', 'legalEntityId', 'hireDate'])
+      if (v[key] === undefined || v[key] === null)
+        issues.push({ path: key, code: 'REQUIRED', message: 'Obrigatório.' })
+    if ('status' in v && v.status !== 'ACTIVE')
+      issues.push({
+        path: 'status',
+        code: 'INVALID',
+        message: 'Um colaborador novo fica activo.',
       })
-      const row = await findRow(scope, id)
-      return view(row, covers(s.sensitive, placementOf(row), context.membershipId))
+    if (issues.length) throw ApiError.validation(issues)
+    const place: Placement = {
+      legalEntityId: v.legalEntityId as string,
+      branchId: (v.branchId as string) ?? null,
+      departmentId: (v.departmentId as string) ?? null,
+      membershipId: (v.membershipId as string) ?? null,
+    }
+    const s = await scopes(scope)
+    this.assertManage(s, place, context.membershipId)
+    this.assertSensitive(s, place, context.membershipId, v)
+    await this.checkReferences(scope, { ...v }, null)
+    const columns: string[] = []
+    const params: unknown[] = []
+    for (const [key, column] of Object.entries({ ...GENERAL_FIELDS, ...SENSITIVE_FIELDS }))
+      if (v[key] !== undefined) {
+        columns.push(column)
+        params.push(v[key])
+      }
+    let id: string
+    try {
+      const r = await scope.trx.rawQuery(
+        `insert into employees (tenant_id, created_by, updated_by, ${columns.join(', ')})
+         values (?, ?, ?, ${columns.map(() => '?').join(', ')}) returning id`,
+        [context.tenantId, context.userId, context.userId, ...params] as never[]
+      )
+      id = (r.rows[0] as { id: string }).id
+    } catch (error) {
+      mapUnique(error)
+    }
+    await audit(scope, {
+      action: 'hr.employee.created',
+      entityType: 'employee',
+      entityId: id,
+      changes: employeeChanges({}, v),
     })
+    const row = await findRow(scope, id)
+    return view(row, covers(s.sensitive, placementOf(row), context.membershipId))
   }
 
   update(

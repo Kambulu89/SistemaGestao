@@ -202,6 +202,38 @@ export type ScannedRoutes = {
     'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.set_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.onboarding': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.settings': { paramsTuple?: []; params?: {} }
+    'recruitment.update_settings': { paramsTuple?: []; params?: {} }
+    'recruitment.requisitions': { paramsTuple?: []; params?: {} }
+    'recruitment.create_requisition': { paramsTuple?: []; params?: {} }
+    'recruitment.requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.submit_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.decide_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.close_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.cancel_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.candidates': { paramsTuple?: []; params?: {} }
+    'recruitment.create_candidate': { paramsTuple?: []; params?: {} }
+    'recruitment.candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.applications': { paramsTuple?: []; params?: {} }
+    'recruitment.create_application': { paramsTuple?: []; params?: {} }
+    'recruitment.application': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.change_stage': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.schedule_interview': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.evaluate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.my_interviews': { paramsTuple?: []; params?: {} }
+    'recruitment.update_interview': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.submit_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.decide_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.respond_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.cancel_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.hire': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -309,6 +341,15 @@ export type ScannedRoutes = {
     'approvals.delegations': { paramsTuple?: []; params?: {} }
     'employees.index': { paramsTuple?: []; params?: {} }
     'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.onboarding': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.settings': { paramsTuple?: []; params?: {} }
+    'recruitment.requisitions': { paramsTuple?: []; params?: {} }
+    'recruitment.requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.candidates': { paramsTuple?: []; params?: {} }
+    'recruitment.candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.applications': { paramsTuple?: []; params?: {} }
+    'recruitment.application': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.my_interviews': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -404,6 +445,15 @@ export type ScannedRoutes = {
     'approvals.delegations': { paramsTuple?: []; params?: {} }
     'employees.index': { paramsTuple?: []; params?: {} }
     'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.onboarding': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.settings': { paramsTuple?: []; params?: {} }
+    'recruitment.requisitions': { paramsTuple?: []; params?: {} }
+    'recruitment.requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.candidates': { paramsTuple?: []; params?: {} }
+    'recruitment.candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.applications': { paramsTuple?: []; params?: {} }
+    'recruitment.application': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.my_interviews': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -487,6 +537,23 @@ export type ScannedRoutes = {
     'approvals.revoke_delegation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.store': { paramsTuple?: []; params?: {} }
     'employees.set_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_requisition': { paramsTuple?: []; params?: {} }
+    'recruitment.submit_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.decide_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.close_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.cancel_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_candidate': { paramsTuple?: []; params?: {} }
+    'recruitment.create_application': { paramsTuple?: []; params?: {} }
+    'recruitment.change_stage': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.schedule_interview': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.evaluate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.submit_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.decide_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.respond_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.cancel_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.hire': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -536,6 +603,11 @@ export type ScannedRoutes = {
     'fixed_assets.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_interview': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
@@ -544,6 +616,7 @@ export type ScannedRoutes = {
     'settings.update_settings': { paramsTuple?: []; params?: {} }
     'accounting.set_allocations': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineNo': ParamValue} }
     'preferences.update': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
+    'recruitment.update_settings': { paramsTuple?: []; params?: {} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

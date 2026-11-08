@@ -18,6 +18,11 @@ export const STATUS_LABELS: Record<string, string> = {
   PENDING_APPROVAL: 'Aguarda aprovação',
   CLOSED: 'Fechada',
   DISPOSED: 'Abatido',
+  OPEN: 'Aberta',
+  FILLED: 'Preenchida',
+  ACCEPTED: 'Aceite',
+  DECLINED: 'Recusada',
+  HIRED: 'Contratado',
 };
 
 const TONES: Record<string, string> = {
@@ -28,6 +33,10 @@ const TONES: Record<string, string> = {
   PENDING_APPROVAL: 'bg-warning-soft text-warning-text',
   INVITED: 'bg-warning-soft text-warning-text',
   DRAFT: 'bg-surface-2 text-fg',
+  OPEN: 'bg-success-soft text-success-text',
+  FILLED: 'bg-info-soft text-info-text',
+  ACCEPTED: 'bg-success-soft text-success-text',
+  HIRED: 'bg-success-soft text-success-text',
 };
 
 export const statusLabel = (code: string | null | undefined) =>

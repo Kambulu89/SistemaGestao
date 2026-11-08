@@ -799,6 +799,35 @@ export class CalendarSchema extends BaseModel {
   declare weekendDays: any
 }
 
+export class CandidateSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'email', 'fullName', 'id', 'notes', 'phone', 'source', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CandidateSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare email: string | null
+  @column()
+  declare fullName: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare phone: string | null
+  @column()
+  declare source: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class CloseTaskSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'done', 'doneAt', 'doneBy', 'id', 'note', 'periodId', 'tenantId', 'title', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = CloseTaskSchema.$columns
@@ -1425,6 +1454,222 @@ export class FxRevaluationSchema extends BaseModel {
   declare version: number
 }
 
+export class HrSettingSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'offerWorkflowId', 'requisitionWorkflowId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = HrSettingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare offerWorkflowId: string | null
+  @column()
+  declare requisitionWorkflowId: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class JobApplicationSchema extends BaseModel {
+  static $columns = ['candidateId', 'createdAt', 'createdBy', 'employeeId', 'id', 'requisitionId', 'stage', 'stageReason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = JobApplicationSchema.$columns
+  @column()
+  declare candidateId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare employeeId: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare requisitionId: string
+  @column()
+  declare stage: string
+  @column()
+  declare stageReason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class JobEvaluationSchema extends BaseModel {
+  static $columns = ['applicationId', 'comments', 'createdAt', 'createdBy', 'evaluatorMembershipId', 'id', 'interviewId', 'recommendation', 'score', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = JobEvaluationSchema.$columns
+  @column()
+  declare applicationId: string
+  @column()
+  declare comments: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare evaluatorMembershipId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare interviewId: string | null
+  @column()
+  declare recommendation: string
+  @column()
+  declare score: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class JobInterviewSchema extends BaseModel {
+  static $columns = ['applicationId', 'createdAt', 'createdBy', 'durationMinutes', 'id', 'interviewerMembershipId', 'location', 'mode', 'scheduledAt', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = JobInterviewSchema.$columns
+  @column()
+  declare applicationId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare durationMinutes: number
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare interviewerMembershipId: string
+  @column()
+  declare location: string | null
+  @column()
+  declare mode: string
+  @column.dateTime()
+  declare scheduledAt: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class JobOfferSchema extends BaseModel {
+  static $columns = ['applicationId', 'approvalRequestId', 'approvedAt', 'approvedBy', 'conditions', 'createdAt', 'createdBy', 'currency', 'employeeId', 'expiresOn', 'id', 'rejectionReason', 'respondedAt', 'salary', 'startDate', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = JobOfferSchema.$columns
+  @column()
+  declare applicationId: string
+  @column()
+  declare approvalRequestId: string | null
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare conditions: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare employeeId: string | null
+  @column.date()
+  declare expiresOn: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare rejectionReason: string | null
+  @column.dateTime()
+  declare respondedAt: DateTime | null
+  @column()
+  declare salary: string
+  @column.date()
+  declare startDate: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class JobRequisitionSchema extends BaseModel {
+  static $columns = ['approvalRequestId', 'approvedAt', 'approvedBy', 'branchId', 'code', 'createdAt', 'createdBy', 'currency', 'deadline', 'departmentId', 'id', 'justification', 'legalEntityId', 'positionId', 'quantity', 'rejectionReason', 'requirements', 'salaryMax', 'salaryMin', 'status', 'tenantId', 'title', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = JobRequisitionSchema.$columns
+  @column()
+  declare approvalRequestId: string | null
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare branchId: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column.date()
+  declare deadline: DateTime | null
+  @column()
+  declare departmentId: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare justification: string | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare positionId: string
+  @column()
+  declare quantity: number
+  @column()
+  declare rejectionReason: string | null
+  @column()
+  declare requirements: string | null
+  @column()
+  declare salaryMax: string
+  @column()
+  declare salaryMin: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class JournalEntrySchema extends BaseModel {
   static $columns = ['approvedAt', 'approvedBy', 'chartId', 'createdAt', 'createdBy', 'currency', 'description', 'documentDate', 'entryDate', 'exchangeRate', 'fiscalYearId', 'id', 'idempotencyKey', 'journalId', 'legalEntityId', 'number', 'periodId', 'postedAt', 'postedBy', 'reference', 'rejectionReason', 'reversalOfId', 'reversedById', 'source', 'sourceRef', 'status', 'submittedAt', 'submittedBy', 'tenantId', 'totalCredit', 'totalDebit', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = JournalEntrySchema.$columns
@@ -1768,6 +2013,43 @@ export class NotificationSchema extends BaseModel {
   declare title: string
   @column()
   declare type: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class OnboardingTaskSchema extends BaseModel {
+  static $columns = ['assigneeMembershipId', 'category', 'completedAt', 'completedBy', 'createdAt', 'createdBy', 'dueDate', 'employeeId', 'id', 'notes', 'status', 'tenantId', 'title', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = OnboardingTaskSchema.$columns
+  @column()
+  declare assigneeMembershipId: string | null
+  @column()
+  declare category: string
+  @column.dateTime()
+  declare completedAt: DateTime | null
+  @column()
+  declare completedBy: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare dueDate: DateTime | null
+  @column()
+  declare employeeId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare title: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
   @column()

@@ -31,6 +31,7 @@ const AdjustmentsController = () => import('#modules/accounting/http/adjustments
 const StatementsController = () => import('#modules/accounting/http/statements_controller')
 const ClosingController = () => import('#modules/accounting/http/closing_controller')
 const EmployeesController = () => import('#modules/hr/http/employees_controller')
+const RecruitmentController = () => import('#modules/hr/http/recruitment_controller')
 
 router
   .group(() => {
@@ -545,7 +546,8 @@ router
               .use(middleware.entitled({ feature: 'approvals' }))
 
             // Recursos humanos (Prompt 07): o âmbito RBAC (empresa, entidade, filial, departamento, próprio) e os dados
-            // pessoais são verificados no serviço com hr.read / hr.manage / hr.sensitive.
+            // pessoais são verificados no serviço com hr.read / hr.manage / hr.sensitive; o recrutamento com
+            // hr.recruitment.read / manage / approve sobre a colocação da vaga.
             router
               .group(() => {
                 router.get('employees', [EmployeesController, 'index'])
@@ -553,6 +555,54 @@ router
                 router.get('employees/:id', [EmployeesController, 'show'])
                 router.patch('employees/:id', [EmployeesController, 'update'])
                 router.post('employees/:id/status', [EmployeesController, 'setStatus'])
+                router.get('employees/:id/onboarding', [RecruitmentController, 'onboarding'])
+                router.post('employees/:id/onboarding', [
+                  RecruitmentController,
+                  'createOnboardingTask',
+                ])
+                router.patch('onboarding-tasks/:id', [
+                  RecruitmentController,
+                  'updateOnboardingTask',
+                ])
+                router
+                  .get('settings', [RecruitmentController, 'settings'])
+                  .use(middleware.can({ permission: 'hr.settings' }))
+                router
+                  .put('settings', [RecruitmentController, 'updateSettings'])
+                  .use(middleware.can({ permission: 'hr.settings' }))
+                router.get('requisitions', [RecruitmentController, 'requisitions'])
+                router.post('requisitions', [RecruitmentController, 'createRequisition'])
+                router.get('requisitions/:id', [RecruitmentController, 'requisition'])
+                router.patch('requisitions/:id', [RecruitmentController, 'updateRequisition'])
+                router.post('requisitions/:id/submit', [RecruitmentController, 'submitRequisition'])
+                router.post('requisitions/:id/decision', [
+                  RecruitmentController,
+                  'decideRequisition',
+                ])
+                router.post('requisitions/:id/close', [RecruitmentController, 'closeRequisition'])
+                router.post('requisitions/:id/cancel', [RecruitmentController, 'cancelRequisition'])
+                router.get('candidates', [RecruitmentController, 'candidates'])
+                router.post('candidates', [RecruitmentController, 'createCandidate'])
+                router.get('candidates/:id', [RecruitmentController, 'candidate'])
+                router.patch('candidates/:id', [RecruitmentController, 'updateCandidate'])
+                router.get('applications', [RecruitmentController, 'applications'])
+                router.post('applications', [RecruitmentController, 'createApplication'])
+                router.get('applications/:id', [RecruitmentController, 'application'])
+                router.post('applications/:id/stage', [RecruitmentController, 'changeStage'])
+                router.post('applications/:id/interviews', [
+                  RecruitmentController,
+                  'scheduleInterview',
+                ])
+                router.post('applications/:id/evaluations', [RecruitmentController, 'evaluate'])
+                router.post('applications/:id/offers', [RecruitmentController, 'createOffer'])
+                router.get('interviews/mine', [RecruitmentController, 'myInterviews'])
+                router.patch('interviews/:id', [RecruitmentController, 'updateInterview'])
+                router.patch('offers/:id', [RecruitmentController, 'updateOffer'])
+                router.post('offers/:id/submit', [RecruitmentController, 'submitOffer'])
+                router.post('offers/:id/decision', [RecruitmentController, 'decideOffer'])
+                router.post('offers/:id/response', [RecruitmentController, 'respondOffer'])
+                router.post('offers/:id/cancel', [RecruitmentController, 'cancelOffer'])
+                router.post('offers/:id/hire', [RecruitmentController, 'hire'])
               })
               .prefix('hr')
               .use(middleware.entitled({ feature: 'hr' }))

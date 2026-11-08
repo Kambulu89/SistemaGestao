@@ -61,12 +61,17 @@ export default class EmployeesController {
   }
 
   async store(ctx: HttpContext) {
-    const body = (await ctx.request.validateUsing(anyBody)) as Record<string, unknown>
+    const body = (await ctx.request.validateUsing(anyBody, { data: ctx.request.body() })) as Record<
+      string,
+      unknown
+    >
     return created(ctx, await employees.create(ctx.tenantContext!, body))
   }
 
   async update(ctx: HttpContext) {
-    const { expectedVersion, ...body } = await ctx.request.validateUsing(updateValidator)
+    const { expectedVersion, ...body } = await ctx.request.validateUsing(updateValidator, {
+      data: ctx.request.body(),
+    })
     return ok(
       ctx,
       await employees.update(
@@ -79,7 +84,7 @@ export default class EmployeesController {
   }
 
   async setStatus(ctx: HttpContext) {
-    const body = await ctx.request.validateUsing(statusValidator)
+    const body = await ctx.request.validateUsing(statusValidator, { data: ctx.request.body() })
     return ok(
       ctx,
       await employees.setStatus(

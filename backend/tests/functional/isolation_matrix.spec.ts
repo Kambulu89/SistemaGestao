@@ -310,9 +310,103 @@ async function populate(client: any) {
       taxId: '004567890LA041',
     })
   )
+  // Recrutamento (7.2): vaga aberta (aprovada por outro membro), candidato, candidatura, proposta e onboarding.
+  const hrDept = ok(
+    await as(client, s).post('/api/v1/organization/departments', {
+      code: 'DPA',
+      name: 'Departamento A',
+      legalEntityId: le.id,
+    })
+  )
+  const hrPosition = ok(
+    await as(client, s).post('/api/v1/organization/positions', {
+      code: 'POA',
+      name: 'Cargo A',
+      departmentId: hrDept.id,
+    })
+  )
+  const hrApprove = await createRole(client, s, 'aprova_rh_a', ['hr.recruitment.approve'])
+  ok(
+    await as(client, s).post(`/api/v1/members/${approver.memberId}/roles`, {
+      roleId: hrApprove.id,
+      scopeType: 'TENANT',
+    }),
+    200
+  )
+  const reqDraft = ok(
+    await as(client, s).post('/api/v1/hr/requisitions', {
+      code: 'VAGA-A',
+      title: 'Vaga A',
+      legalEntityId: le.id,
+      departmentId: hrDept.id,
+      positionId: hrPosition.id,
+      quantity: 1,
+      currency: 'AOA',
+      salaryMin: '100000',
+      salaryMax: '200000',
+    })
+  )
+  const reqSub = ok(
+    await as(client, s).post(`/api/v1/hr/requisitions/${reqDraft.id}/submit`, {
+      expectedVersion: reqDraft.version,
+    }),
+    200
+  )
+  const requisition = ok(
+    await as(client, approver.session).post(`/api/v1/hr/requisitions/${reqDraft.id}/decision`, {
+      decision: 'APPROVE',
+      expectedVersion: reqSub.version,
+    }),
+    200
+  )
+  const candidate = ok(
+    await as(client, s).post('/api/v1/hr/candidates', {
+      fullName: 'Candidato A',
+      email: 'cand.a@exemplo.ao',
+    })
+  )
+  const application = ok(
+    await as(client, s).post('/api/v1/hr/applications', {
+      requisitionId: requisition.id,
+      candidateId: candidate.id,
+    })
+  )
+  const screening = ok(
+    await as(client, s).post(`/api/v1/hr/applications/${application.id}/stage`, {
+      stage: 'SCREENING',
+      expectedVersion: application.version,
+    }),
+    200
+  )
+  const interview = ok(
+    await as(client, s).post(`/api/v1/hr/applications/${application.id}/interviews`, {
+      scheduledAt: '2030-01-10T10:00:00Z',
+      mode: 'ONSITE',
+      interviewerMembershipId: approver.memberId,
+    })
+  )
+  const offer = ok(
+    await as(client, s).post(`/api/v1/hr/applications/${application.id}/offers`, {
+      salary: '150000',
+      startDate: '2030-02-01',
+    })
+  )
+  const onboardingTask = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/onboarding`, {
+      category: 'DOCUMENTS',
+      title: 'Entregar documentos',
+    })
+  )
+  void screening
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
     employee,
+    requisition,
+    candidate,
+    application,
+    interview,
+    offer,
+    onboardingTask,
     closeTask,
     stmtTemplate,
     stmtNote,
@@ -382,6 +476,79 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'suspender colaborador',
         B.post(`/api/v1/hr/employees/${a.employee.id}/status`, { ...v, status: 'SUSPENDED' }),
+      ],
+      ['GET vaga', B.get(`/api/v1/hr/requisitions/${a.requisition.id}`)],
+      ['PATCH vaga', B.patch(`/api/v1/hr/requisitions/${a.requisition.id}`, { ...v, title: 'xx' })],
+      ['submeter vaga', B.post(`/api/v1/hr/requisitions/${a.requisition.id}/submit`, v)],
+      [
+        'decidir vaga',
+        B.post(`/api/v1/hr/requisitions/${a.requisition.id}/decision`, {
+          ...v,
+          decision: 'APPROVE',
+        }),
+      ],
+      ['fechar vaga', B.post(`/api/v1/hr/requisitions/${a.requisition.id}/close`, v)],
+      ['cancelar vaga', B.post(`/api/v1/hr/requisitions/${a.requisition.id}/cancel`, v)],
+      ['GET candidato', B.get(`/api/v1/hr/candidates/${a.candidate.id}`)],
+      ['PATCH candidato', B.patch(`/api/v1/hr/candidates/${a.candidate.id}`, { ...v, notes: 'x' })],
+      ['GET candidatura', B.get(`/api/v1/hr/applications/${a.application.id}`)],
+      [
+        'etapa da candidatura',
+        B.post(`/api/v1/hr/applications/${a.application.id}/stage`, {
+          ...v,
+          stage: 'REJECTED',
+          reason: 'x',
+        }),
+      ],
+      [
+        'marcar entrevista',
+        B.post(`/api/v1/hr/applications/${a.application.id}/interviews`, {
+          scheduledAt: '2030-01-11T10:00:00Z',
+          mode: 'PHONE',
+          interviewerMembershipId: a.member,
+        }),
+      ],
+      [
+        'PATCH entrevista',
+        B.patch(`/api/v1/hr/interviews/${a.interview.id}`, { ...v, status: 'DONE' }),
+      ],
+      [
+        'avaliar candidatura',
+        B.post(`/api/v1/hr/applications/${a.application.id}/evaluations`, {
+          score: 3,
+          recommendation: 'HOLD',
+        }),
+      ],
+      [
+        'nova proposta',
+        B.post(`/api/v1/hr/applications/${a.application.id}/offers`, {
+          salary: '150000',
+          startDate: '2030-02-01',
+        }),
+      ],
+      ['PATCH proposta', B.patch(`/api/v1/hr/offers/${a.offer.id}`, { ...v, salary: '160000' })],
+      ['submeter proposta', B.post(`/api/v1/hr/offers/${a.offer.id}/submit`, v)],
+      [
+        'decidir proposta',
+        B.post(`/api/v1/hr/offers/${a.offer.id}/decision`, { ...v, decision: 'APPROVE' }),
+      ],
+      [
+        'responder proposta',
+        B.post(`/api/v1/hr/offers/${a.offer.id}/response`, { ...v, accepted: true }),
+      ],
+      ['cancelar proposta', B.post(`/api/v1/hr/offers/${a.offer.id}/cancel`, v)],
+      ['contratar', B.post(`/api/v1/hr/offers/${a.offer.id}/hire`, { ...v, code: 'X1' })],
+      ['GET onboarding', B.get(`/api/v1/hr/employees/${a.employee.id}/onboarding`)],
+      [
+        'nova tarefa de onboarding',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/onboarding`, {
+          category: 'OTHER',
+          title: 'xx',
+        }),
+      ],
+      [
+        'PATCH tarefa de onboarding',
+        B.patch(`/api/v1/hr/onboarding-tasks/${a.onboardingTask.id}`, { ...v, status: 'DONE' }),
       ],
       ['GET dimensão', B.get(`/api/v1/accounting/dimensions/${a.dimension.id}`)],
       [
@@ -796,6 +963,20 @@ test.group('isolamento | matriz entre empresas', (group) => {
       hireDate: '2026-01-05',
     })
     crossManager.assertStatus(422)
+    // Candidatura de B com a vaga ou o candidato de A: recusada (inexistentes para B).
+    const crossApplication = await B.post('/api/v1/hr/applications', {
+      requisitionId: a.requisition.id,
+      candidateId: a.candidate.id,
+    })
+    assert.equal(crossApplication.status(), 422)
+    // As listas de B não trazem nada de A.
+    for (const url of [
+      '/api/v1/hr/requisitions',
+      '/api/v1/hr/candidates',
+      '/api/v1/hr/applications',
+    ])
+      assert.lengthOf((await B.get(url)).body().data, 0, url)
+    assert.lengthOf((await B.get('/api/v1/hr/interviews/mine')).body().data, 0)
     // Eventos de B com a entidade legal de A não usam as regras de A.
     const crossEvent = await B.post('/api/v1/accounting/posting-events', {
       legalEntityId: a.le.id,
@@ -843,6 +1024,10 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/accounting/charts/${a.chart.id}`,
       '/api/v1/hr/employees',
       `/api/v1/hr/employees/${a.employee.id}`,
+      '/api/v1/hr/requisitions',
+      `/api/v1/hr/applications/${a.application.id}`,
+      '/api/v1/hr/candidates',
+      '/api/v1/hr/settings',
     ]) {
       const r = await spoof.get(url)
       assert.equal(r.status(), 403, url)

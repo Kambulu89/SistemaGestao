@@ -213,3 +213,18 @@ preenche a quem tem a permissão no âmbito do colaborador, escrevê-los sem ela
 mas nunca os valores (`[RESERVADO]`). Os anexos do colaborador seguem o acesso aos dados pessoais. Por conterem dados
 pessoais, os formulários de RH não guardam rascunhos no browser (excepção a D-022). A cessação fica reservada ao fluxo
 de desligamento (7.11); aqui só há activo ↔ suspenso, com motivo opcional e auditado.
+
+## D-025 Recrutamento: âmbito da vaga, aprovação directa ou por workflow e contratação atómica (aceite)
+
+O recrutamento (7.2) reutiliza a estrutura organizacional: a vaga refere entidade legal, filial, departamento e cargo
+(sem cadastros próprios) e é essa colocação que decide o âmbito de `hr.recruitment.read|manage|approve` (como em D-024,
+verificado no serviço); candidaturas, entrevistas e propostas herdam o âmbito da vaga e fora dele não existem (404). Os
+candidatos não são colaboradores nem utilizadores e só guardam contactos mínimos; a auditoria regista que mudaram, nunca
+os valores. Vagas e propostas são aprovadas por um workflow configurável por empresa (`hr_settings`, tipos de assunto
+`job_requisition` e `job_offer`, efeito aplicado na transacção da decisão) ou, sem workflow, por decisão directa de quem
+tem `hr.recruitment.approve` no âmbito — nunca quem a preparou (segregação). A remuneração aprovada na vaga limita a
+proposta (comparação em cêntimos inteiros/`numeric`, nunca `float`). A contratação converte a proposta aceite em
+colaborador com a mesma regra de 7.1 (`hr.manage` na colocação; contactos do candidato só passam a dados pessoais com
+`hr.sensitive`), cria a checklist de onboarding e marca a vaga preenchida, tudo numa transacção com a vaga bloqueada:
+duas contratações do último posto não passam ambas e repetir não cria outro colaborador. O entrevistador vê e avalia só
+as suas entrevistas, mesmo sem outras permissões de RH.

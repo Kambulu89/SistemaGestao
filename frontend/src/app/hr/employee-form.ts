@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Api, ApiError } from '../core/api';
 import { Breadcrumbs } from '../core/breadcrumbs';
 import { type HasUnsavedChanges, snapshot, warnOnUnload } from '../core/unsaved';
+import { OnboardingCard } from './onboarding-card';
 import { Workspace } from '../core/workspace';
 import { Attachments } from '../ui/attachments';
 import { AuditHistory } from '../ui/audit-history';
@@ -56,6 +57,7 @@ interface Option {
     FieldList,
     Attachments,
     AuditHistory,
+    OnboardingCard,
     ErrorState,
     Skeleton,
     Icon,
@@ -139,6 +141,7 @@ interface Option {
               [canWrite]="canManage() && workspace.has('attachments.storage_mb')"
             />
           }
+          <app-onboarding-card [employeeId]="e.id" />
           <app-audit-history entityType="employee" [entityId]="e.id" [refreshKey]="e.version" />
         </div>
       </app-page-detail>

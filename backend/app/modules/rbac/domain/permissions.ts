@@ -185,6 +185,29 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Ver e alterar dados pessoais (documentos, NIF, segurança social, morada, banco) e anexos dos colaboradores no âmbito atribuído.',
   },
+  {
+    code: 'hr.recruitment.read',
+    module: 'hr',
+    description:
+      'Ver vagas, candidatos, candidaturas, entrevistas e propostas no âmbito atribuído.',
+  },
+  {
+    code: 'hr.recruitment.manage',
+    module: 'hr',
+    description:
+      'Criar vagas e candidatos, gerir candidaturas, entrevistas e propostas, e contratar, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.recruitment.approve',
+    module: 'hr',
+    description:
+      'Aprovar vagas (remuneração autorizada) e propostas no âmbito atribuído, sem ser quem as preparou.',
+  },
+  {
+    code: 'hr.settings',
+    module: 'hr',
+    description: 'Configurar os recursos humanos (workflows de aprovação do recrutamento).',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

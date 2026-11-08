@@ -183,7 +183,7 @@ export const routes: Routes = [
             path: 'rh',
             title: 'Recursos humanos',
             canActivate: [accessGuard],
-            data: { permission: 'hr.read', feature: 'hr', anyScope: true },
+            data: { feature: 'hr' },
             loadChildren: () => import('./hr/hr.routes').then((m) => m.HR_ROUTES),
           },
           {

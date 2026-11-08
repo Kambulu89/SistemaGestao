@@ -83,6 +83,64 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
   'POST /api/v1/hr/employees/:id/status':
     'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'GET /api/v1/hr/requisitions':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'GET /api/v1/hr/requisitions/:id':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'PATCH /api/v1/hr/requisitions/:id':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions/:id/submit':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions/:id/decision':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions/:id/close':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions/:id/cancel':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'GET /api/v1/hr/candidates':
+    'candidatos de vagas visíveis ou registados pelo próprio (hr.recruitment.*) verificado no serviço',
+  'POST /api/v1/hr/candidates': 'hr.recruitment.manage em algum âmbito verificado no serviço',
+  'GET /api/v1/hr/candidates/:id':
+    'candidatos de vagas visíveis ou registados pelo próprio (hr.recruitment.*) verificado no serviço',
+  'PATCH /api/v1/hr/candidates/:id':
+    'quem registou ou gere uma vaga do candidato (hr.recruitment.manage) verificado no serviço',
+  'GET /api/v1/hr/applications':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/applications':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'GET /api/v1/hr/applications/:id':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/applications/:id/stage':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/applications/:id/interviews':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/applications/:id/evaluations':
+    'entrevistador da entrevista ou hr.recruitment.manage no âmbito da vaga, verificado no serviço',
+  'POST /api/v1/hr/applications/:id/offers':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'GET /api/v1/hr/interviews/mine': 'só as entrevistas atribuídas ao próprio membro',
+  'PATCH /api/v1/hr/interviews/:id':
+    'hr.recruitment.manage no âmbito da vaga, ou o entrevistador a marcar a sua como realizada',
+  'PATCH /api/v1/hr/offers/:id':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/submit':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/decision':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/response':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/cancel':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/hire':
+    'hr.recruitment.manage no âmbito da vaga e hr.manage na colocação do novo colaborador, verificados no serviço',
+  'GET /api/v1/hr/employees/:id/onboarding':
+    'âmbito RBAC de hr.read/hr.manage do colaborador verificado no serviço; o responsável conclui a sua tarefa',
+  'POST /api/v1/hr/employees/:id/onboarding':
+    'âmbito RBAC de hr.read/hr.manage do colaborador verificado no serviço; o responsável conclui a sua tarefa',
+  'PATCH /api/v1/hr/onboarding-tasks/:id':
+    'âmbito RBAC de hr.read/hr.manage do colaborador verificado no serviço; o responsável conclui a sua tarefa',
   'GET /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'PUT /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'GET /api/v1/dashboard': 'cada secção exige a permissão e a funcionalidade do módulo dono',

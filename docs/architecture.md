@@ -22,7 +22,7 @@ técnico partilhado e não depende de módulos.
 | `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
 | `dashboard`                                                   | Painel e pesquisa global                                                                  |
 | `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                     |
-| `hr`                                                          | Colaboradores (ficha 360), âmbitos de RH e dados pessoais por campo                       |
+| `hr`                                                          | Colaboradores, recrutamento e onboarding; âmbitos de RH e dados pessoais por campo        |
 
 ## Multi-tenancy
 
@@ -327,7 +327,7 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
 
 ## Recursos humanos (módulo `hr`, Prompt 07)
 
-Bloco 7.1 feito (ver `docs/reports/prompt-07.md` e D-024).
+Blocos 7.1 e 7.2 feitos (ver `docs/reports/prompt-07.md`, D-024 e D-025).
 
 - **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
   cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
@@ -341,3 +341,17 @@ Bloco 7.1 feito (ver `docs/reports/prompt-07.md` e D-024).
 - **Auditoria**: `hr.employee.created|updated|status_changed`, com os campos pessoais como `[RESERVADO]`.
 - **Anexos**: tipo `employee` (funcionalidade `hr`), só com acesso aos dados pessoais do colaborador.
 - Funcionalidade `hr` (plano); sem ela as rotas dão 403 `NOT_ENTITLED`.
+- **Recrutamento** (7.2): `job_requisitions` (vaga com cargo, requisitos, quantidade, prazo e remuneração autorizada em
+  `numeric`; DRAFT → PENDING_APPROVAL → OPEN → FILLED/CLOSED/CANCELLED), `candidates` (contactos mínimos, email único
+  sem maiúsculas), `job_applications` (uma por vaga e candidato; etapas APPLIED → SCREENING → INTERVIEW → OFFER → HIRED,
+  ou REJECTED/WITHDRAWN), `job_interviews`, `job_evaluations` (só de acréscimo, uma por avaliador e entrevista),
+  `job_offers` (salário dentro da remuneração autorizada; uma em curso por candidatura) e `onboarding_tasks`.
+- **Aprovações do recrutamento**: `hr_settings` aponta para workflows publicados (`job_requisition`, `job_offer`); sem
+  workflow, decisão directa com `hr.recruitment.approve` no âmbito e segregação (403 `SEGREGATION`); com workflow, a
+  decisão directa dá 409 `USE_APPROVAL_WORKFLOW` e o efeito chega por `onRequisitionDecided`/`onOfferDecided`
+  (registados em `start/module_hooks.ts`).
+- **Contratação** (`POST /hr/offers/:id/hire`): numa transacção, com a vaga bloqueada, cria o colaborador
+  (`EmployeeService.createIn`, mesmas regras de 7.1), a checklist de onboarding e marca a vaga FILLED ao atingir a
+  quantidade; repetir dá 409.
+- **Validação**: os controllers do RH validam só o corpo JSON (`{ data: ctx.request.body() }`), para que parâmetros,
+  cabeçalhos e cookies nunca cheguem aos serviços nem à auditoria.
