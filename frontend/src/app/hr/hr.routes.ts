@@ -71,6 +71,25 @@ export const HR_ROUTES: Routes = [
     loadComponent: () => import('./contract-detail').then((m) => m.ContractDetail),
   },
   {
+    path: 'ausencias',
+    title: 'Férias e ausências',
+    children: [
+      { path: '', loadComponent: () => import('./leave-requests').then((m) => m.LeaveRequests) },
+      {
+        path: 'configuracao',
+        title: 'Configuração de férias e ausências',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.leave.settings' },
+        loadComponent: () => import('./leave-settings').then((m) => m.LeaveSettings),
+      },
+      {
+        path: ':id',
+        title: 'Pedido de ausência',
+        loadComponent: () => import('./leave-request-detail').then((m) => m.LeaveRequestDetail),
+      },
+    ],
+  },
+  {
     path: 'entrevistas',
     title: 'As minhas entrevistas',
     loadComponent: () => import('./my-interviews').then((m) => m.MyInterviews),

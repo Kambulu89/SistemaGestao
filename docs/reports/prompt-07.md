@@ -1,18 +1,19 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.3 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.4 a 7.13 seguem, um de
-cada vez. Decisões D-024 a D-026.
+Estado: **7.1 a 7.4 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.5 a 7.13 seguem, um de
+cada vez. Decisões D-024 a D-027.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
 
 ## Matriz AS-IS / TO-BE
 
-| Bloco                       | AS-IS (fim do Prompt 06)                                        | TO-BE                                                                                                                                                                                                                                                     | Estado |
-| --------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 7.1 Colaborador             | Estrutura organizacional e memberships; nenhuma ficha de pessoa | Ficha 360 (identificação, organização, dados pessoais, morada, emergência, formação, banco, anexos), âmbitos de RH (empresa/entidade/filial/departamento/próprio), visibilidade por campo, auditoria reservada                                            | Feito  |
-| 7.2 Recrutamento/onboarding | Nada                                                            | Vaga com remuneração autorizada aprovada (directa ou workflow), candidatos, candidaturas por etapas, entrevistas, avaliações, proposta aprovada e respondida, contratação que cria o colaborador e a checklist (documentos, conta, acessos, equipamentos) | Feito  |
-| 7.3 Contratos/carreira      | Colocação só na ficha, sem histórico; sem contratos             | Contrato (tipo, datas, experiência, jornada, remuneração, estado) com adendas e renovações datadas, suspensão, retoma e termo com histórico; condições numa data; histórico de cargos, transferências e promoções com vigência                            | Feito  |
+| Bloco                       | AS-IS (fim do Prompt 06)                                        | TO-BE                                                                                                                                                                                                                                                                                                 | Estado |
+| --------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 7.1 Colaborador             | Estrutura organizacional e memberships; nenhuma ficha de pessoa | Ficha 360 (identificação, organização, dados pessoais, morada, emergência, formação, banco, anexos), âmbitos de RH (empresa/entidade/filial/departamento/próprio), visibilidade por campo, auditoria reservada                                                                                        | Feito  |
+| 7.2 Recrutamento/onboarding | Nada                                                            | Vaga com remuneração autorizada aprovada (directa ou workflow), candidatos, candidaturas por etapas, entrevistas, avaliações, proposta aprovada e respondida, contratação que cria o colaborador e a checklist (documentos, conta, acessos, equipamentos)                                             | Feito  |
+| 7.3 Contratos/carreira      | Colocação só na ficha, sem histórico; sem contratos             | Contrato (tipo, datas, experiência, jornada, remuneração, estado) com adendas e renovações datadas, suspensão, retoma e termo com histórico; condições numa data; histórico de cargos, transferências e promoções com vigência                                                                        | Feito  |
+| 7.4 Férias/ausências        | Calendários e feriados (Prompt 05); nada de férias              | Tipos de ausência, política versionada com fonte legal, conta-corrente de dias (direito proporcional, transporte, expiração, ajustes, gozo, reversão), pedidos com contagem pelo calendário, sobreposição e saldo, aprovação da chefia, confidencialidade médica, ausências para assiduidade/salários | Feito  |
 
 ## Modelo
 
@@ -65,6 +66,18 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
   `PERMANENT`, `BEFORE_HIRE`, `BEFORE_SUSPENSION`, `USE_MOVEMENT`, `USE_NEW_CONTRACT`, `FUTURE_DATE`,
   `NOT_AFTER_CURRENT`, `NO_CHANGE`, `POSITION_REQUIRED`, `CODE_TAKEN`.
 
+### 7.4 Férias e ausências
+
+- Migração `0025_create_hr_leave`: `leave_types`, `leave_policies`, `leave_requests`, `leave_ledger`.
+- `GET /hr/leave/types` (todos os membros com RH), `POST|PATCH /hr/leave/types[/:id]`, `GET|POST /hr/leave/policies`,
+  `GET|PATCH /hr/leave/policies/:id`, `POST /hr/leave/policies/:id/publish` (`hr.leave.settings`).
+- `POST /hr/leave/accruals`, `GET /hr/leave/me`, `GET /hr/employees/:id/leave`, `POST /hr/employees/:id/leave/adjustments`.
+- `GET|POST /hr/leave/requests`, `POST /hr/leave/requests/preview`, `GET /hr/leave/requests/:id`,
+  `POST /hr/leave/requests/:id/decision|cancel`; anexos com `subjectType=leave_request`.
+- Permissões novas: `hr.leave.read`, `hr.leave.request`, `hr.leave.approve`, `hr.leave.manage`, `hr.leave.settings`.
+- Erros: `OVERLAP`, `CROSS_YEAR`, `ZERO_DAYS`, `INSUFFICIENT_BALANCE`, `TOO_MANY_DAYS`, `NO_POLICY`, `SEGREGATION`,
+  `POLICY_CONFLICT`, `NOT_AFTER_PREVIOUS`, `IN_USE`, `NOT_LINKED`, `INVALID_STATE`, `OUT_OF_SCOPE`.
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -89,6 +102,15 @@ Recrutamento (7.2), no mesmo domínio:
 - As minhas entrevistas: o entrevistador marca como realizada e avalia.
 - Ficha do colaborador: cartão de onboarding com progresso; tarefas por estado.
 - Configuração de RH: workflows das vagas e propostas. O editor de workflows ganhou o tipo de assunto.
+
+Férias e ausências (7.4):
+
+- Férias e ausências (todos os membros da empresa com RH): saldo do próprio no subtítulo, vistas "A aprovar por mim" e
+  "Os meus pedidos", estado na URL; "Pedir ausência" com contagem de dias e saldo antes de enviar; "Gerar direitos do
+  ano" (quem gere).
+- Pedido: aprovar/recusar (com motivo), cancelar, justificativo; tipos confidenciais mostram à chefia só as datas.
+- Ficha do colaborador: cartão Férias com direito, gozados, pendentes, disponível, política e conta-corrente; ajustes.
+- Configuração: políticas (nova, nova versão, publicar) e tipos de ausência.
 
 Contratos e carreira (7.3), na ficha do colaborador:
 
@@ -140,9 +162,27 @@ Testes do 7.3:
   activado, adenda salarial reflectida nas condições de hoje, renovação inválida recusada junto do campo e válida;
   suspensão sem motivo recusada, retoma, termo e 6 eventos; 390 px sem deslocamento horizontal. Sem erros na consola.
 
+Testes do 7.4:
+
+- Backend funcional `hr_leave.spec.ts` (3 testes): política versionada (fonte obrigatória, imutável, nova versão fecha a
+  anterior, conflito de âmbito), tipos; direito proporcional (22 × 9/12 = 16,5), idempotência, transporte 5 e expiração
+  1,5; contagem com feriado (4 dias), sobreposição, ano cruzado, zero dias, saldo insuficiente; chefia aprova, o próprio
+  e quem registou não; cancelamento de aprovado com reversão; ajustes; self-service (`/leave/me`); confidencialidade
+  (chefia não vê tipo, motivo nem anexo; auditoria sem tipo nem motivo; leitor de outro departamento não vê).
+- Backend unitário `hr_leave_domain.spec.ts` (4 testes): meses de serviço, direito com arredondamentos, transporte,
+  dias e regras do pedido.
+- `isolation_matrix` (políticas, tipos, pedidos, saldos, ajustes e geração de direitos de outra empresa),
+  `routes_protection` (11 rotas justificadas; tipos e políticas com `can()`).
+- Frontend `hr/leave-model.spec.ts` (3 testes) e navegação.
+- Browser (7 passos, dois utilizadores): política criada e publicada pela interface (fonte obrigatória), tipo de
+  ausência; direitos gerados (20,17 para admissão a 05/01); pedido de 5 dias com contagem e saldo antes de enviar; quem
+  registou não aprova; a chefia aprova em "A aprovar por mim" e o saldo passa a 15,17 com o gozo na conta-corrente;
+  doença confidencial decidida pela chefia sem tipo, motivo nem anexos (o admin vê); 390 px sem deslocamento. Sem erros
+  na consola.
+
 ## Pendências
 
-- 7.4 a 7.13 (férias, compensação, adiantamentos, processamento salarial, IRT/INSS, recibos,
+- 7.5 a 7.13 (compensação, adiantamentos, processamento salarial, IRT/INSS, recibos,
   formação, cessação, portais e relatórios).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
@@ -150,3 +190,5 @@ Testes do 7.3:
 - Contratos e carreira: limites legais (termo, renovações, período experimental) por confirmar na LGT 12/23; movimentos
   com data futura (agendados) e transferência entre entidades legais ficam por fazer; documento do contrato em PDF fica
   para o bloco de documentos/recibos.
+- Férias: meios dias, pedidos que atravessam o ano (dividir em dois), proporcionais na cessação (7.11), notificações
+  à chefia, e valores da LGT 12/23 por confirmar pela empresa na política.

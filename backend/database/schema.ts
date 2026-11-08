@@ -2023,6 +2023,172 @@ export class JournalSchema extends BaseModel {
   declare version: number
 }
 
+export class LeaveLedgerSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'days', 'effectiveDate', 'employeeId', 'id', 'kind', 'leaveRequestId', 'policyId', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'year'] as const
+  $columns = LeaveLedgerSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare days: string
+  @column.date()
+  declare effectiveDate: DateTime
+  @column()
+  declare employeeId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare leaveRequestId: string | null
+  @column()
+  declare policyId: string | null
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare year: number
+}
+
+export class LeavePolicySchema extends BaseModel {
+  static $columns = ['annualDays', 'calendarId', 'carryoverMaxDays', 'code', 'createdAt', 'createdBy', 'firstYearDaysPerMonth', 'firstYearRule', 'id', 'legalEntityId', 'legalReference', 'name', 'policyVersion', 'publishedAt', 'rounding', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = LeavePolicySchema.$columns
+  @column()
+  declare annualDays: string
+  @column()
+  declare calendarId: string
+  @column()
+  declare carryoverMaxDays: string
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare firstYearDaysPerMonth: string | null
+  @column()
+  declare firstYearRule: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string | null
+  @column()
+  declare legalReference: string
+  @column()
+  declare name: string
+  @column()
+  declare policyVersion: number
+  @column.dateTime()
+  declare publishedAt: DateTime | null
+  @column()
+  declare rounding: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class LeaveRequestSchema extends BaseModel {
+  static $columns = ['cancelReason', 'createdAt', 'createdBy', 'days', 'decidedAt', 'decidedByMembershipId', 'decisionComment', 'employeeId', 'endDate', 'id', 'leaveTypeId', 'reason', 'startDate', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'year'] as const
+  $columns = LeaveRequestSchema.$columns
+  @column()
+  declare cancelReason: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare days: string
+  @column.dateTime()
+  declare decidedAt: DateTime | null
+  @column()
+  declare decidedByMembershipId: string | null
+  @column()
+  declare decisionComment: string | null
+  @column()
+  declare employeeId: string
+  @column.date()
+  declare endDate: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare leaveTypeId: string
+  @column()
+  declare reason: string | null
+  @column.date()
+  declare startDate: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare year: number
+}
+
+export class LeaveTypeSchema extends BaseModel {
+  static $columns = ['category', 'code', 'confidential', 'counting', 'createdAt', 'createdBy', 'deductsBalance', 'id', 'maxDaysPerRequest', 'name', 'paid', 'requiresDocument', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = LeaveTypeSchema.$columns
+  @column()
+  declare category: string
+  @column()
+  declare code: string
+  @column()
+  declare confidential: boolean
+  @column()
+  declare counting: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare deductsBalance: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare maxDaysPerRequest: string | null
+  @column()
+  declare name: string
+  @column()
+  declare paid: boolean
+  @column()
+  declare requiresDocument: boolean
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class LegalEntitySchema extends BaseModel {
   static $columns = ['addressLine', 'code', 'commune', 'countryCode', 'createdAt', 'createdBy', 'email', 'fiscalYearStartMonth', 'functionalCurrency', 'id', 'legalName', 'municipality', 'neighbourhood', 'phone', 'postalCode', 'province', 'representativeName', 'representativeRole', 'status', 'taxId', 'taxRegime', 'tenantId', 'tradeName', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'vatRegistered', 'version', 'website'] as const
   $columns = LegalEntitySchema.$columns

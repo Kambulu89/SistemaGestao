@@ -22,7 +22,7 @@ técnico partilhado e não depende de módulos.
 | `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
 | `dashboard`                                                   | Painel e pesquisa global                                                                  |
 | `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                     |
-| `hr`                                                          | Colaboradores, recrutamento, contratos e carreira; âmbitos de RH e dados por campo        |
+| `hr`                                                          | Colaboradores, recrutamento, contratos, carreira, férias e ausências; âmbitos de RH       |
 
 ## Multi-tenancy
 
@@ -327,7 +327,7 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
 
 ## Recursos humanos (módulo `hr`, Prompt 07)
 
-Blocos 7.1 a 7.3 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-026).
+Blocos 7.1 a 7.4 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-027).
 
 - **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
   cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
@@ -364,3 +364,11 @@ Blocos 7.1 a 7.3 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-026).
   `POST /hr/employees/:id/assignments` (TRANSFER/PROMOTION/CHANGE, data até hoje, versão da ficha) fecha o período na
   véspera, abre o novo e actualiza a ficha; a criação do colaborador abre o período HIRE e os colaboradores anteriores
   ganham-no no primeiro movimento. A ficha recusa mudanças de colocação (`USE_MOVEMENT`).
+- **Férias e ausências** (7.4): `leave_types` (categoria, remunerada, desconta saldo, dias úteis/calendário, justificativo,
+  confidencial), `leave_policies` (código + versão, fonte legal, calendário, dias anuais, regra do primeiro ano,
+  arredondamento, transporte; publicada não muda), `leave_ledger` (conta-corrente só de acréscimo; índices parciais
+  únicos para direito/transporte/expiração por ano e gozo/reversão por pedido) e `leave_requests`. Ver: o próprio, a
+  chefia directa ou `hr.leave.read`; pedir: o próprio com `hr.leave.request` ou `hr.leave.manage`; decidir: chefia ou
+  `hr.leave.approve`, nunca o próprio nem quem registou; configurar: `hr.leave.settings`. Contagem com
+  `workingDaysBetween` (calendários das configurações). Para assiduidade e salários: `approvedAbsences(scope,
+employeeId, from, to)` em `#modules/hr/index`.

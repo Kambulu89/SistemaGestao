@@ -216,6 +216,34 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Criar, activar, suspender, terminar e alterar por adenda ou renovação contratos de trabalho no âmbito atribuído.',
   },
   {
+    code: 'hr.leave.read',
+    module: 'hr',
+    description:
+      'Ver pedidos de ausência e saldos de férias dos colaboradores no âmbito atribuído.',
+  },
+  {
+    code: 'hr.leave.request',
+    module: 'hr',
+    description: 'Pedir férias e ausências para si próprio (self-service).',
+  },
+  {
+    code: 'hr.leave.approve',
+    module: 'hr',
+    description: 'Aprovar ou recusar pedidos de ausência no âmbito atribuído (nunca os próprios).',
+  },
+  {
+    code: 'hr.leave.manage',
+    module: 'hr',
+    description:
+      'Registar ausências por conta dos colaboradores, gerar direitos de férias, ajustar saldos e cancelar ausências aprovadas, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.leave.settings',
+    module: 'hr',
+    description:
+      'Configurar tipos de ausência e políticas de férias (versionadas, com fonte legal).',
+  },
+  {
     code: 'hr.settings',
     module: 'hr',
     description: 'Configurar os recursos humanos (workflows de aprovação do recrutamento).',

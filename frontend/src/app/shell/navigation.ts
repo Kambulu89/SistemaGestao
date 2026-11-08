@@ -243,6 +243,13 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Pessoas',
       },
       {
+        label: 'Férias e ausências',
+        path: '/rh/ausencias',
+        icon: 'calendar',
+        feature: 'hr',
+        section: 'Pessoas',
+      },
+      {
         label: 'Vagas',
         path: '/rh/vagas',
         icon: 'badge',
@@ -266,6 +273,14 @@ export const NAVIGATION: NavGroup[] = [
         icon: 'calendar',
         feature: 'hr',
         section: 'Recrutamento',
+      },
+      {
+        label: 'Férias e ausências',
+        path: '/rh/ausencias/configuracao',
+        icon: 'settings',
+        permission: 'hr.leave.settings',
+        feature: 'hr',
+        section: 'Configuração',
       },
       {
         label: 'Configuração de RH',

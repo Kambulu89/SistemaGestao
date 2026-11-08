@@ -7,6 +7,7 @@ import { Breadcrumbs } from '../core/breadcrumbs';
 import { type HasUnsavedChanges, snapshot, warnOnUnload } from '../core/unsaved';
 import { CareerCard } from './career-card';
 import { ContractsCard } from './contracts-card';
+import { LeaveCard } from './leave-card';
 import { OnboardingCard } from './onboarding-card';
 import { Workspace } from '../core/workspace';
 import { Attachments } from '../ui/attachments';
@@ -62,6 +63,7 @@ interface Option {
     OnboardingCard,
     CareerCard,
     ContractsCard,
+    LeaveCard,
     ErrorState,
     Skeleton,
     Icon,
@@ -134,6 +136,7 @@ interface Option {
             (moved)="reload()"
           />
           <app-contracts-card [employeeId]="e.id" [hireDate]="e.hireDate" />
+          <app-leave-card [employeeId]="e.id" />
         </div>
         <div aside>
           <section class="card" aria-labelledby="emp-summary">

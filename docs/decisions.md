@@ -245,3 +245,20 @@ aceitar mudanças de colocação (422 `USE_MOVEMENT`) e a entidade legal não mu
 entidade). Movimentos só com data até hoje (sem agendamento por agora). Limites legais (duração e renovações de
 contratos a prazo, período experimental) não estão no código: dependem da Lei Geral do Trabalho em vigor e ficam por
 confirmar antes de qualquer validação legal.
+
+## D-027 Férias: política versionada sem valores legais fixos, conta-corrente de dias e confidencialidade médica (aceite)
+
+Os dias de férias, a regra do ano de admissão (completo, proporcional aos meses completos ou dias por mês completo), o
+arredondamento e o transporte máximo vêm de uma política configurada pela empresa, com a fonte legal obrigatória e
+versionada: publicada não se altera, uma nova versão começa numa data posterior e fecha a anterior na véspera; não há
+duas políticas em vigor para o mesmo âmbito. O sistema não fixa nenhum valor da Lei Geral do Trabalho. O saldo é uma
+conta-corrente só de acréscimo por colaborador e ano (direito, transporte, expiração, ajuste, gozo, reversão), em
+`numeric(6,2)`; gerar o direito é idempotente (um direito, um transporte e uma expiração por ano, garantidos pela base
+de dados) e um recálculo regista só a diferença. Os dias de um pedido são contados pelo servidor (dias úteis do
+calendário da política, com feriados, ou dias de calendário), no mesmo ano, sem sobreposição e dentro do saldo
+disponível (que desconta os pendentes); a aprovação volta a verificar o saldo com o colaborador bloqueado. Decide a
+chefia directa ou quem tem `hr.leave.approve` no âmbito — nunca o próprio nem quem registou o pedido. Cancelar uma
+ausência aprovada é de quem gere e devolve os dias por reversão. Tipos confidenciais (ex.: doença) mostram a quem
+decide só as datas: tipo, motivo e justificativos ficam para o próprio e para `hr.sensitive`, e a auditoria não regista o
+tipo nem o motivo. As ausências aprovadas ficam disponíveis para assiduidade e processamento salarial
+(`approvedAbsences`).

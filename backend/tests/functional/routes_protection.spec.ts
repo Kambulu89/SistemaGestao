@@ -165,6 +165,27 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de hr.read/hr.manage sobre a colocação (antiga e nova) verificado no serviço',
   'POST /api/v1/hr/employees/:id/assignments':
     'âmbito RBAC de hr.read/hr.manage sobre a colocação (antiga e nova) verificado no serviço',
+  'GET /api/v1/hr/leave/types':
+    'catálogo de tipos de ausência, necessário a quem pede (sem dados pessoais)',
+  'GET /api/v1/hr/leave/me': 'só a ficha ligada à conta do próprio membro',
+  'POST /api/v1/hr/leave/accruals':
+    'hr.leave.manage no âmbito; só gera direitos dos colaboradores cobertos',
+  'GET /api/v1/hr/employees/:id/leave':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/employees/:id/leave/adjustments':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'GET /api/v1/hr/leave/requests':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/leave/requests':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/leave/requests/preview':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'GET /api/v1/hr/leave/requests/:id':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/leave/requests/:id/decision':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/leave/requests/:id/cancel':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
   'GET /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'PUT /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'GET /api/v1/dashboard': 'cada secção exige a permissão e a funcionalidade do módulo dono',

@@ -33,6 +33,7 @@ const ClosingController = () => import('#modules/accounting/http/closing_control
 const EmployeesController = () => import('#modules/hr/http/employees_controller')
 const RecruitmentController = () => import('#modules/hr/http/recruitment_controller')
 const CareerController = () => import('#modules/hr/http/career_controller')
+const LeaveController = () => import('#modules/hr/http/leave_controller')
 
 router
   .group(() => {
@@ -556,6 +557,38 @@ router
                 router.get('employees/:id', [EmployeesController, 'show'])
                 router.patch('employees/:id', [EmployeesController, 'update'])
                 router.post('employees/:id/status', [EmployeesController, 'setStatus'])
+                router.get('leave/types', [LeaveController, 'types'])
+                router
+                  .post('leave/types', [LeaveController, 'createType'])
+                  .use(middleware.can({ permission: 'hr.leave.settings' }))
+                router
+                  .patch('leave/types/:id', [LeaveController, 'updateType'])
+                  .use(middleware.can({ permission: 'hr.leave.settings' }))
+                router
+                  .get('leave/policies', [LeaveController, 'policies'])
+                  .use(middleware.can({ permission: 'hr.leave.settings' }))
+                router
+                  .post('leave/policies', [LeaveController, 'createPolicy'])
+                  .use(middleware.can({ permission: 'hr.leave.settings' }))
+                router
+                  .get('leave/policies/:id', [LeaveController, 'policy'])
+                  .use(middleware.can({ permission: 'hr.leave.settings' }))
+                router
+                  .patch('leave/policies/:id', [LeaveController, 'updatePolicy'])
+                  .use(middleware.can({ permission: 'hr.leave.settings' }))
+                router
+                  .post('leave/policies/:id/publish', [LeaveController, 'publishPolicy'])
+                  .use(middleware.can({ permission: 'hr.leave.settings' }))
+                router.post('leave/accruals', [LeaveController, 'accrue'])
+                router.get('leave/me', [LeaveController, 'mine'])
+                router.get('employees/:id/leave', [LeaveController, 'summary'])
+                router.post('employees/:id/leave/adjustments', [LeaveController, 'adjust'])
+                router.get('leave/requests', [LeaveController, 'requests'])
+                router.post('leave/requests', [LeaveController, 'createRequest'])
+                router.post('leave/requests/preview', [LeaveController, 'preview'])
+                router.get('leave/requests/:id', [LeaveController, 'request'])
+                router.post('leave/requests/:id/decision', [LeaveController, 'decide'])
+                router.post('leave/requests/:id/cancel', [LeaveController, 'cancel'])
                 router.get('employees/:id/contracts', [CareerController, 'contracts'])
                 router.post('employees/:id/contracts', [CareerController, 'createContract'])
                 router.get('employees/:id/assignments', [CareerController, 'assignments'])

@@ -398,6 +398,35 @@ async function populate(client: any) {
     })
   )
   void screening
+  const leavePolicy = ok(
+    await as(client, s).post('/api/v1/hr/leave/policies', {
+      code: 'FERIAS-A',
+      name: 'Férias A',
+      calendarId: calendar.id,
+      annualDays: '22',
+      firstYearRule: 'FULL',
+      legalReference: 'Política de teste',
+      validFrom: '2025-01-01',
+    })
+  )
+  const leaveType = ok(
+    await as(client, s).post('/api/v1/hr/leave/types', {
+      code: 'FER-A',
+      name: 'Férias A',
+      category: 'VACATION',
+      paid: true,
+      deductsBalance: false,
+      counting: 'CALENDAR_DAYS',
+    })
+  )
+  const leaveRequest = ok(
+    await as(client, s).post('/api/v1/hr/leave/requests', {
+      employeeId: employee.id,
+      leaveTypeId: leaveType.id,
+      startDate: '2026-02-02',
+      endDate: '2026-02-03',
+    })
+  )
   const contract = ok(
     await as(client, s).post(`/api/v1/hr/employees/${employee.id}/contracts`, {
       code: 'CT-A',
@@ -418,6 +447,9 @@ async function populate(client: any) {
     offer,
     onboardingTask,
     contract,
+    leavePolicy,
+    leaveType,
+    leaveRequest,
     closeTask,
     stmtTemplate,
     stmtNote,
@@ -581,6 +613,52 @@ test.group('isolamento | matriz entre empresas', (group) => {
           effectiveDate: '2026-03-01',
           baseSalary: '1',
           reason: 'xxx',
+        }),
+      ],
+      ['GET política de férias', B.get(`/api/v1/hr/leave/policies/${a.leavePolicy.id}`)],
+      [
+        'PATCH política de férias',
+        B.patch(`/api/v1/hr/leave/policies/${a.leavePolicy.id}`, { ...v, name: 'xxxx' }),
+      ],
+      ['publicar política', B.post(`/api/v1/hr/leave/policies/${a.leavePolicy.id}/publish`, v)],
+      [
+        'PATCH tipo de ausência',
+        B.patch(`/api/v1/hr/leave/types/${a.leaveType.id}`, { ...v, name: 'xx' }),
+      ],
+      ['GET pedido de ausência', B.get(`/api/v1/hr/leave/requests/${a.leaveRequest.id}`)],
+      [
+        'decidir ausência',
+        B.post(`/api/v1/hr/leave/requests/${a.leaveRequest.id}/decision`, {
+          ...v,
+          decision: 'APPROVE',
+        }),
+      ],
+      ['cancelar ausência', B.post(`/api/v1/hr/leave/requests/${a.leaveRequest.id}/cancel`, v)],
+      ['GET saldo de férias', B.get(`/api/v1/hr/employees/${a.employee.id}/leave`)],
+      [
+        'ajustar saldo',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/leave/adjustments`, {
+          year: 2026,
+          days: '1',
+          reason: 'xxx',
+        }),
+      ],
+      [
+        'pedir ausência para colaborador de A',
+        B.post('/api/v1/hr/leave/requests', {
+          employeeId: a.employee.id,
+          leaveTypeId: a.leaveType.id,
+          startDate: '2026-03-02',
+          endDate: '2026-03-03',
+        }),
+      ],
+      [
+        'pré-visualizar ausência de A',
+        B.post('/api/v1/hr/leave/requests/preview', {
+          employeeId: a.employee.id,
+          leaveTypeId: a.leaveType.id,
+          startDate: '2026-03-02',
+          endDate: '2026-03-03',
         }),
       ],
       ['GET carreira', B.get(`/api/v1/hr/employees/${a.employee.id}/assignments`)],
@@ -1033,6 +1111,17 @@ test.group('isolamento | matriz entre empresas', (group) => {
     ])
       assert.lengthOf((await B.get(url)).body().data, 0, url)
     assert.lengthOf((await B.get('/api/v1/hr/interviews/mine')).body().data, 0)
+    for (const url of [
+      '/api/v1/hr/leave/requests',
+      '/api/v1/hr/leave/types',
+      '/api/v1/hr/leave/policies',
+    ])
+      assert.lengthOf((await B.get(url)).body().data, 0, url)
+    // Gerar direitos em B não toca colaboradores de A.
+    const accrual = (
+      await B.post('/api/v1/hr/leave/accruals', { year: 2026, employeeIds: [a.employee.id] })
+    ).body().data
+    assert.equal(accrual.created + accrual.adjusted + accrual.unchanged + accrual.skipped.length, 0)
     // Eventos de B com a entidade legal de A não usam as regras de A.
     const crossEvent = await B.post('/api/v1/accounting/posting-events', {
       legalEntityId: a.le.id,
@@ -1086,6 +1175,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/hr/settings',
       `/api/v1/hr/contracts/${a.contract.id}`,
       `/api/v1/hr/employees/${a.employee.id}/assignments`,
+      '/api/v1/hr/leave/requests',
+      `/api/v1/hr/employees/${a.employee.id}/leave`,
     ]) {
       const r = await spoof.get(url)
       assert.equal(r.status(), 403, url)

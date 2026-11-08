@@ -6,7 +6,7 @@ import { assertEntitled, assertWithinQuota } from '#modules/subscription/index'
 import { audit } from '#modules/audit/index'
 import { canViewRequest } from '#modules/approvals/index'
 import { ORGANIZATION_ENTITY_TYPES, organizationRecordExists } from '#modules/organization/index'
-import { employeeAccess } from '#modules/hr/index'
+import { employeeAccess, leaveRequestAccess } from '#modules/hr/index'
 import {
   extensionOf,
   FILE_TYPES,
@@ -81,6 +81,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.employee = {
     feature: 'hr',
     access: (scope, id) => employeeAccess(scope, id, 'sensitive'),
+  }
+  // Justificativos de ausências (ex.: atestado médico): os confidenciais só para o próprio e `hr.sensitive`.
+  map.leave_request = {
+    feature: 'hr',
+    access: (scope, id) => leaveRequestAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

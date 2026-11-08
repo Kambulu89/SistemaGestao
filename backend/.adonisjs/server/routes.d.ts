@@ -202,6 +202,24 @@ export type ScannedRoutes = {
     'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.set_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.types': { paramsTuple?: []; params?: {} }
+    'leave.create_type': { paramsTuple?: []; params?: {} }
+    'leave.update_type': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.policies': { paramsTuple?: []; params?: {} }
+    'leave.create_policy': { paramsTuple?: []; params?: {} }
+    'leave.policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.update_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.publish_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.accrue': { paramsTuple?: []; params?: {} }
+    'leave.mine': { paramsTuple?: []; params?: {} }
+    'leave.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.adjust': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.requests': { paramsTuple?: []; params?: {} }
+    'leave.create_request': { paramsTuple?: []; params?: {} }
+    'leave.preview': { paramsTuple?: []; params?: {} }
+    'leave.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -353,6 +371,13 @@ export type ScannedRoutes = {
     'approvals.delegations': { paramsTuple?: []; params?: {} }
     'employees.index': { paramsTuple?: []; params?: {} }
     'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.types': { paramsTuple?: []; params?: {} }
+    'leave.policies': { paramsTuple?: []; params?: {} }
+    'leave.policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.mine': { paramsTuple?: []; params?: {} }
+    'leave.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.requests': { paramsTuple?: []; params?: {} }
+    'leave.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -460,6 +485,13 @@ export type ScannedRoutes = {
     'approvals.delegations': { paramsTuple?: []; params?: {} }
     'employees.index': { paramsTuple?: []; params?: {} }
     'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.types': { paramsTuple?: []; params?: {} }
+    'leave.policies': { paramsTuple?: []; params?: {} }
+    'leave.policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.mine': { paramsTuple?: []; params?: {} }
+    'leave.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.requests': { paramsTuple?: []; params?: {} }
+    'leave.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -555,6 +587,15 @@ export type ScannedRoutes = {
     'approvals.revoke_delegation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.store': { paramsTuple?: []; params?: {} }
     'employees.set_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.create_type': { paramsTuple?: []; params?: {} }
+    'leave.create_policy': { paramsTuple?: []; params?: {} }
+    'leave.publish_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.accrue': { paramsTuple?: []; params?: {} }
+    'leave.adjust': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.create_request': { paramsTuple?: []; params?: {} }
+    'leave.preview': { paramsTuple?: []; params?: {} }
+    'leave.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -629,6 +670,8 @@ export type ScannedRoutes = {
     'fixed_assets.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.update_type': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.update_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.update_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
