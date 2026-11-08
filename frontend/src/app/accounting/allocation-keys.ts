@@ -5,7 +5,7 @@ import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { ErrorAlert } from '../ui/error-alert';
 import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { Action, Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import { AllocationEditor } from './allocation-editor';
@@ -23,7 +23,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
   selector: 'app-allocation-keys',
   imports: [
     FormsModule,
-    PageHeader,
+    EntityListPage,
     DataTable,
     CellDef,
     StatusBadge,
@@ -34,89 +34,95 @@ import { accountingDeps, legalEntityOptions } from './shared';
     AllocationEditor,
   ],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Chaves de repartição"
       subtitle="Repartições a 100% reutilizáveis nas imputações das linhas."
-    />
-    <app-data-table
-      label="Chaves de repartição"
-      [columns]="columns"
-      [rows]="keys.value() ?? []"
-      [total]="keys.value()?.length ?? 0"
-      [loading]="keys.loading()"
-      [error]="keys.error()"
-      emptyText="Ainda não há chaves."
-      (retry)="keys.load()"
+      permission="accounting.read"
+      feature="accounting"
     >
-      <ng-template appCell="code" let-row>
-        <button type="button" class="btn-link" (click)="edit(row)">{{ row.code }}</button>
-      </ng-template>
-      <ng-template appCell="status" let-row><app-status-badge [status]="row.status" /></ng-template>
-    </app-data-table>
-    @if (canManage()) {
-      <form
-        class="mt-4 space-y-3"
-        (ngSubmit)="save()"
-        [attr.aria-label]="editing() ? 'Alterar chave' : 'Nova chave'"
+      <app-data-table
+        tableId="acc-allocation-keys"
+        label="Chaves de repartição"
+        [columns]="columns"
+        [rows]="keys.value() ?? []"
+        [total]="keys.value()?.length ?? 0"
+        [loading]="keys.loading()"
+        [error]="keys.error()"
+        emptyText="Ainda não há chaves."
+        (retry)="keys.load()"
       >
-        <app-error-alert [error]="action.error()" [showDetails]="true" />
-        <app-form-section [title]="editing() ? 'Alterar ' + editing()!.code : 'Nova chave'">
-          <app-field
-            label="Entidade legal"
-            [required]="true"
-            [error]="action.field('legalEntityId')"
-          >
-            <select
-              appControl
-              class="input"
-              name="le"
-              [disabled]="!!editing()"
-              [(ngModel)]="form.legalEntityId"
-              (ngModelChange)="loadCenters()"
+        <ng-template appCell="code" let-row>
+          <button type="button" class="btn-link" (click)="edit(row)">{{ row.code }}</button>
+        </ng-template>
+        <ng-template appCell="status" let-row
+          ><app-status-badge [status]="row.status"
+        /></ng-template>
+      </app-data-table>
+      @if (canManage()) {
+        <form
+          class="mt-4 space-y-3"
+          (ngSubmit)="save()"
+          [attr.aria-label]="editing() ? 'Alterar chave' : 'Nova chave'"
+        >
+          <app-error-alert [error]="action.error()" [showDetails]="true" />
+          <app-form-section [title]="editing() ? 'Alterar ' + editing()!.code : 'Nova chave'">
+            <app-field
+              label="Entidade legal"
+              [required]="true"
+              [error]="action.field('legalEntityId')"
             >
-              <option [ngValue]="null">—</option>
-              @for (e of entities(); track e.id) {
-                <option [ngValue]="e.id">{{ e.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Código" [required]="true" [error]="action.field('code')">
-            <input
-              appControl
-              class="input"
-              name="code"
-              [disabled]="!!editing()"
-              [(ngModel)]="form.code"
-            />
-          </app-field>
-          <app-field label="Nome" [required]="true" [error]="action.field('name')">
-            <input appControl class="input" name="name" [(ngModel)]="form.name" />
-          </app-field>
-          <app-field label="Estado">
-            <select appControl class="input" name="status" [(ngModel)]="form.status">
-              <option value="ACTIVE">Activa</option>
-              <option value="INACTIVE">Inactiva</option>
-            </select>
-          </app-field>
-          <div class="md:col-span-2">
-            <app-allocation-editor
-              label="Destinos da chave"
-              [(targets)]="targets"
-              [dimensions]="dimensions()"
-              [costCenters]="centers()"
-            />
+              <select
+                appControl
+                class="input"
+                name="le"
+                [disabled]="!!editing()"
+                [(ngModel)]="form.legalEntityId"
+                (ngModelChange)="loadCenters()"
+              >
+                <option [ngValue]="null">—</option>
+                @for (e of entities(); track e.id) {
+                  <option [ngValue]="e.id">{{ e.label }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Código" [required]="true" [error]="action.field('code')">
+              <input
+                appControl
+                class="input"
+                name="code"
+                [disabled]="!!editing()"
+                [(ngModel)]="form.code"
+              />
+            </app-field>
+            <app-field label="Nome" [required]="true" [error]="action.field('name')">
+              <input appControl class="input" name="name" [(ngModel)]="form.name" />
+            </app-field>
+            <app-field label="Estado">
+              <select appControl class="input" name="status" [(ngModel)]="form.status">
+                <option value="ACTIVE">Activa</option>
+                <option value="INACTIVE">Inactiva</option>
+              </select>
+            </app-field>
+            <div class="md:col-span-2">
+              <app-allocation-editor
+                label="Destinos da chave"
+                [(targets)]="targets"
+                [dimensions]="dimensions()"
+                [costCenters]="centers()"
+              />
+            </div>
+          </app-form-section>
+          <div class="flex gap-2">
+            <button type="submit" class="btn-primary" [disabled]="action.busy() || !complete()">
+              {{ editing() ? 'Guardar chave' : 'Criar chave' }}
+            </button>
+            @if (editing()) {
+              <button type="button" class="btn-secondary" (click)="reset()">Nova chave</button>
+            }
           </div>
-        </app-form-section>
-        <div class="flex gap-2">
-          <button type="submit" class="btn-primary" [disabled]="action.busy() || !complete()">
-            {{ editing() ? 'Guardar chave' : 'Criar chave' }}
-          </button>
-          @if (editing()) {
-            <button type="button" class="btn-secondary" (click)="reset()">Nova chave</button>
-          }
-        </div>
-      </form>
-    }
+        </form>
+      }
+    </app-entity-list-page>
   `,
 })
 export class AllocationKeys {
@@ -139,7 +145,7 @@ export class AllocationKeys {
       (await this.deps.api.page<AllocationKey>('accounting/allocation-keys', { limit: 200 })).items,
   );
   protected readonly columns: Column<AllocationKey>[] = [
-    { key: 'code', label: 'Código' },
+    { key: 'code', required: true, label: 'Código' },
     { key: 'name', label: 'Nome' },
     {
       key: 'legalEntityId',

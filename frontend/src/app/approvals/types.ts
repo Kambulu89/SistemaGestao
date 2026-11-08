@@ -68,3 +68,43 @@ export interface Delegation {
 }
 
 export const personName = (p: Person | null | undefined) => p?.fullName || p?.email || '—';
+
+/** Acontecimentos do pedido por ordem cronológica (para a ApprovalTimeline). */
+export function requestTimeline(r: RequestDetail) {
+  const stepName = (n: number) => r.steps.find((s) => s.sequence === n)?.name ?? `Etapa ${n}`;
+  const events: {
+    at: string;
+    title: string;
+    detail?: string | null;
+    tone: 'neutral' | 'success' | 'danger' | 'warning';
+  }[] = [
+    { at: r.createdAt, title: `Pedido criado por ${personName(r.requestedBy)}`, tone: 'neutral' },
+  ];
+  for (const d of [...r.decisions].sort((a, b) => a.decidedAt.localeCompare(b.decidedAt)))
+    events.push({
+      at: d.decidedAt,
+      title: `${d.decision === 'APPROVE' ? 'Aprovado' : 'Rejeitado'} por ${personName(d.decidedBy)}${
+        d.onBehalfOf ? ` (em nome de ${personName(d.onBehalfOf)})` : ''
+      } — ${stepName(d.stepSequence)}`,
+      detail: d.comment,
+      tone: d.decision === 'APPROVE' ? 'success' : 'danger',
+    });
+  if (r.completedAt && r.status !== 'PENDING')
+    events.push({
+      at: r.completedAt,
+      title:
+        r.status === 'APPROVED'
+          ? 'Pedido aprovado'
+          : r.status === 'REJECTED'
+            ? 'Pedido rejeitado'
+            : 'Pedido cancelado',
+      tone: r.status === 'APPROVED' ? 'success' : r.status === 'REJECTED' ? 'danger' : 'warning',
+    });
+  else if (r.status === 'PENDING' && r.currentStep)
+    events.push({
+      at: new Date().toISOString(),
+      title: `A aguardar decisão — ${stepName(r.currentStep)}`,
+      tone: 'warning',
+    });
+  return events;
+}

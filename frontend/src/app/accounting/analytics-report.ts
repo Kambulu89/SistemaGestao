@@ -1,10 +1,9 @@
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { downloadText, toCsv } from '../ui/csv';
-import { ErrorAlert } from '../ui/error-alert';
 import { Action } from '../ui/load';
 import { formatMoney } from '../ui/money-input';
-import { PageHeader } from '../ui/page-header';
+import { ReportPage } from '../ui/templates';
 import {
   type AnalyticReport,
   type Dimension,
@@ -20,18 +19,21 @@ import { accountingDeps, legalEntityOptions } from './shared';
  */
 @Component({
   selector: 'app-analytics-report',
-  imports: [FormsModule, PageHeader, ErrorAlert],
+  imports: [FormsModule, ReportPage],
   template: `
-    <app-page-header
+    <app-report-page
       title="Analítica"
       subtitle="Repartição dos movimentos contabilizados por centro de custo ou dimensão."
-    />
-    <form
-      class="mb-4 flex flex-wrap items-end gap-2"
-      (ngSubmit)="run()"
-      aria-label="Parâmetros da analítica"
+      [busy]="action.busy()"
+      [error]="action.error()"
+      [canRun]="!!fiscalYearId"
+      [hasResult]="!!report()"
+      [summary]="summary()"
+      [generatedAt]="generatedAt()"
+      (run)="run()"
+      (exported)="export()"
     >
-      <div>
+      <div params>
         <label class="label" for="an-year">Exercício</label>
         <select
           id="an-year"
@@ -48,7 +50,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
           }
         </select>
       </div>
-      <div>
+      <div params>
         <label class="label" for="an-from">De</label>
         <select id="an-from" name="from" class="input w-40" [(ngModel)]="fromPeriod">
           @for (p of periods(); track p.id) {
@@ -56,7 +58,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
           }
         </select>
       </div>
-      <div>
+      <div params>
         <label class="label" for="an-to">Até</label>
         <select id="an-to" name="to" class="input w-40" [(ngModel)]="toPeriod">
           @for (p of periods(); track p.id) {
@@ -64,7 +66,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
           }
         </select>
       </div>
-      <div>
+      <div params>
         <label class="label" for="an-group">Por</label>
         <select id="an-group" name="group" class="input w-56" [(ngModel)]="group">
           <option value="costCenter">Centro de custo</option>
@@ -73,7 +75,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
           }
         </select>
       </div>
-      <fieldset class="flex flex-wrap items-center gap-3 text-sm">
+      <fieldset params class="flex flex-wrap items-center gap-3 py-2 text-sm">
         <legend class="sr-only">Naturezas</legend>
         @for (n of natures; track n.value) {
           <label class="flex items-center gap-1"
@@ -82,61 +84,54 @@ import { accountingDeps, legalEntityOptions } from './shared';
           >
         }
       </fieldset>
-      <button type="submit" class="btn-primary" [disabled]="action.busy() || !fiscalYearId">
-        Gerar
-      </button>
-      @if (report()) {
-        <button type="button" class="btn-secondary" (click)="export()">Exportar CSV</button>
-      }
-    </form>
-    <app-error-alert [error]="action.error()" />
-    @if (report(); as r) {
-      <p class="mb-2 text-sm" role="status" data-testid="an-status">
-        @if (r.consistent) {
-          <span class="text-success-text"
-            >Confere com o razão: débitos {{ money(r.ledger.debit) }}, créditos
-            {{ money(r.ledger.credit) }}.</span
-          >
-        } @else {
-          <span class="text-danger-text">Não confere com o razão — contacte o suporte.</span>
-        }
-      </p>
-      <div class="card overflow-x-auto p-0">
-        <table class="w-full min-w-[36rem] text-sm">
-          <caption class="sr-only">
-            Relatório analítico
-          </caption>
-          <thead>
-            <tr class="border-b border-border text-left">
-              <th scope="col" class="p-2">
-                {{ r.groupBy === 'costCenter' ? 'Centro de custo' : 'Valor' }}
-              </th>
-              <th scope="col" class="p-2 text-right">Débito</th>
-              <th scope="col" class="p-2 text-right">Crédito</th>
-              <th scope="col" class="p-2 text-right">Líquido</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of r.rows; track row.key) {
-              <tr class="border-b border-border" [class.text-muted]="row.key === null">
-                <td class="p-2">{{ row.label }}</td>
-                <td class="p-2 text-right">{{ money(row.debit) }}</td>
-                <td class="p-2 text-right">{{ money(row.credit) }}</td>
-                <td class="p-2 text-right">{{ money(row.net) }}</td>
+      @if (report(); as r) {
+        <p class="mb-2 text-sm" role="status" data-testid="an-status">
+          @if (r.consistent) {
+            <span class="text-success-text"
+              >Confere com o razão: débitos {{ money(r.ledger.debit) }}, créditos
+              {{ money(r.ledger.credit) }}.</span
+            >
+          } @else {
+            <span class="text-danger-text">Não confere com o razão — contacte o suporte.</span>
+          }
+        </p>
+        <div class="card overflow-x-auto p-0">
+          <table class="w-full min-w-[36rem] text-sm">
+            <caption class="sr-only">
+              Relatório analítico
+            </caption>
+            <thead>
+              <tr class="border-b border-border text-left">
+                <th scope="col" class="p-2">
+                  {{ r.groupBy === 'costCenter' ? 'Centro de custo' : 'Valor' }}
+                </th>
+                <th scope="col" class="p-2 text-right">Débito</th>
+                <th scope="col" class="p-2 text-right">Crédito</th>
+                <th scope="col" class="p-2 text-right">Líquido</th>
               </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr class="font-semibold" data-testid="an-totals">
-              <th scope="row" class="p-2 text-left">Totais</th>
-              <td class="p-2 text-right">{{ money(r.totals.debit) }}</td>
-              <td class="p-2 text-right">{{ money(r.totals.credit) }}</td>
-              <td class="p-2 text-right">{{ money(r.totals.net) }}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    }
+            </thead>
+            <tbody>
+              @for (row of r.rows; track row.key) {
+                <tr class="border-b border-border" [class.text-muted]="row.key === null">
+                  <td class="p-2">{{ row.label }}</td>
+                  <td class="p-2 text-right">{{ money(row.debit) }}</td>
+                  <td class="p-2 text-right">{{ money(row.credit) }}</td>
+                  <td class="p-2 text-right">{{ money(row.net) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="font-semibold" data-testid="an-totals">
+                <th scope="row" class="p-2 text-left">Totais</th>
+                <td class="p-2 text-right">{{ money(r.totals.debit) }}</td>
+                <td class="p-2 text-right">{{ money(r.totals.credit) }}</td>
+                <td class="p-2 text-right">{{ money(r.totals.net) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+    </app-report-page>
   `,
 })
 export class AnalyticsReportPage {
@@ -149,6 +144,17 @@ export class AnalyticsReportPage {
   private readonly entities = signal<{ id: string; label: string }[]>([]);
   protected readonly names = computed(() => new Map(this.entities().map((e) => [e.id, e.label])));
   protected readonly action = new Action();
+  protected readonly generatedAt = signal(new Date().toISOString());
+  protected readonly summary = computed(() => {
+    const r = this.report();
+    if (!r) return null;
+    const name = (n: number) => this.periods().find((p) => p.number === n)?.name ?? String(n);
+    const by =
+      this.group === 'costCenter'
+        ? 'por centro de custo'
+        : `por ${this.dimensions().find((d) => d.id === this.group)?.name ?? 'dimensão'}`;
+    return `${name(this.fromPeriod)} a ${name(this.toPeriod)} · ${by}`;
+  });
   protected fiscalYearId: string | null = null;
   protected fromPeriod = 0;
   protected toPeriod = 13;
@@ -201,6 +207,7 @@ export class AnalyticsReportPage {
       }),
     );
     this.report.set(r ?? null);
+    this.generatedAt.set(new Date().toISOString());
   }
 
   protected export() {

@@ -1,12 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { downloadText, toCsv } from '../ui/csv';
 import { formatDate } from '../ui/dates';
-import { ErrorAlert } from '../ui/error-alert';
 import { Action } from '../ui/load';
 import { formatMoney } from '../ui/money-input';
-import { PageHeader } from '../ui/page-header';
+import { ReportPage } from '../ui/templates';
 import { type Account, type Chart, type Ledger } from './model';
 import { accountingDeps, legalEntityOptions } from './shared';
 
@@ -16,18 +15,21 @@ import { accountingDeps, legalEntityOptions } from './shared';
  */
 @Component({
   selector: 'app-ledger',
-  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert],
+  imports: [FormsModule, RouterLink, ReportPage],
   template: `
-    <app-page-header
+    <app-report-page
       title="Razão"
       subtitle="Movimentos contabilizados de uma conta, com saldo acumulado."
-    />
-    <form
-      class="mb-4 flex flex-wrap items-end gap-2"
-      (ngSubmit)="run()"
-      aria-label="Parâmetros do razão"
+      [busy]="action.busy()"
+      [error]="action.error()"
+      [canRun]="!!legalEntityId && !!accountId && !!from && !!to"
+      [hasResult]="!!ledger()"
+      [summary]="summary()"
+      [generatedAt]="generatedAt()"
+      (run)="run()"
+      (exported)="export()"
     >
-      <div>
+      <div params>
         <label class="label" for="lg-le">Entidade legal</label>
         <select
           id="lg-le"
@@ -42,7 +44,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
           }
         </select>
       </div>
-      <div>
+      <div params>
         <label class="label" for="lg-acc">Conta</label>
         <select id="lg-acc" name="acc" class="input w-64" [(ngModel)]="accountId">
           <option [ngValue]="null">—</option>
@@ -51,94 +53,83 @@ import { accountingDeps, legalEntityOptions } from './shared';
           }
         </select>
       </div>
-      <div>
+      <div params>
         <label class="label" for="lg-from">De</label>
         <input id="lg-from" name="from" type="date" class="input" [(ngModel)]="from" />
       </div>
-      <div>
+      <div params>
         <label class="label" for="lg-to">Até</label>
         <input id="lg-to" name="to" type="date" class="input" [(ngModel)]="to" />
       </div>
-      <div>
+      <div params>
         <label class="label" for="lg-tp">Terceiro</label>
         <input id="lg-tp" name="tp" class="input w-40" [(ngModel)]="thirdPartyRef" />
       </div>
-      <button
-        type="submit"
-        class="btn-primary"
-        [disabled]="action.busy() || !legalEntityId || !accountId || !from || !to"
-      >
-        Consultar
-      </button>
-      @if (ledger()) {
-        <button type="button" class="btn-secondary" (click)="export()">Exportar CSV</button>
-      }
-    </form>
-    <app-error-alert [error]="action.error()" />
-    @if (ledger(); as l) {
-      <p class="mb-2 text-sm text-muted">
-        {{ l.account.code }} — {{ l.account.name
-        }}{{ l.account.includesSubaccounts ? ' (com subcontas)' : '' }} · exercício
-        {{ l.fiscalYear.code }}
-      </p>
-      @if (l.truncated) {
-        <p class="mb-2 text-sm text-warning-text" role="status">
-          Mostram-se as primeiras 5000 linhas; os totais incluem todas.
+      @if (ledger(); as l) {
+        <p class="mb-2 text-sm text-muted">
+          {{ l.account.code }} — {{ l.account.name
+          }}{{ l.account.includesSubaccounts ? ' (com subcontas)' : '' }} · exercício
+          {{ l.fiscalYear.code }}
         </p>
-      }
-      <div class="card overflow-x-auto p-0">
-        <table class="w-full min-w-[52rem] text-sm">
-          <caption class="sr-only">
-            Razão da conta
-            {{
-              l.account.code
-            }}
-          </caption>
-          <thead>
-            <tr class="border-b border-border text-left">
-              <th scope="col" class="p-2">Data</th>
-              <th scope="col" class="p-2">Número</th>
-              <th scope="col" class="p-2">Descrição</th>
-              <th scope="col" class="p-2">Conta</th>
-              <th scope="col" class="p-2">Terceiro</th>
-              <th scope="col" class="p-2 text-right">Débito</th>
-              <th scope="col" class="p-2 text-right">Crédito</th>
-              <th scope="col" class="p-2 text-right">Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="border-b border-border text-muted">
-              <td class="p-2" colspan="7">Saldo anterior</td>
-              <td class="p-2 text-right" data-testid="ledger-opening">{{ money(l.opening) }}</td>
-            </tr>
-            @for (r of l.lines; track $index) {
-              <tr class="border-b border-border">
-                <td class="p-2">{{ date(r.date) }}</td>
-                <td class="p-2">
-                  <a class="btn-link" [routerLink]="['/contabilidade/lancamentos', r.entryId]">{{
-                    r.number
-                  }}</a>
-                </td>
-                <td class="p-2">{{ r.description ?? r.entryDescription }}</td>
-                <td class="p-2 font-mono">{{ r.accountCode }}</td>
-                <td class="p-2">{{ r.thirdPartyRef ?? '' }}</td>
-                <td class="p-2 text-right">{{ money(r.debit, true) }}</td>
-                <td class="p-2 text-right">{{ money(r.credit, true) }}</td>
-                <td class="p-2 text-right">{{ money(r.balance) }}</td>
+        @if (l.truncated) {
+          <p class="mb-2 text-sm text-warning-text" role="status">
+            Mostram-se as primeiras 5000 linhas; os totais incluem todas.
+          </p>
+        }
+        <div class="card overflow-x-auto p-0">
+          <table class="w-full min-w-[52rem] text-sm">
+            <caption class="sr-only">
+              Razão da conta
+              {{
+                l.account.code
+              }}
+            </caption>
+            <thead>
+              <tr class="border-b border-border text-left">
+                <th scope="col" class="p-2">Data</th>
+                <th scope="col" class="p-2">Número</th>
+                <th scope="col" class="p-2">Descrição</th>
+                <th scope="col" class="p-2">Conta</th>
+                <th scope="col" class="p-2">Terceiro</th>
+                <th scope="col" class="p-2 text-right">Débito</th>
+                <th scope="col" class="p-2 text-right">Crédito</th>
+                <th scope="col" class="p-2 text-right">Saldo</th>
               </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr class="font-semibold" data-testid="ledger-totals">
-              <th scope="row" class="p-2 text-left" colspan="5">Totais do período</th>
-              <td class="p-2 text-right">{{ money(l.debit) }}</td>
-              <td class="p-2 text-right">{{ money(l.credit) }}</td>
-              <td class="p-2 text-right" data-testid="ledger-closing">{{ money(l.closing) }}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    }
+            </thead>
+            <tbody>
+              <tr class="border-b border-border text-muted">
+                <td class="p-2" colspan="7">Saldo anterior</td>
+                <td class="p-2 text-right" data-testid="ledger-opening">{{ money(l.opening) }}</td>
+              </tr>
+              @for (r of l.lines; track $index) {
+                <tr class="border-b border-border">
+                  <td class="p-2">{{ date(r.date) }}</td>
+                  <td class="p-2">
+                    <a class="btn-link" [routerLink]="['/contabilidade/lancamentos', r.entryId]">{{
+                      r.number
+                    }}</a>
+                  </td>
+                  <td class="p-2">{{ r.description ?? r.entryDescription }}</td>
+                  <td class="p-2 font-mono">{{ r.accountCode }}</td>
+                  <td class="p-2">{{ r.thirdPartyRef ?? '' }}</td>
+                  <td class="p-2 text-right">{{ money(r.debit, true) }}</td>
+                  <td class="p-2 text-right">{{ money(r.credit, true) }}</td>
+                  <td class="p-2 text-right">{{ money(r.balance) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="font-semibold" data-testid="ledger-totals">
+                <th scope="row" class="p-2 text-left" colspan="5">Totais do período</th>
+                <td class="p-2 text-right">{{ money(l.debit) }}</td>
+                <td class="p-2 text-right">{{ money(l.credit) }}</td>
+                <td class="p-2 text-right" data-testid="ledger-closing">{{ money(l.closing) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+    </app-report-page>
   `,
 })
 export class LedgerPage {
@@ -149,6 +140,13 @@ export class LedgerPage {
   protected readonly ledger = signal<Ledger | null>(null);
   protected readonly action = new Action();
   protected readonly date = formatDate;
+  protected readonly generatedAt = signal(new Date().toISOString());
+  protected readonly summary = computed(() => {
+    const l = this.ledger();
+    return l
+      ? `Conta ${l.account.code} · ${formatDate(l.from)} a ${formatDate(l.to)} · exercício ${l.fiscalYear.code}`
+      : null;
+  });
   protected legalEntityId: string | null = null;
   protected accountId: string | null = null;
   protected from = `${new Date().getFullYear()}-01-01`;
@@ -224,6 +222,7 @@ export class LedgerPage {
       }),
     );
     this.ledger.set(r ?? null);
+    this.generatedAt.set(new Date().toISOString());
   }
 
   protected export() {

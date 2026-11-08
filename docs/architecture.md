@@ -21,6 +21,7 @@ técnico partilhado e não depende de módulos.
 | `subscription`, `platform`                                    | Funcionalidades, planos, subscrições, limites; administração da plataforma                |
 | `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
 | `dashboard`                                                   | Painel e pesquisa global                                                                  |
+| `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                     |
 
 ## Multi-tenancy
 
@@ -163,7 +164,7 @@ Sucesso `{ data, meta: { requestId } }`; erro `{ error: { code, message, details
 
 ## Contabilidade (módulo `accounting`, Prompt 06)
 
-Blocos 6.1 a 6.7 feitos; 6.8–6.10 por fazer (ver `docs/reports/prompt-06.md`).
+Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificação oficial verificada (ver `docs/reports/prompt-06.md`).
 
 - **Plano de contas** por entidade legal (um activo, índice parcial único). Contas em árvore: classe → conta →
   subconta; o código do filho começa pelo do pai; só contas sem subcontas são movimentáveis; natureza, saldo normal,
@@ -243,7 +244,32 @@ Blocos 6.1 a 6.7 feitos; 6.8–6.10 por fazer (ver `docs/reports/prompt-06.md`).
   entidade e data, nunca com outra por contabilizar, nunca sem câmbio. Reconciliação de contas: grupos de linhas
   contabilizadas da mesma conta, entidade e terceiro cujos débitos igualam os créditos (funcional); UNIQUE por
   linha do razão e FK para `journal_lines`; desfazer é auditado.
-- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics|adjustments|reconcile` e `fixed_assets.read|manage|post`; funcionalidade `accounting`. Regras:
+- **Demonstrações financeiras (6.8)**: modelos por plano de contas, versionados (`DRAFT` → `PUBLISHED` → `RETIRED`;
+  um publicado e um rascunho por código; publicar retira o anterior; o publicado não muda). Linhas: títulos, contas
+  (prefixos de código com regra de saldo qualquer/devedor/credor), totais por fórmula (`A1+A2-A3`, sem ciclos) e
+  resultado líquido (só no balanço). Cada conta vai para a linha do **prefixo mais longo** que aceita o sinal do seu
+  saldo — nunca duas linhas — e o mesmo prefixo com regras sobrepostas em duas linhas é recusado. A demonstração é
+  calculada a pedido dos lançamentos contabilizados (balanço: períodos até ao indicado, abertura incluída;
+  resultados: só períodos normais), com coluna comparativa opcional e detalhe por conta; confere quando não há contas
+  com saldo sem linha e as linhas de controlo coincidem (activo = capital próprio + passivo; resultado = resultado do
+  razão). Notas numeradas por exercício. Exportação Excel (.xlsx gerado no browser, sem dependências) e
+  impressão/PDF pelo browser (a moldura da aplicação não é impressa). Não há modelos pré-definidos nem alegação de
+  conformidade com o PGC: os mapas são configurados pela empresa. Fluxos de caixa ficam para quando houver
+  classificação de fluxos (Finanças).
+- **Fecho (6.10)**: checklist por período, calculada a pedido — bloqueios (lançamentos submetidos/aprovados por
+  contabilizar, débitos ≠ créditos) e avisos (rascunhos, eventos de integração falhados, depreciações e regularizações
+  por gerar, actualizações cambiais em rascunho, períodos anteriores abertos, tarefas manuais por concluir) — e tarefas
+  manuais (`close_tasks`, copiáveis do período anterior). Fechar um período com bloqueios é recusado
+  (`CLOSE_BLOCKED`); com avisos exige `acknowledgeWarnings` (`CLOSE_WARNINGS`), que fica na auditoria. Concorrência:
+  contabilizar bloqueia o período `FOR SHARE` e fechar bloqueia-o `FOR UPDATE`, por isso nunca entra um lançamento num
+  período que outra transacção acabou de fechar. Encerramento do exercício (`fiscal_year_closings`, um em vigor por
+  exercício): exige todos os períodos fechados menos o de regularizações; gera e contabiliza no período de
+  regularizações o apuramento (contas de resultados por conta e centro de custo saldadas contra uma conta de capital
+  próprio) e, se pedido, o transporte dos saldos de balanço (por conta, terceiro e centro de custo) para o período de
+  abertura do exercício seguinte (vazio de lançamentos em vigor); fecha o período de regularizações e o exercício. A
+  reabertura (motivo obrigatório, `accounting.reopen`) estorna o transporte na abertura seguinte (que tem de estar
+  aberta) e o apuramento no período de regularizações; os lançamentos `YEAR_CLOSE`/`YEAR_OPENING` só se estornam assim.
+- Permissões: `accounting.read|create|approve|post|reverse|close|reopen|settings|reports|analytics|adjustments|reconcile|statements` e `fixed_assets.read|manage|post`; funcionalidade `accounting`. Regras:
   `accounting.settings`; enviar/reprocessar eventos: `accounting.post`; simular e consultar: `accounting.read`.
 
 ## Anexos
@@ -265,6 +291,13 @@ Blocos 6.1 a 6.7 feitos; 6.8–6.10 por fazer (ver `docs/reports/prompt-06.md`).
   contexto. Só in-app: o email espera fornecedor (D-009).
 - `GET /me/tasks` deriva as tarefas das fontes de verdade (hoje: etapas de aprovação que o membro pode decidir, por si ou
   por delegação); não há tabela de tarefas duplicada.
+
+## Preferências do membro
+
+- `member_preferences` (tenant, membership, chave, valor JSON), uma linha por chave. `GET/PUT /me/preferences/:key`
+  só lê e escreve a membership em contexto; chaves conhecidas (`favorites`, `dashboard`) com validação própria
+  (caminhos internos, ids de widgets, limites de tamanho); chave desconhecida é 404. Sem dados de negócio, por isso
+  sem auditoria (D-021).
 
 ## Frontend
 

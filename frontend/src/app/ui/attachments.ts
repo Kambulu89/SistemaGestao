@@ -5,6 +5,7 @@ import { ErrorAlert } from './error-alert';
 import { Action, Loadable } from './load';
 import { ConfirmService } from './confirm';
 import { ToastService } from './toasts';
+import { DocumentPreviewPage, previewKind } from './templates/document-preview-page';
 
 export interface Attachment {
   id: string;
@@ -31,7 +32,7 @@ export function formatSize(bytes: number) {
  */
 @Component({
   selector: 'app-attachments',
-  imports: [ErrorAlert],
+  imports: [ErrorAlert, DocumentPreviewPage],
   template: `
     <section class="card" aria-labelledby="attachments-title">
       <h2 id="attachments-title" class="font-semibold">Anexos</h2>
@@ -71,6 +72,16 @@ export function formatSize(bytes: number) {
                 </span>
               </span>
               <span class="flex gap-2">
+                @if (canPreview(a)) {
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    [attr.aria-label]="'Pré-visualizar ' + a.fileName"
+                    (click)="previewing.set(a)"
+                  >
+                    Pré-visualizar
+                  </button>
+                }
                 <button type="button" class="btn-secondary" (click)="download(a)">
                   Descarregar
                 </button>
@@ -90,6 +101,15 @@ export function formatSize(bytes: number) {
         </ul>
       }
     </section>
+    @if (previewing(); as p) {
+      <app-document-preview
+        [url]="'attachments/' + p.id + '/content'"
+        [fileName]="p.fileName"
+        [contentType]="p.contentType"
+        [open]="true"
+        (closed)="previewing.set(null)"
+      />
+    }
   `,
 })
 export class Attachments {
@@ -103,6 +123,8 @@ export class Attachments {
   protected readonly size = formatSize;
   protected readonly when = formatDateTime;
   protected readonly tooBig = signal(false);
+  protected readonly previewing = signal<Attachment | null>(null);
+  protected readonly canPreview = (a: Attachment) => previewKind(a.contentType) !== null;
   protected readonly action = new Action();
   protected readonly list = new Loadable(() =>
     this.api.get<Attachment[]>('attachments', {

@@ -1,4 +1,14 @@
-import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
+import { type Draft, DraftBanner, Drafts } from '../core/drafts';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiError } from '../core/api';
@@ -49,6 +59,20 @@ const blankLine = (): LineForm => ({
   costCenterId: null,
   thirdPartyRef: '',
 });
+/** Conteúdo do rascunho local do formulário (cabeçalho e linhas, como editados). */
+interface EntryDraft {
+  legalEntityId: string | null;
+  journalId: string | null;
+  entryDate: string;
+  periodId: string | null;
+  documentDate: string;
+  reference: string;
+  currency: string;
+  exchangeRate: string;
+  description: string;
+  lines: LineForm[];
+}
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 /**
@@ -70,6 +94,7 @@ const today = () => new Date().toISOString().slice(0, 10);
     Attachments,
     AuditHistory,
     EntryAllocations,
+    DraftBanner,
   ],
   template: `
     @if (loadError()) {
@@ -87,7 +112,20 @@ const today = () => new Date().toISOString().slice(0, 10);
             Rejeitado: {{ entry()!.rejectionReason }}
           </p>
         }
-        <form class="space-y-4" (ngSubmit)="save()" novalidate>
+        @if (draft(); as d) {
+          <app-draft-banner
+            [savedAt]="d.savedAt"
+            (restore)="restoreDraft()"
+            (discard)="discardDraft()"
+          />
+        }
+        <form
+          class="space-y-4"
+          (ngSubmit)="save()"
+          (input)="queueDraft()"
+          (change)="queueDraft()"
+          novalidate
+        >
           <app-form-section title="Cabeçalho" description="Entidade, diário, data e período.">
             <app-field
               label="Entidade legal"
@@ -528,6 +566,10 @@ export class EntryForm implements HasUnsavedChanges {
   private readonly toasts = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly breadcrumbs = inject(Breadcrumbs);
+  private readonly drafts = inject(Drafts);
+  /** Rascunho local por recuperar (só se diferente do que está no formulário). */
+  protected readonly draft = signal<Draft<EntryDraft> | null>(null);
+  private draftTimer: ReturnType<typeof setTimeout> | null = null;
   protected readonly when = formatDateTime;
   protected readonly isNew = computed(() => this.id() === 'novo');
   protected readonly entry = signal<Entry | null>(null);
@@ -595,10 +637,53 @@ export class EntryForm implements HasUnsavedChanges {
 
   constructor() {
     warnOnUnload(this);
+    inject(DestroyRef).onDestroy(() => this.draftTimer && clearTimeout(this.draftTimer));
     effect(() => {
       const id = this.id();
       untracked(() => void this.load(id));
     });
+  }
+
+  /**
+   * Nome do rascunho: um para "novo" e um por lançamento e versão (um rascunho de uma versão antiga não se aplica a um
+   * lançamento que entretanto mudou no servidor).
+   */
+  private draftName(e: Entry | null = this.entry()) {
+    return e ? `accounting-entry-${e.id}-v${e.version}` : 'accounting-entry-new';
+  }
+
+  private checkDraft() {
+    if (this.readonly()) return this.draft.set(null);
+    const d = this.drafts.read<EntryDraft>(this.draftName());
+    this.draft.set(d && snapshot(d.value) !== this.initial ? d : null);
+  }
+
+  /** Guarda o rascunho 1 s depois da última alteração (só com alterações por guardar). */
+  protected queueDraft() {
+    if (this.draftTimer) clearTimeout(this.draftTimer);
+    this.draftTimer = setTimeout(() => {
+      if (this.hasUnsavedChanges())
+        this.drafts.write<EntryDraft>(this.draftName(), { ...this.form, lines: this.lines });
+    }, 1000);
+  }
+
+  protected async restoreDraft() {
+    const d = this.draft();
+    if (!d) return;
+    const { lines, ...form } = d.value;
+    this.form = {
+      ...this.form,
+      ...form,
+      legalEntityId: this.entry()?.legalEntityId ?? form.legalEntityId,
+    };
+    this.lines = lines.length ? lines : [blankLine(), blankLine()];
+    this.draft.set(null);
+    await this.loadReferences();
+  }
+
+  protected discardDraft() {
+    this.drafts.clear(this.draftName());
+    this.draft.set(null);
   }
 
   hasUnsavedChanges() {
@@ -638,6 +723,7 @@ export class EntryForm implements HasUnsavedChanges {
       await this.loadReferences();
       this.initial = this.snap();
       this.loaded.set(true);
+      this.checkDraft();
     } catch (error) {
       this.loadError.set(ApiError.from(error));
     }
@@ -803,6 +889,8 @@ export class EntryForm implements HasUnsavedChanges {
           }),
     );
     if (!result) return;
+    this.drafts.clear(this.draftName(e));
+    this.draft.set(null);
     this.apply(result);
     this.initial = this.snap();
     if (!e) {

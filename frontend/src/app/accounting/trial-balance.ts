@@ -1,11 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { downloadText, toCsv } from '../ui/csv';
-import { ErrorAlert } from '../ui/error-alert';
 import { Action } from '../ui/load';
 import { formatMoney } from '../ui/money-input';
-import { PageHeader } from '../ui/page-header';
+import { ReportPage } from '../ui/templates';
 import {
   type FiscalYear,
   type Period,
@@ -21,18 +20,21 @@ import { accountingDeps, legalEntityOptions } from './shared';
  */
 @Component({
   selector: 'app-trial-balance',
-  imports: [FormsModule, PageHeader, ErrorAlert],
+  imports: [FormsModule, ReportPage],
   template: `
-    <app-page-header
+    <app-report-page
       title="Balancete"
       subtitle="Só lançamentos contabilizados, na moeda funcional da entidade."
-    />
-    <form
-      class="mb-4 flex flex-wrap items-end gap-2"
-      (ngSubmit)="run()"
-      aria-label="Parâmetros do balancete"
+      [busy]="action.busy()"
+      [error]="action.error()"
+      [canRun]="!!fiscalYearId"
+      [hasResult]="!!tb()"
+      [summary]="summary()"
+      [generatedAt]="generatedAt()"
+      (run)="run()"
+      (exported)="export()"
     >
-      <div>
+      <div params>
         <label class="label" for="tb-year">Exercício</label>
         <select
           id="tb-year"
@@ -47,7 +49,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
           }
         </select>
       </div>
-      <div>
+      <div params>
         <label class="label" for="tb-from">De</label>
         <select id="tb-from" name="from" class="input w-40" [(ngModel)]="fromPeriod">
           @for (p of periods(); track p.id) {
@@ -55,7 +57,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
           }
         </select>
       </div>
-      <div>
+      <div params>
         <label class="label" for="tb-to">Até</label>
         <select id="tb-to" name="to" class="input w-40" [(ngModel)]="toPeriod">
           @for (p of periods(); track p.id) {
@@ -63,7 +65,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
           }
         </select>
       </div>
-      <div>
+      <div params>
         <label class="label" for="tb-mode">Tipo</label>
         <select id="tb-mode" name="mode" class="input w-44" [(ngModel)]="mode">
           <option value="analytic">Analítico</option>
@@ -71,7 +73,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
         </select>
       </div>
       @if (mode === 'synthetic') {
-        <div>
+        <div params>
           <label class="label" for="tb-depth">Até ao nível</label>
           <select id="tb-depth" name="depth" class="input w-32" [(ngModel)]="maxDepth">
             <option [ngValue]="1">Classes</option>
@@ -80,73 +82,66 @@ import { accountingDeps, legalEntityOptions } from './shared';
           </select>
         </div>
       }
-      <label class="flex items-center gap-2 text-sm"
+      <label params class="flex items-center gap-2 py-2 text-sm"
         ><input type="checkbox" name="zero" [(ngModel)]="includeZero" /> Contas sem
         movimentos</label
       >
-      <button type="submit" class="btn-primary" [disabled]="action.busy() || !fiscalYearId">
-        Gerar
-      </button>
-      @if (tb()) {
-        <button type="button" class="btn-secondary" (click)="export()">Exportar CSV</button>
-      }
-    </form>
-    <app-error-alert [error]="action.error()" />
-    @if (tb(); as t) {
-      <p class="mb-2 text-sm" role="status" data-testid="tb-status">
-        @if (t.balanced) {
-          <span class="text-success-text">Equilibrado: débitos = créditos.</span>
-        } @else {
-          <span class="text-danger-text">Desequilibrado — verifique os lançamentos.</span>
-        }
-      </p>
-      <div class="card overflow-x-auto p-0">
-        <table class="w-full min-w-[52rem] text-sm">
-          <caption class="sr-only">
-            Balancete do exercício
-            {{
-              t.fiscalYear.code
-            }}
-          </caption>
-          <thead>
-            <tr class="border-b border-border text-left">
-              <th scope="col" class="p-2">Conta</th>
-              <th scope="col" class="p-2 text-right">Saldo anterior</th>
-              <th scope="col" class="p-2 text-right">Débito</th>
-              <th scope="col" class="p-2 text-right">Crédito</th>
-              <th scope="col" class="p-2 text-right">Saldo devedor</th>
-              <th scope="col" class="p-2 text-right">Saldo credor</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of t.rows; track r.accountId) {
-              <tr class="border-b border-border" [class.font-semibold]="!r.postable">
-                <td class="p-2" [style.padding-left.rem]="0.5 + (r.depth - 1) * 1.25">
-                  <button type="button" class="btn-link text-left" (click)="openLedger(r)">
-                    <span class="font-mono">{{ r.code }}</span> {{ r.name }}
-                  </button>
-                </td>
-                <td class="p-2 text-right">{{ money(r.opening) }}</td>
-                <td class="p-2 text-right">{{ money(r.debit) }}</td>
-                <td class="p-2 text-right">{{ money(r.credit) }}</td>
-                <td class="p-2 text-right">{{ money(split(r.closing).debit) }}</td>
-                <td class="p-2 text-right">{{ money(split(r.closing).credit) }}</td>
+      @if (tb(); as t) {
+        <p class="mb-2 text-sm" role="status" data-testid="tb-status">
+          @if (t.balanced) {
+            <span class="text-success-text">Equilibrado: débitos = créditos.</span>
+          } @else {
+            <span class="text-danger-text">Desequilibrado — verifique os lançamentos.</span>
+          }
+        </p>
+        <div class="card overflow-x-auto p-0">
+          <table class="w-full min-w-[52rem] text-sm">
+            <caption class="sr-only">
+              Balancete do exercício
+              {{
+                t.fiscalYear.code
+              }}
+            </caption>
+            <thead>
+              <tr class="border-b border-border text-left">
+                <th scope="col" class="p-2">Conta</th>
+                <th scope="col" class="p-2 text-right">Saldo anterior</th>
+                <th scope="col" class="p-2 text-right">Débito</th>
+                <th scope="col" class="p-2 text-right">Crédito</th>
+                <th scope="col" class="p-2 text-right">Saldo devedor</th>
+                <th scope="col" class="p-2 text-right">Saldo credor</th>
               </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr class="font-semibold" data-testid="tb-totals">
-              <th scope="row" class="p-2 text-left">Totais (contas movimentáveis)</th>
-              <td class="p-2 text-right">{{ money(t.totals.opening) }}</td>
-              <td class="p-2 text-right">{{ money(t.totals.debit) }}</td>
-              <td class="p-2 text-right">{{ money(t.totals.credit) }}</td>
-              <td class="p-2 text-right">{{ money(t.totals.closingDebit) }}</td>
-              <td class="p-2 text-right">{{ money(t.totals.closingCredit) }}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    }
+            </thead>
+            <tbody>
+              @for (r of t.rows; track r.accountId) {
+                <tr class="border-b border-border" [class.font-semibold]="!r.postable">
+                  <td class="p-2" [style.padding-left.rem]="0.5 + (r.depth - 1) * 1.25">
+                    <button type="button" class="btn-link text-left" (click)="openLedger(r)">
+                      <span class="font-mono">{{ r.code }}</span> {{ r.name }}
+                    </button>
+                  </td>
+                  <td class="p-2 text-right">{{ money(r.opening) }}</td>
+                  <td class="p-2 text-right">{{ money(r.debit) }}</td>
+                  <td class="p-2 text-right">{{ money(r.credit) }}</td>
+                  <td class="p-2 text-right">{{ money(split(r.closing).debit) }}</td>
+                  <td class="p-2 text-right">{{ money(split(r.closing).credit) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="font-semibold" data-testid="tb-totals">
+                <th scope="row" class="p-2 text-left">Totais (contas movimentáveis)</th>
+                <td class="p-2 text-right">{{ money(t.totals.opening) }}</td>
+                <td class="p-2 text-right">{{ money(t.totals.debit) }}</td>
+                <td class="p-2 text-right">{{ money(t.totals.credit) }}</td>
+                <td class="p-2 text-right">{{ money(t.totals.closingDebit) }}</td>
+                <td class="p-2 text-right">{{ money(t.totals.closingCredit) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+    </app-report-page>
   `,
 })
 export class TrialBalancePage {
@@ -162,6 +157,16 @@ export class TrialBalancePage {
   protected readonly tb = signal<TrialBalance | null>(null);
   protected readonly action = new Action();
   protected readonly split = splitBalance;
+  protected readonly generatedAt = signal(new Date().toISOString());
+  /** Parâmetros do resultado actual, para o ecrã e a impressão. */
+  protected readonly summary = computed(() => {
+    const t = this.tb();
+    if (!t) return null;
+    const name = (n: number) => this.periods().find((p) => p.number === n)?.name ?? String(n);
+    return `Exercício ${t.fiscalYear.code} · ${name(t.fromPeriod)} a ${name(t.toPeriod)} · ${
+      t.mode === 'synthetic' ? 'sintético' : 'analítico'
+    }`;
+  });
   protected fiscalYearId: string | null = null;
   protected fromPeriod = 0;
   protected toPeriod = 13;
@@ -218,6 +223,7 @@ export class TrialBalancePage {
       }),
     );
     this.tb.set(r ?? null);
+    this.generatedAt.set(new Date().toISOString());
   }
 
   protected openLedger(r: TrialBalanceRow) {

@@ -32,7 +32,7 @@ export class ToastService {
   imports: [Icon],
   template: `
     <div
-      class="pointer-events-none fixed right-4 bottom-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2"
+      class="no-print pointer-events-none fixed right-4 bottom-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2"
     >
       @for (t of service.toasts(); track t.id) {
         <div

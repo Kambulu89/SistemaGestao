@@ -278,8 +278,33 @@ async function populate(client: any) {
       reversalAccountId: accountA.id,
     })
   )
+  const stmtTemplate = ok(
+    await as(client, s).post('/api/v1/accounting/statement-templates', {
+      chartId: chart.id,
+      code: 'BA',
+      name: 'Balanço A',
+      kind: 'BALANCE_SHEET',
+      lines: [{ kind: 'ACCOUNTS', code: 'A1', label: 'Contas', mappings: [{ prefix: '1' }] }],
+    })
+  )
+  const stmtNote = ok(
+    await as(client, s).post('/api/v1/accounting/statement-notes', {
+      fiscalYearId: fy.id,
+      number: 1,
+      title: 'Nota A',
+      body: 'Texto A',
+    })
+  )
+  const closeTask = ok(
+    await as(client, s).post(`/api/v1/accounting/periods/${period.id}/tasks`, {
+      title: 'Tarefa A',
+    })
+  )[0]
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    closeTask,
+    stmtTemplate,
+    stmtNote,
     schedule,
     provision,
     assetClass,
@@ -414,6 +439,56 @@ test.group('isolamento | matriz entre empresas', (group) => {
           ],
         }),
       ],
+      ['checklist de período de A', B.get(`/api/v1/accounting/periods/${a.period.id}/checklist`)],
+      [
+        'tarefa em período de A',
+        B.post(`/api/v1/accounting/periods/${a.period.id}/tasks`, { title: 'xxx' }),
+      ],
+      ['copiar tarefas de A', B.post(`/api/v1/accounting/periods/${a.period.id}/tasks/copy`)],
+      [
+        'PATCH tarefa de A',
+        B.patch(`/api/v1/accounting/close-tasks/${a.closeTask.id}`, { ...v, done: true }),
+      ],
+      ['DELETE tarefa de A', B.delete(`/api/v1/accounting/close-tasks/${a.closeTask.id}`)],
+      ['encerramento de A', B.get(`/api/v1/accounting/fiscal-years/${a.fy.id}/closing`)],
+      ['encerrar exercício de A', B.post(`/api/v1/accounting/fiscal-years/${a.fy.id}/close`, {})],
+      [
+        'reabrir exercício de A',
+        B.post(`/api/v1/accounting/fiscal-years/${a.fy.id}/reopen`, { reason: 'xxxxx' }),
+      ],
+      [
+        'GET modelo de demonstração',
+        B.get(`/api/v1/accounting/statement-templates/${a.stmtTemplate.id}`),
+      ],
+      [
+        'PATCH modelo de demonstração',
+        B.patch(`/api/v1/accounting/statement-templates/${a.stmtTemplate.id}`, { name: 'xx' }),
+      ],
+      [
+        'publicar modelo de A',
+        B.post(`/api/v1/accounting/statement-templates/${a.stmtTemplate.id}/publish`),
+      ],
+      [
+        'nova versão de modelo de A',
+        B.post(`/api/v1/accounting/statement-templates/${a.stmtTemplate.id}/versions`),
+      ],
+      [
+        'demonstração de A',
+        B.get(
+          `/api/v1/accounting/statements?templateId=${a.stmtTemplate.id}&fiscalYearId=${a.fy.id}`
+        ),
+      ],
+      ['notas de A', B.get(`/api/v1/accounting/statement-notes?fiscalYearId=${a.fy.id}`)],
+      [
+        'PATCH nota de A',
+        B.patch(`/api/v1/accounting/statement-notes/${a.stmtNote.id}`, {
+          ...v,
+          number: 1,
+          title: 'xx',
+          body: 'xx',
+        }),
+      ],
+      ['DELETE nota de A', B.delete(`/api/v1/accounting/statement-notes/${a.stmtNote.id}`)],
       ['GET classe de activos', B.get(`/api/v1/accounting/fixed-asset-classes/${a.assetClass.id}`)],
       [
         'PATCH classe de activos',
@@ -582,6 +657,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
       B.get('/api/v1/accounting/adjustment-schedules'),
       B.get('/api/v1/accounting/provisions'),
       B.get('/api/v1/accounting/fx-revaluations'),
+      B.get('/api/v1/accounting/statement-templates'),
     ])
     const idsOfA = new Set(
       [
@@ -610,6 +686,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
         a.asset.id,
         a.schedule.id,
         a.provision.id,
+        a.stmtTemplate.id,
+        a.stmtNote.id,
       ].map(String)
     )
     const leaked = lists.flatMap((r) =>

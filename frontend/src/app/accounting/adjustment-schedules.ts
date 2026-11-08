@@ -6,7 +6,7 @@ import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { ErrorAlert } from '../ui/error-alert';
 import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { Action, Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import {
@@ -50,7 +50,7 @@ const blankLine = (): ScheduleLineInput => ({
   imports: [
     FormsModule,
     RouterLink,
-    PageHeader,
+    EntityListPage,
     DataTable,
     CellDef,
     StatusBadge,
@@ -60,354 +60,377 @@ const blankLine = (): ScheduleLineInput => ({
     FieldControl,
   ],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Regularizações"
       subtitle="Recorrências, acréscimos e diferimentos. Geram rascunhos que seguem a aprovação normal."
-    />
-    @if (canManage()) {
-      <section class="card mb-4" aria-labelledby="adj-gen">
-        <h2 id="adj-gen" class="mb-3 font-semibold">Gerar rascunhos</h2>
-        <form
-          class="flex flex-wrap items-end gap-2"
-          (ngSubmit)="preview()"
-          aria-label="Gerar regularizações"
-        >
-          <div>
-            <label class="label" for="adj-le">Entidade legal</label>
-            <select
-              id="adj-le"
-              name="le"
-              class="input w-64"
-              [(ngModel)]="genEntity"
-              (ngModelChange)="pending.set(null)"
-            >
-              @for (e of entities(); track e.id) {
-                <option [ngValue]="e.id">{{ e.label }}</option>
-              }
-            </select>
-          </div>
-          <div>
-            <label class="label" for="adj-upto">Até ao mês</label>
-            <input
-              id="adj-upto"
-              name="upTo"
-              type="month"
-              class="input w-44"
-              [(ngModel)]="upTo"
-              (ngModelChange)="pending.set(null)"
-            />
-          </div>
-          <button type="submit" class="btn-secondary" [disabled]="gen.busy() || !genEntity">
-            Simular
-          </button>
-          @if (pending()?.rows?.length && !pending()?.entries) {
-            <button type="button" class="btn-primary" [disabled]="gen.busy()" (click)="generate()">
-              Gerar {{ pending()!.rows.length }} rascunho(s)
-            </button>
-          }
-        </form>
-        <app-error-alert [error]="gen.error()" [showDetails]="true" />
-        @if (pending(); as p) {
-          <p class="mt-3 text-sm" role="status" data-testid="adj-status">
-            @if (p.entries) {
-              Gerados {{ p.entries.length }} rascunho(s), total {{ money(p.total) }}. Submeta-os em
-              Lançamentos.
-            } @else if (p.rows.length === 0) {
-              Nada por gerar até {{ upTo }}.
-            } @else {
-              Por gerar: {{ p.rows.length }} rascunho(s), total {{ money(p.total) }}.
-            }
-          </p>
-          @if (p.rows.length) {
-            <ul class="mt-2 divide-y divide-border text-sm">
-              @for (r of p.rows; track r.scheduleId + r.month) {
-                <li class="flex justify-between gap-2 py-1">
-                  <span>{{ r.month }} · {{ r.code }} — {{ r.name }} ({{ kindText(r.kind) }})</span>
-                  <span>{{ money(r.total) }}</span>
-                </li>
-              }
-            </ul>
-          }
-        }
-      </section>
-    }
-
-    <app-data-table
-      label="Planos de regularização"
-      [columns]="columns"
-      [rows]="schedules.value() ?? []"
-      [total]="schedules.value()?.length ?? 0"
-      [loading]="schedules.loading()"
-      [error]="schedules.error()"
-      emptyText="Ainda não há planos."
-      (retry)="schedules.load()"
+      permission="accounting.read"
+      feature="accounting"
     >
-      <ng-template appCell="code" let-row>
-        <button type="button" class="btn-link" (click)="edit(row)">{{ row.code }}</button>
-      </ng-template>
-      <ng-template appCell="status" let-row><app-status-badge [status]="row.status" /></ng-template>
-    </app-data-table>
-
-    @if (editing()?.occurrences?.length) {
-      <section class="card mt-4" aria-labelledby="adj-occ">
-        <h2 id="adj-occ" class="mb-2 font-semibold">Meses gerados de {{ editing()!.code }}</h2>
-        <ul class="divide-y divide-border text-sm" data-testid="adj-occurrences">
-          @for (o of editing()!.occurrences; track o.month) {
-            <li class="flex justify-between gap-2 py-1">
-              <span>{{ o.month }} · {{ money(o.amount) }}</span>
-              <a class="btn-link" [routerLink]="['/contabilidade/lancamentos', o.entryId]">{{
-                o.entryNumber ?? 'rascunho'
-              }}</a>
-            </li>
-          }
-        </ul>
-      </section>
-    }
-
-    @if (canManage()) {
-      <form
-        class="mt-4 space-y-3"
-        (ngSubmit)="save()"
-        [attr.aria-label]="editing() ? 'Alterar plano' : 'Novo plano'"
-      >
-        <app-error-alert [error]="action.error()" [showDetails]="true" />
-        <app-form-section [title]="editing() ? 'Alterar ' + editing()!.code : 'Novo plano'">
-          <app-field
-            label="Entidade legal"
-            [required]="true"
-            [error]="action.field('legalEntityId')"
+      @if (canManage()) {
+        <section class="card mb-4" aria-labelledby="adj-gen">
+          <h2 id="adj-gen" class="mb-3 font-semibold">Gerar rascunhos</h2>
+          <form
+            class="flex flex-wrap items-end gap-2"
+            (ngSubmit)="preview()"
+            aria-label="Gerar regularizações"
           >
-            <select
-              appControl
-              class="input"
-              name="le"
-              [disabled]="!!editing()"
-              [(ngModel)]="form.legalEntityId"
-              (ngModelChange)="loadRefs()"
-            >
-              <option [ngValue]="null">—</option>
-              @for (e of entities(); track e.id) {
-                <option [ngValue]="e.id">{{ e.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Tipo" [required]="true" [error]="action.field('kind')">
-            <select
-              appControl
-              class="input"
-              name="kind"
-              [disabled]="!!editing()"
-              [(ngModel)]="form.kind"
-            >
-              @for (k of kinds; track k[0]) {
-                <option [value]="k[0]">{{ k[1] }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Código" [required]="true" [error]="action.field('code')">
-            <input
-              appControl
-              class="input"
-              name="code"
-              [disabled]="!!editing()"
-              [(ngModel)]="form.code"
-            />
-          </app-field>
-          <app-field label="Nome" [required]="true" [error]="action.field('name')">
-            <input appControl class="input" name="name" [(ngModel)]="form.name" />
-          </app-field>
-          <app-field label="Diário" [required]="true" [error]="action.field('journalId')">
-            <select appControl class="input" name="journal" [(ngModel)]="form.journalId">
-              <option [ngValue]="null">—</option>
-              @for (j of journals(); track j.id) {
-                <option [ngValue]="j.id">{{ j.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Primeiro mês" [required]="true" [error]="action.field('startMonth')">
-            <input
-              appControl
-              class="input"
-              type="month"
-              name="start"
-              [(ngModel)]="form.startMonth"
-            />
-          </app-field>
-          @if (form.kind === 'RECURRING') {
-            <app-field label="Periodicidade" [error]="action.field('frequency')">
-              <select appControl class="input" name="frequency" [(ngModel)]="form.frequency">
-                @for (f of frequencies; track f[0]) {
-                  <option [value]="f[0]">{{ f[1] }}</option>
+            <div>
+              <label class="label" for="adj-le">Entidade legal</label>
+              <select
+                id="adj-le"
+                name="le"
+                class="input w-64"
+                [(ngModel)]="genEntity"
+                (ngModelChange)="pending.set(null)"
+              >
+                @for (e of entities(); track e.id) {
+                  <option [ngValue]="e.id">{{ e.label }}</option>
                 }
               </select>
-            </app-field>
-            <app-field label="Último mês" hint="Vazio: sem fim." [error]="action.field('endMonth')">
-              <input appControl class="input" type="month" name="end" [(ngModel)]="form.endMonth" />
-            </app-field>
-          } @else {
-            <app-field
-              label="Total a repartir"
-              [required]="true"
-              [error]="action.field('totalAmount')"
-            >
+            </div>
+            <div>
+              <label class="label" for="adj-upto">Até ao mês</label>
               <input
-                appControl
-                class="input"
-                inputmode="decimal"
-                name="total"
-                [(ngModel)]="form.totalAmount"
+                id="adj-upto"
+                name="upTo"
+                type="month"
+                class="input w-44"
+                [(ngModel)]="upTo"
+                (ngModelChange)="pending.set(null)"
               />
-            </app-field>
-            <app-field label="N.º de meses" [required]="true" [error]="action.field('months')">
-              <input
-                appControl
-                class="input"
-                type="number"
-                min="1"
-                max="600"
-                name="months"
-                [(ngModel)]="form.months"
-              />
-            </app-field>
-            <app-field
-              label="Conta a débito"
-              [required]="true"
-              [hint]="
-                form.kind === 'DEFERRAL' ? 'P. ex. o gasto do mês.' : 'P. ex. o gasto incorrido.'
-              "
-              [error]="action.field('debitAccountId')"
-            >
-              <select appControl class="input" name="debit" [(ngModel)]="form.debitAccountId">
-                <option [ngValue]="null">—</option>
-                @for (a of accounts(); track a.id) {
-                  <option [ngValue]="a.id">{{ a.label }}</option>
-                }
-              </select>
-            </app-field>
-            <app-field
-              label="Conta a crédito"
-              [required]="true"
-              [hint]="
-                form.kind === 'DEFERRAL'
-                  ? 'P. ex. gastos a reconhecer.'
-                  : 'P. ex. acréscimos de gastos.'
-              "
-              [error]="action.field('creditAccountId')"
-            >
-              <select appControl class="input" name="credit" [(ngModel)]="form.creditAccountId">
-                <option [ngValue]="null">—</option>
-                @for (a of accounts(); track a.id) {
-                  <option [ngValue]="a.id">{{ a.label }}</option>
-                }
-              </select>
-            </app-field>
-            <app-field label="Centro de custo" [error]="action.field('costCenterId')">
-              <select appControl class="input" name="cc" [(ngModel)]="form.costCenterId">
-                <option [ngValue]="null">—</option>
-                @for (c of centers(); track c.id) {
-                  <option [ngValue]="c.id">{{ c.label }}</option>
-                }
-              </select>
-            </app-field>
-          }
-          <app-field label="Estado">
-            <select appControl class="input" name="status" [(ngModel)]="form.status">
-              <option value="ACTIVE">Activo</option>
-              <option value="INACTIVE">Inactivo</option>
-            </select>
-          </app-field>
-        </app-form-section>
-        @if (form.kind === 'RECURRING') {
-          <fieldset class="card space-y-2">
-            <legend class="font-semibold">Linhas de cada mês</legend>
-            @if (action.field('lines')) {
-              <p class="field-error" role="alert">{{ action.field('lines') }}</p>
-            }
-            @for (l of lines; track $index; let i = $index) {
-              <div class="grid gap-2 md:grid-cols-[2fr_1fr_1fr_1.5fr_1fr_auto] md:items-end">
-                <div>
-                  <label class="label" [for]="'l-acc-' + i">Conta {{ i + 1 }}</label>
-                  <select
-                    class="input"
-                    [id]="'l-acc-' + i"
-                    [name]="'acc' + i"
-                    [(ngModel)]="l.accountId"
-                  >
-                    <option [ngValue]="null">—</option>
-                    @for (a of accounts(); track a.id) {
-                      <option [ngValue]="a.id">{{ a.label }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="label" [for]="'l-d-' + i">Débito {{ i + 1 }}</label>
-                  <input
-                    class="input"
-                    inputmode="decimal"
-                    [id]="'l-d-' + i"
-                    [name]="'d' + i"
-                    [(ngModel)]="l.debit"
-                  />
-                </div>
-                <div>
-                  <label class="label" [for]="'l-c-' + i">Crédito {{ i + 1 }}</label>
-                  <input
-                    class="input"
-                    inputmode="decimal"
-                    [id]="'l-c-' + i"
-                    [name]="'c' + i"
-                    [(ngModel)]="l.credit"
-                  />
-                </div>
-                <div>
-                  <label class="label" [for]="'l-cc-' + i">Centro de custo {{ i + 1 }}</label>
-                  <select
-                    class="input"
-                    [id]="'l-cc-' + i"
-                    [name]="'cc' + i"
-                    [(ngModel)]="l.costCenterId"
-                  >
-                    <option [ngValue]="null">—</option>
-                    @for (c of centers(); track c.id) {
-                      <option [ngValue]="c.id">{{ c.label }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="label" [for]="'l-t-' + i">Terceiro {{ i + 1 }}</label>
-                  <input
-                    class="input"
-                    [id]="'l-t-' + i"
-                    [name]="'t' + i"
-                    [(ngModel)]="l.thirdPartyRef"
-                  />
-                </div>
-                <button
-                  type="button"
-                  class="btn-secondary"
-                  [attr.aria-label]="'Remover linha ' + (i + 1)"
-                  [disabled]="lines.length <= 2"
-                  (click)="lines.splice(i, 1)"
-                >
-                  Remover
-                </button>
-              </div>
-            }
-            <button type="button" class="btn-secondary" (click)="lines.push(blankLine())">
-              Acrescentar linha
+            </div>
+            <button type="submit" class="btn-secondary" [disabled]="gen.busy() || !genEntity">
+              Simular
             </button>
-          </fieldset>
-        }
-        <div class="flex gap-2">
-          <button type="submit" class="btn-primary" [disabled]="action.busy()">
-            {{ editing() ? 'Guardar plano' : 'Criar plano' }}
-          </button>
-          @if (editing()) {
-            <button type="button" class="btn-secondary" (click)="reset()">Novo plano</button>
+            @if (pending()?.rows?.length && !pending()?.entries) {
+              <button
+                type="button"
+                class="btn-primary"
+                [disabled]="gen.busy()"
+                (click)="generate()"
+              >
+                Gerar {{ pending()!.rows.length }} rascunho(s)
+              </button>
+            }
+          </form>
+          <app-error-alert [error]="gen.error()" [showDetails]="true" />
+          @if (pending(); as p) {
+            <p class="mt-3 text-sm" role="status" data-testid="adj-status">
+              @if (p.entries) {
+                Gerados {{ p.entries.length }} rascunho(s), total {{ money(p.total) }}. Submeta-os
+                em Lançamentos.
+              } @else if (p.rows.length === 0) {
+                Nada por gerar até {{ upTo }}.
+              } @else {
+                Por gerar: {{ p.rows.length }} rascunho(s), total {{ money(p.total) }}.
+              }
+            </p>
+            @if (p.rows.length) {
+              <ul class="mt-2 divide-y divide-border text-sm">
+                @for (r of p.rows; track r.scheduleId + r.month) {
+                  <li class="flex justify-between gap-2 py-1">
+                    <span
+                      >{{ r.month }} · {{ r.code }} — {{ r.name }} ({{ kindText(r.kind) }})</span
+                    >
+                    <span>{{ money(r.total) }}</span>
+                  </li>
+                }
+              </ul>
+            }
           }
-        </div>
-      </form>
-    }
+        </section>
+      }
+
+      <app-data-table
+        tableId="acc-adjustment-schedules"
+        label="Planos de regularização"
+        [columns]="columns"
+        [rows]="schedules.value() ?? []"
+        [total]="schedules.value()?.length ?? 0"
+        [loading]="schedules.loading()"
+        [error]="schedules.error()"
+        emptyText="Ainda não há planos."
+        (retry)="schedules.load()"
+      >
+        <ng-template appCell="code" let-row>
+          <button type="button" class="btn-link" (click)="edit(row)">{{ row.code }}</button>
+        </ng-template>
+        <ng-template appCell="status" let-row
+          ><app-status-badge [status]="row.status"
+        /></ng-template>
+      </app-data-table>
+
+      @if (editing()?.occurrences?.length) {
+        <section class="card mt-4" aria-labelledby="adj-occ">
+          <h2 id="adj-occ" class="mb-2 font-semibold">Meses gerados de {{ editing()!.code }}</h2>
+          <ul class="divide-y divide-border text-sm" data-testid="adj-occurrences">
+            @for (o of editing()!.occurrences; track o.month) {
+              <li class="flex justify-between gap-2 py-1">
+                <span>{{ o.month }} · {{ money(o.amount) }}</span>
+                <a class="btn-link" [routerLink]="['/contabilidade/lancamentos', o.entryId]">{{
+                  o.entryNumber ?? 'rascunho'
+                }}</a>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (canManage()) {
+        <form
+          class="mt-4 space-y-3"
+          (ngSubmit)="save()"
+          [attr.aria-label]="editing() ? 'Alterar plano' : 'Novo plano'"
+        >
+          <app-error-alert [error]="action.error()" [showDetails]="true" />
+          <app-form-section [title]="editing() ? 'Alterar ' + editing()!.code : 'Novo plano'">
+            <app-field
+              label="Entidade legal"
+              [required]="true"
+              [error]="action.field('legalEntityId')"
+            >
+              <select
+                appControl
+                class="input"
+                name="le"
+                [disabled]="!!editing()"
+                [(ngModel)]="form.legalEntityId"
+                (ngModelChange)="loadRefs()"
+              >
+                <option [ngValue]="null">—</option>
+                @for (e of entities(); track e.id) {
+                  <option [ngValue]="e.id">{{ e.label }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Tipo" [required]="true" [error]="action.field('kind')">
+              <select
+                appControl
+                class="input"
+                name="kind"
+                [disabled]="!!editing()"
+                [(ngModel)]="form.kind"
+              >
+                @for (k of kinds; track k[0]) {
+                  <option [value]="k[0]">{{ k[1] }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Código" [required]="true" [error]="action.field('code')">
+              <input
+                appControl
+                class="input"
+                name="code"
+                [disabled]="!!editing()"
+                [(ngModel)]="form.code"
+              />
+            </app-field>
+            <app-field label="Nome" [required]="true" [error]="action.field('name')">
+              <input appControl class="input" name="name" [(ngModel)]="form.name" />
+            </app-field>
+            <app-field label="Diário" [required]="true" [error]="action.field('journalId')">
+              <select appControl class="input" name="journal" [(ngModel)]="form.journalId">
+                <option [ngValue]="null">—</option>
+                @for (j of journals(); track j.id) {
+                  <option [ngValue]="j.id">{{ j.label }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Primeiro mês" [required]="true" [error]="action.field('startMonth')">
+              <input
+                appControl
+                class="input"
+                type="month"
+                name="start"
+                [(ngModel)]="form.startMonth"
+              />
+            </app-field>
+            @if (form.kind === 'RECURRING') {
+              <app-field label="Periodicidade" [error]="action.field('frequency')">
+                <select appControl class="input" name="frequency" [(ngModel)]="form.frequency">
+                  @for (f of frequencies; track f[0]) {
+                    <option [value]="f[0]">{{ f[1] }}</option>
+                  }
+                </select>
+              </app-field>
+              <app-field
+                label="Último mês"
+                hint="Vazio: sem fim."
+                [error]="action.field('endMonth')"
+              >
+                <input
+                  appControl
+                  class="input"
+                  type="month"
+                  name="end"
+                  [(ngModel)]="form.endMonth"
+                />
+              </app-field>
+            } @else {
+              <app-field
+                label="Total a repartir"
+                [required]="true"
+                [error]="action.field('totalAmount')"
+              >
+                <input
+                  appControl
+                  class="input"
+                  inputmode="decimal"
+                  name="total"
+                  [(ngModel)]="form.totalAmount"
+                />
+              </app-field>
+              <app-field label="N.º de meses" [required]="true" [error]="action.field('months')">
+                <input
+                  appControl
+                  class="input"
+                  type="number"
+                  min="1"
+                  max="600"
+                  name="months"
+                  [(ngModel)]="form.months"
+                />
+              </app-field>
+              <app-field
+                label="Conta a débito"
+                [required]="true"
+                [hint]="
+                  form.kind === 'DEFERRAL' ? 'P. ex. o gasto do mês.' : 'P. ex. o gasto incorrido.'
+                "
+                [error]="action.field('debitAccountId')"
+              >
+                <select appControl class="input" name="debit" [(ngModel)]="form.debitAccountId">
+                  <option [ngValue]="null">—</option>
+                  @for (a of accounts(); track a.id) {
+                    <option [ngValue]="a.id">{{ a.label }}</option>
+                  }
+                </select>
+              </app-field>
+              <app-field
+                label="Conta a crédito"
+                [required]="true"
+                [hint]="
+                  form.kind === 'DEFERRAL'
+                    ? 'P. ex. gastos a reconhecer.'
+                    : 'P. ex. acréscimos de gastos.'
+                "
+                [error]="action.field('creditAccountId')"
+              >
+                <select appControl class="input" name="credit" [(ngModel)]="form.creditAccountId">
+                  <option [ngValue]="null">—</option>
+                  @for (a of accounts(); track a.id) {
+                    <option [ngValue]="a.id">{{ a.label }}</option>
+                  }
+                </select>
+              </app-field>
+              <app-field label="Centro de custo" [error]="action.field('costCenterId')">
+                <select appControl class="input" name="cc" [(ngModel)]="form.costCenterId">
+                  <option [ngValue]="null">—</option>
+                  @for (c of centers(); track c.id) {
+                    <option [ngValue]="c.id">{{ c.label }}</option>
+                  }
+                </select>
+              </app-field>
+            }
+            <app-field label="Estado">
+              <select appControl class="input" name="status" [(ngModel)]="form.status">
+                <option value="ACTIVE">Activo</option>
+                <option value="INACTIVE">Inactivo</option>
+              </select>
+            </app-field>
+          </app-form-section>
+          @if (form.kind === 'RECURRING') {
+            <fieldset class="card space-y-2">
+              <legend class="font-semibold">Linhas de cada mês</legend>
+              @if (action.field('lines')) {
+                <p class="field-error" role="alert">{{ action.field('lines') }}</p>
+              }
+              @for (l of lines; track $index; let i = $index) {
+                <div class="grid gap-2 md:grid-cols-[2fr_1fr_1fr_1.5fr_1fr_auto] md:items-end">
+                  <div>
+                    <label class="label" [for]="'l-acc-' + i">Conta {{ i + 1 }}</label>
+                    <select
+                      class="input"
+                      [id]="'l-acc-' + i"
+                      [name]="'acc' + i"
+                      [(ngModel)]="l.accountId"
+                    >
+                      <option [ngValue]="null">—</option>
+                      @for (a of accounts(); track a.id) {
+                        <option [ngValue]="a.id">{{ a.label }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div>
+                    <label class="label" [for]="'l-d-' + i">Débito {{ i + 1 }}</label>
+                    <input
+                      class="input"
+                      inputmode="decimal"
+                      [id]="'l-d-' + i"
+                      [name]="'d' + i"
+                      [(ngModel)]="l.debit"
+                    />
+                  </div>
+                  <div>
+                    <label class="label" [for]="'l-c-' + i">Crédito {{ i + 1 }}</label>
+                    <input
+                      class="input"
+                      inputmode="decimal"
+                      [id]="'l-c-' + i"
+                      [name]="'c' + i"
+                      [(ngModel)]="l.credit"
+                    />
+                  </div>
+                  <div>
+                    <label class="label" [for]="'l-cc-' + i">Centro de custo {{ i + 1 }}</label>
+                    <select
+                      class="input"
+                      [id]="'l-cc-' + i"
+                      [name]="'cc' + i"
+                      [(ngModel)]="l.costCenterId"
+                    >
+                      <option [ngValue]="null">—</option>
+                      @for (c of centers(); track c.id) {
+                        <option [ngValue]="c.id">{{ c.label }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div>
+                    <label class="label" [for]="'l-t-' + i">Terceiro {{ i + 1 }}</label>
+                    <input
+                      class="input"
+                      [id]="'l-t-' + i"
+                      [name]="'t' + i"
+                      [(ngModel)]="l.thirdPartyRef"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    [attr.aria-label]="'Remover linha ' + (i + 1)"
+                    [disabled]="lines.length <= 2"
+                    (click)="lines.splice(i, 1)"
+                  >
+                    Remover
+                  </button>
+                </div>
+              }
+              <button type="button" class="btn-secondary" (click)="lines.push(blankLine())">
+                Acrescentar linha
+              </button>
+            </fieldset>
+          }
+          <div class="flex gap-2">
+            <button type="submit" class="btn-primary" [disabled]="action.busy()">
+              {{ editing() ? 'Guardar plano' : 'Criar plano' }}
+            </button>
+            @if (editing()) {
+              <button type="button" class="btn-secondary" (click)="reset()">Novo plano</button>
+            }
+          </div>
+        </form>
+      }
+    </app-entity-list-page>
   `,
 })
 export class AdjustmentSchedules {
@@ -441,7 +464,7 @@ export class AdjustmentSchedules {
       ).items,
   );
   protected readonly columns: Column<AdjustmentSchedule>[] = [
-    { key: 'code', label: 'Código' },
+    { key: 'code', required: true, label: 'Código' },
     { key: 'name', label: 'Nome' },
     { key: 'kind', label: 'Tipo', value: (r) => SCHEDULE_KIND_LABELS[r.kind] },
     {

@@ -87,6 +87,23 @@ export const ACCOUNTING_ROUTES: Routes = [
     loadComponent: () => import('./analytics-report').then((m) => m.AnalyticsReportPage),
   },
   {
+    path: 'fecho',
+    title: 'Fecho',
+    loadComponent: () => import('./closing').then((m) => m.ClosingPage),
+  },
+  {
+    path: 'demonstracoes',
+    title: 'Demonstrações financeiras',
+    canActivate: [accessGuard],
+    data: { permission: 'accounting.reports' },
+    loadComponent: () => import('./statements').then((m) => m.StatementsPage),
+  },
+  {
+    path: 'modelos-demonstracoes',
+    title: 'Modelos de demonstrações',
+    loadComponent: () => import('./statement-templates').then((m) => m.StatementTemplates),
+  },
+  {
     path: 'regularizacoes',
     title: 'Regularizações',
     loadComponent: () => import('./adjustment-schedules').then((m) => m.AdjustmentSchedules),

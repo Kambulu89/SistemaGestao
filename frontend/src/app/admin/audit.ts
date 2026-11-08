@@ -1,11 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, inject } from '@angular/core';
 import { Api } from '../core/api';
+import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { formatDateTime } from '../ui/dates';
-import { ErrorAlert } from '../ui/error-alert';
-import { Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
-import { Pager } from '../ui/pager';
+import { FilterBar, type FilterDef } from '../ui/filter-bar';
+import { type ListQuery, ListState } from '../ui/list-state';
+import { EntityListPage } from '../ui/templates';
 
 interface AuditEvent {
   id: string;
@@ -21,122 +20,103 @@ interface AuditEvent {
 
 const LIMIT = 50;
 
-/** Registo de auditoria (só leitura), com filtros por acção, entidade e período. */
+/** Datas do filtro (dia local) para instantes ISO, como a API espera. */
+export function auditQuery(q: ListQuery): ListQuery {
+  const out = { ...q };
+  if (typeof q['from'] === 'string') out['from'] = new Date(`${q['from']}T00:00:00`).toISOString();
+  if (typeof q['to'] === 'string') out['to'] = new Date(`${q['to']}T23:59:59.999`).toISOString();
+  return out;
+}
+
+/** Registo de auditoria (EntityListPage, só leitura): filtros por acção, entidade e período na URL. */
 @Component({
   selector: 'app-audit',
-  imports: [FormsModule, PageHeader, ErrorAlert, Pager],
+  imports: [EntityListPage, FilterBar, DataTable, CellDef],
   template: `
-    <app-page-header title="Auditoria" subtitle="Operações sensíveis registadas nesta empresa." />
-    <form class="card mb-4 grid gap-3 md:grid-cols-5" role="search" (ngSubmit)="go(0)">
-      <div>
-        <label class="label" for="action">Acção</label>
-        <input
-          id="action"
-          name="action"
-          class="input"
-          placeholder="ex.: member.*"
-          [(ngModel)]="filters.action"
-        />
-      </div>
-      <div>
-        <label class="label" for="entityType">Entidade</label>
-        <input
-          id="entityType"
-          name="entityType"
-          class="input"
-          placeholder="ex.: legal_entity"
-          [(ngModel)]="filters.entityType"
-        />
-      </div>
-      <div>
-        <label class="label" for="from">Desde</label>
-        <input id="from" name="from" type="date" class="input" [(ngModel)]="filters.from" />
-      </div>
-      <div>
-        <label class="label" for="to">Até</label>
-        <input id="to" name="to" type="date" class="input" [(ngModel)]="filters.to" />
-      </div>
-      <div class="flex items-end"><button type="submit" class="btn-secondary">Filtrar</button></div>
-    </form>
-    <app-error-alert [error]="page.error()" />
-    @if (page.loading()) {
-      <p class="text-sm text-muted">A carregar…</p>
-    } @else if ((page.value()?.items ?? []).length === 0) {
-      <p class="card text-sm text-muted">Sem eventos.</p>
-    } @else {
-      <div class="card overflow-x-auto p-0">
-        <table class="table" aria-label="Eventos de auditoria">
-          <thead>
-            <tr>
-              <th>Quando</th>
-              <th>Quem</th>
-              <th>Acção</th>
-              <th>Entidade</th>
-              <th>Detalhe</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (e of page.value()?.items; track e.id) {
-              <tr>
-                <td class="whitespace-nowrap">{{ when(e.occurredAt) }}</td>
-                <td>{{ e.actor?.fullName ?? e.actor?.email ?? 'Sistema' }}</td>
-                <td class="font-mono text-xs">{{ e.action }}</td>
-                <td class="text-xs">
-                  {{ e.entityType }}<br /><span class="text-muted">{{ e.entityId ?? '' }}</span>
-                </td>
-                <td class="text-xs">
-                  @for (c of changes(e); track c.field) {
-                    <div>
-                      <strong>{{ c.field }}</strong
-                      >: {{ c.from }} → {{ c.to }}
-                    </div>
-                  }
-                  @if (e.metadata) {
-                    <details>
-                      <summary class="cursor-pointer text-muted">Metadados</summary>
-                      <pre class="mt-1 whitespace-pre-wrap">{{ json(e.metadata) }}</pre>
-                    </details>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <app-pager
-        [total]="page.value()?.total ?? 0"
-        [limit]="limit"
-        [offset]="offset()"
-        (offsetChange)="go($event)"
+    <app-entity-list-page
+      title="Auditoria"
+      subtitle="Operações sensíveis registadas nesta empresa."
+      permission="audit.read"
+    >
+      <app-filter-bar
+        id="audit"
+        label="auditoria"
+        [searchable]="false"
+        [state]="list"
+        [filters]="filters"
       />
-    }
+      <app-data-table
+        label="Eventos de auditoria"
+        tableId="audit"
+        [columns]="columns"
+        [rows]="list.page.value()?.items ?? []"
+        [total]="list.page.value()?.total ?? 0"
+        [loading]="list.page.loading()"
+        [error]="list.page.error()"
+        [offset]="list.offset()"
+        [limit]="list.limit"
+        emptyText="Sem eventos."
+        (offsetChange)="list.goTo($event)"
+        (retry)="list.reload()"
+      >
+        <ng-template appCell="action" let-e
+          ><span class="font-mono text-xs">{{ e.action }}</span></ng-template
+        >
+        <ng-template appCell="entity" let-e>
+          <span class="text-xs"
+            >{{ e.entityType }}<br /><span class="text-muted">{{ e.entityId ?? '' }}</span></span
+          >
+        </ng-template>
+        <ng-template appCell="detail" let-e>
+          <div class="text-xs">
+            @for (c of changes(e); track c.field) {
+              <div>
+                <strong>{{ c.field }}</strong
+                >: {{ c.from }} → {{ c.to }}
+              </div>
+            }
+            @if (e.metadata) {
+              <details>
+                <summary class="cursor-pointer text-muted">Metadados</summary>
+                <pre class="mt-1 whitespace-pre-wrap">{{ json(e.metadata) }}</pre>
+              </details>
+            }
+          </div>
+        </ng-template>
+      </app-data-table>
+    </app-entity-list-page>
   `,
 })
 export class Audit {
   private readonly api = inject(Api);
-  protected readonly limit = LIMIT;
-  protected readonly when = formatDateTime;
-  protected readonly offset = signal(0);
-  protected filters = { action: '', entityType: '', from: '', to: '' };
-  protected readonly page = new Loadable(() =>
-    this.api.page<AuditEvent>('audit-events', {
-      action: this.filters.action.trim() || undefined,
-      entityType: this.filters.entityType.trim() || undefined,
-      from: this.filters.from ? new Date(`${this.filters.from}T00:00:00`).toISOString() : undefined,
-      to: this.filters.to ? new Date(`${this.filters.to}T23:59:59.999`).toISOString() : undefined,
-      limit: LIMIT,
-      offset: this.offset(),
-    }),
-  );
-
-  constructor() {
-    void this.page.load();
-  }
-
-  protected go(offset: number) {
-    this.offset.set(offset);
-    void this.page.load();
-  }
+  protected readonly filters: FilterDef[] = [
+    { key: 'action', label: 'Acção', type: 'text', placeholder: 'ex.: member.*' },
+    { key: 'entityType', label: 'Entidade', type: 'text', placeholder: 'ex.: legal_entity' },
+    { key: 'from', label: 'Desde', type: 'date' },
+    { key: 'to', label: 'Até', type: 'date' },
+  ];
+  protected readonly columns: Column<AuditEvent>[] = [
+    {
+      key: 'occurredAt',
+      label: 'Quando',
+      required: true,
+      value: (e) => formatDateTime(e.occurredAt),
+    },
+    {
+      key: 'actor',
+      label: 'Quem',
+      value: (e) => e.actor?.fullName ?? e.actor?.email ?? 'Sistema',
+    },
+    { key: 'action', label: 'Acção' },
+    { key: 'entity', label: 'Entidade', hideOnMobile: true },
+    { key: 'detail', label: 'Detalhe', hideOnMobile: true },
+  ];
+  protected readonly list = new ListState<AuditEvent>(this.api, {
+    url: 'audit-events',
+    filterKeys: ['action', 'entityType', 'from', 'to'],
+    limit: LIMIT,
+    transform: auditQuery,
+  });
 
   protected changes(e: AuditEvent) {
     const show = (v: unknown) =>

@@ -8,94 +8,95 @@ import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { formatDate } from '../ui/dates';
 import { exportList, withoutPaging } from '../ui/export';
 import { Icon } from '../ui/icon';
-import { Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { FilterBar, type FilterDef } from '../ui/filter-bar';
+import { ListState } from '../ui/list-state';
+import { EntityListPage } from '../ui/templates';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import { REF_KINDS } from './reference-kinds';
 
 const LIMIT = 25;
 
-/** Lista de uma tabela de referência (câmbios, séries, calendários, contas bancárias) com filtros do servidor. */
+/**
+ * Lista de uma tabela de referência (EntityListPage: câmbios, séries, calendários, contas bancárias): filtros do tipo na
+ * URL, colunas configuráveis e exportação das colunas visíveis.
+ */
 @Component({
   selector: 'app-reference-list',
-  imports: [FormsModule, RouterLink, PageHeader, DataTable, CellDef, StatusBadge, Icon],
+  imports: [
+    FormsModule,
+    RouterLink,
+    EntityListPage,
+    FilterBar,
+    DataTable,
+    CellDef,
+    StatusBadge,
+    Icon,
+  ],
   template: `
     @if (meta(); as k) {
-      <app-page-header [title]="k.title">
+      <app-entity-list-page [title]="k.title" [permission]="k.readPermission">
         @if (canManage()) {
-          <a class="btn-primary" [routerLink]="['/empresa', k.segment, 'novo']"
+          <a actions class="btn-primary" [routerLink]="['/empresa', k.segment, 'novo']"
             ><app-icon name="plus" [size]="16" />{{ k.feminine ? 'Nova' : 'Novo' }}
             {{ k.singular }}</a
           >
         }
-      </app-page-header>
-      <form class="mb-4 flex flex-wrap items-end gap-2" (ngSubmit)="go(0)" role="search">
-        <div>
-          <label class="label" for="q">Pesquisar</label>
-          <input id="q" name="q" type="search" class="input w-64" [(ngModel)]="q" />
-        </div>
-        @for (f of k.filters; track f.key) {
-          <div>
-            <label class="label" [for]="'f-' + f.key">{{ f.label }}</label>
-            <select
-              class="input w-48"
-              [id]="'f-' + f.key"
-              [name]="f.key"
-              [ngModel]="filters()[f.key] ?? ''"
-              (ngModelChange)="setFilter(f.key, $event)"
-            >
-              <option value="">Todos</option>
-              @for (o of f.options; track o.value) {
-                <option [value]="o.value">{{ o.label }}</option>
-              }
-            </select>
-          </div>
+        <app-filter-bar
+          id="ref"
+          [label]="k.title"
+          placeholder="Pesquisar"
+          [state]="list"
+          [filters]="filterDefs()"
+        />
+        @if (k.segment === 'exchange-rates') {
+          <form
+            class="card mb-4 flex flex-wrap items-end gap-2"
+            (ngSubmit)="lookup()"
+            aria-label="Consultar câmbio"
+          >
+            <div>
+              <label class="label" for="lk-from">De</label>
+              <input id="lk-from" name="lkFrom" class="input w-24" [(ngModel)]="rate.from" />
+            </div>
+            <div>
+              <label class="label" for="lk-to">Para</label>
+              <input id="lk-to" name="lkTo" class="input w-24" [(ngModel)]="rate.to" />
+            </div>
+            <div>
+              <label class="label" for="lk-date">Na data</label>
+              <input id="lk-date" name="lkDate" type="date" class="input" [(ngModel)]="rate.date" />
+            </div>
+            <button type="submit" class="btn-secondary">Consultar</button>
+            <p class="text-sm" role="status" data-testid="rate-result">{{ rateResult() }}</p>
+          </form>
         }
-        <button type="submit" class="btn-secondary">Pesquisar</button>
-      </form>
-      @if (k.segment === 'exchange-rates') {
-        <form
-          class="card mb-4 flex flex-wrap items-end gap-2"
-          (ngSubmit)="lookup()"
-          aria-label="Consultar câmbio"
+        <app-data-table
+          [label]="k.title"
+          [tableId]="'ref-' + k.segment"
+          [columns]="columns()"
+          [rows]="list.page.value()?.items ?? []"
+          [total]="list.page.value()?.total ?? 0"
+          [loading]="list.page.loading()"
+          [error]="list.page.error()"
+          [offset]="list.offset()"
+          [limit]="list.limit"
+          [emptyText]="
+            list.q() || list.activeFilters()
+              ? 'Sem registos com estes filtros.'
+              : 'Ainda não há registos.'
+          "
+          [exportable]="true"
+          [exporting]="exporting()"
+          (offsetChange)="list.goTo($event)"
+          (retry)="list.reload()"
+          (export)="export($event)"
         >
-          <div>
-            <label class="label" for="lk-from">De</label>
-            <input id="lk-from" name="lkFrom" class="input w-24" [(ngModel)]="rate.from" />
-          </div>
-          <div>
-            <label class="label" for="lk-to">Para</label>
-            <input id="lk-to" name="lkTo" class="input w-24" [(ngModel)]="rate.to" />
-          </div>
-          <div>
-            <label class="label" for="lk-date">Na data</label>
-            <input id="lk-date" name="lkDate" type="date" class="input" [(ngModel)]="rate.date" />
-          </div>
-          <button type="submit" class="btn-secondary">Consultar</button>
-          <p class="text-sm" role="status" data-testid="rate-result">{{ rateResult() }}</p>
-        </form>
-      }
-      <app-data-table
-        [label]="k.title"
-        [columns]="columns()"
-        [rows]="page.value()?.items ?? []"
-        [total]="page.value()?.total ?? 0"
-        [loading]="page.loading()"
-        [error]="page.error()"
-        [offset]="offset()"
-        [limit]="limit"
-        [emptyText]="q() ? 'Sem registos com estes filtros.' : 'Ainda não há registos.'"
-        [exportable]="true"
-        [exporting]="exporting()"
-        (offsetChange)="go($event)"
-        (retry)="page.load()"
-        (export)="export()"
-      >
-        <ng-template appCell="status" let-row
-          ><app-status-badge [status]="row.status"
-        /></ng-template>
-      </app-data-table>
+          <ng-template appCell="status" let-row
+            ><app-status-badge [status]="row.status"
+          /></ng-template>
+        </app-data-table>
+      </app-entity-list-page>
     } @else {
       <p class="card">Tipo desconhecido.</p>
     }
@@ -111,10 +112,13 @@ export class ReferenceList {
     const m = this.meta();
     return !!m && this.workspace.can(m.managePermission);
   });
-  protected readonly limit = LIMIT;
-  protected readonly q = signal('');
-  protected readonly filters = signal<Record<string, string>>({});
-  protected readonly offset = signal(0);
+  protected readonly filterDefs = computed<FilterDef[]>(() =>
+    (this.meta()?.filters ?? []).map((f) => ({
+      key: f.key,
+      label: f.label,
+      options: (f.options ?? []).map((o) => ({ value: String(o.value), label: o.label })),
+    })),
+  );
   protected readonly exporting = signal(false);
   protected rate = { from: 'USD', to: 'AOA', date: new Date().toISOString().slice(0, 10) };
   protected readonly rateResult = signal('');
@@ -126,37 +130,36 @@ export class ReferenceList {
       key: c.key,
       label: c.label,
       hideOnMobile: i > 2 && c.key !== 'status',
+      required: i === 0,
       link: i === 0 ? (r: OrgRecord) => ['/empresa', meta.segment, r.id] : undefined,
       value: (r: OrgRecord) => this.cell(c.key, r),
     }));
   });
-  protected readonly page = new Loadable(() => this.api.page<OrgRecord>(this.kind(), this.query()));
+  /** Pesquisa, filtros do tipo e página na URL; a entidade legal do âmbito vai sempre (não fica na URL). */
+  protected readonly list = new ListState<OrgRecord>(this.api, {
+    url: () => this.kind(),
+    filterKeys: () => (this.meta()?.filters ?? []).map((f) => f.key),
+    limit: LIMIT,
+    extra: () => this.scope(),
+  });
 
   constructor() {
     effect(() => {
       this.kind();
+      this.workspace.legalEntityId();
       untracked(() => {
-        this.q.set('');
-        this.filters.set({});
-        this.offset.set(0);
-        void this.page.load();
+        void this.list.reload();
         void this.loadNames();
       });
     });
   }
 
-  private query() {
+  private scope() {
     const legalEntityId =
       this.meta()?.columns.some((c) => c.key === 'legalEntityId') || this.kind() === 'bank-accounts'
         ? (this.workspace.legalEntityId() ?? undefined)
         : undefined;
-    return {
-      q: this.q().trim() || undefined,
-      ...this.filters(),
-      legalEntityId,
-      limit: LIMIT,
-      offset: this.offset(),
-    };
+    return { legalEntityId };
   }
 
   private async loadNames() {
@@ -184,16 +187,6 @@ export class ReferenceList {
     return v ?? null;
   }
 
-  protected setFilter(key: string, value: string) {
-    this.filters.update((f) => {
-      const next = { ...f };
-      if (value) next[key] = value;
-      else delete next[key];
-      return next;
-    });
-    this.go(0);
-  }
-
   /** Câmbio em vigor numa data: o mais recente com data igual ou anterior (regra do servidor). */
   protected async lookup() {
     const from = this.rate.from.trim().toUpperCase();
@@ -211,19 +204,14 @@ export class ReferenceList {
     }
   }
 
-  protected go(offset: number) {
-    this.offset.set(offset);
-    void this.page.load();
-  }
-
-  protected async export() {
+  protected async export(columns: Column<OrgRecord>[]) {
     this.exporting.set(true);
     try {
       const count = await exportList(
         this.api,
-        this.kind(),
-        withoutPaging(this.query()),
-        this.columns(),
+        this.list.url(),
+        withoutPaging(this.list.query()),
+        columns,
         `${this.kind()}.csv`,
       );
       this.toasts.show(`Exportados ${count} registo(s).`);

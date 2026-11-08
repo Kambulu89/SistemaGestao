@@ -5,17 +5,26 @@ export interface NavItem {
   icon: string;
   permission?: string;
   feature?: string;
+  /** Subtítulo dentro do domínio (ex.: "Relatórios financeiros"). */
+  section?: string;
 }
 
 export interface NavGroup {
   label: string;
+  icon?: string;
   items: NavItem[];
   platform?: boolean;
 }
 
+/**
+ * Navegação por domínios do ERP (prompt de interface): cada grupo é um domínio e as secções arrumam os ecrãs dentro
+ * dele. Só entram ecrãs com backend real; os domínios ainda sem módulos (Operações Comerciais, Pessoas e Talento,
+ * Operações Empresariais, Inteligência e Automação) não aparecem até existirem.
+ */
 export const NAVIGATION: NavGroup[] = [
   {
-    label: 'Geral',
+    label: 'Início',
+    icon: 'home',
     items: [
       { label: 'Painel', path: '/painel', icon: 'home' },
       { label: 'Notificações', path: '/notificacoes', icon: 'bell' },
@@ -23,47 +32,8 @@ export const NAVIGATION: NavGroup[] = [
     ],
   },
   {
-    label: 'Organização',
-    items: [
-      {
-        label: 'Entidades legais',
-        path: '/organizacao/legal-entities',
-        icon: 'building',
-        permission: 'organization.read',
-        feature: 'organization',
-      },
-      {
-        label: 'Filiais',
-        path: '/organizacao/branches',
-        icon: 'branch',
-        permission: 'organization.read',
-        feature: 'organization',
-      },
-      {
-        label: 'Departamentos',
-        path: '/organizacao/departments',
-        icon: 'tree',
-        permission: 'organization.read',
-        feature: 'organization',
-      },
-      {
-        label: 'Cargos',
-        path: '/organizacao/positions',
-        icon: 'badge',
-        permission: 'organization.read',
-        feature: 'organization',
-      },
-      {
-        label: 'Centros de custo',
-        path: '/organizacao/cost-centers',
-        icon: 'coins',
-        permission: 'organization.read',
-        feature: 'organization',
-      },
-    ],
-  },
-  {
-    label: 'Contabilidade',
+    label: 'Gestão Financeira',
+    icon: 'coins',
     items: [
       {
         label: 'Lançamentos',
@@ -71,90 +41,15 @@ export const NAVIGATION: NavGroup[] = [
         icon: 'file',
         permission: 'accounting.read',
         feature: 'accounting',
+        section: 'Contabilidade',
       },
       {
-        label: 'Balancete',
-        path: '/contabilidade/balancete',
-        icon: 'grid',
-        permission: 'accounting.reports',
-        feature: 'accounting',
-      },
-      {
-        label: 'Razão',
-        path: '/contabilidade/razao',
-        icon: 'file',
-        permission: 'accounting.reports',
-        feature: 'accounting',
-      },
-      {
-        label: 'Analítica',
-        path: '/contabilidade/analitica',
-        icon: 'grid',
-        permission: 'accounting.analytics',
-        feature: 'accounting',
-      },
-      {
-        label: 'Dimensões analíticas',
-        path: '/contabilidade/dimensoes',
-        icon: 'layers',
-        permission: 'accounting.read',
-        feature: 'accounting',
-      },
-      {
-        label: 'Chaves de repartição',
-        path: '/contabilidade/chaves',
-        icon: 'tree',
-        permission: 'accounting.read',
-        feature: 'accounting',
-      },
-      {
-        label: 'Regularizações',
-        path: '/contabilidade/regularizacoes',
-        icon: 'history',
-        permission: 'accounting.read',
-        feature: 'accounting',
-      },
-      {
-        label: 'Provisões',
-        path: '/contabilidade/provisoes',
-        icon: 'shield',
-        permission: 'accounting.read',
-        feature: 'accounting',
-      },
-      {
-        label: 'Diferenças cambiais',
-        path: '/contabilidade/diferencas-cambiais',
-        icon: 'globe',
-        permission: 'accounting.adjustments',
-        feature: 'accounting',
-      },
-      {
-        label: 'Reconciliação de contas',
-        path: '/contabilidade/reconciliacao',
+        label: 'Fecho',
+        path: '/contabilidade/fecho',
         icon: 'check',
         permission: 'accounting.read',
         feature: 'accounting',
-      },
-      {
-        label: 'Activos fixos',
-        path: '/contabilidade/activos',
-        icon: 'building',
-        permission: 'fixed_assets.read',
-        feature: 'accounting',
-      },
-      {
-        label: 'Depreciações',
-        path: '/contabilidade/depreciacoes',
-        icon: 'coins',
-        permission: 'fixed_assets.read',
-        feature: 'accounting',
-      },
-      {
-        label: 'Classes de activos',
-        path: '/contabilidade/classes-activos',
-        icon: 'layers',
-        permission: 'fixed_assets.read',
-        feature: 'accounting',
+        section: 'Contabilidade',
       },
       {
         label: 'Saldos de abertura',
@@ -162,20 +57,7 @@ export const NAVIGATION: NavGroup[] = [
         icon: 'download',
         permission: 'accounting.create',
         feature: 'accounting',
-      },
-      {
-        label: 'Planos de contas',
-        path: '/contabilidade/planos',
-        icon: 'tree',
-        permission: 'accounting.read',
-        feature: 'accounting',
-      },
-      {
-        label: 'Exercícios',
-        path: '/contabilidade/exercicios',
-        icon: 'calendar',
-        permission: 'accounting.read',
-        feature: 'accounting',
+        section: 'Contabilidade',
       },
       {
         label: 'Regras de contabilização',
@@ -183,6 +65,7 @@ export const NAVIGATION: NavGroup[] = [
         icon: 'flow',
         permission: 'accounting.read',
         feature: 'accounting',
+        section: 'Contabilidade',
       },
       {
         label: 'Eventos contabilísticos',
@@ -190,6 +73,103 @@ export const NAVIGATION: NavGroup[] = [
         icon: 'history',
         permission: 'accounting.read',
         feature: 'accounting',
+        section: 'Contabilidade',
+      },
+      {
+        label: 'Balancete',
+        path: '/contabilidade/balancete',
+        icon: 'grid',
+        permission: 'accounting.reports',
+        feature: 'accounting',
+        section: 'Relatórios financeiros',
+      },
+      {
+        label: 'Razão',
+        path: '/contabilidade/razao',
+        icon: 'file',
+        permission: 'accounting.reports',
+        feature: 'accounting',
+        section: 'Relatórios financeiros',
+      },
+      {
+        label: 'Demonstrações financeiras',
+        path: '/contabilidade/demonstracoes',
+        icon: 'file',
+        permission: 'accounting.reports',
+        feature: 'accounting',
+        section: 'Relatórios financeiros',
+      },
+      {
+        label: 'Analítica',
+        path: '/contabilidade/analitica',
+        icon: 'grid',
+        permission: 'accounting.analytics',
+        feature: 'accounting',
+        section: 'Relatórios financeiros',
+      },
+      {
+        label: 'Activos fixos',
+        path: '/contabilidade/activos',
+        icon: 'building',
+        permission: 'fixed_assets.read',
+        feature: 'accounting',
+        section: 'Activos e regularizações',
+      },
+      {
+        label: 'Depreciações',
+        path: '/contabilidade/depreciacoes',
+        icon: 'coins',
+        permission: 'fixed_assets.read',
+        feature: 'accounting',
+        section: 'Activos e regularizações',
+      },
+      {
+        label: 'Regularizações',
+        path: '/contabilidade/regularizacoes',
+        icon: 'history',
+        permission: 'accounting.read',
+        feature: 'accounting',
+        section: 'Activos e regularizações',
+      },
+      {
+        label: 'Provisões',
+        path: '/contabilidade/provisoes',
+        icon: 'shield',
+        permission: 'accounting.read',
+        feature: 'accounting',
+        section: 'Activos e regularizações',
+      },
+      {
+        label: 'Diferenças cambiais',
+        path: '/contabilidade/diferencas-cambiais',
+        icon: 'globe',
+        permission: 'accounting.adjustments',
+        feature: 'accounting',
+        section: 'Activos e regularizações',
+      },
+      {
+        label: 'Reconciliação de contas',
+        path: '/contabilidade/reconciliacao',
+        icon: 'check',
+        permission: 'accounting.read',
+        feature: 'accounting',
+        section: 'Activos e regularizações',
+      },
+      {
+        label: 'Planos de contas',
+        path: '/contabilidade/planos',
+        icon: 'tree',
+        permission: 'accounting.read',
+        feature: 'accounting',
+        section: 'Configuração financeira',
+      },
+      {
+        label: 'Exercícios',
+        path: '/contabilidade/exercicios',
+        icon: 'calendar',
+        permission: 'accounting.read',
+        feature: 'accounting',
+        section: 'Configuração financeira',
       },
       {
         label: 'Diários',
@@ -197,60 +177,148 @@ export const NAVIGATION: NavGroup[] = [
         icon: 'layers',
         permission: 'accounting.read',
         feature: 'accounting',
-      },
-    ],
-  },
-  {
-    label: 'Empresa',
-    items: [
-      {
-        label: 'Perfil da empresa',
-        path: '/empresa/perfil',
-        icon: 'building',
-        permission: 'settings.read',
+        section: 'Configuração financeira',
       },
       {
-        label: 'Configurações',
-        path: '/empresa/configuracoes',
-        icon: 'settings',
-        permission: 'settings.read',
+        label: 'Dimensões analíticas',
+        path: '/contabilidade/dimensoes',
+        icon: 'layers',
+        permission: 'accounting.read',
+        feature: 'accounting',
+        section: 'Configuração financeira',
+      },
+      {
+        label: 'Chaves de repartição',
+        path: '/contabilidade/chaves',
+        icon: 'tree',
+        permission: 'accounting.read',
+        feature: 'accounting',
+        section: 'Configuração financeira',
+      },
+      {
+        label: 'Modelos de demonstrações',
+        path: '/contabilidade/modelos-demonstracoes',
+        icon: 'template',
+        permission: 'accounting.read',
+        feature: 'accounting',
+        section: 'Configuração financeira',
+      },
+      {
+        label: 'Classes de activos',
+        path: '/contabilidade/classes-activos',
+        icon: 'layers',
+        permission: 'fixed_assets.read',
+        feature: 'accounting',
+        section: 'Configuração financeira',
       },
       {
         label: 'Câmbios',
         path: '/empresa/exchange-rates',
         icon: 'coins',
         permission: 'settings.read',
-      },
-      {
-        label: 'Séries documentais',
-        path: '/empresa/document-series',
-        icon: 'layers',
-        permission: 'settings.read',
-      },
-      {
-        label: 'Calendários',
-        path: '/empresa/calendars',
-        icon: 'calendar',
-        permission: 'settings.read',
+        section: 'Configuração financeira',
       },
       {
         label: 'Contas bancárias',
         path: '/empresa/bank-accounts',
         icon: 'card',
         permission: 'bank_accounts.read',
+        section: 'Configuração financeira',
       },
     ],
   },
   {
-    label: 'Administração',
+    label: 'Administração e Plataforma',
+    icon: 'settings',
     items: [
-      { label: 'Membros', path: '/membros', icon: 'users', permission: 'members.read' },
-      { label: 'Perfis', path: '/perfis', icon: 'shield', permission: 'roles.read' },
+      {
+        label: 'Entidades legais',
+        path: '/organizacao/legal-entities',
+        icon: 'building',
+        permission: 'organization.read',
+        feature: 'organization',
+        section: 'Organização',
+      },
+      {
+        label: 'Filiais',
+        path: '/organizacao/branches',
+        icon: 'branch',
+        permission: 'organization.read',
+        feature: 'organization',
+        section: 'Organização',
+      },
+      {
+        label: 'Departamentos',
+        path: '/organizacao/departments',
+        icon: 'tree',
+        permission: 'organization.read',
+        feature: 'organization',
+        section: 'Organização',
+      },
+      {
+        label: 'Cargos',
+        path: '/organizacao/positions',
+        icon: 'badge',
+        permission: 'organization.read',
+        feature: 'organization',
+        section: 'Organização',
+      },
+      {
+        label: 'Centros de custo',
+        path: '/organizacao/cost-centers',
+        icon: 'coins',
+        permission: 'organization.read',
+        feature: 'organization',
+        section: 'Organização',
+      },
+      {
+        label: 'Perfil da empresa',
+        path: '/empresa/perfil',
+        icon: 'building',
+        permission: 'settings.read',
+        section: 'Empresa',
+      },
+      {
+        label: 'Configurações',
+        path: '/empresa/configuracoes',
+        icon: 'settings',
+        permission: 'settings.read',
+        section: 'Empresa',
+      },
+      {
+        label: 'Séries documentais',
+        path: '/empresa/document-series',
+        icon: 'layers',
+        permission: 'settings.read',
+        section: 'Empresa',
+      },
+      {
+        label: 'Calendários',
+        path: '/empresa/calendars',
+        icon: 'calendar',
+        permission: 'settings.read',
+        section: 'Empresa',
+      },
+      {
+        label: 'Membros',
+        path: '/membros',
+        icon: 'users',
+        permission: 'members.read',
+        section: 'Acessos e subscrição',
+      },
+      {
+        label: 'Perfis',
+        path: '/perfis',
+        icon: 'shield',
+        permission: 'roles.read',
+        section: 'Acessos e subscrição',
+      },
       {
         label: 'Matriz de permissões',
         path: '/perfis/matriz',
         icon: 'grid',
         permission: 'roles.read',
+        section: 'Acessos e subscrição',
       },
       {
         label: 'Workflows de aprovação',
@@ -258,15 +326,35 @@ export const NAVIGATION: NavGroup[] = [
         icon: 'flow',
         permission: 'approvals.manage',
         feature: 'approvals',
+        section: 'Acessos e subscrição',
       },
-      { label: 'Subscrição', path: '/subscricao', icon: 'card', permission: 'subscription.read' },
-      { label: 'Auditoria', path: '/auditoria', icon: 'history', permission: 'audit.read' },
+      {
+        label: 'Subscrição',
+        path: '/subscricao',
+        icon: 'card',
+        permission: 'subscription.read',
+        section: 'Acessos e subscrição',
+      },
+    ],
+  },
+  {
+    label: 'Integrações e Compliance',
+    icon: 'shield',
+    items: [
+      {
+        label: 'Auditoria',
+        path: '/auditoria',
+        icon: 'history',
+        permission: 'audit.read',
+        section: 'Compliance',
+      },
     ],
   },
 ];
 
 export const PLATFORM_NAVIGATION: NavGroup = {
   label: 'Plataforma',
+  icon: 'globe',
   platform: true,
   items: [
     { label: 'Empresas', path: '/plataforma/empresas', icon: 'globe' },
@@ -290,4 +378,21 @@ export function visibleNavigation(
       })).filter((g) => g.items.length > 0)
     : [];
   return platformAdmin ? [...groups, PLATFORM_NAVIGATION] : groups;
+}
+
+/** Todos os ecrãs visíveis, numa lista (paleta de comandos), com o domínio como contexto. */
+export function flatNavigation(groups: NavGroup[]): (NavItem & { group: string })[] {
+  return groups.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label })));
+}
+
+/** Secções de um grupo, pela ordem em que aparecem (itens sem secção ficam numa secção sem título). */
+export function sectionsOf(group: NavGroup): { title: string | null; items: NavItem[] }[] {
+  const out: { title: string | null; items: NavItem[] }[] = [];
+  for (const item of group.items) {
+    const title = item.section ?? null;
+    const last = out[out.length - 1];
+    if (last && last.title === title) last.items.push(item);
+    else out.push({ title, items: [item] });
+  }
+  return out;
 }

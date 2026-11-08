@@ -1,3 +1,4 @@
+import { FormActionBar } from '../ui/form-action-bar';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -18,6 +19,8 @@ import { ErrorState, Skeleton } from '../ui/states';
 import { ToastService } from '../ui/toasts';
 import { groupIban, HOLIDAY_KINDS, REF_KINDS, WEEKDAYS } from './reference-kinds';
 
+import { CalendarPage, type CalendarEvent, shiftMonth } from '../ui/templates';
+
 interface Holiday {
   id: string;
   date: string;
@@ -32,6 +35,7 @@ interface Holiday {
 @Component({
   selector: 'app-reference-form',
   imports: [
+    FormActionBar,
     FormsModule,
     RouterLink,
     PageDetail,
@@ -43,6 +47,7 @@ interface Holiday {
     FieldControl,
     Attachments,
     AuditHistory,
+    CalendarPage,
   ],
   template: `
     @if (meta(); as k) {
@@ -95,7 +100,7 @@ interface Holiday {
             </section>
           }
 
-          <form class="space-y-4" (ngSubmit)="save()" novalidate>
+          <form id="ref-form" class="space-y-4" (ngSubmit)="save()" novalidate>
             <app-error-alert [error]="action.error()" [showDetails]="false" />
             <app-form-section [title]="k.title" description="Campos marcados são obrigatórios.">
               @for (f of k.fields; track f.key) {
@@ -204,18 +209,34 @@ interface Holiday {
               }
             </app-form-section>
             @if (canManage() && editable()) {
-              <div class="flex items-center gap-3">
-                <button type="submit" class="btn-primary" [disabled]="action.busy()">
-                  {{ action.busy() ? 'A guardar…' : isNew() ? 'Criar' : 'Guardar alterações' }}
-                </button>
-                @if (hasUnsavedChanges()) {
-                  <span class="text-sm text-muted" role="status">Alterações por guardar</span>
-                }
-              </div>
+              <app-form-action-bar
+                formId="ref-form"
+                [dirty]="hasUnsavedChanges()"
+                [busy]="action.busy()"
+                [saveLabel]="isNew() ? 'Criar' : 'Guardar alterações'"
+              />
             }
           </form>
 
           @if (k.segment === 'calendars' && record(); as r) {
+            <app-calendar-month
+              label="Vista mensal do calendário"
+              [year]="calYear()"
+              [month]="calMonth()"
+              [weekendDays]="$any(r['weekendDays']) ?? []"
+              [events]="holidayEvents()"
+              (monthChange)="setMonth($event.year, $event.month)"
+              (goToday)="setMonth(todayYear, todayMonth)"
+            >
+              <p class="mb-2 text-sm text-muted" data-testid="cal-working-days">
+                @if (monthWorkingDays() !== null) {
+                  {{ monthWorkingDays() }} dia(s) útil(eis) neste mês (cálculo do servidor, com
+                  feriados e dias de descanso).
+                } @else {
+                  A calcular dias úteis…
+                }
+              </p>
+            </app-calendar-month>
             <section class="card" aria-labelledby="hol-title">
               <h2 id="hol-title" class="font-semibold">Feriados</h2>
               @if (holidays().length === 0) {
@@ -386,6 +407,37 @@ export class ReferenceForm implements HasUnsavedChanges {
   protected readonly loadError = signal<ApiError | null>(null);
   protected readonly refs = signal<Record<string, OrgRecord[]>>({});
   protected readonly holidays = signal<Holiday[]>([]);
+  protected readonly todayYear = new Date().getFullYear();
+  protected readonly todayMonth = new Date().getMonth() + 1;
+  protected readonly calYear = signal(this.todayYear);
+  protected readonly calMonth = signal(this.todayMonth);
+  protected readonly monthWorkingDays = signal<number | null>(null);
+  protected readonly holidayEvents = computed<CalendarEvent[]>(() =>
+    this.holidays().map((h) => ({ date: h.date, label: h.name, tone: 'warning' })),
+  );
+  private workingSeq = 0;
+
+  /** Muda o mês da vista e pede ao servidor os dias úteis desse mês. */
+  protected async setMonth(year: number, month: number) {
+    this.calYear.set(year);
+    this.calMonth.set(month);
+    const id = this.record()?.id;
+    if (!id || this.meta()?.segment !== 'calendars') return;
+    const seq = ++this.workingSeq;
+    this.monthWorkingDays.set(null);
+    const next = shiftMonth(year, month, 1);
+    const last = new Date(Date.UTC(next.year, next.month - 1, 0)).getUTCDate();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    try {
+      const r = await this.api.get<{ workingDays: number }>(`calendars/${id}/working-days`, {
+        from: `${year}-${pad(month)}-01`,
+        to: `${year}-${pad(month)}-${pad(last)}`,
+      });
+      if (seq === this.workingSeq) this.monthWorkingDays.set(r.workingDays);
+    } catch {
+      if (seq === this.workingSeq) this.monthWorkingDays.set(null);
+    }
+  }
   protected readonly workingDays = signal<number | null>(null);
   protected readonly action = new Action();
   protected readonly holidayAction = new Action();
@@ -457,6 +509,7 @@ export class ReferenceForm implements HasUnsavedChanges {
     this.record.set(rest as OrgRecord);
     this.form = { ...rest };
     this.breadcrumbs.setCurrent(this.meta()!.title_(rest));
+    if (this.meta()?.segment === 'calendars') void this.setMonth(this.calYear(), this.calMonth());
   }
 
   protected readonly = (f: OrgField) =>
@@ -561,6 +614,7 @@ export class ReferenceForm implements HasUnsavedChanges {
     );
     if (!added) return;
     this.holidays.set(added.holidays);
+    void this.setMonth(this.calYear(), this.calMonth());
     this.newHoliday = { date: '', name: '', kind: this.newHoliday.kind };
     this.workingDays.set(null);
     this.toasts.show('Feriado adicionado.');
@@ -579,6 +633,7 @@ export class ReferenceForm implements HasUnsavedChanges {
     );
     if (this.holidayAction.error()) return;
     this.holidays.update((list) => list.filter((x) => x.id !== h.id));
+    void this.setMonth(this.calYear(), this.calMonth());
     this.workingDays.set(null);
     this.toasts.show('Feriado removido.');
   }

@@ -1,5 +1,18 @@
-import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { FormActionBar } from '../ui/form-action-bar';
 import { FormsModule } from '@angular/forms';
+import { type Draft, Drafts } from '../core/drafts';
+import { EntityFormPage } from '../ui/templates';
 import { Router, RouterLink } from '@angular/router';
 import { Api, ApiError } from '../core/api';
 import { Breadcrumbs } from '../core/breadcrumbs';
@@ -29,13 +42,19 @@ interface Dependent {
   count: number;
 }
 
-/** Criar (`:id = novo`) ou ver/alterar um registo organizacional, com anexos e histórico. */
+/**
+ * Criar (`:id = novo`, EntityCreatePage com rascunho local) ou ver/alterar (EntityDetailPage) um registo organizacional,
+ * com anexos e histórico.
+ */
 @Component({
   selector: 'app-organization-form',
   imports: [
+    FormActionBar,
     FormsModule,
     RouterLink,
     PageDetail,
+    EntityFormPage,
+    NgTemplateOutlet,
     ErrorAlert,
     ErrorState,
     Skeleton,
@@ -49,152 +68,43 @@ interface Dependent {
     @if (meta(); as k) {
       @if (loadError()) {
         <app-error-state [error]="loadError()" (retry)="reload()" />
+      } @else if (isNew()) {
+        <app-entity-form-page
+          [title]="'Criar ' + k.singular"
+          subtitle="Os campos com * são obrigatórios. O rascunho fica guardado neste browser até criar."
+          formId="org-form"
+          [loading]="!loaded()"
+          [saveError]="action.error()"
+          [busy]="action.busy()"
+          [dirty]="hasUnsavedChanges()"
+          saveLabel="Criar"
+          [draftSavedAt]="draft()?.savedAt ?? null"
+          (save)="save()"
+          (cancelled)="cancel()"
+          (restoreDraft)="restoreDraft()"
+          (discardDraft)="discardDraft()"
+          (input)="queueDraft()"
+          (change)="queueDraft()"
+        >
+          <ng-container *ngTemplateOutlet="fieldsTpl" />
+        </app-entity-form-page>
       } @else if (!loaded()) {
         <div class="card"><app-skeleton /></div>
       } @else {
-        <app-page-detail
-          [title]="isNew() ? 'Nova ' + k.singular : (title() ?? k.singular)"
-          [status]="isNew() ? null : $any(record()?.['status'])"
-        >
+        <app-page-detail [title]="title() ?? k.singular" [status]="$any(record()?.['status'])">
           <ng-container actions>
             <a class="btn-secondary" [routerLink]="['/organizacao', k.segment]">Voltar à lista</a>
           </ng-container>
-          <form class="space-y-4" (ngSubmit)="save()" novalidate>
+          <form id="org-form" class="space-y-4" (ngSubmit)="save()" novalidate>
             <app-error-alert [error]="action.error()" [showDetails]="false" />
-            @for (section of sections; track section.id) {
-              @if (fieldsOf(section.id).length > 0) {
-                <app-form-section [title]="section.title" [description]="section.description">
-                  @for (f of fieldsOf(section.id); track f.key) {
-                    <app-field
-                      [label]="f.label"
-                      [required]="!!f.required"
-                      [hint]="
-                        isNew()
-                          ? (f.hint ?? null)
-                          : f.immutable
-                            ? 'Não se altera depois de criado.'
-                            : null
-                      "
-                      [error]="action.field(f.key)"
-                      [class.md:col-span-2]="f.type === 'textarea'"
-                    >
-                      @switch (f.type) {
-                        @case ('select') {
-                          <select
-                            appControl
-                            class="input"
-                            [name]="f.key"
-                            [disabled]="readonly(f)"
-                            [(ngModel)]="form[f.key]"
-                          >
-                            @if (!f.required && f.key !== 'status') {
-                              <option [ngValue]="null">—</option>
-                            }
-                            @for (o of f.options; track o.value) {
-                              <option [ngValue]="o.value">{{ o.label }}</option>
-                            }
-                          </select>
-                        }
-                        @case ('boolean') {
-                          <select
-                            appControl
-                            class="input"
-                            [name]="f.key"
-                            [disabled]="readonly(f)"
-                            [(ngModel)]="form[f.key]"
-                          >
-                            <option [ngValue]="null">—</option>
-                            <option [ngValue]="true">Sim</option>
-                            <option [ngValue]="false">Não</option>
-                          </select>
-                        }
-                        @case ('member') {
-                          <select
-                            appControl
-                            class="input"
-                            [name]="f.key"
-                            [disabled]="readonly(f)"
-                            [(ngModel)]="form[f.key]"
-                          >
-                            <option [ngValue]="null">—</option>
-                            @for (m of memberOptions(f); track m.id) {
-                              <option [ngValue]="m.id">{{ m.label }}</option>
-                            }
-                          </select>
-                        }
-                        @case ('ref') {
-                          <select
-                            appControl
-                            class="input"
-                            [name]="f.key"
-                            [disabled]="readonly(f)"
-                            [(ngModel)]="form[f.key]"
-                          >
-                            <option [ngValue]="null">—</option>
-                            @for (o of options(f); track o.id) {
-                              <option [ngValue]="o.id">{{ o.label }}</option>
-                            }
-                          </select>
-                        }
-                        @case ('textarea') {
-                          <textarea
-                            appControl
-                            class="input"
-                            rows="3"
-                            [name]="f.key"
-                            [disabled]="readonly(f)"
-                            [(ngModel)]="form[f.key]"
-                          ></textarea>
-                        }
-                        @case ('date') {
-                          <input
-                            appControl
-                            type="date"
-                            class="input"
-                            [name]="f.key"
-                            [disabled]="readonly(f)"
-                            [(ngModel)]="form[f.key]"
-                          />
-                        }
-                        @case ('number') {
-                          <input
-                            appControl
-                            type="number"
-                            class="input"
-                            [name]="f.key"
-                            [disabled]="readonly(f)"
-                            [(ngModel)]="form[f.key]"
-                          />
-                        }
-                        @default {
-                          <input
-                            appControl
-                            [type]="
-                              f.type === 'email' || f.type === 'tel' || f.type === 'url'
-                                ? f.type
-                                : 'text'
-                            "
-                            class="input"
-                            [name]="f.key"
-                            [disabled]="readonly(f)"
-                            [(ngModel)]="form[f.key]"
-                          />
-                        }
-                      }
-                    </app-field>
-                  }
-                </app-form-section>
-              }
-            }
+            <ng-container *ngTemplateOutlet="fieldsTpl" />
             @if (canManage()) {
-              <div class="flex items-center gap-3">
-                <button type="submit" class="btn-primary" [disabled]="action.busy()">
-                  {{ action.busy() ? 'A guardar…' : isNew() ? 'Criar' : 'Guardar alterações' }}
-                </button>
-                @if (hasUnsavedChanges()) {
-                  <span class="text-sm text-muted" role="status">Alterações por guardar</span>
-                }
-              </div>
+              <app-form-action-bar
+                formId="org-form"
+                [dirty]="hasUnsavedChanges()"
+                [busy]="action.busy()"
+                [saveLabel]="'Guardar alterações'"
+              />
             }
           </form>
           <div aside>
@@ -232,6 +142,131 @@ interface Dependent {
         </app-page-detail>
       }
     }
+    <ng-template #fieldsTpl>
+      @for (section of sections; track section.id) {
+        @if (fieldsOf(section.id).length > 0) {
+          <app-form-section [title]="section.title" [description]="section.description">
+            @for (f of fieldsOf(section.id); track f.key) {
+              <app-field
+                [label]="f.label"
+                [required]="!!f.required"
+                [hint]="
+                  isNew()
+                    ? (f.hint ?? null)
+                    : f.immutable
+                      ? 'Não se altera depois de criado.'
+                      : null
+                "
+                [error]="action.field(f.key)"
+                [class.md:col-span-2]="f.type === 'textarea'"
+              >
+                @switch (f.type) {
+                  @case ('select') {
+                    <select
+                      appControl
+                      class="input"
+                      [name]="f.key"
+                      [disabled]="readonly(f)"
+                      [(ngModel)]="form[f.key]"
+                    >
+                      @if (!f.required && f.key !== 'status') {
+                        <option [ngValue]="null">—</option>
+                      }
+                      @for (o of f.options; track o.value) {
+                        <option [ngValue]="o.value">{{ o.label }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('boolean') {
+                    <select
+                      appControl
+                      class="input"
+                      [name]="f.key"
+                      [disabled]="readonly(f)"
+                      [(ngModel)]="form[f.key]"
+                    >
+                      <option [ngValue]="null">—</option>
+                      <option [ngValue]="true">Sim</option>
+                      <option [ngValue]="false">Não</option>
+                    </select>
+                  }
+                  @case ('member') {
+                    <select
+                      appControl
+                      class="input"
+                      [name]="f.key"
+                      [disabled]="readonly(f)"
+                      [(ngModel)]="form[f.key]"
+                    >
+                      <option [ngValue]="null">—</option>
+                      @for (m of memberOptions(f); track m.id) {
+                        <option [ngValue]="m.id">{{ m.label }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('ref') {
+                    <select
+                      appControl
+                      class="input"
+                      [name]="f.key"
+                      [disabled]="readonly(f)"
+                      [(ngModel)]="form[f.key]"
+                    >
+                      <option [ngValue]="null">—</option>
+                      @for (o of options(f); track o.id) {
+                        <option [ngValue]="o.id">{{ o.label }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('textarea') {
+                    <textarea
+                      appControl
+                      class="input"
+                      rows="3"
+                      [name]="f.key"
+                      [disabled]="readonly(f)"
+                      [(ngModel)]="form[f.key]"
+                    ></textarea>
+                  }
+                  @case ('date') {
+                    <input
+                      appControl
+                      type="date"
+                      class="input"
+                      [name]="f.key"
+                      [disabled]="readonly(f)"
+                      [(ngModel)]="form[f.key]"
+                    />
+                  }
+                  @case ('number') {
+                    <input
+                      appControl
+                      type="number"
+                      class="input"
+                      [name]="f.key"
+                      [disabled]="readonly(f)"
+                      [(ngModel)]="form[f.key]"
+                    />
+                  }
+                  @default {
+                    <input
+                      appControl
+                      [type]="
+                        f.type === 'email' || f.type === 'tel' || f.type === 'url' ? f.type : 'text'
+                      "
+                      class="input"
+                      [name]="f.key"
+                      [disabled]="readonly(f)"
+                      [(ngModel)]="form[f.key]"
+                    />
+                  }
+                }
+              </app-field>
+            }
+          </app-form-section>
+        }
+      }
+    </ng-template>
   `,
 })
 export class OrganizationForm implements HasUnsavedChanges {
@@ -256,9 +291,14 @@ export class OrganizationForm implements HasUnsavedChanges {
   protected readonly action = new Action();
   protected form: Record<string, unknown> = {};
   private initial = '';
+  private readonly drafts = inject(Drafts);
+  protected readonly draft = signal<Draft<Record<string, unknown>> | null>(null);
+  private draftTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly draftName = computed(() => `organization-new-${this.kind()}`);
 
   constructor() {
     warnOnUnload(this);
+    inject(DestroyRef).onDestroy(() => this.draftTimer && clearTimeout(this.draftTimer));
     effect(() => {
       const kind = this.kind();
       const id = this.id();
@@ -287,7 +327,7 @@ export class OrganizationForm implements HasUnsavedChanges {
       this.refs.set(Object.fromEntries(refKinds.map((r, i) => [r, pages[i].items])));
       if (meta.fields.some((f) => f.type === 'member') && this.workspace.can('members.read'))
         this.members.set(
-          (await this.api.page<Member>('members', { status: 'ACTIVE', limit: 200 })).items.map(
+          (await this.api.page<Member>('members', { status: 'ACTIVE', limit: 100 })).items.map(
             (m) => ({ id: m.id, label: `${m.fullName} (${m.email})` }),
           ),
         );
@@ -315,6 +355,10 @@ export class OrganizationForm implements HasUnsavedChanges {
       }
       this.initial = snapshot(this.form);
       this.loaded.set(true);
+      if (id === 'novo') {
+        const d = this.drafts.read<Record<string, unknown>>(this.draftName());
+        this.draft.set(d && snapshot(d.value) !== this.initial ? d : null);
+      } else this.draft.set(null);
     } catch (error) {
       this.loadError.set(ApiError.from(error));
     }
@@ -335,6 +379,30 @@ export class OrganizationForm implements HasUnsavedChanges {
     return current && !list.some((m) => m.id === current)
       ? [...list, { id: current, label: 'Responsável actual' }]
       : list;
+  }
+
+  /** Rascunho do registo novo 1 s depois da última alteração (só neste browser, por utilizador e empresa). */
+  protected queueDraft() {
+    if (!this.isNew()) return;
+    if (this.draftTimer) clearTimeout(this.draftTimer);
+    this.draftTimer = setTimeout(() => {
+      if (this.hasUnsavedChanges()) this.drafts.write(this.draftName(), this.form);
+    }, 1000);
+  }
+
+  protected restoreDraft() {
+    const d = this.draft();
+    if (d) this.form = { ...this.form, ...d.value };
+    this.draft.set(null);
+  }
+
+  protected discardDraft() {
+    this.drafts.clear(this.draftName());
+    this.draft.set(null);
+  }
+
+  protected cancel() {
+    void this.router.navigate(['/organizacao', this.meta()!.segment]);
   }
 
   protected fieldsOf(section: string) {
@@ -387,6 +455,8 @@ export class OrganizationForm implements HasUnsavedChanges {
     this.workspace.invalidate('scope:');
     this.initial = snapshot({ ...result });
     if (!original) {
+      this.drafts.clear(this.draftName());
+      this.draft.set(null);
       this.form = { ...result };
       this.toasts.show(`${meta.singular[0].toUpperCase()}${meta.singular.slice(1)} criada.`);
       await this.router.navigate(['/organizacao', meta.segment, result.id]);

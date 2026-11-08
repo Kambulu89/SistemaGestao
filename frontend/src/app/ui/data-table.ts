@@ -4,6 +4,9 @@ import {
   TemplateRef,
   computed,
   contentChildren,
+  effect,
+  signal,
+  untracked,
   inject,
   input,
   output,
@@ -14,6 +17,7 @@ import type { ApiError } from '../core/api';
 import { ErrorState } from './states';
 import { Icon } from './icon';
 import { Pager } from './pager';
+import { Dropdown } from './dropdown';
 
 export interface Column<T = Record<string, unknown>> {
   key: string;
@@ -27,6 +31,38 @@ export interface Column<T = Record<string, unknown>> {
   align?: 'start' | 'end';
   /** Esconde a coluna em ecrãs pequenos. */
   hideOnMobile?: boolean;
+  /** Não pode ser escondida na configuração de colunas (ex.: a coluna que liga ao detalhe). */
+  required?: boolean;
+  /** Escondida por omissão (o utilizador pode mostrá-la). */
+  hiddenByDefault?: boolean;
+}
+
+/** Colunas visíveis: as obrigatórias sempre; as outras segundo a escolha guardada ou a predefinição. */
+export function visibleColumns<T>(columns: Column<T>[], hidden: ReadonlySet<string> | null) {
+  return columns.filter((c) =>
+    c.required ? true : hidden ? !hidden.has(c.key) : !c.hiddenByDefault,
+  );
+}
+
+const COLUMNS_KEY = (id: string) => `sg.columns.${id}`;
+
+function readHidden(id: string): Set<string> | null {
+  try {
+    const raw = localStorage.getItem(COLUMNS_KEY(id));
+    const value = raw ? (JSON.parse(raw) as unknown) : null;
+    return Array.isArray(value) ? new Set(value.filter((v) => typeof v === 'string')) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeHidden(id: string, hidden: Set<string> | null) {
+  try {
+    if (hidden) localStorage.setItem(COLUMNS_KEY(id), JSON.stringify([...hidden]));
+    else localStorage.removeItem(COLUMNS_KEY(id));
+  } catch {
+    /* sem armazenamento: vale só nesta sessão */
+  }
 }
 
 export interface Sort {
@@ -47,7 +83,7 @@ export class CellDef {
  */
 @Component({
   selector: 'app-data-table',
-  imports: [NgTemplateOutlet, RouterLink, ErrorState, Icon, Pager],
+  imports: [NgTemplateOutlet, RouterLink, ErrorState, Icon, Pager, Dropdown],
   template: `
     @if (error()) {
       <app-error-state [error]="error()" (retry)="retry.emit()" />
@@ -63,7 +99,7 @@ export class CellDef {
           </caption>
           <thead>
             <tr>
-              @for (c of columns(); track c.key) {
+              @for (c of shown(); track c.key) {
                 <th
                   scope="col"
                   [attr.aria-sort]="ariaSort(c)"
@@ -91,7 +127,7 @@ export class CellDef {
             @if (loading() && rows().length === 0) {
               @for (i of skeletonRows; track i) {
                 <tr>
-                  @for (c of columns(); track c.key) {
+                  @for (c of shown(); track c.key) {
                     <td [class.hidden]="c.hideOnMobile" [class.md:table-cell]="c.hideOnMobile">
                       <span class="skeleton block h-4 w-3/4"></span>
                     </td>
@@ -100,14 +136,14 @@ export class CellDef {
               }
             } @else if (rows().length === 0) {
               <tr>
-                <td [attr.colspan]="columns().length" class="py-8 text-center text-muted">
+                <td [attr.colspan]="shown().length" class="py-8 text-center text-muted">
                   {{ emptyText() }}
                 </td>
               </tr>
             } @else {
               @for (row of rows(); track trackBy()(row)) {
                 <tr class="hover:bg-surface-2" [class.opacity-60]="loading()">
-                  @for (c of columns(); track c.key; let first = $first) {
+                  @for (c of shown(); track c.key; let first = $first) {
                     <td
                       [class.text-right]="c.align === 'end'"
                       [class.hidden]="c.hideOnMobile"
@@ -134,17 +170,57 @@ export class CellDef {
         <p class="text-sm text-muted" aria-live="polite">
           {{ loading() ? 'A carregar…' : total() + ' registo(s)' }}
         </p>
-        @if (exportable()) {
-          <button
-            type="button"
-            class="btn-secondary"
-            [disabled]="exporting() || total() === 0"
-            (click)="export.emit()"
-          >
-            <app-icon name="download" [size]="16" />
-            {{ exporting() ? 'A exportar…' : 'Exportar CSV' }}
-          </button>
-        }
+        <div class="flex flex-wrap items-center gap-2">
+          @if (tableId()) {
+            <app-dropdown
+              label="Configurar colunas"
+              align="end"
+              buttonClass="btn-secondary"
+              [closeOnSelect]="false"
+            >
+              <span trigger class="inline-flex items-center gap-1"
+                ><app-icon name="layers" [size]="16" /> Colunas</span
+              >
+              <div class="px-2 py-1 text-xs font-semibold text-muted uppercase">
+                Colunas visíveis
+              </div>
+              @for (c of columns(); track c.key) {
+                <label
+                  class="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-surface-2"
+                  data-menu-item
+                  tabindex="-1"
+                >
+                  <input
+                    type="checkbox"
+                    class="size-4"
+                    [checked]="isShown(c)"
+                    [disabled]="c.required"
+                    (change)="toggleColumn(c, $any($event.target).checked)"
+                  />
+                  {{ c.label }}
+                </label>
+              }
+              <button
+                type="button"
+                class="btn-link w-full px-2 py-1.5 text-left text-sm"
+                (click)="resetColumns()"
+              >
+                Repor colunas
+              </button>
+            </app-dropdown>
+          }
+          @if (exportable()) {
+            <button
+              type="button"
+              class="btn-secondary"
+              [disabled]="exporting() || total() === 0"
+              (click)="export.emit(shown())"
+            >
+              <app-icon name="download" [size]="16" />
+              {{ exporting() ? 'A exportar…' : 'Exportar CSV' }}
+            </button>
+          }
+        </div>
       </div>
       <app-pager
         [total]="total()"
@@ -168,16 +244,52 @@ export class DataTable<T extends object = Record<string, unknown>> {
   readonly emptyText = input('Sem registos.');
   readonly exportable = input(false);
   readonly exporting = input(false);
+  /** Identificador estável da tabela: activa a configuração de colunas (guardada neste browser). */
+  readonly tableId = input<string | null>(null);
   readonly trackBy = input<(row: T) => unknown>((row: T) => (row as { id?: unknown }).id ?? row);
   readonly sortChange = output<Sort>();
   readonly offsetChange = output<number>();
   readonly retry = output();
-  readonly export = output();
+  /** Pede a exportação com as colunas visíveis. */
+  readonly export = output<Column<T>[]>();
   private readonly cells = contentChildren(CellDef);
   private readonly templates = computed(
     () => new Map(this.cells().map((c) => [c.appCell(), c.template])),
   );
   protected readonly skeletonRows = [1, 2, 3, 4, 5];
+  private readonly hidden = signal<Set<string> | null>(null);
+  /** Colunas mostradas e exportadas. */
+  readonly shown = computed(() => visibleColumns(this.columns(), this.hidden()));
+
+  constructor() {
+    effect(() => {
+      const id = this.tableId();
+      untracked(() => this.hidden.set(id ? readHidden(id) : null));
+    });
+  }
+
+  protected isShown(c: Column<T>) {
+    return this.shown().some((x) => x.key === c.key);
+  }
+
+  protected toggleColumn(c: Column<T>, show: boolean) {
+    const hidden = new Set(
+      this.columns()
+        .filter((x) => !this.isShown(x))
+        .map((x) => x.key),
+    );
+    if (show) hidden.delete(c.key);
+    else hidden.add(c.key);
+    this.hidden.set(hidden);
+    const id = this.tableId();
+    if (id) writeHidden(id, hidden);
+  }
+
+  protected resetColumns() {
+    this.hidden.set(null);
+    const id = this.tableId();
+    if (id) writeHidden(id, null);
+  }
 
   protected cellTemplate(key: string) {
     return this.templates().get(key) ?? null;

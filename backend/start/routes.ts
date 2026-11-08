@@ -22,11 +22,14 @@ const NotificationsController = () => import('#modules/notifications/http/notifi
 const ApprovalsController = () => import('#modules/approvals/http/approvals_controller')
 const AttachmentsController = () => import('#modules/attachments/http/attachments_controller')
 const TasksController = () => import('#modules/tasks/http/tasks_controller')
+const PreferencesController = () => import('#modules/preferences/http/preferences_controller')
 const DashboardController = () => import('#modules/dashboard/http/dashboard_controller')
 const SettingsController = () => import('#modules/settings/http/settings_controller')
 const AccountingController = () => import('#modules/accounting/http/accounting_controller')
 const FixedAssetsController = () => import('#modules/accounting/http/fixed_assets_controller')
 const AdjustmentsController = () => import('#modules/accounting/http/adjustments_controller')
+const StatementsController = () => import('#modules/accounting/http/statements_controller')
+const ClosingController = () => import('#modules/accounting/http/closing_controller')
 
 router
   .group(() => {
@@ -299,7 +302,7 @@ router
               })
               .use(accounting('accounting.post'))
             router
-              .post('accounting/periods/:id/close', [AccountingController, 'closePeriod'])
+              .post('accounting/periods/:id/close', [ClosingController, 'closePeriod'])
               .use(accounting('accounting.close'))
             router
               .post('accounting/periods/:id/reopen', [AccountingController, 'reopenPeriod'])
@@ -326,6 +329,62 @@ router
                 .post('accounting/entries/:id/reverse', [AccountingController, 'reverse'])
                 .use(accounting('accounting.reverse'))
             })
+
+            // Fecho (6.10): checklist (accounting.read), tarefas e encerramento (accounting.close), reabertura do
+            // exercício (accounting.reopen).
+            router
+              .group(() => {
+                router.get('accounting/periods/:id/checklist', [ClosingController, 'checklist'])
+                router.get('accounting/fiscal-years/:id/closing', [ClosingController, 'yearStatus'])
+              })
+              .use(accounting('accounting.read'))
+            router
+              .group(() => {
+                router.post('accounting/periods/:id/tasks', [ClosingController, 'addTask'])
+                router.post('accounting/periods/:id/tasks/copy', [ClosingController, 'copyTasks'])
+                router.patch('accounting/close-tasks/:id', [ClosingController, 'updateTask'])
+                router.delete('accounting/close-tasks/:id', [ClosingController, 'deleteTask'])
+                router.post('accounting/fiscal-years/:id/close', [ClosingController, 'closeYear'])
+              })
+              .use(accounting('accounting.close'))
+            router
+              .post('accounting/fiscal-years/:id/reopen', [ClosingController, 'reopenYear'])
+              .use(accounting('accounting.reopen'))
+
+            // Demonstrações financeiras (6.8): modelos (accounting.read / accounting.settings), demonstrações e notas
+            // (accounting.reports), redacção das notas (accounting.statements).
+            const ST = 'accounting/statement-templates'
+            router
+              .group(() => {
+                router.get(ST, [StatementsController, 'templates'])
+                router.get(`${ST}/:id`, [StatementsController, 'template'])
+              })
+              .use(accounting('accounting.read'))
+            router
+              .group(() => {
+                router.post(ST, [StatementsController, 'createTemplate'])
+                router.patch(`${ST}/:id`, [StatementsController, 'updateTemplate'])
+                router.delete(`${ST}/:id`, [StatementsController, 'deleteTemplate'])
+                router.post(`${ST}/:id/publish`, [StatementsController, 'publishTemplate'])
+                router.post(`${ST}/:id/versions`, [StatementsController, 'newVersion'])
+              })
+              .use(accounting('accounting.settings'))
+            router
+              .group(() => {
+                router.get('accounting/statements', [StatementsController, 'generate'])
+                router.get('accounting/statement-notes', [StatementsController, 'notes'])
+              })
+              .use(accounting('accounting.reports'))
+            router
+              .group(() => {
+                router.post('accounting/statement-notes', [StatementsController, 'createNote'])
+                router.patch('accounting/statement-notes/:id', [StatementsController, 'updateNote'])
+                router.delete('accounting/statement-notes/:id', [
+                  StatementsController,
+                  'deleteNote',
+                ])
+              })
+              .use(accounting('accounting.statements'))
 
             // Regularizações (6.7): consulta com accounting.read; gerar rascunhos com accounting.adjustments;
             // reconciliar com accounting.reconcile.
@@ -447,6 +506,8 @@ router
             router.post('me/notifications/read-all', [NotificationsController, 'readAll'])
             router.post('me/notifications/:id/read', [NotificationsController, 'read'])
             router.get('me/tasks', [TasksController, 'index'])
+            router.get('me/preferences/:key', [PreferencesController, 'show'])
+            router.put('me/preferences/:key', [PreferencesController, 'update'])
             // Painel e pesquisa: cada secção/fonte aplica as permissões e funcionalidades do módulo dono.
             router.get('dashboard', [DashboardController, 'summary'])
             router.get('search', [DashboardController, 'search'])

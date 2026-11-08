@@ -1,8 +1,9 @@
 import { inject } from '@angular/core';
-import { Api } from '../core/api';
+import { Api, ApiError } from '../core/api';
 import { Workspace } from '../core/workspace';
 import { type OrgRecord, recordLabel } from '../admin/org-kinds';
 import { formatMoney } from '../ui/money-input';
+import type { ConfirmService } from '../ui/confirm';
 
 /** Entidades legais activas para escolher (cache da empresa em contexto). */
 export async function legalEntityOptions(api: Api, workspace: Workspace) {
@@ -80,4 +81,29 @@ export function keepKnown<T extends object>(
   const known = new Set(options.map((o) => o.id));
   const target = form as Record<keyof T, unknown>;
   for (const k of keys) if (target[k] && !known.has(target[k] as string)) target[k] = null;
+}
+
+/**
+ * Fecha um período: se a checklist só tiver avisos, mostra-os e, com confirmação, repete reconhecendo-os (fica na
+ * auditoria). Bloqueios e outros erros sobem para quem chamou. Devolve undefined se o utilizador desistir.
+ */
+export async function closeWithWarnings<T>(
+  api: Api,
+  confirm: ConfirmService,
+  periodId: string,
+  name: string,
+): Promise<T | undefined> {
+  try {
+    return await api.post<T>(`accounting/periods/${periodId}/close`, {});
+  } catch (e) {
+    const err = ApiError.from(e);
+    if (err.code !== 'CLOSE_WARNINGS') throw err;
+    const ok = await confirm.ask({
+      title: `Fechar ${name} com avisos`,
+      message: err.details.map((d) => d.message).join(' '),
+      confirmLabel: 'Fechar mesmo assim',
+    });
+    if (!ok) return undefined;
+    return api.post<T>(`accounting/periods/${periodId}/close`, { acknowledgeWarnings: true });
+  }
 }

@@ -2,27 +2,30 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api } from '../core/api';
 import { Workspace } from '../core/workspace';
-import { CellDef, type Column, DataTable, type Sort } from '../ui/data-table';
+import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { formatDateTime } from '../ui/dates';
 import { ErrorAlert } from '../ui/error-alert';
 import { exportList, withoutPaging } from '../ui/export';
 import { FieldControl, FormField } from '../ui/form-field';
 import { Icon } from '../ui/icon';
-import { Action, Loadable } from '../ui/load';
+import { Action } from '../ui/load';
 import { Modal } from '../ui/modal';
-import { PageHeader } from '../ui/page-header';
+import { FilterBar, type FilterDef } from '../ui/filter-bar';
+import { ListState } from '../ui/list-state';
+import { EntityListPage } from '../ui/templates';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import type { Member, Role } from './rbac-types';
 
 const LIMIT = 25;
 
-/** Membros da empresa: lista ordenável e exportável, convite numa janela. */
+/** Membros da empresa (EntityListPage): filtros na URL, colunas configuráveis, exportação e convite numa janela. */
 @Component({
   selector: 'app-members',
   imports: [
     FormsModule,
-    PageHeader,
+    EntityListPage,
+    FilterBar,
     DataTable,
     CellDef,
     StatusBadge,
@@ -33,64 +36,49 @@ const LIMIT = 25;
     Icon,
   ],
   template: `
-    <app-page-header title="Membros" subtitle="Pessoas com acesso a esta empresa.">
+    <app-entity-list-page
+      title="Membros"
+      subtitle="Pessoas com acesso a esta empresa."
+      permission="members.read"
+    >
       @if (canInvite()) {
-        <button type="button" class="btn-primary" (click)="openInvite()">
+        <button actions type="button" class="btn-primary" (click)="openInvite()">
           <app-icon name="plus" [size]="16" />Convidar
         </button>
       }
-    </app-page-header>
-
-    <form class="mb-4 flex flex-wrap items-end gap-2" role="search" (ngSubmit)="go(0)">
-      <div>
-        <label class="label" for="q">Pesquisar</label>
-        <input
-          id="q"
-          name="q"
-          type="search"
-          class="input w-64"
-          placeholder="Nome ou email"
-          [(ngModel)]="q"
-        />
-      </div>
-      <div>
-        <label class="label" for="status">Estado</label>
-        <select
-          id="status"
-          name="status"
-          class="input w-44"
-          [(ngModel)]="status"
-          (ngModelChange)="go(0)"
-        >
-          <option value="">Todos</option>
-          <option value="ACTIVE">Activos</option>
-          <option value="INVITED">Convidados</option>
-          <option value="SUSPENDED">Suspensos</option>
-        </select>
-      </div>
-      <button type="submit" class="btn-secondary">Pesquisar</button>
-    </form>
-
-    <app-data-table
-      label="Membros"
-      [columns]="columns"
-      [rows]="page.value()?.items ?? []"
-      [total]="page.value()?.total ?? 0"
-      [loading]="page.loading()"
-      [error]="page.error()"
-      [sort]="sort()"
-      [offset]="offset()"
-      [limit]="limit"
-      emptyText="Sem membros com estes filtros."
-      [exportable]="true"
-      [exporting]="exporting()"
-      (sortChange)="onSort($event)"
-      (offsetChange)="go($event)"
-      (retry)="page.load()"
-      (export)="export()"
-    >
-      <ng-template appCell="status" let-row><app-status-badge [status]="row.status" /></ng-template>
-    </app-data-table>
+      <app-filter-bar
+        id="members"
+        label="membros"
+        placeholder="Nome ou email"
+        [state]="list"
+        [filters]="filters"
+      />
+      <app-data-table
+        label="Membros"
+        tableId="members"
+        [columns]="columns"
+        [rows]="list.page.value()?.items ?? []"
+        [total]="list.page.value()?.total ?? 0"
+        [loading]="list.page.loading()"
+        [error]="list.page.error()"
+        [sort]="list.sort()"
+        [offset]="list.offset()"
+        [limit]="list.limit"
+        [emptyText]="
+          list.activeFilters() || list.q() ? 'Sem membros com estes filtros.' : 'Ainda sem membros.'
+        "
+        [exportable]="true"
+        [exporting]="exporting()"
+        (sortChange)="list.setSort($event)"
+        (offsetChange)="list.goTo($event)"
+        (retry)="list.reload()"
+        (export)="export($event)"
+      >
+        <ng-template appCell="status" let-row
+          ><app-status-badge [status]="row.status"
+        /></ng-template>
+      </app-data-table>
+    </app-entity-list-page>
 
     <app-modal title="Convidar membro" [open]="inviteOpen()" (closed)="inviteOpen.set(false)">
       <form id="invite-form" class="space-y-4" (ngSubmit)="invite()" novalidate>
@@ -141,11 +129,23 @@ export class Members {
   private readonly workspace = inject(Workspace);
   private readonly toasts = inject(ToastService);
   protected readonly canInvite = computed(() => this.workspace.can('members.invite'));
-  protected readonly limit = LIMIT;
-  protected readonly q = signal('');
-  protected readonly status = signal('');
-  protected readonly offset = signal(0);
-  protected readonly sort = signal<Sort | null>(null);
+  protected readonly list = new ListState<Member>(this.api, {
+    url: 'members',
+    filterKeys: ['status'],
+    sortFields: ['fullName', 'email', 'status', 'joinedAt'],
+    limit: LIMIT,
+  });
+  protected readonly filters: FilterDef[] = [
+    {
+      key: 'status',
+      label: 'Estado',
+      options: [
+        { value: 'ACTIVE', label: 'Activos' },
+        { value: 'INVITED', label: 'Convidados' },
+        { value: 'SUSPENDED', label: 'Suspensos' },
+      ],
+    },
+  ];
   protected readonly exporting = signal(false);
   protected readonly inviteOpen = signal(false);
   protected readonly email = signal('');
@@ -157,7 +157,13 @@ export class Members {
     this.roles().filter((r) => r.status === 'ACTIVE'),
   );
   protected readonly columns: Column<Member>[] = [
-    { key: 'fullName', label: 'Nome', sortable: true, link: (m) => ['/membros', m.id] },
+    {
+      key: 'fullName',
+      label: 'Nome',
+      sortable: true,
+      required: true,
+      link: (m) => ['/membros', m.id],
+    },
     { key: 'email', label: 'Email', sortable: true },
     { key: 'status', label: 'Estado', sortable: true },
     {
@@ -177,36 +183,12 @@ export class Members {
       value: (m) => formatDateTime(m.joinedAt ?? m.invitedAt),
     },
   ];
-  protected readonly page = new Loadable(() => this.api.page<Member>('members', this.query()));
-
   constructor() {
-    void this.page.load();
     if (this.workspace.can('roles.read'))
       this.api.get<Role[]>('roles').then(
         (r) => this.roles.set(r),
         () => undefined,
       );
-  }
-
-  private query() {
-    return {
-      q: this.q().trim() || undefined,
-      status: this.status() || undefined,
-      sort: this.sort()?.field,
-      direction: this.sort()?.direction,
-      limit: LIMIT,
-      offset: this.offset(),
-    };
-  }
-
-  protected onSort(sort: Sort) {
-    this.sort.set(sort);
-    this.go(0);
-  }
-
-  protected go(offset: number) {
-    this.offset.set(offset);
-    void this.page.load();
   }
 
   protected openInvite() {
@@ -235,14 +217,14 @@ export class Members {
     this.email.set('');
     this.fullName.set('');
     this.roleId.set(null);
-    await this.page.load();
+    await this.list.reload();
   }
 
-  protected async export() {
+  protected async export(columns: Column<Member>[]) {
     this.exporting.set(true);
     try {
-      const query = withoutPaging(this.query());
-      const count = await exportList(this.api, 'members', query, this.columns, 'membros.csv');
+      const query = withoutPaging(this.list.query());
+      const count = await exportList(this.api, 'members', query, columns, 'membros.csv');
       this.toasts.show(`Exportados ${count} membro(s).`);
     } catch {
       this.toasts.show('Não foi possível exportar.', 'error');

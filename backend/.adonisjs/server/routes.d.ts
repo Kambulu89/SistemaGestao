@@ -106,7 +106,7 @@ export type ScannedRoutes = {
     'accounting.import_opening': { paramsTuple?: []; params?: {} }
     'accounting.submit_event': { paramsTuple?: []; params?: {} }
     'accounting.retry_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'accounting.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reopen_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.create_entry': { paramsTuple?: []; params?: {} }
     'accounting.update_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -116,6 +116,26 @@ export type ScannedRoutes = {
     'accounting.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.post': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.checklist': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.year_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.add_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.copy_tasks': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.update_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.delete_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.close_year': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.reopen_year': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.templates': { paramsTuple?: []; params?: {} }
+    'statements.template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.create_template': { paramsTuple?: []; params?: {} }
+    'statements.update_template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.delete_template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.publish_template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.new_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.generate': { paramsTuple?: []; params?: {} }
+    'statements.notes': { paramsTuple?: []; params?: {} }
+    'statements.create_note': { paramsTuple?: []; params?: {} }
+    'statements.update_note': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.delete_note': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'adjustments.schedules': { paramsTuple?: []; params?: {} }
     'adjustments.schedule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'adjustments.provisions': { paramsTuple?: []; params?: {} }
@@ -157,6 +177,8 @@ export type ScannedRoutes = {
     'notifications.read_all': { paramsTuple?: []; params?: {} }
     'notifications.read': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'tasks.index': { paramsTuple?: []; params?: {} }
+    'preferences.show': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
+    'preferences.update': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
     'dashboard.summary': { paramsTuple?: []; params?: {} }
     'dashboard.search': { paramsTuple?: []; params?: {} }
     'approvals.workflows': { paramsTuple?: []; params?: {} }
@@ -247,6 +269,12 @@ export type ScannedRoutes = {
     'accounting.analytic_report': { paramsTuple?: []; params?: {} }
     'accounting.trial_balance': { paramsTuple?: []; params?: {} }
     'accounting.ledger': { paramsTuple?: []; params?: {} }
+    'closing.checklist': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.year_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.templates': { paramsTuple?: []; params?: {} }
+    'statements.template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.generate': { paramsTuple?: []; params?: {} }
+    'statements.notes': { paramsTuple?: []; params?: {} }
     'adjustments.schedules': { paramsTuple?: []; params?: {} }
     'adjustments.schedule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'adjustments.provisions': { paramsTuple?: []; params?: {} }
@@ -265,6 +293,7 @@ export type ScannedRoutes = {
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
+    'preferences.show': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
     'dashboard.summary': { paramsTuple?: []; params?: {} }
     'dashboard.search': { paramsTuple?: []; params?: {} }
     'approvals.workflows': { paramsTuple?: []; params?: {} }
@@ -333,6 +362,12 @@ export type ScannedRoutes = {
     'accounting.analytic_report': { paramsTuple?: []; params?: {} }
     'accounting.trial_balance': { paramsTuple?: []; params?: {} }
     'accounting.ledger': { paramsTuple?: []; params?: {} }
+    'closing.checklist': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.year_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.templates': { paramsTuple?: []; params?: {} }
+    'statements.template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.generate': { paramsTuple?: []; params?: {} }
+    'statements.notes': { paramsTuple?: []; params?: {} }
     'adjustments.schedules': { paramsTuple?: []; params?: {} }
     'adjustments.schedule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'adjustments.provisions': { paramsTuple?: []; params?: {} }
@@ -351,6 +386,7 @@ export type ScannedRoutes = {
     'audit.index': { paramsTuple?: []; params?: {} }
     'notifications.index': { paramsTuple?: []; params?: {} }
     'tasks.index': { paramsTuple?: []; params?: {} }
+    'preferences.show': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
     'dashboard.summary': { paramsTuple?: []; params?: {} }
     'dashboard.search': { paramsTuple?: []; params?: {} }
     'approvals.workflows': { paramsTuple?: []; params?: {} }
@@ -399,7 +435,7 @@ export type ScannedRoutes = {
     'accounting.import_opening': { paramsTuple?: []; params?: {} }
     'accounting.submit_event': { paramsTuple?: []; params?: {} }
     'accounting.retry_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
-    'accounting.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.close_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reopen_period': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.create_entry': { paramsTuple?: []; params?: {} }
     'accounting.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -407,6 +443,14 @@ export type ScannedRoutes = {
     'accounting.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.post': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.add_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.copy_tasks': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.close_year': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.reopen_year': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.create_template': { paramsTuple?: []; params?: {} }
+    'statements.publish_template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.new_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.create_note': { paramsTuple?: []; params?: {} }
     'adjustments.create_schedule': { paramsTuple?: []; params?: {} }
     'adjustments.generate_schedules': { paramsTuple?: []; params?: {} }
     'adjustments.create_provision': { paramsTuple?: []; params?: {} }
@@ -447,6 +491,9 @@ export type ScannedRoutes = {
     'members.unassign_role': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'assignmentId': ParamValue} }
     'settings.remove_holiday': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'holidayId': ParamValue} }
     'accounting.delete_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.delete_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.delete_template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.delete_note': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'adjustments.undo_reconciliation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fixed_assets.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.delete_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -469,6 +516,9 @@ export type ScannedRoutes = {
     'accounting.update_value': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'valueId': ParamValue} }
     'accounting.update_key': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'accounting.update_entry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'closing.update_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.update_template': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'statements.update_note': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'adjustments.update_schedule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'adjustments.update_provision': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fixed_assets.update_class': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -481,6 +531,7 @@ export type ScannedRoutes = {
     'settings.update_profile': { paramsTuple?: []; params?: {} }
     'settings.update_settings': { paramsTuple?: []; params?: {} }
     'accounting.set_allocations': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineNo': ParamValue} }
+    'preferences.update': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

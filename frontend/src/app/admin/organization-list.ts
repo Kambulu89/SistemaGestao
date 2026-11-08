@@ -1,14 +1,14 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Api } from '../core/api';
 import { Workspace } from '../core/workspace';
-import { CellDef, type Column, DataTable, type Sort } from '../ui/data-table';
+import { CellDef, type Column, DataTable } from '../ui/data-table';
+import { FilterBar, type FilterDef } from '../ui/filter-bar';
+import { ListState } from '../ui/list-state';
+import { EntityListPage } from '../ui/templates';
 import { formatDate } from '../ui/dates';
 import { exportList, withoutPaging } from '../ui/export';
 import { Icon } from '../ui/icon';
-import { Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import { BRANCH_TYPES, ORG_KINDS, type OrgRecord, recordLabel, TREE_KINDS } from './org-kinds';
@@ -19,13 +19,16 @@ const LIMIT = 25;
 /** Tipos que se filtram pela entidade legal / filial do âmbito de trabalho. */
 const SCOPED_BY_ENTITY = new Set(['branches', 'departments', 'cost-centers']);
 
-/** Lista de uma entidade organizacional: pesquisa, estado, âmbito, ordenação e paginação no servidor, exportação. */
+/**
+ * Lista de uma entidade organizacional (EntityListPage): pesquisa, estado, ordenação e página na URL, âmbito de trabalho,
+ * colunas configuráveis e exportação das colunas visíveis.
+ */
 @Component({
   selector: 'app-organization-list',
   imports: [
-    FormsModule,
     RouterLink,
-    PageHeader,
+    EntityListPage,
+    FilterBar,
     DataTable,
     CellDef,
     StatusBadge,
@@ -35,81 +38,64 @@ const SCOPED_BY_ENTITY = new Set(['branches', 'departments', 'cost-centers']);
   ],
   template: `
     @if (meta(); as k) {
-      <app-page-header [title]="k.title">
+      <app-entity-list-page [title]="k.title" permission="organization.read" feature="organization">
         @if (canManage()) {
-          <a class="btn-primary" [routerLink]="['/organizacao', k.segment, 'novo']"
-            ><app-icon name="plus" [size]="16" />Nova {{ k.singular }}</a
+          <a actions class="btn-primary" [routerLink]="['/organizacao', k.segment, 'novo']"
+            ><app-icon name="plus" [size]="16" />Criar {{ k.singular }}</a
           >
         }
-      </app-page-header>
-      @if (hasTree()) {
-        <app-tabs [tabs]="views" label="Vista" [(active)]="view" />
-      }
-      @if (view() === 'tree' && hasTree()) {
-        <div role="tabpanel" id="panel-tree" aria-labelledby="tab-tree">
-          <app-org-tree [kind]="k.segment" [label]="'Organograma: ' + k.title" />
-        </div>
-      } @else {
-        <div role="tabpanel" id="panel-list" aria-labelledby="tab-list">
-          <form class="mb-4 flex flex-wrap items-end gap-2" (ngSubmit)="go(0)" role="search">
-            <div>
-              <label class="label" for="q">Pesquisar</label>
-              <input
-                id="q"
-                name="q"
-                type="search"
-                class="input w-64"
-                placeholder="Código ou nome"
-                [(ngModel)]="q"
-              />
-            </div>
-            <div>
-              <label class="label" for="status">Estado</label>
-              <select
-                id="status"
-                name="status"
-                class="input w-40"
-                [(ngModel)]="status"
-                (ngModelChange)="go(0)"
-              >
-                <option value="">Todos</option>
-                <option value="ACTIVE">Activos</option>
-                <option value="INACTIVE">Inactivos</option>
-              </select>
-            </div>
-            <button type="submit" class="btn-secondary">Pesquisar</button>
-            @if (scopeLabel(); as label) {
-              <p class="ml-auto text-sm text-muted" data-testid="scope-filter">
-                Filtrado pelo âmbito: <strong class="text-fg">{{ label }}</strong>
-              </p>
-            }
-          </form>
-          <app-data-table
-            [label]="k.title"
-            [columns]="columns()"
-            [rows]="page.value()?.items ?? []"
-            [total]="page.value()?.total ?? 0"
-            [loading]="page.loading()"
-            [error]="page.error()"
-            [sort]="sort()"
-            [offset]="offset()"
-            [limit]="limit"
-            [emptyText]="
-              q() || status() ? 'Sem registos com estes filtros.' : 'Ainda não há registos.'
-            "
-            [exportable]="true"
-            [exporting]="exporting()"
-            (sortChange)="onSort($event)"
-            (offsetChange)="go($event)"
-            (retry)="page.load()"
-            (export)="export()"
-          >
-            <ng-template appCell="status" let-row
-              ><app-status-badge [status]="row.status"
-            /></ng-template>
-          </app-data-table>
-        </div>
-      }
+        @if (hasTree()) {
+          <app-tabs [tabs]="views" label="Vista" [(active)]="view" />
+        }
+        @if (view() === 'tree' && hasTree()) {
+          <div role="tabpanel" id="panel-tree" aria-labelledby="tab-tree">
+            <app-org-tree [kind]="k.segment" [label]="'Organograma: ' + k.title" />
+          </div>
+        } @else {
+          <div role="tabpanel" id="panel-list" aria-labelledby="tab-list">
+            <app-filter-bar
+              id="org"
+              [label]="k.title"
+              placeholder="Código ou nome"
+              [state]="list"
+              [filters]="filters"
+            >
+              @if (scopeLabel(); as label) {
+                <p class="ml-auto self-center text-sm text-muted" data-testid="scope-filter">
+                  Filtrado pelo âmbito: <strong class="text-fg">{{ label }}</strong>
+                </p>
+              }
+            </app-filter-bar>
+            <app-data-table
+              [label]="k.title"
+              [tableId]="'org-' + k.segment"
+              [columns]="columns()"
+              [rows]="list.page.value()?.items ?? []"
+              [total]="list.page.value()?.total ?? 0"
+              [loading]="list.page.loading()"
+              [error]="list.page.error()"
+              [sort]="list.sort()"
+              [offset]="list.offset()"
+              [limit]="list.limit"
+              [emptyText]="
+                list.q() || list.activeFilters()
+                  ? 'Sem registos com estes filtros.'
+                  : 'Ainda não há registos.'
+              "
+              [exportable]="true"
+              [exporting]="exporting()"
+              (sortChange)="list.setSort($event)"
+              (offsetChange)="list.goTo($event)"
+              (retry)="list.reload()"
+              (export)="export($event)"
+            >
+              <ng-template appCell="status" let-row
+                ><app-status-badge [status]="row.status"
+              /></ng-template>
+            </app-data-table>
+          </div>
+        }
+      </app-entity-list-page>
     } @else {
       <p class="card">Tipo desconhecido.</p>
     }
@@ -129,10 +115,16 @@ export class OrganizationList {
     { id: 'tree', label: 'Organograma' },
   ];
   protected readonly view = signal('list');
-  protected readonly q = signal('');
-  protected readonly status = signal('');
-  protected readonly offset = signal(0);
-  protected readonly sort = signal<Sort | null>(null);
+  protected readonly filters: FilterDef[] = [
+    {
+      key: 'status',
+      label: 'Estado',
+      options: [
+        { value: 'ACTIVE', label: 'Activos' },
+        { value: 'INACTIVE', label: 'Inactivos' },
+      ],
+    },
+  ];
   protected readonly exporting = signal(false);
   private readonly names = signal<Map<string, string>>(new Map());
   private readonly scoped = computed(() => SCOPED_BY_ENTITY.has(this.kind()));
@@ -151,23 +143,28 @@ export class OrganizationList {
       // Referências (ids de outros registos) não se ordenam pelo nome: o servidor ordenaria pelo id.
       sortable: !this.isRef(key),
       hideOnMobile: i > 2 && key !== 'status',
+      required: i === 0,
       link: i === 0 ? (r: OrgRecord) => ['/organizacao', meta.segment, r.id] : undefined,
       value: (r: OrgRecord) => this.cell(key, r[key]),
     }));
   });
-  protected readonly page = new Loadable(() =>
-    this.api.page<OrgRecord>(`organization/${this.kind()}`, this.query()),
-  );
+  /** Pesquisa, estado, ordenação e página na URL; o âmbito de trabalho vai sempre (não fica na URL). */
+  protected readonly list = new ListState<OrgRecord>(this.api, {
+    url: () => `organization/${this.kind()}`,
+    filterKeys: ['status'],
+    sortFields: () =>
+      this.columns()
+        .filter((c) => c.sortable)
+        .map((c) => c.key),
+    limit: LIMIT,
+    extra: () => this.scope(),
+  });
 
   constructor() {
     effect(() => {
       this.kind();
       untracked(() => {
-        this.q.set('');
         this.view.set('list');
-        this.status.set('');
-        this.sort.set(null);
-        this.offset.set(0);
         void this.loadNames();
       });
     });
@@ -176,29 +173,18 @@ export class OrganizationList {
       this.kind();
       this.workspace.legalEntityId();
       this.workspace.branchId();
-      untracked(() => {
-        this.offset.set(0);
-        void this.page.load();
-      });
+      untracked(() => void this.list.reload());
     });
   }
 
-  private query() {
+  private scope() {
     const scope: Record<string, string | undefined> = {};
     if (this.scoped() && this.workspace.legalEntityId()) {
       scope['legalEntityId'] = this.workspace.legalEntityId()!;
       if (this.kind() === 'departments' && this.workspace.branchId())
         scope['branchId'] = this.workspace.branchId()!;
     }
-    return {
-      q: this.q().trim() || undefined,
-      status: this.status() || undefined,
-      sort: this.sort()?.field,
-      direction: this.sort()?.direction,
-      ...scope,
-      limit: LIMIT,
-      offset: this.offset(),
-    };
+    return scope;
   }
 
   private async loadNames() {
@@ -228,25 +214,15 @@ export class OrganizationList {
     return value;
   }
 
-  protected onSort(sort: Sort) {
-    this.sort.set(sort);
-    this.go(0);
-  }
-
-  protected go(offset: number) {
-    this.offset.set(offset);
-    void this.page.load();
-  }
-
-  protected async export() {
+  protected async export(columns: Column<OrgRecord>[]) {
     this.exporting.set(true);
     try {
-      const query = withoutPaging(this.query());
+      const query = withoutPaging(this.list.query());
       const count = await exportList(
         this.api,
-        `organization/${this.kind()}`,
+        this.list.url(),
         query,
-        this.columns(),
+        columns,
         `${this.kind()}.csv`,
       );
       this.toasts.show(`Exportados ${count} registo(s).`);

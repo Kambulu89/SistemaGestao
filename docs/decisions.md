@@ -144,3 +144,57 @@ sem estados paralelos. As diferenças cambiais são calculadas sobre os saldos c
 das contas que o utilizador escolhe (itens monetários; activos não monetários não se actualizam), e as diferenças
 realizadas são o resíduo funcional de um saldo já liquidado em moeda — não dependem do módulo de Finanças, que ainda
 não existe. Não se assumem câmbios nem critérios fiscais: o câmbio é o registado pela empresa.
+
+## D-019 Demonstrações por modelos versionados e prefixos, sem modelo oficial embutido (aceite)
+
+O balanço e a demonstração de resultados vêm de modelos configurados pela empresa por plano de contas, não de mapas
+fixos no código: o PGC angolano e os critérios dos mapas têm de ser confirmados na fonte oficial antes de qualquer
+alegação, e cada empresa tem o seu plano. As contas entram por prefixo de código (com regra de saldo devedor/credor
+para contas que mudam de lado, como bancos), e cada conta vai para o prefixo mais longo — uma única linha —, por isso a
+demonstração nunca conta duas vezes um saldo e o que ficar sem linha é mostrado e impede a conferência. Os modelos são
+versionados: publicar fixa a versão (as demonstrações de um exercício podem sempre ser refeitas com a versão usada) e
+uma alteração é uma nova versão. As demonstrações não se guardam: são recalculadas do razão. Fluxos de caixa não são
+gerados enquanto não houver classificação dos fluxos de tesouraria (Prompt 11); o Excel é gerado no browser sem novas
+dependências e o PDF é o da impressão do browser.
+
+## D-020 Fecho por checklist com avisos reconhecidos; encerramento por lançamentos normais (aceite)
+
+O fecho de um período corre uma checklist calculada no momento: o que torna o razão errado (lançamentos a meio do
+fluxo, desequilíbrio) bloqueia; o que é provável esquecimento (rascunhos, eventos falhados, depreciações, regularizações
+ou diferenças cambiais por fazer, tarefas manuais) é aviso, que se pode reconhecer de forma explícita e auditada —
+bloquear sempre impediria fechar quando um módulo externo falha, e não avisar deixaria esquecimentos silenciosos. O
+encerramento do exercício não guarda saldos noutra tabela: apura os resultados e transporta os saldos com lançamentos
+contabilizados normais (origens `YEAR_CLOSE` e `YEAR_OPENING`), por isso o balancete, o razão e as demonstrações de
+ambos os exercícios continuam a vir só dos lançamentos. Reabrir estorna esses lançamentos (nunca os apaga) e o registo
+do encerramento fica no histórico. O transporte é na moeda funcional; o detalhe por moeda estrangeira não passa para
+o exercício seguinte (a actualização cambial do 6.7 continua a funcionar sobre os saldos em moeda dos lançamentos).
+
+## D-021 Identidade "Corporate Blue", navegação por domínios e preferências do membro no servidor (aceite)
+
+O prompt de interface profissional fixa a identidade (primária `#174EA6`, interactiva `#2563EB`, sucesso `#0D9488`,
+aviso `#D97706`, erro `#DC2626`, fundo `#F6F8FB`, Inter). Os tokens semânticos mantêm-se e só mudam os valores, por isso
+os ecrãs existentes herdam a identidade sem alterações; o sucesso e o aviso indicados não têm 4.5:1 com texto branco nem
+sobre branco, por isso são usados em preenchimentos, ícones e barras (3:1) e o texto de estado usa variantes mais
+escuras — o teste de contraste verifica os dois usos nos dois temas. A Inter é auto-alojada (pacote npm, sem CDN) para
+não depender nem informar terceiros. A navegação passa a domínios do ERP com secções e mostra só domínios com módulos
+reais (sem entradas fictícias). Favoritos e disposição do painel são preferências do membro guardadas no PostgreSQL
+(`member_preferences`, por membership, com RLS, validadas por chave e sem dados de negócio — por isso fora da auditoria),
+para seguirem o utilizador entre browsers; os recentes ficam no browser, por serem só histórico local de navegação.
+
+## D-022 Estado das listas na URL e preferências de vista no browser (aceite)
+
+As listagens guardam pesquisa, filtros, ordenação e página nos parâmetros da URL: uma ligação abre a mesma vista,
+voltar atrás repõe-na e o servidor faz sempre a filtragem, a ordenação (lista fechada de campos por recurso) e a
+paginação. A escolha de colunas e os rascunhos de formulários ficam no browser, por utilizador e empresa: são
+conveniências de um posto de trabalho, não dados de negócio, e um rascunho só passa a registo quando a API o aceita.
+Rascunhos de um registo existente ficam associados à versão, para não se reaplicarem sobre uma alteração feita
+entretanto por outra pessoa.
+
+## D-023 Pré-visualização só de tipos passivos; quadros e assistentes só pedem à API (aceite)
+
+A pré-visualização de ficheiros mostra apenas PDF (visualizador do browser), imagens raster e texto simples; HTML, SVG
+e outros tipos activos só se descarregam, porque um ficheiro carregado por um utilizador não pode executar código na
+sessão de outro. O ficheiro vem pela mesma rota autorizada da descarga e o URL temporário é libertado ao fechar. O
+quadro kanban e o assistente não decidem nada: mover um cartão ou concluir um assistente é um pedido à API, e o estado
+mostrado é sempre o que a API devolve depois (se recusar, nada muda). O assistente de encerramento substitui a
+confirmação por um passo de revisão explícito com todos os parâmetros.

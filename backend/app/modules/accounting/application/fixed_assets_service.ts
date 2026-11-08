@@ -1550,3 +1550,8 @@ function summarize(rows: PendingRow[], scale: number) {
     ),
   }
 }
+
+/** Quotas de depreciação devidas até ao mês (para a checklist de fecho). */
+export async function depreciationDue(scope: TenantScope, legalEntityId: string, month: string) {
+  return (await pendingDepreciation(scope, legalEntityId, month, false)).rows.length
+}

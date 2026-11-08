@@ -7,7 +7,10 @@ import {
   AccountingSetupService,
   type SetupKind,
 } from '#modules/accounting/application/setup_service'
-import { JournalEntryService } from '#modules/accounting/application/entries_service'
+import {
+  ENTRY_SORT_FIELDS,
+  JournalEntryService,
+} from '#modules/accounting/application/entries_service'
 import {
   AllocationService,
   AnalyticReportService,
@@ -105,6 +108,19 @@ const listValidator = vine.create(
     })
     .allowUnknownProperties()
 )
+const entryListValidator = vine.create(
+  vine
+    .object({
+      q: vine.string().trim().maxLength(100).optional(),
+      limit: vine.number().withoutDecimals().min(1).max(500).optional(),
+      offset: vine.number().withoutDecimals().min(0).optional(),
+      dateFrom: vine.date({ formats: ['YYYY-MM-DD'] }).optional(),
+      dateTo: vine.date({ formats: ['YYYY-MM-DD'] }).optional(),
+      sort: vine.enum(ENTRY_SORT_FIELDS).optional(),
+      direction: vine.enum(['asc', 'desc'] as const).optional(),
+    })
+    .allowUnknownProperties()
+)
 const versionValidator = vine.create(
   vine.object({ expectedVersion: vine.number().withoutDecimals().min(0) }).allowUnknownProperties()
 )
@@ -182,14 +198,6 @@ export default class AccountingController {
     return ok(ctx, await setup.update(ctx.tenantContext!, kindOf(ctx).kind, uuid(ctx), body))
   }
 
-  async closePeriod(ctx: HttpContext) {
-    const body = await ctx.request.validateUsing(periodValidator)
-    return ok(
-      ctx,
-      await setup.setPeriodStatus(ctx.tenantContext!, uuid(ctx), 'CLOSED', body.reason ?? null)
-    )
-  }
-
   async reopenPeriod(ctx: HttpContext) {
     const body = await ctx.request.validateUsing(periodValidator)
     return ok(
@@ -200,9 +208,12 @@ export default class AccountingController {
 
   // ---- lançamentos
   async entries(ctx: HttpContext) {
-    const q = await ctx.request.validateUsing(listValidator, { data: ctx.request.qs() })
+    const q = await ctx.request.validateUsing(entryListValidator, { data: ctx.request.qs() })
     const qs = ctx.request.qs()
     const page = await entries.list(ctx.tenantContext!, {
+      dateFrom: qs.dateFrom || undefined,
+      dateTo: qs.dateTo || undefined,
+      sort: q.sort ? { field: q.sort, direction: q.direction ?? 'asc' } : undefined,
       legalEntityId: filterValue('legalEntityId', qs.legalEntityId) as string | undefined,
       journalId: filterValue('journalId', qs.journalId) as string | undefined,
       periodId: filterValue('periodId', qs.periodId) as string | undefined,

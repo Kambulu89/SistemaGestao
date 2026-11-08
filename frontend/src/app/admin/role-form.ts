@@ -6,6 +6,7 @@ import { Workspace } from '../core/workspace';
 import { ErrorAlert } from '../ui/error-alert';
 import { Action } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
+import { FormActionBar } from '../ui/form-action-bar';
 import { AuditHistory } from '../ui/audit-history';
 import { ConfirmService } from '../ui/confirm';
 import { ToastService } from '../ui/toasts';
@@ -19,14 +20,14 @@ import type { PermissionDefinition, Role } from './rbac-types';
  */
 @Component({
   selector: 'app-role-form',
-  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, AuditHistory],
+  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, AuditHistory, FormActionBar],
   template: `
     <app-page-header [title]="isNew() ? 'Novo perfil' : (role()?.name ?? 'Perfil')">
       <a routerLink="/perfis" class="btn-secondary">Voltar</a>
     </app-page-header>
     <app-error-alert [error]="loadError()" />
     @if (ready()) {
-      <form class="card space-y-4" (ngSubmit)="save()" novalidate>
+      <form id="role-form" class="card space-y-4" (ngSubmit)="save()" novalidate>
         <app-error-alert [error]="action.error()" />
         @if (saved()) {
           <p class="text-sm text-success-text" role="status">Guardado.</p>
@@ -110,10 +111,12 @@ import type { PermissionDefinition, Role } from './rbac-types';
           }
         </fieldset>
         @if (editable()) {
-          <div class="flex flex-wrap gap-2">
-            <button type="submit" class="btn-primary" [disabled]="action.busy()">
-              {{ isNew() ? 'Criar' : 'Guardar' }}
-            </button>
+          <app-form-action-bar
+            formId="role-form"
+            [dirty]="hasUnsavedChanges()"
+            [busy]="action.busy()"
+            [saveLabel]="isNew() ? 'Criar' : 'Guardar'"
+          >
             @if (!isNew()) {
               <button
                 type="button"
@@ -124,7 +127,7 @@ import type { PermissionDefinition, Role } from './rbac-types';
                 Eliminar
               </button>
             }
-          </div>
+          </app-form-action-bar>
         }
       </form>
       @if (role(); as r) {

@@ -23,7 +23,7 @@ import { StatusBadge } from './status-badge';
       </div>
       <div class="flex flex-wrap gap-2"><ng-content select="[actions]" /></div>
     </div>
-    <div class="grid gap-4 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div class="space-y-4 lg:col-span-2"><ng-content /></div>
       <div class="space-y-4"><ng-content select="[aside]" /></div>
     </div>

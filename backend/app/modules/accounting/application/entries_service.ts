@@ -50,6 +50,29 @@ const HEADER = `e.id, e.version, e.legal_entity_id, e.chart_id, e.fiscal_year_id
   e.reversal_of_id, e.reversed_by_id, j.code as journal_code, j.name as journal_name, p.name as period_name,
   p.status as period_status, y.code as fiscal_year_code`
 
+/** Campos pelos quais a lista de lançamentos pode ser ordenada (lista fechada: nunca SQL vindo do pedido). */
+export const ENTRY_SORT_FIELDS = [
+  'entryDate',
+  'number',
+  'totalDebit',
+  'status',
+  'journalCode',
+] as const
+export type EntrySortField = (typeof ENTRY_SORT_FIELDS)[number]
+const SORT_COLUMNS: Record<EntrySortField, string> = {
+  entryDate: 'e.entry_date',
+  number: 'e.number',
+  totalDebit: 'e.total_debit',
+  status: 'e.status',
+  journalCode: 'j.code',
+}
+
+function orderBy(sort?: { field: EntrySortField; direction: 'asc' | 'desc' }) {
+  if (!sort) return 'e.entry_date desc, e.created_at desc'
+  const dir = sort.direction === 'desc' ? 'desc' : 'asc'
+  return `${SORT_COLUMNS[sort.field]} ${dir} nulls last, e.entry_date desc, e.created_at desc, e.id`
+}
+
 const FROM = `from journal_entries e
   join journals j on j.tenant_id = e.tenant_id and j.id = e.journal_id
   join fiscal_periods p on p.tenant_id = e.tenant_id and p.id = e.period_id
@@ -177,9 +200,13 @@ async function assertPeriodOpen(scope: TenantScope, periodId: string) {
   const r = await scope.trx.rawQuery(
     `select p.status, y.status as year_status from fiscal_periods p
        join fiscal_years y on y.tenant_id = p.tenant_id and y.id = p.fiscal_year_id
-      where p.tenant_id = ? and p.id = ?`,
+      where p.tenant_id = ? and p.id = ?
+      for share of p`,
     [scope.context.tenantId, periodId]
   )
+  // FOR SHARE: fechar o período (FOR UPDATE, também no encerramento do exercício) espera por quem está a
+  // contabilizar e vice-versa, por isso nunca fica um lançamento contabilizado num período que outra transacção acabou
+  // de fechar.
   const p = r.rows[0] as { status: string; year_status: string } | undefined
   if (!p || p.status !== 'OPEN' || p.year_status !== 'OPEN')
     throw ApiError.conflict('PERIOD_CLOSED', 'O período do lançamento está fechado.')
@@ -482,6 +509,9 @@ export class JournalEntryService {
       periodId?: string
       fiscalYearId?: string
       q?: string
+      dateFrom?: string
+      dateTo?: string
+      sort?: { field: EntrySortField; direction: 'asc' | 'desc' }
       limit: number
       offset: number
     }
@@ -502,6 +532,14 @@ export class JournalEntryService {
           params.push(v)
         }
       }
+      if (filter.dateFrom) {
+        where.push('e.entry_date >= ?::date')
+        params.push(filter.dateFrom)
+      }
+      if (filter.dateTo) {
+        where.push('e.entry_date <= ?::date')
+        params.push(filter.dateTo)
+      }
       if (filter.q) {
         where.push(
           `(lower(e.description) like ? or lower(coalesce(e.reference,'')) like ? or lower(coalesce(e.number,'')) like ?)`
@@ -511,7 +549,7 @@ export class JournalEntryService {
       }
       const clause = where.join(' and ')
       const rows = await scope.trx.rawQuery(
-        `select ${HEADER} ${FROM} where ${clause} order by e.entry_date desc, e.created_at desc limit ? offset ?`,
+        `select ${HEADER} ${FROM} where ${clause} order by ${orderBy(filter.sort)} limit ? offset ?`,
         [...Array(2).fill(await scaleOf(scope)), ...params, filter.limit, filter.offset] as never[]
       )
       const count = await scope.trx.rawQuery(
@@ -709,6 +747,11 @@ export class JournalEntryService {
           'MANAGED_BY_FIXED_ASSETS',
           'Lançamento dos activos fixos: anule-o na ficha do activo ou nas depreciações.'
         )
+      if (entry.source === 'YEAR_CLOSE' || entry.source === 'YEAR_OPENING')
+        throw ApiError.conflict(
+          'MANAGED_BY_YEAR_CLOSE',
+          'Lançamento do encerramento do exercício: anule-o reabrindo o exercício.'
+        )
       return reverseInScope(scope, entry, input)
     })
   }
@@ -721,7 +764,7 @@ export const MANAGED_SOURCE = 'FIXED_ASSETS'
 export async function reverseInScope(
   scope: TenantScope,
   entry: EntryRow,
-  input: { date: string; description?: string | null }
+  input: { date: string; description?: string | null; periodId?: string }
 ) {
   const context = scope.context
   expectStatus(entry, undefined, 'POSTED')
@@ -737,7 +780,7 @@ export async function reverseInScope(
         message: 'Data do estorno igual ou posterior à do lançamento.',
       },
     ])
-  const period = await resolvePeriod(scope, entry.legal_entity_id, input.date)
+  const period = await resolvePeriod(scope, entry.legal_entity_id, input.date, input.periodId)
   if (!period)
     throw ApiError.validation([
       { path: 'date', code: 'NO_PERIOD', message: 'Não há exercício para esta data.' },

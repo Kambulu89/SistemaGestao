@@ -54,3 +54,35 @@ describe('ligações da pesquisa global', () => {
     expect(hitLink(hit({ type: 'approval_workflow' }))).toBe('/aprovacoes/workflows/x');
   });
 });
+
+describe('xlsx', () => {
+  it('CRC-32 e ZIP sem compressão com as partes do livro', async () => {
+    const { buildXlsx, crc32 } = await import('./xlsx');
+    expect(crc32(new TextEncoder().encode('hello'))).toBe(0x3610a686);
+    const bytes = buildXlsx('Balanço 2026', [
+      [
+        { value: 'Rubrica', bold: true },
+        { value: 'Valor', bold: true },
+      ],
+      [{ value: '=HACK()' }, { value: '-1250.50', kind: 'number' }],
+      [{ value: 'Caixa & bancos <1>' }, { value: 'não é número', kind: 'number' }],
+    ]);
+    expect([...bytes.slice(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);
+    const text = new TextDecoder().decode(bytes);
+    for (const part of [
+      '[Content_Types].xml',
+      'xl/workbook.xml',
+      'xl/styles.xml',
+      'xl/worksheets/sheet1.xml',
+    ])
+      expect(text).toContain(part);
+    expect(text).toContain('<c r="B2" s="2"><v>-1250.50</v></c>');
+    expect(text).toContain("'=HACK()");
+    expect(text).toContain('Caixa &amp; bancos &lt;1&gt;');
+    expect(text).toContain('<sheet name="Balanço 2026"');
+    // Fim do arquivo: 6 entradas no directório central.
+    const end = new DataView(bytes.buffer, bytes.length - 22);
+    expect(end.getUint32(0, true)).toBe(0x06054b50);
+    expect(end.getUint16(10, true)).toBe(6);
+  });
+});
