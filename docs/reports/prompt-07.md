@@ -1,7 +1,7 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.4 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.5 a 7.13 seguem, um de
-cada vez. Decisões D-024 a D-027.
+Estado: **7.1 a 7.5 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.6 a 7.13 seguem, um de
+cada vez. Decisões D-024 a D-028.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
@@ -14,6 +14,7 @@ terão de ser configuradas pela empresa e confirmadas na legislação em vigor q
 | 7.2 Recrutamento/onboarding | Nada                                                            | Vaga com remuneração autorizada aprovada (directa ou workflow), candidatos, candidaturas por etapas, entrevistas, avaliações, proposta aprovada e respondida, contratação que cria o colaborador e a checklist (documentos, conta, acessos, equipamentos)                                             | Feito  |
 | 7.3 Contratos/carreira      | Colocação só na ficha, sem histórico; sem contratos             | Contrato (tipo, datas, experiência, jornada, remuneração, estado) com adendas e renovações datadas, suspensão, retoma e termo com histórico; condições numa data; histórico de cargos, transferências e promoções com vigência                                                                        | Feito  |
 | 7.4 Férias/ausências        | Calendários e feriados (Prompt 05); nada de férias              | Tipos de ausência, política versionada com fonte legal, conta-corrente de dias (direito proporcional, transporte, expiração, ajustes, gozo, reversão), pedidos com contagem pelo calendário, sobreposição e saldo, aprovação da chefia, confidencialidade médica, ausências para assiduidade/salários | Feito  |
+| 7.5 Compensação/benefícios  | Salário base no contrato (7.3)                                  | Catálogo de componentes (subsídios, prémios, horas extra, abonos, descontos), incidência IRT/INSS por vigência com fonte, propostas com aprovação (directa ou workflow), componentes do colaborador com vigência e histórico imutável, remuneração numa data para o processamento                     | Feito  |
 
 ## Modelo
 
@@ -78,6 +79,20 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
 - Erros: `OVERLAP`, `CROSS_YEAR`, `ZERO_DAYS`, `INSUFFICIENT_BALANCE`, `TOO_MANY_DAYS`, `NO_POLICY`, `SEGREGATION`,
   `POLICY_CONFLICT`, `NOT_AFTER_PREVIOUS`, `IN_USE`, `NOT_LINKED`, `INVALID_STATE`, `OUT_OF_SCOPE`.
 
+### 7.5 Compensação e benefícios
+
+- Migração `0026_create_hr_compensation`: `pay_components`, `pay_component_incidences`, `compensation_proposals`,
+  `compensation_proposal_lines`, `employee_pay_items`; `hr_settings.compensation_workflow_id`.
+- `GET /hr/pay-components` (qualquer `hr.compensation.*`), `POST|PATCH /hr/pay-components[/:id]`,
+  `GET /hr/pay-components/:id`, `POST /hr/pay-components/:id/incidences` (`hr.compensation.settings`).
+- `GET /hr/employees/:id/compensation?date=`, `POST /hr/employees/:id/compensation/proposals`,
+  `GET /hr/compensation/proposals`, `GET|PATCH /hr/compensation/proposals/:id`, `POST …/submit|decision|cancel`.
+- Permissões novas: `hr.compensation.read`, `hr.compensation.manage`, `hr.compensation.approve`,
+  `hr.compensation.settings`; tipo de assunto `compensation_proposal`.
+- Erros: `NO_CONTRACT`, `NOT_AFTER_CURRENT`, `NOTHING_TO_REMOVE`, `VARIABLE_COMPONENT`, `INVALID_AMOUNT`,
+  `INVALID_PERCENT`, `STALE_PROPOSAL`, `SEGREGATION`, `USE_APPROVAL_WORKFLOW`, `NOT_AFTER_PREVIOUS`, `INCONSISTENT`,
+  `IN_USE`, `CODE_TAKEN`.
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -102,6 +117,15 @@ Recrutamento (7.2), no mesmo domínio:
 - As minhas entrevistas: o entrevistador marca como realizada e avalia.
 - Ficha do colaborador: cartão de onboarding com progresso; tarefas por estado.
 - Configuração de RH: workflows das vagas e propostas. O editor de workflows ganhou o tipo de assunto.
+
+Compensação (7.5):
+
+- Ficha do colaborador: cartão Compensação com a remuneração numa data (base do contrato, componentes, incidência),
+  propostas e histórico com vigência; "Nova proposta" com linhas (definir/remover; montante ou percentagem).
+- Proposta: pedir aprovação, aprovar e aplicar (outra pessoa) ou recusar com motivo, cancelar.
+- Compensação (lista): propostas no âmbito, vista "A aprovar por mim".
+- Componentes de remuneração: catálogo e versões da incidência de IRT/INSS com fonte. Configuração de RH: workflow das
+  propostas de compensação.
 
 Férias e ausências (7.4):
 
@@ -180,9 +204,23 @@ Testes do 7.4:
   doença confidencial decidida pela chefia sem tipo, motivo nem anexos (o admin vê); 390 px sem deslocamento. Sem erros
   na consola.
 
+Testes do 7.5:
+
+- Backend funcional `hr_compensation.spec.ts` (3 testes): catálogo (coerência, código, uso em propostas), incidência
+  versionada com fonte e só de acréscimo; propostas (validação de linhas, sem contrato, segregação, recusa com motivo,
+  aplicação com vigência, 10% de 200 000 = 20 000, não retroactiva, remoção, histórico, proposta desactualizada,
+  ninguém aprova a própria remuneração, auditoria sem valores); âmbitos e workflow.
+- Backend unitário `hr_compensation_domain.spec.ts` (3 testes): percentagens e arredondamento, linhas, natureza.
+- `isolation_matrix` (componentes, incidências, remuneração e propostas de outra empresa), `routes_protection`.
+- Frontend `hr/compensation-model.spec.ts` (4 testes) e navegação.
+- Browser (5 passos, dois utilizadores): componente e incidência com fonte pela interface (fonte obrigatória); proposta
+  na ficha com percentagem inválida assinalada junto da linha; quem preparou não aprova; o aprovador aprova em "A
+  aprovar por mim"; remuneração a 01/03 com base 200 000, prémio 20 000, subsídio 25 000 e incidências (e nada a 15/01);
+  390 px sem deslocamento. Sem erros na consola.
+
 ## Pendências
 
-- 7.5 a 7.13 (compensação, adiantamentos, processamento salarial, IRT/INSS, recibos,
+- 7.6 a 7.13 (adiantamentos, processamento salarial, IRT/INSS, recibos,
   formação, cessação, portais e relatórios).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
@@ -192,3 +230,5 @@ Testes do 7.4:
   para o bloco de documentos/recibos.
 - Férias: meios dias, pedidos que atravessam o ano (dividir em dois), proporcionais na cessação (7.11), notificações
   à chefia, e valores da LGT 12/23 por confirmar pela empresa na política.
+- Compensação: taxas e limites de IRT/INSS por confirmar na legislação (a empresa configura as incidências com a fonte);
+  aprovação de propostas com efeito em períodos de processamento fechados será bloqueada no 7.7.

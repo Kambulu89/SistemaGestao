@@ -55,6 +55,15 @@ describe('colaborador: envio da ficha', () => {
     expect(
       recruiter.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
     ).toEqual(['Férias e ausências', 'Vagas', 'Candidatos', 'As minhas entrevistas']);
+    const payroll = visibleNavigation(
+      (p, any) => (any ? p === 'hr.compensation.read' : false),
+      (f) => f === 'hr',
+      true,
+      false,
+    );
+    expect(
+      payroll.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
+    ).toContain('Compensação');
     const noFeature = visibleNavigation(
       () => true,
       () => false,

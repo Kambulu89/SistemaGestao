@@ -23,6 +23,7 @@ export const SUBJECT_TYPE_LABELS: Record<string, string> = {
   bank_account: 'Conta bancária da empresa',
   job_requisition: 'Vaga (requisição de pessoal)',
   job_offer: 'Proposta de contratação',
+  compensation_proposal: 'Proposta de compensação',
 };
 
 const emptyStep = (): StepDraft => ({

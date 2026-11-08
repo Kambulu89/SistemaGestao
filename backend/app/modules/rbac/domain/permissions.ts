@@ -244,6 +244,29 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Configurar tipos de ausência e políticas de férias (versionadas, com fonte legal).',
   },
   {
+    code: 'hr.compensation.read',
+    module: 'hr',
+    description:
+      'Ver a remuneração dos colaboradores (componentes, histórico e propostas) no âmbito atribuído.',
+  },
+  {
+    code: 'hr.compensation.manage',
+    module: 'hr',
+    description: 'Preparar e submeter propostas de compensação no âmbito atribuído.',
+  },
+  {
+    code: 'hr.compensation.approve',
+    module: 'hr',
+    description:
+      'Aprovar propostas de compensação no âmbito atribuído, nunca as que preparou nem a sua própria remuneração.',
+  },
+  {
+    code: 'hr.compensation.settings',
+    module: 'hr',
+    description:
+      'Configurar componentes de remuneração e a incidência de IRT e INSS por vigência (com fonte legal).',
+  },
+  {
     code: 'hr.settings',
     module: 'hr',
     description: 'Configurar os recursos humanos (workflows de aprovação do recrutamento).',

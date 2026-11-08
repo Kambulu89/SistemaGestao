@@ -6,11 +6,12 @@
 import { registerSubjectHandler } from '#modules/approvals/index'
 import { registerNotificationFilter } from '#modules/notifications/index'
 import { onBankAccountDecided, tenantSettings } from '#modules/settings/index'
-import { onOfferDecided, onRequisitionDecided } from '#modules/hr/index'
+import { onCompensationDecided, onOfferDecided, onRequisitionDecided } from '#modules/hr/index'
 
 registerSubjectHandler('bank_account', onBankAccountDecided)
 registerSubjectHandler('job_requisition', onRequisitionDecided)
 registerSubjectHandler('job_offer', onOfferDecided)
+registerSubjectHandler('compensation_proposal', onCompensationDecided)
 
 registerNotificationFilter(async (scope, type) => {
   const settings = await tenantSettings(scope)

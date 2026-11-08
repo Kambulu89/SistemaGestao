@@ -12,6 +12,7 @@ import { ToastService } from '../ui/toasts';
 interface HrSettings {
   requisitionWorkflowId: string | null;
   offerWorkflowId: string | null;
+  compensationWorkflowId: string | null;
   version: number;
 }
 interface Workflow {
@@ -88,6 +89,23 @@ interface Workflow {
                 }
               </select>
             </app-field>
+            <app-field
+              label="Propostas de compensação"
+              [error]="action.field('compensationWorkflowId')"
+            >
+              <select
+                appControl
+                class="input"
+                data-testid="wf-compensation"
+                [(ngModel)]="compensationWorkflowId"
+                [ngModelOptions]="{ standalone: true }"
+              >
+                <option [ngValue]="null">Decisão directa</option>
+                @for (w of byType('compensation_proposal'); track w.id) {
+                  <option [ngValue]="w.id">{{ w.code }} — {{ w.name }}</option>
+                }
+              </select>
+            </app-field>
           </app-form-section>
           <p class="text-sm text-muted">
             Os workflows criam-se em
@@ -111,6 +129,7 @@ export class HrSettingsPage {
   protected readonly action = new Action();
   protected requisitionWorkflowId: string | null = null;
   protected offerWorkflowId: string | null = null;
+  protected compensationWorkflowId: string | null = null;
 
   constructor() {
     void this.load();
@@ -131,6 +150,7 @@ export class HrSettingsPage {
       this.workflows.set(w);
       this.requisitionWorkflowId = s.requisitionWorkflowId;
       this.offerWorkflowId = s.offerWorkflowId;
+      this.compensationWorkflowId = s.compensationWorkflowId;
     } catch (error) {
       this.loadError.set(ApiError.from(error));
     }
@@ -142,6 +162,7 @@ export class HrSettingsPage {
       this.api.put<HrSettings>('hr/settings', {
         requisitionWorkflowId: this.requisitionWorkflowId,
         offerWorkflowId: this.offerWorkflowId,
+        compensationWorkflowId: this.compensationWorkflowId,
         expectedVersion: s.version,
       }),
     );

@@ -262,3 +262,17 @@ ausência aprovada é de quem gere e devolve os dias por reversão. Tipos confid
 decide só as datas: tipo, motivo e justificativos ficam para o próprio e para `hr.sensitive`, e a auditoria não regista o
 tipo nem o motivo. As ausências aprovadas ficam disponíveis para assiduidade e processamento salarial
 (`approvedAbsences`).
+
+## D-028 Compensação: base no contrato, componentes com vigência por proposta aprovada e incidência versionada (aceite)
+
+O salário base continua a viver só no contrato (7.3); a compensação trata os outros componentes (subsídios, prémios,
+horas extra, abonos, descontos) de um catálogo da empresa, em montante fixo ou percentagem do salário base do contrato
+em vigor na data — nunca há duas fontes para o mesmo valor. A incidência de IRT e INSS de cada componente (com parte
+isenta de IRT opcional) é versionada por data de início e exige a fonte legal; uma nova versão começa depois da anterior
+e nunca a altera; nenhuma taxa ou limite legal está no código. Os componentes do colaborador só mudam por propostas
+(rascunho → aprovação → aplicada): decide quem tem `hr.compensation.approve` no âmbito, nunca quem preparou nem o
+próprio colaborador, ou o workflow configurado (`compensation_proposal`). Aplicar fecha o período em vigor na véspera e
+abre o novo, na mesma transacção e com o colaborador bloqueado; volta a validar o estado (contrato na data, nada
+posterior em vigor, só remove o que existe) e recusa propostas desactualizadas (409 `STALE_PROPOSAL`). O histórico nunca
+é apagado nem reescrito. Os valores nunca vão para a auditoria. Os componentes variáveis (ex.: horas extra) não ficam na
+ficha: entram por período no processamento (7.7), que obtém a remuneração numa data com `compensationAt`.

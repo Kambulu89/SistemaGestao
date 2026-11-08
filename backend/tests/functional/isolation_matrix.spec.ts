@@ -419,6 +419,22 @@ async function populate(client: any) {
       counting: 'CALENDAR_DAYS',
     })
   )
+  const payComponent = ok(
+    await as(client, s).post('/api/v1/hr/pay-components', {
+      code: 'SUB-A',
+      name: 'Subsídio A',
+      kind: 'EARNING',
+      category: 'ALLOWANCE',
+      calculation: 'FIXED',
+    })
+  )
+  const compProposal = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/compensation/proposals`, {
+      effectiveDate: '2026-02-01',
+      reason: 'Proposta A',
+      lines: [{ componentId: payComponent.id, action: 'SET', amount: '1000' }],
+    })
+  )
   const leaveRequest = ok(
     await as(client, s).post('/api/v1/hr/leave/requests', {
       employeeId: employee.id,
@@ -450,6 +466,8 @@ async function populate(client: any) {
     leavePolicy,
     leaveType,
     leaveRequest,
+    payComponent,
+    compProposal,
     closeTask,
     stmtTemplate,
     stmtNote,
@@ -660,6 +678,49 @@ test.group('isolamento | matriz entre empresas', (group) => {
           startDate: '2026-03-02',
           endDate: '2026-03-03',
         }),
+      ],
+      ['GET componente', B.get(`/api/v1/hr/pay-components/${a.payComponent.id}`)],
+      [
+        'PATCH componente',
+        B.patch(`/api/v1/hr/pay-components/${a.payComponent.id}`, { ...v, name: 'xx' }),
+      ],
+      [
+        'incidência de componente',
+        B.post(`/api/v1/hr/pay-components/${a.payComponent.id}/incidences`, {
+          validFrom: '2026-01-01',
+          irtSubject: true,
+          inssSubject: true,
+          legalReference: 'xxxxx',
+        }),
+      ],
+      ['GET remuneração', B.get(`/api/v1/hr/employees/${a.employee.id}/compensation`)],
+      [
+        'nova proposta de compensação',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/compensation/proposals`, {
+          effectiveDate: '2026-03-01',
+          reason: 'xxx',
+          lines: [{ componentId: a.payComponent.id, action: 'SET', amount: '1' }],
+        }),
+      ],
+      ['GET proposta', B.get(`/api/v1/hr/compensation/proposals/${a.compProposal.id}`)],
+      [
+        'PATCH proposta',
+        B.patch(`/api/v1/hr/compensation/proposals/${a.compProposal.id}`, { ...v, reason: 'xxx' }),
+      ],
+      [
+        'submeter proposta',
+        B.post(`/api/v1/hr/compensation/proposals/${a.compProposal.id}/submit`, v),
+      ],
+      [
+        'decidir proposta',
+        B.post(`/api/v1/hr/compensation/proposals/${a.compProposal.id}/decision`, {
+          ...v,
+          decision: 'APPROVE',
+        }),
+      ],
+      [
+        'cancelar proposta',
+        B.post(`/api/v1/hr/compensation/proposals/${a.compProposal.id}/cancel`, v),
       ],
       ['GET carreira', B.get(`/api/v1/hr/employees/${a.employee.id}/assignments`)],
       [
@@ -1177,6 +1238,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/hr/employees/${a.employee.id}/assignments`,
       '/api/v1/hr/leave/requests',
       `/api/v1/hr/employees/${a.employee.id}/leave`,
+      `/api/v1/hr/employees/${a.employee.id}/compensation`,
+      '/api/v1/hr/compensation/proposals',
     ]) {
       const r = await spoof.get(url)
       assert.equal(r.status(), 403, url)

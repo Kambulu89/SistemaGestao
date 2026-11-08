@@ -22,7 +22,7 @@ técnico partilhado e não depende de módulos.
 | `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
 | `dashboard`                                                   | Painel e pesquisa global                                                                  |
 | `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                     |
-| `hr`                                                          | Colaboradores, recrutamento, contratos, carreira, férias e ausências; âmbitos de RH       |
+| `hr`                                                          | Colaboradores, recrutamento, contratos, carreira, ausências e compensação; âmbitos de RH  |
 
 ## Multi-tenancy
 
@@ -327,7 +327,7 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
 
 ## Recursos humanos (módulo `hr`, Prompt 07)
 
-Blocos 7.1 a 7.4 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-027).
+Blocos 7.1 a 7.5 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-028).
 
 - **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
   cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
@@ -372,3 +372,9 @@ Blocos 7.1 a 7.4 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-027).
   `hr.leave.approve`, nunca o próprio nem quem registou; configurar: `hr.leave.settings`. Contagem com
   `workingDaysBetween` (calendários das configurações). Para assiduidade e salários: `approvedAbsences(scope,
 employeeId, from, to)` em `#modules/hr/index`.
+- **Compensação** (7.5): `pay_components` (categoria, natureza, cálculo fixo / % do base / variável),
+  `pay_component_incidences` (IRT/INSS e parte isenta por data de início, com fonte; só de acréscimo),
+  `compensation_proposals` + `_lines` (SET/REMOVE) e `employee_pay_items` (vigência; um período em aberto por
+  componente). Permissões `hr.compensation.read|manage|approve|settings`; workflow opcional em `hr_settings`
+  (`compensation_proposal`). Para o processamento: `compensationAt(scope, employeeId, date)` em `#modules/hr/index` (base
+  do contrato + componentes com incidência resolvida; percentagens já em montante).

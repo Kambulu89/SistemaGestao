@@ -117,6 +117,7 @@ export async function hrSettings(scope: TenantScope) {
   return {
     requisitionWorkflowId: (row?.requisition_workflow_id as string) ?? null,
     offerWorkflowId: (row?.offer_workflow_id as string) ?? null,
+    compensationWorkflowId: (row?.compensation_workflow_id as string) ?? null,
     version: row ? Number(row.version) : 0,
   }
 }
@@ -128,7 +129,11 @@ export class HrSettingsService {
 
   update(
     context: TenantContext,
-    input: { requisitionWorkflowId?: string | null; offerWorkflowId?: string | null },
+    input: {
+      requisitionWorkflowId?: string | null
+      offerWorkflowId?: string | null
+      compensationWorkflowId?: string | null
+    },
     expectedVersion: number
   ) {
     return runInTenant(context, async (scope) => {
@@ -139,6 +144,7 @@ export class HrSettingsService {
       for (const [key, subject] of [
         ['requisitionWorkflowId', 'job_requisition'],
         ['offerWorkflowId', 'job_offer'],
+        ['compensationWorkflowId', 'compensation_proposal'],
       ] as const)
         if (next[key] && !(await isActiveWorkflowFor(scope, next[key]!, subject)))
           issues.push({
@@ -149,23 +155,25 @@ export class HrSettingsService {
       fail(issues)
       if (current.version === 0)
         await scope.trx.rawQuery(
-          `insert into hr_settings (tenant_id, requisition_workflow_id, offer_workflow_id, created_by, updated_by)
-           values (?, ?, ?, ?, ?)`,
+          `insert into hr_settings (tenant_id, requisition_workflow_id, offer_workflow_id, compensation_workflow_id,
+             created_by, updated_by) values (?, ?, ?, ?, ?, ?)`,
           [
             context.tenantId,
             next.requisitionWorkflowId,
             next.offerWorkflowId,
+            next.compensationWorkflowId,
             context.userId,
             context.userId,
           ] as never[]
         )
       else
         await scope.trx.rawQuery(
-          `update hr_settings set requisition_workflow_id = ?, offer_workflow_id = ?, version = version + 1,
-             updated_by = ?, updated_at = now() where tenant_id = ?`,
+          `update hr_settings set requisition_workflow_id = ?, offer_workflow_id = ?, compensation_workflow_id = ?,
+             version = version + 1, updated_by = ?, updated_at = now() where tenant_id = ?`,
           [
             next.requisitionWorkflowId,
             next.offerWorkflowId,
+            next.compensationWorkflowId,
             context.userId,
             context.tenantId,
           ] as never[]
@@ -180,6 +188,10 @@ export class HrSettingsService {
             to: next.requisitionWorkflowId,
           },
           offerWorkflowId: { from: current.offerWorkflowId, to: next.offerWorkflowId },
+          compensationWorkflowId: {
+            from: current.compensationWorkflowId,
+            to: next.compensationWorkflowId,
+          },
         },
       })
       return hrSettings(scope)

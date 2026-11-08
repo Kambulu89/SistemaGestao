@@ -34,6 +34,7 @@ const EmployeesController = () => import('#modules/hr/http/employees_controller'
 const RecruitmentController = () => import('#modules/hr/http/recruitment_controller')
 const CareerController = () => import('#modules/hr/http/career_controller')
 const LeaveController = () => import('#modules/hr/http/leave_controller')
+const CompensationController = () => import('#modules/hr/http/compensation_controller')
 
 router
   .group(() => {
@@ -589,6 +590,36 @@ router
                 router.get('leave/requests/:id', [LeaveController, 'request'])
                 router.post('leave/requests/:id/decision', [LeaveController, 'decide'])
                 router.post('leave/requests/:id/cancel', [LeaveController, 'cancel'])
+                router.get('pay-components', [CompensationController, 'components'])
+                router
+                  .post('pay-components', [CompensationController, 'createComponent'])
+                  .use(middleware.can({ permission: 'hr.compensation.settings' }))
+                router
+                  .get('pay-components/:id', [CompensationController, 'component'])
+                  .use(middleware.can({ permission: 'hr.compensation.settings' }))
+                router
+                  .patch('pay-components/:id', [CompensationController, 'updateComponent'])
+                  .use(middleware.can({ permission: 'hr.compensation.settings' }))
+                router
+                  .post('pay-components/:id/incidences', [CompensationController, 'addIncidence'])
+                  .use(middleware.can({ permission: 'hr.compensation.settings' }))
+                router.get('employees/:id/compensation', [CompensationController, 'summary'])
+                router.post('employees/:id/compensation/proposals', [
+                  CompensationController,
+                  'createProposal',
+                ])
+                router.get('compensation/proposals', [CompensationController, 'proposals'])
+                router.get('compensation/proposals/:id', [CompensationController, 'proposal'])
+                router.patch('compensation/proposals/:id', [
+                  CompensationController,
+                  'updateProposal',
+                ])
+                router.post('compensation/proposals/:id/submit', [CompensationController, 'submit'])
+                router.post('compensation/proposals/:id/decision', [
+                  CompensationController,
+                  'decide',
+                ])
+                router.post('compensation/proposals/:id/cancel', [CompensationController, 'cancel'])
                 router.get('employees/:id/contracts', [CareerController, 'contracts'])
                 router.post('employees/:id/contracts', [CareerController, 'createContract'])
                 router.get('employees/:id/assignments', [CareerController, 'assignments'])

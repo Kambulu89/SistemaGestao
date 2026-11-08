@@ -186,6 +186,24 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
   'POST /api/v1/hr/leave/requests/:id/cancel':
     'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'GET /api/v1/hr/pay-components':
+    'catálogo sem valores; exige uma permissão hr.compensation.* em qualquer âmbito (verificado no serviço)',
+  'GET /api/v1/hr/employees/:id/compensation':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/employees/:id/compensation/proposals':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'GET /api/v1/hr/compensation/proposals':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'GET /api/v1/hr/compensation/proposals/:id':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'PATCH /api/v1/hr/compensation/proposals/:id':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/compensation/proposals/:id/submit':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/compensation/proposals/:id/decision':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/compensation/proposals/:id/cancel':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
   'GET /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'PUT /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'GET /api/v1/dashboard': 'cada secção exige a permissão e a funcionalidade do módulo dono',

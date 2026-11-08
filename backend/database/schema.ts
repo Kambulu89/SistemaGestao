@@ -859,6 +859,70 @@ export class CloseTaskSchema extends BaseModel {
   declare version: number
 }
 
+export class CompensationProposalLineSchema extends BaseModel {
+  static $columns = ['action', 'amount', 'componentId', 'createdAt', 'createdBy', 'id', 'percent', 'proposalId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CompensationProposalLineSchema.$columns
+  @column()
+  declare action: string
+  @column()
+  declare amount: string | null
+  @column()
+  declare componentId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare percent: string | null
+  @column()
+  declare proposalId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class CompensationProposalSchema extends BaseModel {
+  static $columns = ['approvalRequestId', 'createdAt', 'createdBy', 'decidedAt', 'decidedByMembershipId', 'decisionComment', 'effectiveDate', 'employeeId', 'id', 'reason', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CompensationProposalSchema.$columns
+  @column()
+  declare approvalRequestId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.dateTime()
+  declare decidedAt: DateTime | null
+  @column()
+  declare decidedByMembershipId: string | null
+  @column()
+  declare decisionComment: string | null
+  @column.date()
+  declare effectiveDate: DateTime
+  @column()
+  declare employeeId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare reason: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class CostCenterSchema extends BaseModel {
   static $columns = ['code', 'createdAt', 'createdBy', 'departmentId', 'id', 'legalEntityId', 'managerMembershipId', 'name', 'parentId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = CostCenterSchema.$columns
@@ -970,6 +1034,41 @@ export class DocumentSerySchema extends BaseModel {
   declare updatedBy: string | null
   @column.date()
   declare validFrom: DateTime | null
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class EmployeePayItemSchema extends BaseModel {
+  static $columns = ['amount', 'componentId', 'createdAt', 'createdBy', 'currency', 'employeeId', 'id', 'percent', 'proposalId', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = EmployeePayItemSchema.$columns
+  @column()
+  declare amount: string | null
+  @column()
+  declare componentId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare employeeId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare percent: string | null
+  @column()
+  declare proposalId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
   @column.date()
   declare validTo: DateTime | null
   @column()
@@ -1611,8 +1710,10 @@ export class FxRevaluationSchema extends BaseModel {
 }
 
 export class HrSettingSchema extends BaseModel {
-  static $columns = ['createdAt', 'createdBy', 'id', 'offerWorkflowId', 'requisitionWorkflowId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  static $columns = ['compensationWorkflowId', 'createdAt', 'createdBy', 'id', 'offerWorkflowId', 'requisitionWorkflowId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = HrSettingSchema.$columns
+  @column()
+  declare compensationWorkflowId: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -2403,6 +2504,70 @@ export class OneTimeTokenSchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare userId: string
+}
+
+export class PayComponentIncidenceSchema extends BaseModel {
+  static $columns = ['componentId', 'createdAt', 'createdBy', 'id', 'inssSubject', 'irtExemptAmount', 'irtSubject', 'legalReference', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'version'] as const
+  $columns = PayComponentIncidenceSchema.$columns
+  @column()
+  declare componentId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare inssSubject: boolean
+  @column()
+  declare irtExemptAmount: string | null
+  @column()
+  declare irtSubject: boolean
+  @column()
+  declare legalReference: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
+  @column()
+  declare version: number
+}
+
+export class PayComponentSchema extends BaseModel {
+  static $columns = ['calculation', 'category', 'code', 'createdAt', 'createdBy', 'id', 'kind', 'name', 'recurring', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayComponentSchema.$columns
+  @column()
+  declare calculation: string
+  @column()
+  declare category: string
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare name: string
+  @column()
+  declare recurring: boolean
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
 }
 
 export class PermissionSchema extends BaseModel {

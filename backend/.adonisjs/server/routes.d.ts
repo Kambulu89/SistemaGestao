@@ -220,6 +220,19 @@ export type ScannedRoutes = {
     'leave.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'leave.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'leave.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.components': { paramsTuple?: []; params?: {} }
+    'compensation.create_component': { paramsTuple?: []; params?: {} }
+    'compensation.component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.update_component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.add_incidence': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.create_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.proposals': { paramsTuple?: []; params?: {} }
+    'compensation.proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.update_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -378,6 +391,11 @@ export type ScannedRoutes = {
     'leave.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'leave.requests': { paramsTuple?: []; params?: {} }
     'leave.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.components': { paramsTuple?: []; params?: {} }
+    'compensation.component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.proposals': { paramsTuple?: []; params?: {} }
+    'compensation.proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -492,6 +510,11 @@ export type ScannedRoutes = {
     'leave.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'leave.requests': { paramsTuple?: []; params?: {} }
     'leave.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.components': { paramsTuple?: []; params?: {} }
+    'compensation.component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.proposals': { paramsTuple?: []; params?: {} }
+    'compensation.proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -596,6 +619,12 @@ export type ScannedRoutes = {
     'leave.preview': { paramsTuple?: []; params?: {} }
     'leave.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'leave.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.create_component': { paramsTuple?: []; params?: {} }
+    'compensation.add_incidence': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.create_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -672,6 +701,8 @@ export type ScannedRoutes = {
     'employees.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'leave.update_type': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'leave.update_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.update_component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.update_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.update_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

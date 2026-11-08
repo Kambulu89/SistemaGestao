@@ -69,6 +69,7 @@ const settingsBody = vine.create(
   vine.object({
     requisitionWorkflowId: vine.string().uuid().nullable().optional(),
     offerWorkflowId: vine.string().uuid().nullable().optional(),
+    compensationWorkflowId: vine.string().uuid().nullable().optional(),
     ...version,
   })
 )

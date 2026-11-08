@@ -90,6 +90,31 @@ export const HR_ROUTES: Routes = [
     ],
   },
   {
+    path: 'compensacao',
+    title: 'Compensação',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.compensation.read', anyScope: true },
+        loadComponent: () =>
+          import('./compensation-proposals').then((m) => m.CompensationProposals),
+      },
+      {
+        path: 'componentes',
+        title: 'Componentes de remuneração',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.compensation.settings' },
+        loadComponent: () => import('./pay-components').then((m) => m.PayComponents),
+      },
+      {
+        path: ':id',
+        title: 'Proposta de compensação',
+        loadComponent: () => import('./compensation-proposal').then((m) => m.CompensationProposal),
+      },
+    ],
+  },
+  {
     path: 'entrevistas',
     title: 'As minhas entrevistas',
     loadComponent: () => import('./my-interviews').then((m) => m.MyInterviews),
