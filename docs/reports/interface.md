@@ -73,3 +73,36 @@
 - Modelos ApprovalWorkflowPage, ReportPage, WizardPage, CalendarPage, KanbanPage e DocumentPreviewPage (UI-3).
 - Aplicar EntityListPage às restantes listas (organização, perfis, auditoria, contabilidade) e EntityFormPage aos
   restantes formulários; NotificationCenter em painel lateral; ApprovalTimeline dedicada.
+
+## UI-3 — Aprovação, relatório, assistente, calendário, kanban, pré-visualização e centro de notificações
+
+**Ecrãs**
+
+- Pedido de aprovação (ApprovalWorkflowPage): resumo, decisão, etapas e linha temporal (criação, decisões com autor,
+  delegação e comentário, conclusão ou etapa em espera).
+- Balancete (ReportPage): estado vazio antes de gerar, metadados (parâmetros e hora) também na impressão, CSV e
+  impressão/PDF.
+- Encerramento do exercício (WizardPage): Verificação → Conta e diário → Rever e encerrar.
+- Calendário da empresa (CalendarPage): mês com descanso, feriados e dias úteis calculados pelo servidor.
+- Tarefas de fecho (KanbanPage): Por fazer / Feitas, por arrastar ou botões acessíveis.
+- Anexos: Pré-visualizar (DocumentPreviewPage) para PDF, imagens e texto.
+- Notificações: centro em gaveta lateral.
+
+**APIs usadas** (sem rotas novas): `approvals/requests/:id`, `accounting/trial-balance`,
+`accounting/fiscal-years/:id/close`, `accounting/periods/:id/tasks`, `accounting/close-tasks/:id`, `calendars/:id`,
+`calendars/:id/working-days`, `attachments/:id/content`, `me/notifications` (`unread`), `me/notifications/:id/read`,
+`me/notifications/read-all`.
+
+**Testes e evidências**
+
+- Frontend: `templates3.spec.ts` (grelha do mês, mudança de mês, tipos pré-visualizáveis, linha temporal).
+- Browser: tarefa movida para Feitas e aviso da checklist resolvido; assistente bloqueia sem conta de resultado,
+  revisão com os parâmetros e exercício encerrado; balancete com estado vazio e metadados; calendário de Novembro de
+  2026 com feriado e 20 dias úteis; imagem carregada e pré-visualizada; linha temporal de um pedido; centro de
+  notificações com separadores; sem erros de consola.
+
+**Pendências**
+
+- Aplicar ReportPage ao razão, analítica e demonstrações; KanbanPage a outros fluxos quando existirem estados com
+  mais colunas (ex.: pedidos, futuros módulos comerciais).
+- Aplicar EntityListPage/EntityFormPage às restantes listas e formulários.

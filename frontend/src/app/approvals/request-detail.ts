@@ -7,139 +7,117 @@ import { Attachments } from '../ui/attachments';
 import { formatDateTime } from '../ui/dates';
 import { ErrorAlert } from '../ui/error-alert';
 import { Action, Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
-import { StatusBadge } from '../ui/status-badge';
-import { type StepItem, Stepper } from '../ui/stepper';
+import { type StepItem } from '../ui/stepper';
+import { ApprovalWorkflowPage } from '../ui/templates';
 import { ConfirmService } from '../ui/confirm';
 import { ToastService } from '../ui/toasts';
 import { Breadcrumbs } from '../core/breadcrumbs';
-import { personName, type RequestDetail } from './types';
+import { personName, type RequestDetail, requestTimeline } from './types';
 
-/** Pedido: etapas, decisões, decidir (por si ou por delegação), cancelar e anexos. */
+/** Pedido (ApprovalWorkflowPage): etapas, linha temporal, decidir (por si ou por delegação), cancelar e anexos. */
 @Component({
   selector: 'app-request-detail',
-  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, StatusBadge, Attachments, Stepper],
+  imports: [FormsModule, RouterLink, ErrorAlert, Attachments, ApprovalWorkflowPage],
   template: `
     <app-error-alert [error]="request.error()" />
     @if (request.value(); as r) {
-      <app-page-header
+      <app-approval-workflow-page
         [title]="r.title"
+        [status]="r.status"
         [subtitle]="
           r.workflow.name + ' · pedido por ' + person(r.requestedBy) + ' em ' + when(r.createdAt)
         "
+        [steps]="stepItems()"
+        [timeline]="timeline()"
       >
-        <a routerLink="/aprovacoes" class="btn-secondary">Voltar</a>
-      </app-page-header>
-      <div class="grid gap-4 lg:grid-cols-3">
-        <div class="space-y-4 lg:col-span-2">
-          <section class="card">
-            <p class="text-sm">Estado: <app-status-badge [status]="r.status" /></p>
-            @if (r.description) {
-              <p class="mt-2 text-sm whitespace-pre-line text-fg">{{ r.description }}</p>
-            }
-          </section>
+        <a actions routerLink="/aprovacoes" class="btn-secondary">Voltar</a>
+        <section summary class="card">
+          <p class="text-sm">
+            {{
+              r.status === 'PENDING'
+                ? 'Em curso na etapa ' + r.currentStep + ' de ' + r.steps.length + '.'
+                : 'Concluído' + (r.completedAt ? ' em ' + when(r.completedAt) : '') + '.'
+            }}
+          </p>
+          @if (r.description) {
+            <p class="mt-2 text-sm whitespace-pre-line text-fg">{{ r.description }}</p>
+          }
+        </section>
 
-          @if (r.myOptions.length > 0) {
-            <form class="card space-y-3 border-primary" (ngSubmit)="decide()" aria-label="Decidir">
-              <h2 class="font-semibold">A sua decisão — etapa {{ r.currentStep }}</h2>
-              <app-error-alert [error]="action.error()" />
-              @if (r.myOptions.length > 1 || r.myOptions[0].onBehalfOf) {
-                <div>
-                  <label class="label" for="behalf">Decidir</label>
-                  <select id="behalf" name="behalf" class="input" [(ngModel)]="onBehalfOf">
-                    @for (o of r.myOptions; track o.onBehalfOf) {
-                      <option [ngValue]="o.onBehalfOf">
-                        {{ o.onBehalfOf ? 'Em nome de quem me delegou' : 'Por mim' }}
-                      </option>
-                    }
-                  </select>
-                </div>
-              }
+        @if (r.myOptions.length > 0) {
+          <form
+            decision
+            class="card space-y-3 border-primary"
+            (ngSubmit)="decide()"
+            aria-label="Decidir"
+          >
+            <h2 class="font-semibold">A sua decisão — etapa {{ r.currentStep }}</h2>
+            <app-error-alert [error]="action.error()" />
+            @if (r.myOptions.length > 1 || r.myOptions[0].onBehalfOf) {
               <div>
-                <label class="label" for="comment">Comentário (obrigatório para rejeitar)</label>
-                <textarea
-                  id="comment"
-                  name="comment"
-                  rows="3"
-                  class="input"
-                  [(ngModel)]="comment"
-                ></textarea>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  type="submit"
-                  class="btn-primary"
-                  [disabled]="action.busy()"
-                  (click)="decision.set('APPROVE')"
-                >
-                  Aprovar
-                </button>
-                <button
-                  type="submit"
-                  class="btn-danger"
-                  [disabled]="action.busy() || !comment().trim()"
-                  (click)="decision.set('REJECT')"
-                >
-                  Rejeitar
-                </button>
-              </div>
-            </form>
-          }
-
-          <section class="card">
-            <h2 class="font-semibold">Etapas</h2>
-            <div class="mt-3"><app-stepper label="Etapas do pedido" [steps]="stepItems()" /></div>
-            <h3 class="mt-4 text-sm font-semibold">Decisões</h3>
-            <ol class="mt-2 space-y-3">
-              @for (s of r.steps; track s.sequence) {
-                <li class="text-sm">
-                  <span class="font-medium">{{ s.sequence }}. {{ s.name }}</span>
-                  @if (r.status === 'PENDING' && r.currentStep === s.sequence) {
-                    <span class="badge ml-1 bg-warning-soft text-warning-text">Em curso</span>
+                <label class="label" for="behalf">Decidir</label>
+                <select id="behalf" name="behalf" class="input" [(ngModel)]="onBehalfOf">
+                  @for (o of r.myOptions; track o.onBehalfOf) {
+                    <option [ngValue]="o.onBehalfOf">
+                      {{ o.onBehalfOf ? 'Em nome de quem me delegou' : 'Por mim' }}
+                    </option>
                   }
-                  <span class="text-xs text-muted">
-                    · {{ s.requiredApprovals }} aprovação(ões)</span
-                  >
-                  <ul class="mt-1 pl-4 text-xs text-fg">
-                    @for (d of decisionsFor(s.sequence); track $index) {
-                      <li>
-                        {{ d.decision === 'APPROVE' ? 'Aprovado' : 'Rejeitado' }} por
-                        {{ person(d.decidedBy) }}
-                        @if (d.onBehalfOf) {
-                          (em nome de {{ person(d.onBehalfOf) }})
-                        }
-                        · {{ when(d.decidedAt) }}{{ d.comment ? ' — ' + d.comment : '' }}
-                      </li>
-                    }
-                  </ul>
-                </li>
-              }
-            </ol>
-          </section>
-        </div>
-        <div class="space-y-4">
-          @if (canCancel()) {
-            <section class="card space-y-2">
-              <h2 class="font-semibold">Cancelar pedido</h2>
-              <label class="label" for="reason">Motivo</label>
-              <input id="reason" class="input" [(ngModel)]="reason" name="reason" />
+                </select>
+              </div>
+            }
+            <div>
+              <label class="label" for="comment">Comentário (obrigatório para rejeitar)</label>
+              <textarea
+                id="comment"
+                name="comment"
+                rows="3"
+                class="input"
+                [(ngModel)]="comment"
+              ></textarea>
+            </div>
+            <div class="flex gap-2">
               <button
-                type="button"
-                class="btn-secondary"
+                type="submit"
+                class="btn-primary"
                 [disabled]="action.busy()"
-                (click)="cancel()"
+                (click)="decision.set('APPROVE')"
               >
-                Cancelar pedido
+                Aprovar
               </button>
-            </section>
-          }
-          <app-attachments
-            subjectType="approval_request"
-            [subjectId]="r.id"
-            [canWrite]="canAttach()"
-          />
-        </div>
-      </div>
+              <button
+                type="submit"
+                class="btn-danger"
+                [disabled]="action.busy() || !comment().trim()"
+                (click)="decision.set('REJECT')"
+              >
+                Rejeitar
+              </button>
+            </div>
+          </form>
+        }
+
+        @if (canCancel()) {
+          <section aside class="card space-y-2">
+            <h2 class="font-semibold">Cancelar pedido</h2>
+            <label class="label" for="reason">Motivo</label>
+            <input id="reason" class="input" [(ngModel)]="reason" name="reason" />
+            <button
+              type="button"
+              class="btn-secondary"
+              [disabled]="action.busy()"
+              (click)="cancel()"
+            >
+              Cancelar pedido
+            </button>
+          </section>
+        }
+        <app-attachments
+          aside
+          subjectType="approval_request"
+          [subjectId]="r.id"
+          [canWrite]="canAttach()"
+        />
+      </app-approval-workflow-page>
     }
   `,
 })
@@ -208,9 +186,10 @@ export class RequestDetailPage {
     });
   });
 
-  protected decisionsFor(step: number) {
-    return (this.request.value()?.decisions ?? []).filter((d) => d.stepSequence === step);
-  }
+  protected readonly timeline = computed(() => {
+    const r = this.request.value();
+    return r ? requestTimeline(r) : [];
+  });
 
   protected async decide() {
     const updated = await this.action.run(() =>

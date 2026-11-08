@@ -84,6 +84,15 @@ Classes base: `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-danger`, `btn-li
 | EntityDetailPage                  | `PageDetail` (+ `Tabs`, `Attachments`, `AuditHistory`)     | detalhe da organização, lançamento, activo…                        |
 | SettingsPage                      | `SettingsPage` (índice de secções + secções)               | Configurações da empresa                                           |
 
+| ApprovalWorkflowPage | `ApprovalWorkflowPage` + `ApprovalTimeline` + `Stepper` | Pedido de aprovação |
+| ReportPage | `ReportPage` (parâmetros, Gerar, vazio, exportar, imprimir, metadados) | Balancete |
+| WizardPage | `WizardPage` (passos, Anterior/Seguinte, Concluir uma vez) | Encerramento do exercício |
+| CalendarPage | `CalendarPage` (mês, descanso, hoje, acontecimentos; `monthGrid`) | Calendários da empresa (feriados + dias úteis do servidor) |
+| KanbanPage | `KanbanPage` + `KanbanCard` (arrastar ou botões "Mover para…") | Tarefas de fecho (por fazer / feitas) |
+| DocumentPreviewPage | `DocumentPreviewPage` (PDF, imagem, texto; nunca HTML/SVG) | Anexos ("Pré-visualizar") |
+
+- **NotificationCenter**: o sino abre uma gaveta lateral com "Por ler"/"Todas", marcar como lida (uma ou todas) e
+  ligação ao assunto (`shell/notification-menu.ts`).
 - **`ListState`** (`ui/list-state.ts`): pesquisa (300 ms de espera), filtros, ordenação e página na URL (ligação
   partilhável, "voltar" repõe a vista); só aceita da URL filtros e campos de ordenação declarados; parâmetros fixos
   (ex.: entidade legal da barra superior) vão em `extra` e não na URL. Só a resposta do último pedido conta.

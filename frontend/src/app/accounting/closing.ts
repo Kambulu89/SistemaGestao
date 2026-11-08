@@ -7,6 +7,14 @@ import { formatDate } from '../ui/dates';
 import { ErrorAlert } from '../ui/error-alert';
 import { Action } from '../ui/load';
 import { PageHeader } from '../ui/page-header';
+import {
+  KanbanCard,
+  KanbanPage,
+  type KanbanColumn,
+  type KanbanMove,
+  WizardPage,
+  type WizardStep,
+} from '../ui/templates';
 import { ToastService } from '../ui/toasts';
 import {
   type Account,
@@ -32,7 +40,7 @@ import {
  */
 @Component({
   selector: 'app-closing',
-  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert],
+  imports: [FormsModule, RouterLink, PageHeader, ErrorAlert, WizardPage, KanbanPage, KanbanCard],
   template: `
     <app-page-header
       title="Fecho"
@@ -122,36 +130,36 @@ import {
               @if (c.tasks.length === 0) {
                 <p class="text-sm text-muted">Sem tarefas manuais neste período.</p>
               }
-              <ul class="mb-2 divide-y divide-border text-sm" data-testid="cl-tasks">
-                @for (t of c.tasks; track t.id) {
-                  <li class="flex items-center justify-between gap-2 py-1">
-                    <label class="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        [checked]="t.done"
-                        [disabled]="
-                          !canClose() || c.period.status === 'CLOSED' || taskAction.busy()
-                        "
-                        (change)="toggle(t)"
-                      />
-                      <span [class.line-through]="t.done">{{ t.title }}</span>
+              @if (c.tasks.length > 0) {
+                <div class="mb-3" data-testid="cl-tasks">
+                  <app-kanban
+                    label="Tarefas de fecho"
+                    [columns]="taskColumns(c.tasks)"
+                    [disabled]="!canClose() || c.period.status === 'CLOSED' || taskAction.busy()"
+                    emptyText="Nenhuma."
+                    (move)="moveTask($event)"
+                  >
+                    <ng-template appKanbanCard let-t>
+                      <div class="flex items-start justify-between gap-2 text-sm">
+                        <span>{{ t.title }}</span>
+                        @if (canClose() && c.period.status === 'OPEN') {
+                          <button
+                            type="button"
+                            class="btn-ghost px-1"
+                            [attr.aria-label]="'Apagar tarefa ' + t.title"
+                            (click)="deleteTask(t)"
+                          >
+                            ✕
+                          </button>
+                        }
+                      </div>
                       @if (t.doneAt) {
-                        <span class="text-xs text-muted">({{ day(t.doneAt) }})</span>
+                        <p class="text-xs text-muted">Feita em {{ day(t.doneAt) }}</p>
                       }
-                    </label>
-                    @if (canClose() && c.period.status === 'OPEN') {
-                      <button
-                        type="button"
-                        class="btn-ghost px-2"
-                        [attr.aria-label]="'Apagar tarefa ' + t.title"
-                        (click)="deleteTask(t)"
-                      >
-                        ✕
-                      </button>
-                    }
-                  </li>
-                }
-              </ul>
+                    </ng-template>
+                  </app-kanban>
+                </div>
+              }
               @if (canClose() && c.period.status === 'OPEN') {
                 <form
                   class="flex flex-wrap items-end gap-2"
@@ -245,71 +253,105 @@ import {
                 saldo(s) de resultados).
               </p>
               @if (y.fiscalYear.status === 'OPEN') {
-                @if (y.openPeriods.length) {
-                  <p class="mb-2 text-sm text-warning-text">
-                    Para encerrar, feche primeiro: {{ y.openPeriods.join(', ') }}.
-                  </p>
-                }
                 @if (canClose()) {
-                  <form
-                    class="flex flex-wrap items-end gap-2"
-                    (ngSubmit)="closeYear()"
-                    aria-label="Encerrar exercício"
+                  <app-wizard
+                    label="Encerrar exercício"
+                    [steps]="closeSteps"
+                    [(step)]="closeStep"
+                    [canAdvance]="closeStepReady(y)"
+                    [busy]="action.busy()"
+                    finishLabel="Encerrar exercício"
+                    (finish)="closeYear()"
                   >
-                    <div>
-                      <label class="label" for="cl-result"
-                        >Conta de resultado (capital próprio)</label
-                      >
-                      <select
-                        id="cl-result"
-                        name="result"
-                        class="input w-64"
-                        [(ngModel)]="resultAccountId"
-                      >
-                        <option [ngValue]="null">—</option>
-                        @for (a of equityAccounts(); track a.id) {
-                          <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+                    @switch (closeSteps[closeStep()].id) {
+                      @case ('check') {
+                        @if (y.openPeriods.length) {
+                          <p class="text-sm text-warning-text" role="status">
+                            Para encerrar, feche primeiro: {{ y.openPeriods.join(', ') }}.
+                          </p>
+                        } @else {
+                          <p class="text-sm text-success-text" role="status">
+                            Todos os períodos estão fechados.
+                          </p>
                         }
-                      </select>
-                    </div>
-                    <div>
-                      <label class="label" for="cl-journal">Diário</label>
-                      <select
-                        id="cl-journal"
-                        name="journal"
-                        class="input w-48"
-                        [(ngModel)]="journalId"
-                      >
-                        <option [ngValue]="null">—</option>
-                        @for (j of journals(); track j.id) {
-                          <option [ngValue]="j.id">{{ j.label }}</option>
-                        }
-                      </select>
-                    </div>
-                    <div>
-                      <label class="label" for="cl-next">Transportar saldos para</label>
-                      <select
-                        id="cl-next"
-                        name="next"
-                        class="input w-48"
-                        [(ngModel)]="nextFiscalYearId"
-                      >
-                        <option [ngValue]="null">Não transportar</option>
-                        @for (n of y.nextFiscalYears; track n.id) {
-                          <option [ngValue]="n.id">{{ n.code }}</option>
-                        }
-                      </select>
-                    </div>
-                    <button
-                      type="submit"
-                      class="btn-primary"
-                      [disabled]="
-                        action.busy() || !resultAccountId || !journalId || y.openPeriods.length > 0
-                      "
-                    >
-                      Encerrar exercício
-                    </button>
-                  </form>
+                        <p class="mt-2 text-sm">
+                          Serão apurados {{ y.profitAndLoss.length }} saldo(s) de resultados, com
+                          resultado líquido de <strong>{{ money(y.netResult) }}</strong
+                          >.
+                        </p>
+                      }
+                      @case ('params') {
+                        <div class="flex flex-wrap items-end gap-2">
+                          <div>
+                            <label class="label" for="cl-result"
+                              >Conta de resultado (capital próprio)</label
+                            >
+                            <select
+                              id="cl-result"
+                              name="result"
+                              class="input w-64"
+                              [(ngModel)]="resultAccountId"
+                            >
+                              <option [ngValue]="null">—</option>
+                              @for (a of equityAccounts(); track a.id) {
+                                <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+                              }
+                            </select>
+                          </div>
+                          <div>
+                            <label class="label" for="cl-journal">Diário</label>
+                            <select
+                              id="cl-journal"
+                              name="journal"
+                              class="input w-48"
+                              [(ngModel)]="journalId"
+                            >
+                              <option [ngValue]="null">—</option>
+                              @for (j of journals(); track j.id) {
+                                <option [ngValue]="j.id">{{ j.label }}</option>
+                              }
+                            </select>
+                          </div>
+                          <div>
+                            <label class="label" for="cl-next">Transportar saldos para</label>
+                            <select
+                              id="cl-next"
+                              name="next"
+                              class="input w-48"
+                              [(ngModel)]="nextFiscalYearId"
+                            >
+                              <option [ngValue]="null">Não transportar</option>
+                              @for (n of y.nextFiscalYears; track n.id) {
+                                <option [ngValue]="n.id">{{ n.code }}</option>
+                              }
+                            </select>
+                          </div>
+                        </div>
+                      }
+                      @case ('confirm') {
+                        <dl
+                          class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm"
+                          data-testid="cl-review"
+                        >
+                          <dt class="text-muted">Exercício</dt>
+                          <dd>{{ y.fiscalYear.code }}</dd>
+                          <dt class="text-muted">Resultado líquido</dt>
+                          <dd>{{ money(y.netResult) }}</dd>
+                          <dt class="text-muted">Conta de resultado</dt>
+                          <dd>{{ accountLabel(resultAccountId) }}</dd>
+                          <dt class="text-muted">Diário</dt>
+                          <dd>{{ journalLabel(journalId) }}</dd>
+                          <dt class="text-muted">Transporte de saldos</dt>
+                          <dd>{{ nextLabel(y) }}</dd>
+                        </dl>
+                        <p class="mt-3 text-sm text-muted">
+                          Os lançamentos de apuramento e de abertura ficam contabilizados; para
+                          corrigir, reabre-se o exercício (os lançamentos são estornados, nunca
+                          apagados).
+                        </p>
+                      }
+                    }
+                  </app-wizard>
                 }
               }
               @if (y.history.length) {
@@ -387,6 +429,33 @@ export class ClosingPage {
   protected readonly year = signal<YearClosing | null>(null);
   protected readonly equityAccounts = signal<Account[]>([]);
   protected readonly journals = signal<{ id: string; label: string }[]>([]);
+  /** Assistente de encerramento: verificar → parâmetros → rever e confirmar. */
+  protected readonly closeSteps: WizardStep[] = [
+    { id: 'check', label: 'Verificação' },
+    { id: 'params', label: 'Conta e diário' },
+    { id: 'confirm', label: 'Rever e encerrar' },
+  ];
+  protected readonly closeStep = signal(0);
+
+  protected closeStepReady(y: YearClosing) {
+    const id = this.closeSteps[this.closeStep()].id;
+    if (id === 'check') return y.openPeriods.length === 0;
+    return !!this.resultAccountId && !!this.journalId && y.openPeriods.length === 0;
+  }
+
+  protected accountLabel(id: string | null) {
+    const a = this.equityAccounts().find((x) => x.id === id);
+    return a ? `${a.code} — ${a.name}` : '—';
+  }
+
+  protected journalLabel(id: string | null) {
+    return this.journals().find((j) => j.id === id)?.label ?? '—';
+  }
+
+  protected nextLabel(y: YearClosing) {
+    const n = y.nextFiscalYears.find((x) => x.id === this.nextFiscalYearId);
+    return n ? `Para ${n.code}` : 'Não transportar';
+  }
   private readonly entities = signal<{ id: string; label: string }[]>([]);
   protected readonly names = computed(() => new Map(this.entities().map((e) => [e.id, e.label])));
   protected readonly summary = computed(() => checklistSummary(this.selected()?.items ?? []));
@@ -425,6 +494,7 @@ export class ClosingPage {
     this.resultAccountId = null;
     this.journalId = null;
     this.nextFiscalYearId = null;
+    this.closeStep.set(0);
     const id = this.fiscalYearId;
     if (!id) return;
     const y = await this.deps.api.get<FiscalYear>(`accounting/fiscal-years/${id}`);
@@ -506,6 +576,18 @@ export class ClosingPage {
     await this.reloadSelected();
   }
 
+  /** Quadro das tarefas: por fazer / feitas (mover é marcar ou desmarcar na API). */
+  protected taskColumns(tasks: CloseTask[]): KanbanColumn<CloseTask>[] {
+    return [
+      { id: 'todo', label: 'Por fazer', items: tasks.filter((t) => !t.done) },
+      { id: 'done', label: 'Feitas', items: tasks.filter((t) => t.done) },
+    ];
+  }
+
+  protected moveTask(m: KanbanMove<CloseTask>) {
+    if ((m.to === 'done') !== m.item.done) void this.toggle(m.item);
+  }
+
   protected async toggle(t: CloseTask) {
     const r = await this.taskAction.run(() =>
       this.deps.api.patch<CloseTask[]>(`accounting/close-tasks/${t.id}`, {
@@ -555,14 +637,9 @@ export class ClosingPage {
     await Promise.all([this.reloadSelected(), this.loadYear()]);
   }
 
+  /** Chamado no último passo do assistente (a revisão substitui a confirmação). */
   protected async closeYear() {
     const y = this.year()!;
-    const ok = await this.confirm.ask({
-      title: `Encerrar ${y.fiscalYear.code}`,
-      message: `Apurar o resultado (${this.money(y.netResult)})${this.nextFiscalYearId ? ', transportar os saldos para o exercício seguinte' : ''} e fechar o exercício? Os lançamentos ficam contabilizados; para corrigir, reabre-se o exercício.`,
-      confirmLabel: 'Encerrar',
-    });
-    if (!ok) return;
     const body = {
       resultAccountId: this.resultAccountId,
       journalId: this.journalId,
@@ -588,6 +665,7 @@ export class ClosingPage {
     });
     if (!r) return;
     this.toasts.show(`Exercício ${y.fiscalYear.code} encerrado.`);
+    this.closeStep.set(0);
     await Promise.all([this.loadYear(), this.refreshPeriods()]);
   }
 

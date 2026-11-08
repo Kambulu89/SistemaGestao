@@ -189,3 +189,12 @@ paginação. A escolha de colunas e os rascunhos de formulários ficam no browse
 conveniências de um posto de trabalho, não dados de negócio, e um rascunho só passa a registo quando a API o aceita.
 Rascunhos de um registo existente ficam associados à versão, para não se reaplicarem sobre uma alteração feita
 entretanto por outra pessoa.
+
+## D-023 Pré-visualização só de tipos passivos; quadros e assistentes só pedem à API (aceite)
+
+A pré-visualização de ficheiros mostra apenas PDF (visualizador do browser), imagens raster e texto simples; HTML, SVG
+e outros tipos activos só se descarregam, porque um ficheiro carregado por um utilizador não pode executar código na
+sessão de outro. O ficheiro vem pela mesma rota autorizada da descarga e o URL temporário é libertado ao fechar. O
+quadro kanban e o assistente não decidem nada: mover um cartão ou concluir um assistente é um pedido à API, e o estado
+mostrado é sempre o que a API devolve depois (se recusar, nada muda). O assistente de encerramento substitui a
+confirmação por um passo de revisão explícito com todos os parâmetros.
