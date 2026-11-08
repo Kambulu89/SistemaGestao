@@ -22,7 +22,7 @@ técnico partilhado e não depende de módulos.
 | `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
 | `dashboard`                                                   | Painel e pesquisa global                                                                  |
 | `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                     |
-| `hr`                                                          | Colaboradores, recrutamento e onboarding; âmbitos de RH e dados pessoais por campo        |
+| `hr`                                                          | Colaboradores, recrutamento, contratos e carreira; âmbitos de RH e dados por campo        |
 
 ## Multi-tenancy
 
@@ -327,7 +327,7 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
 
 ## Recursos humanos (módulo `hr`, Prompt 07)
 
-Blocos 7.1 e 7.2 feitos (ver `docs/reports/prompt-07.md`, D-024 e D-025).
+Blocos 7.1 a 7.3 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-026).
 
 - **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
   cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
@@ -355,3 +355,12 @@ Blocos 7.1 e 7.2 feitos (ver `docs/reports/prompt-07.md`, D-024 e D-025).
   quantidade; repetir dá 409.
 - **Validação**: os controllers do RH validam só o corpo JSON (`{ data: ctx.request.body() }`), para que parâmetros,
   cabeçalhos e cookies nunca cheguem aos serviços nem à auditoria.
+- **Contratos** (7.3): `employment_contracts` (tipo, início/termo, período experimental, horas semanais e remuneração em
+  `numeric`, DRAFT → ACTIVE ⇄ SUSPENDED → ENDED, ou CANCELLED em rascunho; um em vigor por colaborador),
+  `employment_contract_amendments` (CHANGE/RENEWAL só de acréscimo, com data de efeito sem retroactividade),
+  `employment_contract_events`. Condições numa data: `contractTermsAt(scope, employeeId, date)` em `#modules/hr/index`.
+  Permissões `hr.contracts.read|manage` no âmbito do colaborador; remuneração como `[RESERVADO]` na auditoria.
+- **Carreira** (7.3): `employment_assignments` com vigência `[valid_from, valid_to]`, um período em aberto por colaborador;
+  `POST /hr/employees/:id/assignments` (TRANSFER/PROMOTION/CHANGE, data até hoje, versão da ficha) fecha o período na
+  véspera, abre o novo e actualiza a ficha; a criação do colaborador abre o período HIRE e os colaboradores anteriores
+  ganham-no no primeiro movimento. A ficha recusa mudanças de colocação (`USE_MOVEMENT`).

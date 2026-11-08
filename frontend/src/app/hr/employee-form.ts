@@ -5,6 +5,8 @@ import { Router, RouterLink } from '@angular/router';
 import { Api, ApiError } from '../core/api';
 import { Breadcrumbs } from '../core/breadcrumbs';
 import { type HasUnsavedChanges, snapshot, warnOnUnload } from '../core/unsaved';
+import { CareerCard } from './career-card';
+import { ContractsCard } from './contracts-card';
 import { OnboardingCard } from './onboarding-card';
 import { Workspace } from '../core/workspace';
 import { Attachments } from '../ui/attachments';
@@ -58,6 +60,8 @@ interface Option {
     Attachments,
     AuditHistory,
     OnboardingCard,
+    CareerCard,
+    ContractsCard,
     ErrorState,
     Skeleton,
     Icon,
@@ -121,6 +125,16 @@ interface Option {
             />
           }
         </form>
+        <div class="mt-4 space-y-4">
+          <app-career-card
+            [employeeId]="e.id"
+            [employeeVersion]="e.version"
+            [legalEntityId]="e.legalEntityId"
+            [active]="e.status !== 'TERMINATED'"
+            (moved)="reload()"
+          />
+          <app-contracts-card [employeeId]="e.id" [hireDate]="e.hireDate" />
+        </div>
         <div aside>
           <section class="card" aria-labelledby="emp-summary">
             <h2 id="emp-summary" class="mb-3 font-semibold">Resumo</h2>
@@ -154,7 +168,11 @@ interface Option {
             <app-field
               [label]="f.label"
               [required]="!!f.required"
-              [hint]="f.hint ?? null"
+              [hint]="
+                locked(f.key)
+                  ? 'Muda-se por movimento de carreira (secção Carreira).'
+                  : (f.hint ?? null)
+              "
               [error]="action.field(f.key)"
             >
               @if (f.type === 'select' || f.type === 'ref') {
@@ -162,7 +180,7 @@ interface Option {
                   appControl
                   class="input"
                   [attr.data-field]="f.key"
-                  [disabled]="readonly()"
+                  [disabled]="readonly() || locked(f.key)"
                   [ngModel]="form[f.key] ?? null"
                   [ngModelOptions]="{ standalone: true }"
                   (ngModelChange)="setField(f.key, $event)"
@@ -253,6 +271,21 @@ export class EmployeeForm implements HasUnsavedChanges {
 
   protected reload() {
     void this.load(this.id());
+  }
+
+  /** Colocação (7.3): depois de criada a ficha, só muda por movimento de carreira, com histórico. */
+  protected locked(key: string) {
+    return (
+      !this.isNew() &&
+      [
+        'legalEntityId',
+        'branchId',
+        'departmentId',
+        'positionId',
+        'managerId',
+        'costCenterId',
+      ].includes(key)
+    );
   }
 
   protected setField(key: string, value: unknown) {

@@ -398,6 +398,16 @@ async function populate(client: any) {
     })
   )
   void screening
+  const contract = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/contracts`, {
+      code: 'CT-A',
+      contractType: 'PERMANENT',
+      startDate: '2026-01-05',
+      weeklyHours: '40',
+      currency: 'AOA',
+      baseSalary: '200000',
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
     employee,
@@ -407,6 +417,7 @@ async function populate(client: any) {
     interview,
     offer,
     onboardingTask,
+    contract,
     closeTask,
     stmtTemplate,
     stmtNote,
@@ -538,6 +549,51 @@ test.group('isolamento | matriz entre empresas', (group) => {
       ],
       ['cancelar proposta', B.post(`/api/v1/hr/offers/${a.offer.id}/cancel`, v)],
       ['contratar', B.post(`/api/v1/hr/offers/${a.offer.id}/hire`, { ...v, code: 'X1' })],
+      ['GET contratos', B.get(`/api/v1/hr/employees/${a.employee.id}/contracts`)],
+      [
+        'novo contrato',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/contracts`, {
+          code: 'X',
+          contractType: 'PERMANENT',
+          startDate: '2026-02-01',
+          weeklyHours: '40',
+          currency: 'AOA',
+          baseSalary: '1',
+        }),
+      ],
+      ['GET contrato', B.get(`/api/v1/hr/contracts/${a.contract.id}`)],
+      ['PATCH contrato', B.patch(`/api/v1/hr/contracts/${a.contract.id}`, { ...v, notes: 'x' })],
+      ['activar contrato', B.post(`/api/v1/hr/contracts/${a.contract.id}/activate`, v)],
+      ['cancelar contrato', B.post(`/api/v1/hr/contracts/${a.contract.id}/cancel`, v)],
+      [
+        'terminar contrato',
+        B.post(`/api/v1/hr/contracts/${a.contract.id}/terminate`, {
+          ...v,
+          date: '2026-03-01',
+          reason: 'x',
+        }),
+      ],
+      [
+        'adenda',
+        B.post(`/api/v1/hr/contracts/${a.contract.id}/amendments`, {
+          ...v,
+          kind: 'CHANGE',
+          effectiveDate: '2026-03-01',
+          baseSalary: '1',
+          reason: 'xxx',
+        }),
+      ],
+      ['GET carreira', B.get(`/api/v1/hr/employees/${a.employee.id}/assignments`)],
+      [
+        'movimento',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/assignments`, {
+          ...v,
+          kind: 'CHANGE',
+          effectiveDate: '2026-03-01',
+          managerId: null,
+          reason: 'xxx',
+        }),
+      ],
       ['GET onboarding', B.get(`/api/v1/hr/employees/${a.employee.id}/onboarding`)],
       [
         'nova tarefa de onboarding',
@@ -1028,6 +1084,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/hr/applications/${a.application.id}`,
       '/api/v1/hr/candidates',
       '/api/v1/hr/settings',
+      `/api/v1/hr/contracts/${a.contract.id}`,
+      `/api/v1/hr/employees/${a.employee.id}/assignments`,
     ]) {
       const r = await spoof.get(url)
       assert.equal(r.status(), 403, url)

@@ -32,6 +32,7 @@ const StatementsController = () => import('#modules/accounting/http/statements_c
 const ClosingController = () => import('#modules/accounting/http/closing_controller')
 const EmployeesController = () => import('#modules/hr/http/employees_controller')
 const RecruitmentController = () => import('#modules/hr/http/recruitment_controller')
+const CareerController = () => import('#modules/hr/http/career_controller')
 
 router
   .group(() => {
@@ -555,6 +556,18 @@ router
                 router.get('employees/:id', [EmployeesController, 'show'])
                 router.patch('employees/:id', [EmployeesController, 'update'])
                 router.post('employees/:id/status', [EmployeesController, 'setStatus'])
+                router.get('employees/:id/contracts', [CareerController, 'contracts'])
+                router.post('employees/:id/contracts', [CareerController, 'createContract'])
+                router.get('employees/:id/assignments', [CareerController, 'assignments'])
+                router.post('employees/:id/assignments', [CareerController, 'move'])
+                router.get('contracts/:id', [CareerController, 'contract'])
+                router.patch('contracts/:id', [CareerController, 'updateContract'])
+                router.post('contracts/:id/activate', [CareerController, 'activate'])
+                router.post('contracts/:id/suspend', [CareerController, 'suspend'])
+                router.post('contracts/:id/resume', [CareerController, 'resume'])
+                router.post('contracts/:id/terminate', [CareerController, 'terminate'])
+                router.post('contracts/:id/cancel', [CareerController, 'cancel'])
+                router.post('contracts/:id/amendments', [CareerController, 'amend'])
                 router.get('employees/:id/onboarding', [RecruitmentController, 'onboarding'])
                 router.post('employees/:id/onboarding', [
                   RecruitmentController,

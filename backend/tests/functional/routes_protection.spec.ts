@@ -141,6 +141,30 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de hr.read/hr.manage do colaborador verificado no serviço; o responsável conclui a sua tarefa',
   'PATCH /api/v1/hr/onboarding-tasks/:id':
     'âmbito RBAC de hr.read/hr.manage do colaborador verificado no serviço; o responsável conclui a sua tarefa',
+  'GET /api/v1/hr/employees/:id/contracts':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/employees/:id/contracts':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'GET /api/v1/hr/contracts/:id':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'PATCH /api/v1/hr/contracts/:id':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/activate':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/suspend':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/resume':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/terminate':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/cancel':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/amendments':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'GET /api/v1/hr/employees/:id/assignments':
+    'âmbito RBAC de hr.read/hr.manage sobre a colocação (antiga e nova) verificado no serviço',
+  'POST /api/v1/hr/employees/:id/assignments':
+    'âmbito RBAC de hr.read/hr.manage sobre a colocação (antiga e nova) verificado no serviço',
   'GET /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'PUT /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'GET /api/v1/dashboard': 'cada secção exige a permissão e a funcionalidade do módulo dono',

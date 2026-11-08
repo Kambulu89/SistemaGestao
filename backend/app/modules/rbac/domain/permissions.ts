@@ -204,6 +204,18 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Aprovar vagas (remuneração autorizada) e propostas no âmbito atribuído, sem ser quem as preparou.',
   },
   {
+    code: 'hr.contracts.read',
+    module: 'hr',
+    description:
+      'Ver contratos de trabalho (condições, remuneração, adendas e histórico) no âmbito atribuído.',
+  },
+  {
+    code: 'hr.contracts.manage',
+    module: 'hr',
+    description:
+      'Criar, activar, suspender, terminar e alterar por adenda ou renovação contratos de trabalho no âmbito atribuído.',
+  },
+  {
     code: 'hr.settings',
     module: 'hr',
     description: 'Configurar os recursos humanos (workflows de aprovação do recrutamento).',

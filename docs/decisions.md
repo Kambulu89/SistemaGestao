@@ -228,3 +228,20 @@ colaborador com a mesma regra de 7.1 (`hr.manage` na colocação; contactos do c
 `hr.sensitive`), cria a checklist de onboarding e marca a vaga preenchida, tudo numa transacção com a vaga bloqueada:
 duas contratações do último posto não passam ambas e repetir não cria outro colaborador. O entrevistador vê e avalia só
 as suas entrevistas, mesmo sem outras permissões de RH.
+
+## D-026 Contratos com adendas datadas e carreira com vigência; a colocação só muda por movimento (aceite)
+
+O contrato de trabalho (7.3) guarda as condições iniciais e, depois de activado, nunca é reescrito: alterações de
+remuneração, horas, horário ou termo são adendas (ou renovações) só de acréscimo, com data de efeito que não pode ser
+anterior à última adenda nem ao início. As condições numa data são as iniciais com as adendas em vigor nessa data
+(`termsAt`, exportado como `contractTermsAt` para o processamento salarial). Há no máximo um contrato em vigor por
+colaborador (índice parcial) e um novo não se sobrepõe a um anterior terminado. Suspender, retomar e terminar ficam no
+histórico do contrato com data e motivo; a cessação completa (aviso, férias proporcionais, liquidação) é o bloco 7.11.
+Os contratos são confidenciais: permissões próprias `hr.contracts.read|manage` no âmbito do colaborador (o próprio vê
+os seus com âmbito OWN) e a remuneração nunca vai para a auditoria (`[RESERVADO]`). A colocação (filial, departamento,
+cargo, superior, centro de custo) passa a ter histórico com vigência (`employment_assignments`): transferências,
+promoções e alterações fecham o período corrente na véspera e actualizam a ficha na mesma transacção; a ficha deixa de
+aceitar mudanças de colocação (422 `USE_MOVEMENT`) e a entidade legal não muda por movimento (é outro contrato noutra
+entidade). Movimentos só com data até hoje (sem agendamento por agora). Limites legais (duração e renovações de
+contratos a prazo, período experimental) não estão no código: dependem da Lei Geral do Trabalho em vigor e ficam por
+confirmar antes de qualquer validação legal.

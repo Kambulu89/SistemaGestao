@@ -5,6 +5,7 @@ import { audit } from '#modules/audit/index'
 import { permissionScope, type PermissionScope } from '#modules/rbac/index'
 import { legalEntityFacts, orgReferenceFacts } from '#modules/organization/index'
 import { isValidIban } from '#modules/settings/index'
+import { PLACEMENT_KEYS } from '#modules/hr/domain/contracts'
 import {
   type EmployeeStatus,
   GENERAL_FIELDS,
@@ -96,7 +97,7 @@ function view(r: any, sensitive: boolean) {
   }
 }
 
-const placementOf = (r: any): Placement => ({
+export const placementOf = (r: any): Placement => ({
   legalEntityId: r.legal_entity_id,
   branchId: r.branch_id,
   departmentId: r.department_id,
@@ -156,7 +157,7 @@ async function scopes(scope: TenantScope) {
   return { read, manage, sensitive }
 }
 
-async function findRow(scope: TenantScope, id: string, lock = false) {
+export async function findRow(scope: TenantScope, id: string, lock = false) {
   const r = await scope.trx.rawQuery(
     `${SELECT} where e.tenant_id = ? and e.id = ?${lock ? ' for update of e' : ''}`,
     [scope.context.tenantId, id]
@@ -305,6 +306,25 @@ export class EmployeeService {
     } catch (error) {
       mapUnique(error)
     }
+    // Primeiro período da carreira (7.3): a colocação inicial, desde a admissão.
+    await scope.trx.rawQuery(
+      `insert into employment_assignments (tenant_id, employee_id, kind, valid_from, legal_entity_id, branch_id,
+         department_id, position_id, manager_id, cost_center_id, created_by, updated_by)
+       values (?, ?, 'HIRE', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        context.tenantId,
+        id,
+        v.hireDate,
+        v.legalEntityId,
+        v.branchId ?? null,
+        v.departmentId ?? null,
+        v.positionId ?? null,
+        v.managerId ?? null,
+        v.costCenterId ?? null,
+        context.userId,
+        context.userId,
+      ] as never[]
+    )
     await audit(scope, {
       action: 'hr.employee.created',
       entityType: 'employee',
@@ -368,6 +388,21 @@ export class EmployeeService {
         ])
       await this.checkReferences(scope, after, id)
       const changed = Object.keys(v).filter((k) => (before[k] ?? null) !== (v[k] ?? null))
+      // A colocação tem histórico (7.3): muda-se por movimento de carreira, não pela ficha.
+      const placement = changed.filter(
+        (k) => k === 'legalEntityId' || PLACEMENT_KEYS.includes(k as never)
+      )
+      if (placement.length)
+        throw ApiError.validation(
+          placement.map((path) => ({
+            path,
+            code: 'USE_MOVEMENT',
+            message:
+              path === 'legalEntityId'
+                ? 'A entidade legal não muda: termine o contrato e admita na outra entidade.'
+                : 'Mude a colocação por um movimento de carreira (transferência, promoção ou alteração).',
+          }))
+        )
       if (changed.length === 0) return view(row, covers(s.sensitive, oldPlace, me))
       const sets = changed.map(
         (k) => `${{ ...GENERAL_FIELDS, ...SENSITIVE_FIELDS }[k as 'code']} = ?`
@@ -438,7 +473,7 @@ export class EmployeeService {
     return normalizeEmployee(input, new Date().toISOString().slice(0, 10), isValidIban)
   }
 
-  private assertManage(s: { manage: PermissionScope }, place: Placement, me: string) {
+  assertManage(s: { manage: PermissionScope }, place: Placement, me: string) {
     if (!covers({ ...s.manage, own: false }, place, me))
       throw ApiError.forbidden(
         'OUT_OF_SCOPE',
@@ -464,11 +499,7 @@ export class EmployeeService {
   }
 
   /** Coerência com a estrutura: tudo da mesma entidade legal, activo, e superior sem ciclos. */
-  private async checkReferences(
-    scope: TenantScope,
-    v: Record<string, unknown>,
-    selfId: string | null
-  ) {
+  async checkReferences(scope: TenantScope, v: Record<string, unknown>, selfId: string | null) {
     const issues: ErrorDetail[] = []
     const le = await legalEntityFacts(scope, v.legalEntityId as string)
     if (!le)

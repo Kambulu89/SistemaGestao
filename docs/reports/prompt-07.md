@@ -1,7 +1,7 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 e 7.2 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.3 a 7.13 seguem, um de
-cada vez. Decisões D-024 e D-025.
+Estado: **7.1 a 7.3 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.4 a 7.13 seguem, um de
+cada vez. Decisões D-024 a D-026.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
@@ -12,6 +12,7 @@ terão de ser configuradas pela empresa e confirmadas na legislação em vigor q
 | --------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | 7.1 Colaborador             | Estrutura organizacional e memberships; nenhuma ficha de pessoa | Ficha 360 (identificação, organização, dados pessoais, morada, emergência, formação, banco, anexos), âmbitos de RH (empresa/entidade/filial/departamento/próprio), visibilidade por campo, auditoria reservada                                            | Feito  |
 | 7.2 Recrutamento/onboarding | Nada                                                            | Vaga com remuneração autorizada aprovada (directa ou workflow), candidatos, candidaturas por etapas, entrevistas, avaliações, proposta aprovada e respondida, contratação que cria o colaborador e a checklist (documentos, conta, acessos, equipamentos) | Feito  |
+| 7.3 Contratos/carreira      | Colocação só na ficha, sem histórico; sem contratos             | Contrato (tipo, datas, experiência, jornada, remuneração, estado) com adendas e renovações datadas, suspensão, retoma e termo com histórico; condições numa data; histórico de cargos, transferências e promoções com vigência                            | Feito  |
 
 ## Modelo
 
@@ -52,6 +53,18 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
   `REQUISITION_FILLED`, `OUT_OF_RANGE`, `OFFER_IN_PROGRESS`, `OFFER_EXPIRED`, `PENDING_HIRE`, `ALREADY_APPLIED`,
   `ALREADY_EVALUATED`, `EMAIL_TAKEN`, `CODE_TAKEN`, `VERSION_CONFLICT`.
 
+### 7.3 Contratos e carreira
+
+- Migração `0024_create_hr_contracts`: `employment_contracts`, `employment_contract_amendments`,
+  `employment_contract_events`, `employment_assignments`.
+- `GET|POST /hr/employees/:id/contracts`, `GET|PATCH /hr/contracts/:id` (PATCH só em rascunho),
+  `POST /hr/contracts/:id/activate|suspend|resume|terminate|cancel`, `POST /hr/contracts/:id/amendments`.
+- `GET|POST /hr/employees/:id/assignments` (histórico e movimentos).
+- Permissões novas: `hr.contracts.read`, `hr.contracts.manage`.
+- Erros: `CONTRACT_OPEN`, `CONTRACT_OVERLAP`, `INVALID_STATE`, `NOT_RETROACTIVE`, `NOT_EXTENDED`, `NOT_FIXED_TERM`,
+  `PERMANENT`, `BEFORE_HIRE`, `BEFORE_SUSPENSION`, `USE_MOVEMENT`, `USE_NEW_CONTRACT`, `FUTURE_DATE`,
+  `NOT_AFTER_CURRENT`, `NO_CHANGE`, `POSITION_REQUIRED`, `CODE_TAKEN`.
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -76,6 +89,14 @@ Recrutamento (7.2), no mesmo domínio:
 - As minhas entrevistas: o entrevistador marca como realizada e avalia.
 - Ficha do colaborador: cartão de onboarding com progresso; tarefas por estado.
 - Configuração de RH: workflows das vagas e propostas. O editor de workflows ganhou o tipo de assunto.
+
+Contratos e carreira (7.3), na ficha do colaborador:
+
+- Organização só de leitura depois de criada ("muda-se por movimento de carreira").
+- Carreira: linha do tempo com vigência e "Registar movimento" (transferência, promoção, alteração; data e motivo).
+- Contratos: lista com estado e aviso de termo ultrapassado; "Novo contrato" (rascunho) abre a página do contrato.
+- Contrato: condições iniciais (editáveis só em rascunho), activar, nova adenda, renovar (só a termo certo), suspender,
+  retomar e terminar com data e motivo; condições em vigor hoje, adendas, eventos do contrato e auditoria.
 
 ## Testes e evidências
 
@@ -105,10 +126,27 @@ Testes do 7.2:
   contratação abre a ficha com 4 tarefas de onboarding e cargo da vaga; a vaga fica preenchida; 390 px sem deslocamento
   horizontal. Sem erros na consola.
 
+Testes do 7.3:
+
+- Backend funcional `hr_career.spec.ts` (3 testes): ciclo do contrato (validações, activação, um em vigor, adendas sem
+  retroactividade, renovação que estende, suspensão/retoma/termo, sem sobreposição, remuneração fora da auditoria);
+  âmbitos (`hr.read` não vê contratos, leitura sem gestão, outro departamento, o próprio com OWN); carreira (período de
+  admissão, ficha recusa colocação, datas futuras e anteriores, promoção exige cargo, transferência, ciclos de superior,
+  colaborador anterior ao 7.3).
+- Backend unitário `hr_contracts_domain.spec.ts` (3 testes): condições numa data, regras entre campos, véspera e termo.
+- `isolation_matrix` (contratos, adendas, carreira de outra empresa → 404), `routes_protection` (12 rotas).
+- Frontend `hr/contracts-model.spec.ts` (3 testes).
+- Browser (5 passos): colocação bloqueada na ficha; promoção com histórico e ficha actualizada; contrato a termo criado,
+  activado, adenda salarial reflectida nas condições de hoje, renovação inválida recusada junto do campo e válida;
+  suspensão sem motivo recusada, retoma, termo e 6 eventos; 390 px sem deslocamento horizontal. Sem erros na consola.
+
 ## Pendências
 
-- 7.3 a 7.13 (contratos e carreira, férias, compensação, adiantamentos, processamento salarial, IRT/INSS, recibos,
+- 7.4 a 7.13 (férias, compensação, adiantamentos, processamento salarial, IRT/INSS, recibos,
   formação, cessação, portais e relatórios).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
 - 6.9 SAF-T continua bloqueado pela especificação oficial.
+- Contratos e carreira: limites legais (termo, renovações, período experimental) por confirmar na LGT 12/23; movimentos
+  com data futura (agendados) e transferência entre entidades legais ficam por fazer; documento do contrato em PDF fica
+  para o bloco de documentos/recibos.

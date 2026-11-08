@@ -202,6 +202,18 @@ export type ScannedRoutes = {
     'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.set_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.update_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.resume': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.terminate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.amend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.onboarding': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.create_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -341,6 +353,9 @@ export type ScannedRoutes = {
     'approvals.delegations': { paramsTuple?: []; params?: {} }
     'employees.index': { paramsTuple?: []; params?: {} }
     'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.onboarding': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.settings': { paramsTuple?: []; params?: {} }
     'recruitment.requisitions': { paramsTuple?: []; params?: {} }
@@ -445,6 +460,9 @@ export type ScannedRoutes = {
     'approvals.delegations': { paramsTuple?: []; params?: {} }
     'employees.index': { paramsTuple?: []; params?: {} }
     'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.onboarding': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.settings': { paramsTuple?: []; params?: {} }
     'recruitment.requisitions': { paramsTuple?: []; params?: {} }
@@ -537,6 +555,14 @@ export type ScannedRoutes = {
     'approvals.revoke_delegation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.store': { paramsTuple?: []; params?: {} }
     'employees.set_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.resume': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.terminate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.amend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.create_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.create_requisition': { paramsTuple?: []; params?: {} }
     'recruitment.submit_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -603,6 +629,7 @@ export type ScannedRoutes = {
     'fixed_assets.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'employees.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.update_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

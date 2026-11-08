@@ -1061,6 +1061,162 @@ export class EmployeeSchema extends BaseModel {
   declare workPhone: string | null
 }
 
+export class EmploymentAssignmentSchema extends BaseModel {
+  static $columns = ['branchId', 'costCenterId', 'createdAt', 'createdBy', 'departmentId', 'employeeId', 'id', 'kind', 'legalEntityId', 'managerId', 'positionId', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = EmploymentAssignmentSchema.$columns
+  @column()
+  declare branchId: string | null
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare departmentId: string | null
+  @column()
+  declare employeeId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare managerId: string | null
+  @column()
+  declare positionId: string | null
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class EmploymentContractAmendmentSchema extends BaseModel {
+  static $columns = ['baseSalary', 'contractId', 'createdAt', 'createdBy', 'effectiveDate', 'endDate', 'id', 'kind', 'reason', 'sequence', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'weeklyHours', 'workSchedule'] as const
+  $columns = EmploymentContractAmendmentSchema.$columns
+  @column()
+  declare baseSalary: string | null
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare effectiveDate: DateTime
+  @column.date()
+  declare endDate: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string
+  @column()
+  declare sequence: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare weeklyHours: string | null
+  @column()
+  declare workSchedule: string | null
+}
+
+export class EmploymentContractEventSchema extends BaseModel {
+  static $columns = ['contractId', 'createdAt', 'createdBy', 'eventDate', 'id', 'kind', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = EmploymentContractEventSchema.$columns
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare eventDate: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class EmploymentContractSchema extends BaseModel {
+  static $columns = ['baseSalary', 'code', 'contractType', 'createdAt', 'createdBy', 'currency', 'employeeId', 'endDate', 'id', 'notes', 'probationEndDate', 'renewalCount', 'startDate', 'status', 'suspendedFrom', 'tenantId', 'terminationDate', 'terminationReason', 'updatedAt', 'updatedBy', 'version', 'weeklyHours', 'workSchedule'] as const
+  $columns = EmploymentContractSchema.$columns
+  @column()
+  declare baseSalary: string
+  @column()
+  declare code: string
+  @column()
+  declare contractType: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare employeeId: string
+  @column.date()
+  declare endDate: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare notes: string | null
+  @column.date()
+  declare probationEndDate: DateTime | null
+  @column()
+  declare renewalCount: number
+  @column.date()
+  declare startDate: DateTime
+  @column()
+  declare status: string
+  @column.date()
+  declare suspendedFrom: DateTime | null
+  @column()
+  declare tenantId: string
+  @column.date()
+  declare terminationDate: DateTime | null
+  @column()
+  declare terminationReason: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare weeklyHours: string
+  @column()
+  declare workSchedule: string | null
+}
+
 export class ExchangeRateSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'fromCurrency', 'id', 'rate', 'source', 'tenantId', 'toCurrency', 'updatedAt', 'updatedBy', 'validOn', 'version'] as const
   $columns = ExchangeRateSchema.$columns

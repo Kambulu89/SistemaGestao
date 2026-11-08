@@ -63,6 +63,14 @@ export const HR_ROUTES: Routes = [
     loadComponent: () => import('./application-detail').then((m) => m.ApplicationDetail),
   },
   {
+    path: 'contratos/:id',
+    title: 'Contrato',
+    canActivate: [accessGuard],
+    data: { permission: 'hr.contracts.read', anyScope: true },
+    canDeactivate: [unsavedChangesGuard],
+    loadComponent: () => import('./contract-detail').then((m) => m.ContractDetail),
+  },
+  {
     path: 'entrevistas',
     title: 'As minhas entrevistas',
     loadComponent: () => import('./my-interviews').then((m) => m.MyInterviews),
