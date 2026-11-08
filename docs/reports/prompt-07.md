@@ -1,20 +1,21 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.5 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.6 a 7.13 seguem, um de
-cada vez. Decisões D-024 a D-028.
+Estado: **7.1 a 7.6 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.7 a 7.13 seguem, um de
+cada vez. Decisões D-024 a D-029.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
 
 ## Matriz AS-IS / TO-BE
 
-| Bloco                       | AS-IS (fim do Prompt 06)                                        | TO-BE                                                                                                                                                                                                                                                                                                 | Estado |
-| --------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 7.1 Colaborador             | Estrutura organizacional e memberships; nenhuma ficha de pessoa | Ficha 360 (identificação, organização, dados pessoais, morada, emergência, formação, banco, anexos), âmbitos de RH (empresa/entidade/filial/departamento/próprio), visibilidade por campo, auditoria reservada                                                                                        | Feito  |
-| 7.2 Recrutamento/onboarding | Nada                                                            | Vaga com remuneração autorizada aprovada (directa ou workflow), candidatos, candidaturas por etapas, entrevistas, avaliações, proposta aprovada e respondida, contratação que cria o colaborador e a checklist (documentos, conta, acessos, equipamentos)                                             | Feito  |
-| 7.3 Contratos/carreira      | Colocação só na ficha, sem histórico; sem contratos             | Contrato (tipo, datas, experiência, jornada, remuneração, estado) com adendas e renovações datadas, suspensão, retoma e termo com histórico; condições numa data; histórico de cargos, transferências e promoções com vigência                                                                        | Feito  |
-| 7.4 Férias/ausências        | Calendários e feriados (Prompt 05); nada de férias              | Tipos de ausência, política versionada com fonte legal, conta-corrente de dias (direito proporcional, transporte, expiração, ajustes, gozo, reversão), pedidos com contagem pelo calendário, sobreposição e saldo, aprovação da chefia, confidencialidade médica, ausências para assiduidade/salários | Feito  |
-| 7.5 Compensação/benefícios  | Salário base no contrato (7.3)                                  | Catálogo de componentes (subsídios, prémios, horas extra, abonos, descontos), incidência IRT/INSS por vigência com fonte, propostas com aprovação (directa ou workflow), componentes do colaborador com vigência e histórico imutável, remuneração numa data para o processamento                     | Feito  |
+| Bloco                         | AS-IS (fim do Prompt 06)                                        | TO-BE                                                                                                                                                                                                                                                                                                 | Estado |
+| ----------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 7.1 Colaborador               | Estrutura organizacional e memberships; nenhuma ficha de pessoa | Ficha 360 (identificação, organização, dados pessoais, morada, emergência, formação, banco, anexos), âmbitos de RH (empresa/entidade/filial/departamento/próprio), visibilidade por campo, auditoria reservada                                                                                        | Feito  |
+| 7.2 Recrutamento/onboarding   | Nada                                                            | Vaga com remuneração autorizada aprovada (directa ou workflow), candidatos, candidaturas por etapas, entrevistas, avaliações, proposta aprovada e respondida, contratação que cria o colaborador e a checklist (documentos, conta, acessos, equipamentos)                                             | Feito  |
+| 7.3 Contratos/carreira        | Colocação só na ficha, sem histórico; sem contratos             | Contrato (tipo, datas, experiência, jornada, remuneração, estado) com adendas e renovações datadas, suspensão, retoma e termo com histórico; condições numa data; histórico de cargos, transferências e promoções com vigência                                                                        | Feito  |
+| 7.4 Férias/ausências          | Calendários e feriados (Prompt 05); nada de férias              | Tipos de ausência, política versionada com fonte legal, conta-corrente de dias (direito proporcional, transporte, expiração, ajustes, gozo, reversão), pedidos com contagem pelo calendário, sobreposição e saldo, aprovação da chefia, confidencialidade médica, ausências para assiduidade/salários | Feito  |
+| 7.5 Compensação/benefícios    | Salário base no contrato (7.3)                                  | Catálogo de componentes (subsídios, prémios, horas extra, abonos, descontos), incidência IRT/INSS por vigência com fonte, propostas com aprovação (directa ou workflow), componentes do colaborador com vigência e histórico imutável, remuneração numa data para o processamento                     | Feito  |
+| 7.6 Adiantamentos/empréstimos | Nada                                                            | Pedido com plano exacto ao cêntimo criado na aprovação, saldo derivado, limites configuráveis com fonte (prestação máxima em % do base somando empréstimos activos, número de prestações), contrato em cada mês, aprovação segregada, pagamento directo, desconto idempotente para o processamento    | Feito  |
 
 ## Modelo
 
@@ -93,6 +94,20 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
   `INVALID_PERCENT`, `STALE_PROPOSAL`, `SEGREGATION`, `USE_APPROVAL_WORKFLOW`, `NOT_AFTER_PREVIOUS`, `INCONSISTENT`,
   `IN_USE`, `CODE_TAKEN`.
 
+### 7.6 Adiantamentos e empréstimos
+
+- Migração `0027_create_hr_loans`: `employee_loans` (código, tipo, moeda, capital, prestações, primeiro mês, motivo,
+  estado, decisão), `employee_loan_installments` (mês, valor, estado, referência e data de liquidação; a base exige
+  referência e data em toda a prestação liquidada); `hr_settings.loan_max_installment_percent`,
+  `loan_max_installments`, `loan_policy_reference` (fonte obrigatória quando há limite).
+- `GET|POST /hr/employees/:id/loans`, `GET /hr/loans` (filtros estado, tipo, `toApprove`), `GET|PATCH /hr/loans/:id`,
+  `POST /hr/loans/:id/submit|decision|cancel`, `POST /hr/loans/:id/installments/:installmentId/payment`.
+- Permissões novas: `hr.loans.read`, `hr.loans.manage`, `hr.loans.approve`.
+- Para o processamento (7.7), em `#modules/hr/index`: `dueLoanInstallments(scope, employeeId, period)` (prestações do
+  mês e em atraso) e `recordLoanDeduction(scope, installmentId, reference, date)` (idempotente pela referência).
+- Erros: `ADVANCE_SINGLE`, `TOO_SMALL`, `IMMUTABLE`, `NOT_RETROACTIVE`, `TOO_MANY_INSTALLMENTS`, `NO_CONTRACT`,
+  `LOAN_BEYOND_CONTRACT`, `CURRENCY_MISMATCH`, `LIMIT_EXCEEDED`, `STALE_LOAN`, `SEGREGATION`, `ALREADY_SETTLED`, `FUTURE`.
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -126,6 +141,14 @@ Compensação (7.5):
 - Compensação (lista): propostas no âmbito, vista "A aprovar por mim".
 - Componentes de remuneração: catálogo e versões da incidência de IRT/INSS com fonte. Configuração de RH: workflow das
   propostas de compensação.
+
+Adiantamentos e empréstimos (7.6):
+
+- Ficha do colaborador: cartão com o valor em dívida e os pedidos; "Novo pedido" com prestação prevista.
+- Pedido: plano de prestações (previsto até à aprovação), progresso liquidado/em dívida, avisos do que impediria hoje a
+  submissão, pedir aprovação, aprovar ou recusar (outra pessoa), cancelar antes da aprovação, registar pagamento directo.
+- Adiantamentos e empréstimos (lista): pedidos no âmbito, filtros de estado e tipo, vista "A aprovar por mim".
+- Configuração de RH: limites (percentagem do base, número de prestações) com fonte obrigatória.
 
 Férias e ausências (7.4):
 
@@ -218,9 +241,25 @@ Testes do 7.5:
   aprovar por mim"; remuneração a 01/03 com base 200 000, prémio 20 000, subsídio 25 000 e incidências (e nada a 15/01);
   390 px sem deslocamento. Sem erros na consola.
 
+Testes do 7.6:
+
+- Backend funcional `hr_loans.spec.ts` (4 testes): validação, códigos, plano exacto (100 000 em 3 = 33 333,33 ×2 +
+  33 333,34), não retroactivo, rascunho editável e tipo imutável, sem contrato, além do fim do contrato a termo, moeda;
+  limites com fonte (30% de 200 000 = 60 000 por mês somando o empréstimo activo, máximo de prestações, pedido
+  desactualizado na aprovação); segregação, plano na aprovação, desconto idempotente e em atraso, nunca duas vezes,
+  pagamento directo, liquidação automática, restrição na base de dados, auditoria sem montantes; âmbitos e o próprio.
+- Backend unitário `hr_loans_domain.spec.ts` (4 testes): meses, plano, desconto máximo, textos.
+- `isolation_matrix` (empréstimos e prestações de outra empresa), `routes_protection`.
+- Frontend `hr/loans-model.spec.ts` (3 testes) e navegação.
+- Browser (7 passos, dois utilizadores): limites com fonte obrigatória pela interface; pedido de 300 000 em 3 avisado no
+  rascunho e recusado ao submeter, cancelado; 150 000 em 3 submetido; quem preparou não aprova; o aprovador aprova em
+  "A aprovar por mim" e nascem 3 prestações por descontar (sem "Pagar" para quem só aprova); pagamento directo da
+  primeira com saldo 100 000 e progresso; 390 px sem deslocamento. Sem erros na consola. O E2E encontrou mensagens com
+  montantes por formatar e a tabela apertada em telemóvel; ambos corrigidos.
+
 ## Pendências
 
-- 7.6 a 7.13 (adiantamentos, processamento salarial, IRT/INSS, recibos,
+- 7.7 a 7.13 (processamento salarial, IRT/INSS, recibos,
   formação, cessação, portais e relatórios).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
@@ -232,3 +271,5 @@ Testes do 7.5:
   à chefia, e valores da LGT 12/23 por confirmar pela empresa na política.
 - Compensação: taxas e limites de IRT/INSS por confirmar na legislação (a empresa configura as incidências com a fonte);
   aprovação de propostas com efeito em períodos de processamento fechados será bloqueada no 7.7.
+- Empréstimos: limites legais por confirmar pela empresa (configurados com a fonte); sem pedido pelo próprio
+  colaborador (portal, 7.12); saldo em dívida na cessação a tratar no 7.11; reescalonamento de prestações não pedido.

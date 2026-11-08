@@ -1040,6 +1040,84 @@ export class DocumentSerySchema extends BaseModel {
   declare version: number
 }
 
+export class EmployeeLoanInstallmentSchema extends BaseModel {
+  static $columns = ['amount', 'createdAt', 'createdBy', 'duePeriod', 'id', 'loanId', 'sequence', 'settledOn', 'settlementNote', 'settlementReference', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = EmployeeLoanInstallmentSchema.$columns
+  @column()
+  declare amount: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare duePeriod: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare loanId: string
+  @column()
+  declare sequence: number
+  @column.date()
+  declare settledOn: DateTime | null
+  @column()
+  declare settlementNote: string | null
+  @column()
+  declare settlementReference: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class EmployeeLoanSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'currency', 'decidedAt', 'decidedByMembershipId', 'decisionComment', 'employeeId', 'firstPeriod', 'id', 'installmentsCount', 'kind', 'principal', 'reason', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = EmployeeLoanSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column.dateTime()
+  declare decidedAt: DateTime | null
+  @column()
+  declare decidedByMembershipId: string | null
+  @column()
+  declare decisionComment: string | null
+  @column()
+  declare employeeId: string
+  @column.date()
+  declare firstPeriod: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare installmentsCount: number
+  @column()
+  declare kind: string
+  @column()
+  declare principal: string
+  @column()
+  declare reason: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class EmployeePayItemSchema extends BaseModel {
   static $columns = ['amount', 'componentId', 'createdAt', 'createdBy', 'currency', 'employeeId', 'id', 'percent', 'proposalId', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = EmployeePayItemSchema.$columns
@@ -1710,7 +1788,7 @@ export class FxRevaluationSchema extends BaseModel {
 }
 
 export class HrSettingSchema extends BaseModel {
-  static $columns = ['compensationWorkflowId', 'createdAt', 'createdBy', 'id', 'offerWorkflowId', 'requisitionWorkflowId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  static $columns = ['compensationWorkflowId', 'createdAt', 'createdBy', 'id', 'loanMaxInstallmentPercent', 'loanMaxInstallments', 'loanPolicyReference', 'offerWorkflowId', 'requisitionWorkflowId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = HrSettingSchema.$columns
   @column()
   declare compensationWorkflowId: string | null
@@ -1720,6 +1798,12 @@ export class HrSettingSchema extends BaseModel {
   declare createdBy: string | null
   @column({ isPrimary: true })
   declare id: string
+  @column()
+  declare loanMaxInstallmentPercent: string | null
+  @column()
+  declare loanMaxInstallments: number | null
+  @column()
+  declare loanPolicyReference: string | null
   @column()
   declare offerWorkflowId: string | null
   @column()

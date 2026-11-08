@@ -90,6 +90,23 @@ export const HR_ROUTES: Routes = [
     ],
   },
   {
+    path: 'emprestimos',
+    title: 'Adiantamentos e empréstimos',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.loans.read', anyScope: true },
+        loadComponent: () => import('./loans').then((m) => m.Loans),
+      },
+      {
+        path: ':id',
+        title: 'Adiantamento ou empréstimo',
+        loadComponent: () => import('./loan-detail').then((m) => m.LoanDetail),
+      },
+    ],
+  },
+  {
     path: 'compensacao',
     title: 'Compensação',
     children: [

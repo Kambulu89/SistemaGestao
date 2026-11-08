@@ -10,19 +10,19 @@ serviços técnicos) e `http/` (controllers e middleware, só transporte). Cada 
 `index.ts`; os outros importam **só** daí (`tests/unit/architecture.spec.ts` falha caso contrário). `app/shared/` é código
 técnico partilhado e não depende de módulos.
 
-| Módulo                                                        | Responsabilidade                                                                          |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `health`                                                      | `GET /api/v1/health`                                                                      |
-| `identity`                                                    | Utilizador global, sessão em cookie, CSRF, convites, recuperação, sessões                 |
-| `tenancy`, `members`                                          | Tenant, contexto, `runInTenant`, memberships e convites                                   |
-| `rbac`                                                        | Perfis, permissões e atribuições com âmbito                                               |
-| `organization`                                                | Entidades legais, filiais, departamentos, cargos, centros de custo, dependências, árvores |
-| `settings`                                                    | Perfil e configurações da empresa, câmbios, séries, calendários, contas bancárias         |
-| `subscription`, `platform`                                    | Funcionalidades, planos, subscrições, limites; administração da plataforma                |
-| `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
-| `dashboard`                                                   | Painel e pesquisa global                                                                  |
-| `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                     |
-| `hr`                                                          | Colaboradores, recrutamento, contratos, carreira, ausências e compensação; âmbitos de RH  |
+| Módulo                                                        | Responsabilidade                                                                            |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `health`                                                      | `GET /api/v1/health`                                                                        |
+| `identity`                                                    | Utilizador global, sessão em cookie, CSRF, convites, recuperação, sessões                   |
+| `tenancy`, `members`                                          | Tenant, contexto, `runInTenant`, memberships e convites                                     |
+| `rbac`                                                        | Perfis, permissões e atribuições com âmbito                                                 |
+| `organization`                                                | Entidades legais, filiais, departamentos, cargos, centros de custo, dependências, árvores   |
+| `settings`                                                    | Perfil e configurações da empresa, câmbios, séries, calendários, contas bancárias           |
+| `subscription`, `platform`                                    | Funcionalidades, planos, subscrições, limites; administração da plataforma                  |
+| `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas                 |
+| `dashboard`                                                   | Painel e pesquisa global                                                                    |
+| `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                       |
+| `hr`                                                          | Colaboradores, recrutamento, contratos, ausências, compensação e empréstimos; âmbitos de RH |
 
 ## Multi-tenancy
 
@@ -327,7 +327,7 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
 
 ## Recursos humanos (módulo `hr`, Prompt 07)
 
-Blocos 7.1 a 7.5 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-028).
+Blocos 7.1 a 7.6 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-029).
 
 - **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
   cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
@@ -378,3 +378,7 @@ employeeId, from, to)` em `#modules/hr/index`.
   componente). Permissões `hr.compensation.read|manage|approve|settings`; workflow opcional em `hr_settings`
   (`compensation_proposal`). Para o processamento: `compensationAt(scope, employeeId, date)` em `#modules/hr/index` (base
   do contrato + componentes com incidência resolvida; percentagens já em montante).
+- **Adiantamentos e empréstimos** (7.6): `employee_loans` e `employee_loan_installments` (plano criado na aprovação;
+  cada prestação liquida-se uma vez, com referência e data). Limites opcionais em `hr_settings` com fonte obrigatória.
+  Permissões `hr.loans.read|manage|approve`. Para o processamento: `dueLoanInstallments` e `recordLoanDeduction`
+  (idempotente pela referência) em `#modules/hr/index`.

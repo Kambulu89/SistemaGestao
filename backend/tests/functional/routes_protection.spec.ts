@@ -188,6 +188,24 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
   'GET /api/v1/hr/pay-components':
     'catálogo sem valores; exige uma permissão hr.compensation.* em qualquer âmbito (verificado no serviço)',
+  'GET /api/v1/hr/employees/:id/loans':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/employees/:id/loans':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'GET /api/v1/hr/loans':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'GET /api/v1/hr/loans/:id':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'PATCH /api/v1/hr/loans/:id':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/loans/:id/submit':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/loans/:id/decision':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/loans/:id/cancel':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/loans/:id/installments/:installmentId/payment':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
   'GET /api/v1/hr/employees/:id/compensation':
     'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
   'POST /api/v1/hr/employees/:id/compensation/proposals':

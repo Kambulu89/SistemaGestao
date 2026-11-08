@@ -13,6 +13,9 @@ interface HrSettings {
   requisitionWorkflowId: string | null;
   offerWorkflowId: string | null;
   compensationWorkflowId: string | null;
+  loanMaxInstallmentPercent: string | null;
+  loanMaxInstallments: number | null;
+  loanPolicyReference: string | null;
   version: number;
 }
 interface Workflow {
@@ -24,8 +27,9 @@ interface Workflow {
 }
 
 /**
- * Configuração dos recursos humanos: workflows de aprovação das vagas e das propostas. Sem workflow, a decisão é
- * directa por quem tem `hr.recruitment.approve` no âmbito (nunca quem preparou).
+ * Configuração dos recursos humanos: workflows de aprovação das vagas e das propostas (sem workflow, a decisão é
+ * directa por quem tem a permissão de aprovar no âmbito, nunca quem preparou) e limites dos adiantamentos e
+ * empréstimos, sempre com a fonte (regulamento interno ou norma legal confirmada); nada vem pré-definido.
  */
 @Component({
   selector: 'app-hr-settings',
@@ -43,8 +47,11 @@ interface Workflow {
   template: `
     <app-settings-page
       title="Configuração de RH"
-      subtitle="Como se aprovam as vagas e as propostas de contratação."
-      [sections]="[{ id: 'hr-approvals', label: 'Aprovações do recrutamento' }]"
+      subtitle="Como se aprovam vagas e propostas, e os limites dos adiantamentos e empréstimos."
+      [sections]="[
+        { id: 'hr-approvals', label: 'Aprovações' },
+        { id: 'hr-loans', label: 'Adiantamentos e empréstimos' },
+      ]"
     >
       @if (loadError()) {
         <app-error-state [error]="loadError()" (retry)="load()" />
@@ -112,6 +119,57 @@ interface Workflow {
             <a class="link" routerLink="/aprovacoes/workflows">Aprovações → Workflows</a>, com o
             tipo de assunto "Vaga" ou "Proposta de contratação".
           </p>
+          <div id="hr-loans" tabindex="-1">
+            <app-form-section
+              title="Adiantamentos e empréstimos"
+              description="Limites verificados ao submeter e ao aprovar. Sem limites, só se exige contrato em cada mês de desconto. Indique sempre a fonte (regulamento interno ou norma legal confirmada)."
+              [columns]="2"
+            >
+              <app-field
+                label="Prestação máxima (% do salário base por mês)"
+                hint="Soma das prestações de todos os empréstimos activos no mesmo mês."
+                [error]="action.field('loanMaxInstallmentPercent')"
+              >
+                <input
+                  appControl
+                  class="input"
+                  inputmode="decimal"
+                  data-testid="loan-max-pct"
+                  [(ngModel)]="loanMaxInstallmentPercent"
+                  [ngModelOptions]="{ standalone: true }"
+                />
+              </app-field>
+              <app-field
+                label="Número máximo de prestações"
+                [error]="action.field('loanMaxInstallments')"
+              >
+                <input
+                  appControl
+                  class="input"
+                  type="number"
+                  min="1"
+                  max="120"
+                  data-testid="loan-max-count"
+                  [(ngModel)]="loanMaxInstallments"
+                  [ngModelOptions]="{ standalone: true }"
+                />
+              </app-field>
+              <app-field
+                class="sm:col-span-2"
+                label="Fonte dos limites"
+                [required]="!!loanMaxInstallmentPercent || !!loanMaxInstallments"
+                [error]="action.field('loanPolicyReference')"
+              >
+                <input
+                  appControl
+                  class="input"
+                  data-testid="loan-policy"
+                  [(ngModel)]="loanPolicyReference"
+                  [ngModelOptions]="{ standalone: true }"
+                />
+              </app-field>
+            </app-form-section>
+          </div>
           <div class="flex justify-end">
             <button type="submit" class="btn-primary" [disabled]="action.busy()">Guardar</button>
           </div>
@@ -130,6 +188,9 @@ export class HrSettingsPage {
   protected requisitionWorkflowId: string | null = null;
   protected offerWorkflowId: string | null = null;
   protected compensationWorkflowId: string | null = null;
+  protected loanMaxInstallmentPercent = '';
+  protected loanMaxInstallments: number | null = null;
+  protected loanPolicyReference = '';
 
   constructor() {
     void this.load();
@@ -151,6 +212,9 @@ export class HrSettingsPage {
       this.requisitionWorkflowId = s.requisitionWorkflowId;
       this.offerWorkflowId = s.offerWorkflowId;
       this.compensationWorkflowId = s.compensationWorkflowId;
+      this.loanMaxInstallmentPercent = s.loanMaxInstallmentPercent?.replace(/\.?0+$/, '') ?? '';
+      this.loanMaxInstallments = s.loanMaxInstallments;
+      this.loanPolicyReference = s.loanPolicyReference ?? '';
     } catch (error) {
       this.loadError.set(ApiError.from(error));
     }
@@ -163,11 +227,18 @@ export class HrSettingsPage {
         requisitionWorkflowId: this.requisitionWorkflowId,
         offerWorkflowId: this.offerWorkflowId,
         compensationWorkflowId: this.compensationWorkflowId,
+        loanMaxInstallmentPercent: this.loanMaxInstallmentPercent.trim().replace(',', '.') || null,
+        loanMaxInstallments:
+          this.loanMaxInstallments === null || (this.loanMaxInstallments as unknown) === ''
+            ? null
+            : Number(this.loanMaxInstallments),
+        loanPolicyReference: this.loanPolicyReference.trim() || null,
         expectedVersion: s.version,
       }),
     );
     if (!result) return;
     this.settings.set(result);
+    this.loanMaxInstallmentPercent = result.loanMaxInstallmentPercent?.replace(/\.?0+$/, '') ?? '';
     this.toasts.show('Configuração guardada.');
   }
 }

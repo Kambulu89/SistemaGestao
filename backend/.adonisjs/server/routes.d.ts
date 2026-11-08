@@ -233,6 +233,15 @@ export type ScannedRoutes = {
     'compensation.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'compensation.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'compensation.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.for_employee': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.index': { paramsTuple?: []; params?: {} }
+    'loans.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.pay': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'installmentId': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -396,6 +405,9 @@ export type ScannedRoutes = {
     'compensation.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'compensation.proposals': { paramsTuple?: []; params?: {} }
     'compensation.proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.for_employee': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.index': { paramsTuple?: []; params?: {} }
+    'loans.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -515,6 +527,9 @@ export type ScannedRoutes = {
     'compensation.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'compensation.proposals': { paramsTuple?: []; params?: {} }
     'compensation.proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.for_employee': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.index': { paramsTuple?: []; params?: {} }
+    'loans.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -625,6 +640,11 @@ export type ScannedRoutes = {
     'compensation.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'compensation.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'compensation.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.pay': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'installmentId': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -703,6 +723,7 @@ export type ScannedRoutes = {
     'leave.update_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'compensation.update_component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'compensation.update_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.update_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

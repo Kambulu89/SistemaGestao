@@ -267,9 +267,28 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Configurar componentes de remuneração e a incidência de IRT e INSS por vigência (com fonte legal).',
   },
   {
+    code: 'hr.loans.read',
+    module: 'hr',
+    description:
+      'Ver adiantamentos e empréstimos dos colaboradores (plano de prestações e saldo) no âmbito atribuído.',
+  },
+  {
+    code: 'hr.loans.manage',
+    module: 'hr',
+    description:
+      'Preparar, submeter e cancelar pedidos de adiantamento ou empréstimo e registar pagamentos directos de prestações, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.loans.approve',
+    module: 'hr',
+    description:
+      'Aprovar adiantamentos e empréstimos no âmbito atribuído, nunca os que preparou nem os seus.',
+  },
+  {
     code: 'hr.settings',
     module: 'hr',
-    description: 'Configurar os recursos humanos (workflows de aprovação do recrutamento).',
+    description:
+      'Configurar os recursos humanos (workflows de aprovação e limites de adiantamentos e empréstimos, com fonte).',
   },
 ]
 

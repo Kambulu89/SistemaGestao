@@ -35,6 +35,7 @@ const RecruitmentController = () => import('#modules/hr/http/recruitment_control
 const CareerController = () => import('#modules/hr/http/career_controller')
 const LeaveController = () => import('#modules/hr/http/leave_controller')
 const CompensationController = () => import('#modules/hr/http/compensation_controller')
+const LoansController = () => import('#modules/hr/http/loans_controller')
 
 router
   .group(() => {
@@ -620,6 +621,18 @@ router
                   'decide',
                 ])
                 router.post('compensation/proposals/:id/cancel', [CompensationController, 'cancel'])
+                router.get('employees/:id/loans', [LoansController, 'forEmployee'])
+                router.post('employees/:id/loans', [LoansController, 'store'])
+                router.get('loans', [LoansController, 'index'])
+                router.get('loans/:id', [LoansController, 'show'])
+                router.patch('loans/:id', [LoansController, 'update'])
+                router.post('loans/:id/submit', [LoansController, 'submit'])
+                router.post('loans/:id/decision', [LoansController, 'decide'])
+                router.post('loans/:id/cancel', [LoansController, 'cancel'])
+                router.post('loans/:id/installments/:installmentId/payment', [
+                  LoansController,
+                  'pay',
+                ])
                 router.get('employees/:id/contracts', [CareerController, 'contracts'])
                 router.post('employees/:id/contracts', [CareerController, 'createContract'])
                 router.get('employees/:id/assignments', [CareerController, 'assignments'])

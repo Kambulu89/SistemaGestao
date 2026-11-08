@@ -435,6 +435,16 @@ async function populate(client: any) {
       lines: [{ componentId: payComponent.id, action: 'SET', amount: '1000' }],
     })
   )
+  const loan = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/loans`, {
+      kind: 'ADVANCE',
+      currency: 'AOA',
+      principal: '1000',
+      installmentsCount: 1,
+      firstPeriod: '2030-01',
+      reason: 'Adiantamento A',
+    })
+  )
   const leaveRequest = ok(
     await as(client, s).post('/api/v1/hr/leave/requests', {
       employeeId: employee.id,
@@ -468,6 +478,7 @@ async function populate(client: any) {
     leaveRequest,
     payComponent,
     compProposal,
+    loan,
     closeTask,
     stmtTemplate,
     stmtNote,
@@ -721,6 +732,34 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'cancelar proposta',
         B.post(`/api/v1/hr/compensation/proposals/${a.compProposal.id}/cancel`, v),
+      ],
+      ['GET empréstimos do colaborador', B.get(`/api/v1/hr/employees/${a.employee.id}/loans`)],
+      [
+        'novo empréstimo',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/loans`, {
+          kind: 'ADVANCE',
+          currency: 'AOA',
+          principal: '1',
+          installmentsCount: 1,
+          firstPeriod: '2030-01',
+          reason: 'xxx',
+        }),
+      ],
+      ['GET empréstimo', B.get(`/api/v1/hr/loans/${a.loan.id}`)],
+      ['PATCH empréstimo', B.patch(`/api/v1/hr/loans/${a.loan.id}`, { ...v, reason: 'xxx' })],
+      ['submeter empréstimo', B.post(`/api/v1/hr/loans/${a.loan.id}/submit`, v)],
+      [
+        'decidir empréstimo',
+        B.post(`/api/v1/hr/loans/${a.loan.id}/decision`, { ...v, decision: 'APPROVE' }),
+      ],
+      ['cancelar empréstimo', B.post(`/api/v1/hr/loans/${a.loan.id}/cancel`, v)],
+      [
+        'pagar prestação',
+        B.post(`/api/v1/hr/loans/${a.loan.id}/installments/${a.loan.id}/payment`, {
+          ...v,
+          reference: 'X',
+          paidOn: '2026-01-01',
+        }),
       ],
       ['GET carreira', B.get(`/api/v1/hr/employees/${a.employee.id}/assignments`)],
       [
@@ -1172,6 +1211,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
     ])
       assert.lengthOf((await B.get(url)).body().data, 0, url)
     assert.lengthOf((await B.get('/api/v1/hr/interviews/mine')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/loans')).body().data, 0)
     for (const url of [
       '/api/v1/hr/leave/requests',
       '/api/v1/hr/leave/types',
@@ -1240,6 +1280,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/hr/employees/${a.employee.id}/leave`,
       `/api/v1/hr/employees/${a.employee.id}/compensation`,
       '/api/v1/hr/compensation/proposals',
+      '/api/v1/hr/loans',
+      `/api/v1/hr/employees/${a.employee.id}/loans`,
     ]) {
       const r = await spoof.get(url)
       assert.equal(r.status(), 403, url)

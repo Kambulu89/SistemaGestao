@@ -259,6 +259,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Pessoas',
       },
       {
+        label: 'Adiantamentos e empréstimos',
+        path: '/rh/emprestimos',
+        icon: 'coins',
+        permission: 'hr.loans.read',
+        feature: 'hr',
+        anyScope: true,
+        section: 'Pessoas',
+      },
+      {
         label: 'Vagas',
         path: '/rh/vagas',
         icon: 'badge',

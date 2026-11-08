@@ -70,6 +70,9 @@ const settingsBody = vine.create(
     requisitionWorkflowId: vine.string().uuid().nullable().optional(),
     offerWorkflowId: vine.string().uuid().nullable().optional(),
     compensationWorkflowId: vine.string().uuid().nullable().optional(),
+    loanMaxInstallmentPercent: vine.string().trim().maxLength(10).nullable().optional(),
+    loanMaxInstallments: vine.number().withoutDecimals().nullable().optional(),
+    loanPolicyReference: vine.string().trim().maxLength(2000).nullable().optional(),
     ...version,
   })
 )

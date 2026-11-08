@@ -109,6 +109,22 @@ async function memberActive(scope: TenantScope, id: string) {
 // Configuração (workflows de aprovação)
 // ---------------------------------------------------------------------------------------------------------------
 
+/** Configuração de RH: workflows (recrutamento, compensação) e limites de adiantamentos/empréstimos (com fonte). */
+const SETTINGS_COLUMNS = {
+  requisitionWorkflowId: 'requisition_workflow_id',
+  offerWorkflowId: 'offer_workflow_id',
+  compensationWorkflowId: 'compensation_workflow_id',
+  loanMaxInstallmentPercent: 'loan_max_installment_percent',
+  loanMaxInstallments: 'loan_max_installments',
+  loanPolicyReference: 'loan_policy_reference',
+} as const
+type SettingsKey = keyof typeof SETTINGS_COLUMNS
+const WORKFLOW_SUBJECTS: [SettingsKey, string][] = [
+  ['requisitionWorkflowId', 'job_requisition'],
+  ['offerWorkflowId', 'job_offer'],
+  ['compensationWorkflowId', 'compensation_proposal'],
+]
+
 export async function hrSettings(scope: TenantScope) {
   const r = await scope.trx.rawQuery(`select * from hr_settings where tenant_id = ?`, [
     scope.context.tenantId,
@@ -118,6 +134,12 @@ export async function hrSettings(scope: TenantScope) {
     requisitionWorkflowId: (row?.requisition_workflow_id as string) ?? null,
     offerWorkflowId: (row?.offer_workflow_id as string) ?? null,
     compensationWorkflowId: (row?.compensation_workflow_id as string) ?? null,
+    loanMaxInstallmentPercent: (row?.loan_max_installment_percent as string) ?? null,
+    loanMaxInstallments:
+      row?.loan_max_installments === null || row?.loan_max_installments === undefined
+        ? null
+        : Number(row.loan_max_installments),
+    loanPolicyReference: (row?.loan_policy_reference as string) ?? null,
     version: row ? Number(row.version) : 0,
   }
 }
@@ -129,70 +151,79 @@ export class HrSettingsService {
 
   update(
     context: TenantContext,
-    input: {
-      requisitionWorkflowId?: string | null
-      offerWorkflowId?: string | null
-      compensationWorkflowId?: string | null
-    },
+    input: Partial<Record<SettingsKey, unknown>>,
     expectedVersion: number
   ) {
     return runInTenant(context, async (scope) => {
       const current = await hrSettings(scope)
       if (current.version !== expectedVersion) throw ApiError.versionConflict(current.version)
-      const next = { ...current, ...input }
       const issues: ErrorDetail[] = []
-      for (const [key, subject] of [
-        ['requisitionWorkflowId', 'job_requisition'],
-        ['offerWorkflowId', 'job_offer'],
-        ['compensationWorkflowId', 'compensation_proposal'],
-      ] as const)
-        if (next[key] && !(await isActiveWorkflowFor(scope, next[key]!, subject)))
+      const { values: limits, issues: limitIssues } = normalizeFields(
+        input as Record<string, unknown>,
+        {
+          loanMaxInstallmentPercent: { kind: 'money', label: 'Prestação máxima (%)' },
+          loanPolicyReference: { kind: 'longtext', min: 5, max: 2000, label: 'Fonte dos limites' },
+        }
+      )
+      issues.push(...limitIssues)
+      const next: Record<string, unknown> = { ...current }
+      for (const k of Object.keys(SETTINGS_COLUMNS) as SettingsKey[])
+        if (k in input) next[k] = input[k] ?? null
+      Object.assign(next, limits)
+      if ('loanMaxInstallments' in input && input.loanMaxInstallments !== null) {
+        const n = input.loanMaxInstallments
+        if (!Number.isInteger(n) || (n as number) < 1 || (n as number) > 120)
+          issues.push({
+            path: 'loanMaxInstallments',
+            code: 'INVALID',
+            message: 'Entre 1 e 120 prestações.',
+          })
+      }
+      const pct = next.loanMaxInstallmentPercent as string | null
+      if (pct !== null && (Number(pct) <= 0 || Number(pct) > 100))
+        issues.push({
+          path: 'loanMaxInstallmentPercent',
+          code: 'INVALID',
+          message: 'Entre 0 e 100.',
+        })
+      if ((pct !== null || next.loanMaxInstallments !== null) && !next.loanPolicyReference)
+        issues.push({
+          path: 'loanPolicyReference',
+          code: 'REQUIRED',
+          message: 'Indique a fonte legal ou interna dos limites.',
+        })
+      for (const [key, subject] of WORKFLOW_SUBJECTS)
+        if (next[key] && !(await isActiveWorkflowFor(scope, next[key] as string, subject)))
           issues.push({
             path: key,
             code: 'WORKFLOW_UNAVAILABLE',
             message: 'Escolha um workflow publicado para este tipo de assunto.',
           })
       fail(issues)
+      const keys = Object.keys(SETTINGS_COLUMNS) as SettingsKey[]
+      const cols = keys.map((k) => SETTINGS_COLUMNS[k])
+      const vals = keys.map((k) => next[k] ?? null)
       if (current.version === 0)
         await scope.trx.rawQuery(
-          `insert into hr_settings (tenant_id, requisition_workflow_id, offer_workflow_id, compensation_workflow_id,
-             created_by, updated_by) values (?, ?, ?, ?, ?, ?)`,
-          [
-            context.tenantId,
-            next.requisitionWorkflowId,
-            next.offerWorkflowId,
-            next.compensationWorkflowId,
-            context.userId,
-            context.userId,
-          ] as never[]
+          `insert into hr_settings (tenant_id, ${cols.join(', ')}, created_by, updated_by)
+           values (?, ${cols.map(() => '?').join(', ')}, ?, ?)`,
+          [context.tenantId, ...vals, context.userId, context.userId] as never[]
         )
       else
         await scope.trx.rawQuery(
-          `update hr_settings set requisition_workflow_id = ?, offer_workflow_id = ?, compensation_workflow_id = ?,
-             version = version + 1, updated_by = ?, updated_at = now() where tenant_id = ?`,
-          [
-            next.requisitionWorkflowId,
-            next.offerWorkflowId,
-            next.compensationWorkflowId,
-            context.userId,
-            context.tenantId,
-          ] as never[]
+          `update hr_settings set ${cols.map((c) => `${c} = ?`).join(', ')}, version = version + 1,
+             updated_by = ?, updated_at = now() where tenant_id = ?`,
+          [...vals, context.userId, context.tenantId] as never[]
         )
+      const changes: Record<string, { from: unknown; to: unknown }> = {}
+      for (const k of keys)
+        if ((current as Record<string, unknown>)[k] !== (next[k] ?? null))
+          changes[k] = { from: (current as Record<string, unknown>)[k], to: next[k] ?? null }
       await audit(scope, {
         action: 'hr.settings.updated',
         entityType: 'hr_settings',
         entityId: context.tenantId,
-        changes: {
-          requisitionWorkflowId: {
-            from: current.requisitionWorkflowId,
-            to: next.requisitionWorkflowId,
-          },
-          offerWorkflowId: { from: current.offerWorkflowId, to: next.offerWorkflowId },
-          compensationWorkflowId: {
-            from: current.compensationWorkflowId,
-            to: next.compensationWorkflowId,
-          },
-        },
+        changes,
       })
       return hrSettings(scope)
     })

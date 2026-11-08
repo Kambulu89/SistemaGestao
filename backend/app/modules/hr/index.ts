@@ -9,3 +9,4 @@ export { onOfferDecided, onRequisitionDecided } from '#modules/hr/application/re
 export { contractTermsAt } from '#modules/hr/application/career_service'
 export { approvedAbsences, leaveRequestAccess } from '#modules/hr/application/leave_service'
 export { compensationAt, onCompensationDecided } from '#modules/hr/application/compensation_service'
+export { dueLoanInstallments, recordLoanDeduction } from '#modules/hr/application/loan_service'

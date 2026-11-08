@@ -276,3 +276,19 @@ abre o novo, na mesma transacção e com o colaborador bloqueado; volta a valida
 posterior em vigor, só remove o que existe) e recusa propostas desactualizadas (409 `STALE_PROPOSAL`). O histórico nunca
 é apagado nem reescrito. Os valores nunca vão para a auditoria. Os componentes variáveis (ex.: horas extra) não ficam na
 ficha: entram por período no processamento (7.7), que obtém a remuneração numa data com `compensationAt`.
+
+## D-029 Adiantamentos e empréstimos: plano criado na aprovação, limites configurados com fonte e liquidação única (aceite)
+
+Um adiantamento (uma prestação) ou empréstimo (1 a 120 prestações mensais) a um colaborador é um pedido com código
+automático por empresa e ano (`ADI-AAAA-NNNN`, `EMP-AAAA-NNNN`), sem juros (o prompt não os prevê). Rascunho → aguarda
+aprovação → activo → liquidado (ou recusado/cancelado antes da aprovação). Decide quem tem `hr.loans.approve` no âmbito
+da colocação do colaborador, nunca quem preparou nem o próprio. Ao submeter e de novo ao aprovar valida-se: o primeiro
+desconto não é num mês passado; há contrato em cada mês de desconto (incluindo o fim de um contrato a termo) e na mesma
+moeda; e, se a empresa os configurou, o número máximo de prestações e a prestação máxima em percentagem do salário base
+desse mês, somando as prestações pendentes dos outros empréstimos activos. Os limites ficam em `hr_settings` e exigem a
+fonte (regulamento interno ou norma legal confirmada); nenhum limite legal está no código. O plano (partes iguais ao
+cêntimo, resto na última) só é gravado na aprovação; um empréstimo aprovado não se cancela, liquida-se. Cada prestação
+sai de `PENDING` uma única vez — por desconto no processamento (`recordLoanDeduction`, idempotente pela referência do
+processamento; outra referência dá 409 `ALREADY_SETTLED`) ou por pagamento directo com referência — e a base de dados
+exige referência e data em toda a prestação liquidada. O saldo é derivado das prestações, nunca guardado à parte. Quando
+não resta nada pendente o empréstimo passa a liquidado. Os montantes não vão para a auditoria.
