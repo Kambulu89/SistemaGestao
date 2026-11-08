@@ -4,7 +4,7 @@ import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { ErrorAlert } from '../ui/error-alert';
 import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { Action, Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import { type AssetClass, lifeText, METHOD_LABELS } from './model';
@@ -31,7 +31,7 @@ const ACCOUNT_FIELDS = [
   selector: 'app-asset-classes',
   imports: [
     FormsModule,
-    PageHeader,
+    EntityListPage,
     DataTable,
     CellDef,
     StatusBadge,
@@ -41,141 +41,152 @@ const ACCOUNT_FIELDS = [
     FieldControl,
   ],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Classes de activos"
       subtitle="Contas, diário, vida útil e método por omissão de cada tipo de activo fixo."
-    />
-    <app-data-table
-      label="Classes de activos"
-      [columns]="columns"
-      [rows]="classes.value() ?? []"
-      [total]="classes.value()?.length ?? 0"
-      [loading]="classes.loading()"
-      [error]="classes.error()"
-      emptyText="Ainda não há classes de activos."
-      (retry)="classes.load()"
+      permission="fixed_assets.read"
+      feature="accounting"
     >
-      <ng-template appCell="code" let-row>
-        <button type="button" class="btn-link" (click)="edit(row)">{{ row.code }}</button>
-      </ng-template>
-      <ng-template appCell="status" let-row><app-status-badge [status]="row.status" /></ng-template>
-    </app-data-table>
-    @if (canManage()) {
-      <form
-        class="mt-4 space-y-3"
-        (ngSubmit)="save()"
-        [attr.aria-label]="editing() ? 'Alterar classe' : 'Nova classe'"
+      <app-data-table
+        tableId="acc-asset-classes"
+        label="Classes de activos"
+        [columns]="columns"
+        [rows]="classes.value() ?? []"
+        [total]="classes.value()?.length ?? 0"
+        [loading]="classes.loading()"
+        [error]="classes.error()"
+        emptyText="Ainda não há classes de activos."
+        (retry)="classes.load()"
       >
-        <app-error-alert [error]="action.error()" [showDetails]="true" />
-        <app-form-section [title]="editing() ? 'Alterar ' + editing()!.code : 'Nova classe'">
-          <app-field
-            label="Entidade legal"
-            [required]="true"
-            [error]="action.field('legalEntityId')"
-          >
-            <select
-              appControl
-              class="input"
-              name="le"
-              [disabled]="!!editing()"
-              [(ngModel)]="form.legalEntityId"
-              (ngModelChange)="loadRefs()"
-            >
-              <option [ngValue]="null">—</option>
-              @for (e of entities(); track e.id) {
-                <option [ngValue]="e.id">{{ e.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Código" [required]="true" [error]="action.field('code')">
-            <input
-              appControl
-              class="input"
-              name="code"
-              [disabled]="!!editing()"
-              [(ngModel)]="form.code"
-            />
-          </app-field>
-          <app-field label="Nome" [required]="true" [error]="action.field('name')">
-            <input appControl class="input" name="name" [(ngModel)]="form.name" />
-          </app-field>
-          <app-field label="Diário" [required]="true" [error]="action.field('journalId')">
-            <select appControl class="input" name="journal" [(ngModel)]="form.journalId">
-              <option [ngValue]="null">—</option>
-              @for (j of journals(); track j.id) {
-                <option [ngValue]="j.id">{{ j.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Método" [error]="action.field('method')">
-            <select appControl class="input" name="method" [(ngModel)]="form.method">
-              <option value="STRAIGHT_LINE">Linha recta</option>
-              <option value="DECLINING_BALANCE">Degressivo</option>
-            </select>
-          </app-field>
-          <app-field
-            label="Vida útil (meses)"
-            [required]="true"
-            [hint]="lifeHint()"
-            [error]="action.field('usefulLifeMonths')"
-          >
-            <input
-              appControl
-              class="input"
-              type="number"
-              min="1"
-              max="1200"
-              name="life"
-              [(ngModel)]="form.usefulLifeMonths"
-            />
-          </app-field>
-          @if (form.method === 'DECLINING_BALANCE') {
+        <ng-template appCell="code" let-row>
+          <button type="button" class="btn-link" (click)="edit(row)">{{ row.code }}</button>
+        </ng-template>
+        <ng-template appCell="status" let-row
+          ><app-status-badge [status]="row.status"
+        /></ng-template>
+      </app-data-table>
+      @if (canManage()) {
+        <form
+          class="mt-4 space-y-3"
+          (ngSubmit)="save()"
+          [attr.aria-label]="editing() ? 'Alterar classe' : 'Nova classe'"
+        >
+          <app-error-alert [error]="action.error()" [showDetails]="true" />
+          <app-form-section [title]="editing() ? 'Alterar ' + editing()!.code : 'Nova classe'">
             <app-field
-              label="Coeficiente degressivo"
-              hint="Entre 1,00 e 4,00 (p. ex. 2,00 duplica a taxa da linha recta)."
-              [error]="action.field('decliningFactor')"
+              label="Entidade legal"
+              [required]="true"
+              [error]="action.field('legalEntityId')"
+            >
+              <select
+                appControl
+                class="input"
+                name="le"
+                [disabled]="!!editing()"
+                [(ngModel)]="form.legalEntityId"
+                (ngModelChange)="loadRefs()"
+              >
+                <option [ngValue]="null">—</option>
+                @for (e of entities(); track e.id) {
+                  <option [ngValue]="e.id">{{ e.label }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Código" [required]="true" [error]="action.field('code')">
+              <input
+                appControl
+                class="input"
+                name="code"
+                [disabled]="!!editing()"
+                [(ngModel)]="form.code"
+              />
+            </app-field>
+            <app-field label="Nome" [required]="true" [error]="action.field('name')">
+              <input appControl class="input" name="name" [(ngModel)]="form.name" />
+            </app-field>
+            <app-field label="Diário" [required]="true" [error]="action.field('journalId')">
+              <select appControl class="input" name="journal" [(ngModel)]="form.journalId">
+                <option [ngValue]="null">—</option>
+                @for (j of journals(); track j.id) {
+                  <option [ngValue]="j.id">{{ j.label }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Método" [error]="action.field('method')">
+              <select appControl class="input" name="method" [(ngModel)]="form.method">
+                <option value="STRAIGHT_LINE">Linha recta</option>
+                <option value="DECLINING_BALANCE">Degressivo</option>
+              </select>
+            </app-field>
+            <app-field
+              label="Vida útil (meses)"
+              [required]="true"
+              [hint]="lifeHint()"
+              [error]="action.field('usefulLifeMonths')"
             >
               <input
                 appControl
                 class="input"
-                inputmode="decimal"
-                name="factor"
-                [(ngModel)]="form.decliningFactor"
+                type="number"
+                min="1"
+                max="1200"
+                name="life"
+                [(ngModel)]="form.usefulLifeMonths"
               />
             </app-field>
-          }
-          <app-field label="Estado">
-            <select appControl class="input" name="status" [(ngModel)]="form.status">
-              <option value="ACTIVE">Activa</option>
-              <option value="INACTIVE">Inactiva</option>
-            </select>
-          </app-field>
-        </app-form-section>
-        <app-form-section
-          title="Contas"
-          description="Contas movimentáveis do plano activo da entidade. Com activos contabilizados, as contas do activo e das amortizações acumuladas deixam de mudar."
-        >
-          @for (f of accountFields; track f[0]) {
-            <app-field [label]="f[1]" [required]="true" [hint]="f[2]" [error]="action.field(f[0])">
-              <select appControl class="input" [name]="f[0]" [(ngModel)]="form[f[0]]">
-                <option [ngValue]="null">—</option>
-                @for (a of accounts(); track a.id) {
-                  <option [ngValue]="a.id">{{ a.label }}</option>
-                }
+            @if (form.method === 'DECLINING_BALANCE') {
+              <app-field
+                label="Coeficiente degressivo"
+                hint="Entre 1,00 e 4,00 (p. ex. 2,00 duplica a taxa da linha recta)."
+                [error]="action.field('decliningFactor')"
+              >
+                <input
+                  appControl
+                  class="input"
+                  inputmode="decimal"
+                  name="factor"
+                  [(ngModel)]="form.decliningFactor"
+                />
+              </app-field>
+            }
+            <app-field label="Estado">
+              <select appControl class="input" name="status" [(ngModel)]="form.status">
+                <option value="ACTIVE">Activa</option>
+                <option value="INACTIVE">Inactiva</option>
               </select>
             </app-field>
-          }
-        </app-form-section>
-        <div class="flex gap-2">
-          <button type="submit" class="btn-primary" [disabled]="action.busy()">
-            {{ editing() ? 'Guardar classe' : 'Criar classe' }}
-          </button>
-          @if (editing()) {
-            <button type="button" class="btn-secondary" (click)="reset()">Nova classe</button>
-          }
-        </div>
-      </form>
-    }
+          </app-form-section>
+          <app-form-section
+            title="Contas"
+            description="Contas movimentáveis do plano activo da entidade. Com activos contabilizados, as contas do activo e das amortizações acumuladas deixam de mudar."
+          >
+            @for (f of accountFields; track f[0]) {
+              <app-field
+                [label]="f[1]"
+                [required]="true"
+                [hint]="f[2]"
+                [error]="action.field(f[0])"
+              >
+                <select appControl class="input" [name]="f[0]" [(ngModel)]="form[f[0]]">
+                  <option [ngValue]="null">—</option>
+                  @for (a of accounts(); track a.id) {
+                    <option [ngValue]="a.id">{{ a.label }}</option>
+                  }
+                </select>
+              </app-field>
+            }
+          </app-form-section>
+          <div class="flex gap-2">
+            <button type="submit" class="btn-primary" [disabled]="action.busy()">
+              {{ editing() ? 'Guardar classe' : 'Criar classe' }}
+            </button>
+            @if (editing()) {
+              <button type="button" class="btn-secondary" (click)="reset()">Nova classe</button>
+            }
+          </div>
+        </form>
+      }
+    </app-entity-list-page>
   `,
 })
 export class AssetClasses {
@@ -197,7 +208,7 @@ export class AssetClasses {
         .items,
   );
   protected readonly columns: Column<AssetClass>[] = [
-    { key: 'code', label: 'Código' },
+    { key: 'code', required: true, label: 'Código' },
     { key: 'name', label: 'Nome' },
     {
       key: 'legalEntityId',

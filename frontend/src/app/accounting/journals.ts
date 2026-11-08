@@ -5,7 +5,7 @@ import { ErrorAlert } from '../ui/error-alert';
 import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { Action, Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import { JOURNAL_TYPES, type Journal, label } from './model';
@@ -25,7 +25,7 @@ interface Series {
   imports: [
     FormsModule,
     RouterLink,
-    PageHeader,
+    EntityListPage,
     DataTable,
     CellDef,
     StatusBadge,
@@ -35,74 +35,80 @@ interface Series {
     FieldControl,
   ],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Diários"
       subtitle="A numeração vem da série documental do diário, no momento da contabilização."
-    />
-    <app-data-table
-      label="Diários"
-      [columns]="columns"
-      [rows]="journals.value() ?? []"
-      [total]="journals.value()?.length ?? 0"
-      [loading]="journals.loading()"
-      [error]="journals.error()"
-      emptyText="Ainda não há diários."
-      (retry)="journals.load()"
+      permission="accounting.read"
+      feature="accounting"
     >
-      <ng-template appCell="status" let-row><app-status-badge [status]="row.status" /></ng-template>
-    </app-data-table>
-    @if (canManage()) {
-      <form class="mt-4 space-y-3" (ngSubmit)="create()" aria-label="Novo diário">
-        <app-error-alert [error]="action.error()" [showDetails]="false" />
-        <app-form-section title="Novo diário">
-          <app-field
-            label="Entidade legal"
-            [required]="true"
-            [error]="action.field('legalEntityId')"
-          >
-            <select appControl class="input" name="le" [(ngModel)]="form.legalEntityId">
-              <option [ngValue]="null">—</option>
-              @for (o of entities(); track o.id) {
-                <option [ngValue]="o.id">{{ o.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Tipo" [required]="true" [error]="action.field('type')">
-            <select appControl class="input" name="type" [(ngModel)]="form.type">
-              @for (t of types; track t.value) {
-                <option [value]="t.value">{{ t.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Código" [required]="true" [error]="action.field('code')">
-            <input appControl class="input" name="code" [(ngModel)]="form.code" />
-          </app-field>
-          <app-field label="Nome" [required]="true" [error]="action.field('name')">
-            <input appControl class="input" name="name" [(ngModel)]="form.name" />
-          </app-field>
-          <app-field
-            label="Série documental"
-            [required]="true"
-            [error]="action.field('documentSeriesId')"
-            class="md:col-span-2"
-          >
-            <select appControl class="input" name="series" [(ngModel)]="form.documentSeriesId">
-              <option [ngValue]="null">—</option>
-              @for (s of seriesFor(form.legalEntityId); track s.id) {
-                <option [ngValue]="s.id">{{ s.code }}</option>
-              }
-            </select>
-          </app-field>
-          @if (form.legalEntityId && seriesFor(form.legalEntityId).length === 0) {
-            <p class="text-sm text-muted md:col-span-2">
-              Não há séries abertas do tipo "Lançamento contabilístico" para esta entidade.
-              <a class="btn-link" routerLink="/empresa/document-series/novo">Criar série</a>
-            </p>
-          }
-        </app-form-section>
-        <button type="submit" class="btn-primary" [disabled]="action.busy()">Criar diário</button>
-      </form>
-    }
+      <app-data-table
+        tableId="acc-journals"
+        label="Diários"
+        [columns]="columns"
+        [rows]="journals.value() ?? []"
+        [total]="journals.value()?.length ?? 0"
+        [loading]="journals.loading()"
+        [error]="journals.error()"
+        emptyText="Ainda não há diários."
+        (retry)="journals.load()"
+      >
+        <ng-template appCell="status" let-row
+          ><app-status-badge [status]="row.status"
+        /></ng-template>
+      </app-data-table>
+      @if (canManage()) {
+        <form class="mt-4 space-y-3" (ngSubmit)="create()" aria-label="Novo diário">
+          <app-error-alert [error]="action.error()" [showDetails]="false" />
+          <app-form-section title="Novo diário">
+            <app-field
+              label="Entidade legal"
+              [required]="true"
+              [error]="action.field('legalEntityId')"
+            >
+              <select appControl class="input" name="le" [(ngModel)]="form.legalEntityId">
+                <option [ngValue]="null">—</option>
+                @for (o of entities(); track o.id) {
+                  <option [ngValue]="o.id">{{ o.label }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Tipo" [required]="true" [error]="action.field('type')">
+              <select appControl class="input" name="type" [(ngModel)]="form.type">
+                @for (t of types; track t.value) {
+                  <option [value]="t.value">{{ t.label }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Código" [required]="true" [error]="action.field('code')">
+              <input appControl class="input" name="code" [(ngModel)]="form.code" />
+            </app-field>
+            <app-field label="Nome" [required]="true" [error]="action.field('name')">
+              <input appControl class="input" name="name" [(ngModel)]="form.name" />
+            </app-field>
+            <app-field
+              label="Série documental"
+              [required]="true"
+              [error]="action.field('documentSeriesId')"
+              class="md:col-span-2"
+            >
+              <select appControl class="input" name="series" [(ngModel)]="form.documentSeriesId">
+                <option [ngValue]="null">—</option>
+                @for (s of seriesFor(form.legalEntityId); track s.id) {
+                  <option [ngValue]="s.id">{{ s.code }}</option>
+                }
+              </select>
+            </app-field>
+            @if (form.legalEntityId && seriesFor(form.legalEntityId).length === 0) {
+              <p class="text-sm text-muted md:col-span-2">
+                Não há séries abertas do tipo "Lançamento contabilístico" para esta entidade.
+                <a class="btn-link" routerLink="/empresa/document-series/novo">Criar série</a>
+              </p>
+            }
+          </app-form-section>
+          <button type="submit" class="btn-primary" [disabled]="action.busy()">Criar diário</button>
+        </form>
+      }
+    </app-entity-list-page>
   `,
 })
 export class Journals {
@@ -125,7 +131,7 @@ export class Journals {
     async () => (await this.deps.api.page<Journal>('accounting/journals', { limit: 200 })).items,
   );
   protected readonly columns: Column<Journal>[] = [
-    { key: 'code', label: 'Código' },
+    { key: 'code', required: true, label: 'Código' },
     { key: 'name', label: 'Nome' },
     { key: 'type', label: 'Tipo', value: (r) => label(JOURNAL_TYPES, r.type) },
     {

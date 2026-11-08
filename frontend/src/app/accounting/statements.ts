@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ConfirmService } from '../ui/confirm';
 import { ErrorAlert } from '../ui/error-alert';
 import { Action } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { ReportPage } from '../ui/templates';
 import { ToastService } from '../ui/toasts';
 import { downloadXlsx, type XlsxCell } from '../ui/xlsx';
 import {
@@ -22,192 +22,181 @@ import { accountingDeps, legalEntityOptions, moneyText } from './shared';
  */
 @Component({
   selector: 'app-statements',
-  imports: [FormsModule, PageHeader, ErrorAlert],
+  imports: [FormsModule, ReportPage, ErrorAlert],
   template: `
-    <div class="no-print">
-      <app-page-header
-        title="Demonstrações financeiras"
-        subtitle="Calculadas a partir dos lançamentos contabilizados; conferem com o razão e o balancete."
-      />
-      <form
-        class="mb-4 flex flex-wrap items-end gap-2"
-        (ngSubmit)="generate()"
-        aria-label="Gerar demonstração"
-      >
-        <div>
-          <label class="label" for="st-template">Modelo</label>
-          <select id="st-template" name="template" class="input w-72" [(ngModel)]="templateId">
-            <option [ngValue]="null">—</option>
-            @for (t of templates(); track t.id) {
-              <option [ngValue]="t.id">
-                {{ t.code }} v{{ t.version }} — {{ t.name }} ({{ statusText(t.status) }})
-              </option>
-            }
-          </select>
-        </div>
-        <div>
-          <label class="label" for="st-year">Exercício</label>
-          <select
-            id="st-year"
-            name="year"
-            class="input w-64"
-            [(ngModel)]="fiscalYearId"
-            (ngModelChange)="yearChanged()"
-          >
-            <option [ngValue]="null">—</option>
-            @for (y of years(); track y.id) {
-              <option [ngValue]="y.id">
-                {{ y.code }} — {{ names().get(y.legalEntityId) ?? 'entidade' }}
-              </option>
-            }
-          </select>
-        </div>
-        <div>
-          <label class="label" for="st-to">Até</label>
-          <select id="st-to" name="to" class="input w-40" [(ngModel)]="toPeriod">
-            <option [ngValue]="null">Fim do exercício</option>
-            @for (p of periods(); track p.id) {
-              <option [ngValue]="p.number">{{ p.name }}</option>
-            }
-          </select>
-        </div>
-        <div>
-          <label class="label" for="st-compare">Comparar com</label>
-          <select id="st-compare" name="compare" class="input w-48" [(ngModel)]="compareId">
-            <option [ngValue]="null">—</option>
-            @for (y of comparable(); track y.id) {
-              <option [ngValue]="y.id">{{ y.code }}</option>
-            }
-          </select>
-        </div>
-        <button
-          type="submit"
-          class="btn-primary"
-          [disabled]="action.busy() || !templateId || !fiscalYearId"
+    <app-report-page
+      title="Demonstrações financeiras"
+      subtitle="Calculadas a partir dos lançamentos contabilizados; conferem com o razão e o balancete."
+      [busy]="action.busy()"
+      [error]="action.error()"
+      [canRun]="!!templateId && !!fiscalYearId"
+      [hasResult]="!!result()"
+      [summary]="summary()"
+      [generatedAt]="generatedAt()"
+      exportLabel="Exportar Excel"
+      (run)="generate()"
+      (exported)="exportXlsx()"
+    >
+      <div params>
+        <label class="label" for="st-template">Modelo</label>
+        <select id="st-template" name="template" class="input w-72" [(ngModel)]="templateId">
+          <option [ngValue]="null">—</option>
+          @for (t of templates(); track t.id) {
+            <option [ngValue]="t.id">
+              {{ t.code }} v{{ t.version }} — {{ t.name }} ({{ statusText(t.status) }})
+            </option>
+          }
+        </select>
+      </div>
+      <div params>
+        <label class="label" for="st-year">Exercício</label>
+        <select
+          id="st-year"
+          name="year"
+          class="input w-64"
+          [(ngModel)]="fiscalYearId"
+          (ngModelChange)="yearChanged()"
         >
-          Gerar
-        </button>
-        @if (result()) {
-          <button type="button" class="btn-secondary" (click)="exportXlsx()">Exportar Excel</button>
-          <button type="button" class="btn-secondary" (click)="print()">Imprimir / PDF</button>
-        }
-      </form>
-      <app-error-alert [error]="action.error()" [showDetails]="true" />
-    </div>
-
-    @if (result(); as r) {
-      <article class="card" aria-labelledby="st-title">
-        <header class="mb-3">
-          <h2 id="st-title" class="text-lg font-semibold">{{ r.template.name }}</h2>
-          <p class="text-sm text-muted">
-            {{ entityName() }} · exercício {{ r.fiscalYear.code }}{{ periodText() }} · modelo
-            {{ r.template.code }} v{{ r.template.version }}
-            @if (r.template.status !== 'PUBLISHED') {
-              <strong>({{ statusText(r.template.status) }})</strong>
-            }
-          </p>
-          <p class="mt-1 text-sm" role="status" data-testid="st-status">
-            @if (r.consistent) {
-              <span class="text-success-text"
-                >Confere com o razão{{
-                  r.check ? ': ' + money(r.check.a) + ' = ' + money(r.check.b) : ''
-                }}.</span
-              >
-            } @else {
-              <span class="text-danger-text">
-                Não confere:
-                @if (r.unmapped.length) {
-                  {{ r.unmapped.length }} conta(s) com saldo sem linha no modelo.
-                }
-                @if (r.check && !r.check.ok) {
-                  Controlo {{ money(r.check.a) }} ≠ {{ money(r.check.b) }}.
-                }
-              </span>
-            }
-          </p>
-        </header>
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[32rem] text-sm">
-            <caption class="sr-only">
-              {{
-                r.template.name
-              }}
-            </caption>
-            <thead>
-              <tr class="border-b border-border text-left">
-                <th scope="col" class="p-2">Rubrica</th>
-                <th scope="col" class="p-2">Nota</th>
-                <th scope="col" class="p-2 text-right">{{ r.fiscalYear.code }}</th>
-                @if (r.compareFiscalYear) {
-                  <th scope="col" class="p-2 text-right">{{ r.compareFiscalYear.code }}</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (l of r.lines; track l.lineNo) {
-                <tr
-                  class="border-b border-border"
-                  [class.font-semibold]="l.kind === 'HEADER' || l.kind === 'TOTAL'"
-                  [class.bg-surface-2]="l.kind === 'HEADER'"
+          <option [ngValue]="null">—</option>
+          @for (y of years(); track y.id) {
+            <option [ngValue]="y.id">
+              {{ y.code }} — {{ names().get(y.legalEntityId) ?? 'entidade' }}
+            </option>
+          }
+        </select>
+      </div>
+      <div params>
+        <label class="label" for="st-to">Até</label>
+        <select id="st-to" name="to" class="input w-40" [(ngModel)]="toPeriod">
+          <option [ngValue]="null">Fim do exercício</option>
+          @for (p of periods(); track p.id) {
+            <option [ngValue]="p.number">{{ p.name }}</option>
+          }
+        </select>
+      </div>
+      <div params>
+        <label class="label" for="st-compare">Comparar com</label>
+        <select id="st-compare" name="compare" class="input w-48" [(ngModel)]="compareId">
+          <option [ngValue]="null">—</option>
+          @for (y of comparable(); track y.id) {
+            <option [ngValue]="y.id">{{ y.code }}</option>
+          }
+        </select>
+      </div>
+      @if (result(); as r) {
+        <article class="card" aria-labelledby="st-title">
+          <header class="mb-3">
+            <h2 id="st-title" class="text-lg font-semibold">{{ r.template.name }}</h2>
+            <p class="text-sm text-muted">
+              {{ entityName() }} · exercício {{ r.fiscalYear.code }}{{ periodText() }} · modelo
+              {{ r.template.code }} v{{ r.template.version }}
+              @if (r.template.status !== 'PUBLISHED') {
+                <strong>({{ statusText(r.template.status) }})</strong>
+              }
+            </p>
+            <p class="mt-1 text-sm" role="status" data-testid="st-status">
+              @if (r.consistent) {
+                <span class="text-success-text"
+                  >Confere com o razão{{
+                    r.check ? ': ' + money(r.check.a) + ' = ' + money(r.check.b) : ''
+                  }}.</span
                 >
-                  <th
-                    scope="row"
-                    class="p-2 text-left"
-                    [class.font-normal]="l.kind === 'ACCOUNTS' || l.kind === 'NET_INCOME'"
-                  >
-                    @if (l.accounts.length) {
-                      <details>
-                        <summary class="cursor-pointer">{{ l.label }}</summary>
-                        <ul class="mt-1 text-xs text-muted">
-                          @for (a of l.accounts; track a.code) {
-                            <li class="flex justify-between gap-4">
-                              <span>{{ a.code }} {{ a.name }}</span
-                              ><span>{{ money(a.amount) }}</span>
-                            </li>
-                          }
-                        </ul>
-                      </details>
-                    } @else {
-                      {{ l.label }}
-                    }
-                  </th>
-                  <td class="p-2">{{ l.noteRef ?? '' }}</td>
-                  <td class="p-2 text-right">{{ l.value === null ? '' : money(l.value) }}</td>
+              } @else {
+                <span class="text-danger-text">
+                  Não confere:
+                  @if (r.unmapped.length) {
+                    {{ r.unmapped.length }} conta(s) com saldo sem linha no modelo.
+                  }
+                  @if (r.check && !r.check.ok) {
+                    Controlo {{ money(r.check.a) }} ≠ {{ money(r.check.b) }}.
+                  }
+                </span>
+              }
+            </p>
+          </header>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[32rem] text-sm">
+              <caption class="sr-only">
+                {{
+                  r.template.name
+                }}
+              </caption>
+              <thead>
+                <tr class="border-b border-border text-left">
+                  <th scope="col" class="p-2">Rubrica</th>
+                  <th scope="col" class="p-2">Nota</th>
+                  <th scope="col" class="p-2 text-right">{{ r.fiscalYear.code }}</th>
                   @if (r.compareFiscalYear) {
-                    <td class="p-2 text-right">
-                      {{ l.previous === null ? '' : money(l.previous) }}
-                    </td>
+                    <th scope="col" class="p-2 text-right">{{ r.compareFiscalYear.code }}</th>
                   }
                 </tr>
+              </thead>
+              <tbody>
+                @for (l of r.lines; track l.lineNo) {
+                  <tr
+                    class="border-b border-border"
+                    [class.font-semibold]="l.kind === 'HEADER' || l.kind === 'TOTAL'"
+                    [class.bg-surface-2]="l.kind === 'HEADER'"
+                  >
+                    <th
+                      scope="row"
+                      class="p-2 text-left"
+                      [class.font-normal]="l.kind === 'ACCOUNTS' || l.kind === 'NET_INCOME'"
+                    >
+                      @if (l.accounts.length) {
+                        <details>
+                          <summary class="cursor-pointer">{{ l.label }}</summary>
+                          <ul class="mt-1 text-xs text-muted">
+                            @for (a of l.accounts; track a.code) {
+                              <li class="flex justify-between gap-4">
+                                <span>{{ a.code }} {{ a.name }}</span
+                                ><span>{{ money(a.amount) }}</span>
+                              </li>
+                            }
+                          </ul>
+                        </details>
+                      } @else {
+                        {{ l.label }}
+                      }
+                    </th>
+                    <td class="p-2">{{ l.noteRef ?? '' }}</td>
+                    <td class="p-2 text-right">{{ l.value === null ? '' : money(l.value) }}</td>
+                    @if (r.compareFiscalYear) {
+                      <td class="p-2 text-right">
+                        {{ l.previous === null ? '' : money(l.previous) }}
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (r.unmapped.length) {
+            <section class="mt-3 text-sm" aria-labelledby="st-unmapped">
+              <h3 id="st-unmapped" class="font-semibold text-danger-text">
+                Contas com saldo sem linha no modelo
+              </h3>
+              <ul data-testid="st-unmapped">
+                @for (u of r.unmapped; track u.code + u.name) {
+                  <li>{{ u.code }} {{ u.name }}: {{ money(u.balance) }}</li>
+                }
+              </ul>
+            </section>
+          }
+          @if (notes().length) {
+            <section class="mt-4" aria-labelledby="st-notes">
+              <h3 id="st-notes" class="mb-2 font-semibold">Notas</h3>
+              @for (n of notes(); track n.id) {
+                <div class="mb-2">
+                  <h4 class="font-semibold">{{ n.number }}. {{ n.title }}</h4>
+                  <p class="text-sm whitespace-pre-line">{{ n.body }}</p>
+                </div>
               }
-            </tbody>
-          </table>
-        </div>
-        @if (r.unmapped.length) {
-          <section class="mt-3 text-sm" aria-labelledby="st-unmapped">
-            <h3 id="st-unmapped" class="font-semibold text-danger-text">
-              Contas com saldo sem linha no modelo
-            </h3>
-            <ul data-testid="st-unmapped">
-              @for (u of r.unmapped; track u.code + u.name) {
-                <li>{{ u.code }} {{ u.name }}: {{ money(u.balance) }}</li>
-              }
-            </ul>
-          </section>
-        }
-        @if (notes().length) {
-          <section class="mt-4" aria-labelledby="st-notes">
-            <h3 id="st-notes" class="mb-2 font-semibold">Notas</h3>
-            @for (n of notes(); track n.id) {
-              <div class="mb-2">
-                <h4 class="font-semibold">{{ n.number }}. {{ n.title }}</h4>
-                <p class="text-sm whitespace-pre-line">{{ n.body }}</p>
-              </div>
-            }
-          </section>
-        }
-      </article>
-    }
+            </section>
+          }
+        </article>
+      }
+    </app-report-page>
 
     @if (canWriteNotes() && fiscalYearId) {
       <section class="no-print card mt-4" aria-labelledby="st-note-form">
@@ -288,6 +277,13 @@ import { accountingDeps, legalEntityOptions, moneyText } from './shared';
 })
 export class StatementsPage {
   private readonly deps = accountingDeps();
+  protected readonly generatedAt = signal(new Date().toISOString());
+  protected readonly summary = computed(() => {
+    const r = this.result();
+    return r
+      ? `Modelo ${r.template.code} v${r.template.version} · exercício ${r.fiscalYear.code}`
+      : null;
+  });
   private readonly toasts = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   protected readonly canWriteNotes = computed(() =>
@@ -384,6 +380,7 @@ export class StatementsPage {
       }),
     );
     this.result.set(r ?? null);
+    this.generatedAt.set(new Date().toISOString());
     if (r) this.notes.set(r.notes);
   }
 
@@ -417,10 +414,6 @@ export class StatementsPage {
       `${r.template.code} ${r.fiscalYear.code}`,
       rows,
     );
-  }
-
-  protected print() {
-    window.print();
   }
 
   protected editNote(n: StatementNote) {

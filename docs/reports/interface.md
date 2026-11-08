@@ -136,3 +136,34 @@ acontecia durante a construção e falhava nos ecrãs que servem vários tipos).
 - Listas da contabilidade (diários, planos, exercícios, activos, regras, eventos, regularizações, provisões,
   modelos) e demonstrações financeiras ainda com o cabeçalho e filtros antigos; formulários de edição ainda com
   `PageDetail` sem barra fixa.
+
+## UI-5 — Contabilidade nos modelos e barra de acções nos formulários de edição
+
+**Ecrãs**
+
+- EntityListPage (permissão e funcionalidade verificadas, colunas configuráveis): diários, planos de contas,
+  exercícios, regras de contabilização, regularizações, provisões, modelos de demonstrações, classes de activos e
+  chaves de repartição (listas completas com criação rápida na própria página).
+- Activos fixos e eventos contabilísticos com `ListState`: pesquisa, estado (e classe) na URL, etiquetas, colunas e
+  exportação das colunas visíveis.
+- Demonstrações financeiras em ReportPage (estado vazio, metadados, "Exportar Excel", imprimir); as notas ficam abaixo.
+- `FormActionBar` (barra fixa com alterações por guardar) em configurações da empresa, perfis, registos da organização
+  e tabelas da empresa.
+
+**APIs** (sem alterações): `accounting/journals`, `charts`, `fiscal-years`, `posting-rules`, `adjustment-schedules`,
+`provisions`, `statement-templates`, `fixed-asset-classes`, `allocation-keys`, `fixed-assets`, `posting-events`,
+`statements`, `settings`, `roles/:id`, `organization/:kind/:id`, tabelas da empresa.
+
+**Testes e evidências**
+
+- Frontend: `form-action-bar.spec.ts` (alterações por guardar, acções extra, sem submissão dupla).
+- Browser: as 9 listas de configuração com colunas configuráveis; activos com estado na URL após recarregar; eventos
+  com pesquisa e estado na URL; demonstrações com estado vazio; barra fixa nas configurações (alterações por guardar),
+  num perfil editável, numa entidade legal e numa série documental; UI-2 e UI-4 repetidos sem falhas; sem erros de
+  consola. Na base de desenvolvimento não há modelos de demonstração, por isso a geração não foi exercitada no browser
+  (continua coberta pelos testes do backend do 6.8).
+
+**Pendências**
+
+- Formulário de lançamento e de regras de contabilização com as suas barras próprias (acções de fluxo); dimensões e
+  depreciações/regularizações por período com layouts próprios.

@@ -1,97 +1,65 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { formatDate } from '../ui/dates';
 import { exportList, withoutPaging } from '../ui/export';
 import { Icon } from '../ui/icon';
-import { Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
+import { FilterBar, type FilterDef } from '../ui/filter-bar';
+import { ListState } from '../ui/list-state';
 import { ToastService } from '../ui/toasts';
 import { ASSET_STATUS, type AssetClass, type AssetStatus, type FixedAsset } from './model';
 import { accountingDeps, moneyText } from './shared';
 
 const LIMIT = 25;
 
-/** Activos fixos com filtros do servidor (estado, classe, pesquisa) e valor líquido actual. */
+/** Activos fixos (EntityListPage): pesquisa, estado e classe na URL, valor líquido actual, colunas e exportação. */
 @Component({
   selector: 'app-assets',
-  imports: [FormsModule, RouterLink, PageHeader, DataTable, CellDef, Icon],
+  imports: [RouterLink, EntityListPage, FilterBar, DataTable, CellDef, Icon],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Activos fixos"
       subtitle="Fichas, aquisição, depreciação e abate. Os lançamentos são gerados e contabilizados pela ficha."
+      permission="fixed_assets.read"
+      feature="accounting"
     >
       @if (canManage()) {
-        <a class="btn-primary" routerLink="/contabilidade/activos/novo"
+        <a actions class="btn-primary" routerLink="/contabilidade/activos/novo"
           ><app-icon name="plus" [size]="16" />Novo activo</a
         >
       }
-    </app-page-header>
-    <form class="mb-4 flex flex-wrap items-end gap-2" role="search" (ngSubmit)="go(0)">
-      <div>
-        <label class="label" for="fa-q">Pesquisar</label>
-        <input
-          id="fa-q"
-          name="q"
-          type="search"
-          class="input w-64"
-          placeholder="N.º, designação, série ou localização"
-          [(ngModel)]="q"
-        />
-      </div>
-      <div>
-        <label class="label" for="fa-status">Estado</label>
-        <select
-          id="fa-status"
-          name="status"
-          class="input w-44"
-          [(ngModel)]="status"
-          (ngModelChange)="go(0)"
-        >
-          <option value="">Todos</option>
-          @for (s of statuses; track s[0]) {
-            <option [value]="s[0]">{{ s[1] }}</option>
-          }
-        </select>
-      </div>
-      <div>
-        <label class="label" for="fa-class">Classe</label>
-        <select
-          id="fa-class"
-          name="class"
-          class="input w-48"
-          [(ngModel)]="classId"
-          (ngModelChange)="go(0)"
-        >
-          <option value="">Todas</option>
-          @for (c of classes(); track c.id) {
-            <option [value]="c.id">{{ c.code }} — {{ c.name }}</option>
-          }
-        </select>
-      </div>
-      <button type="submit" class="btn-secondary">Pesquisar</button>
-    </form>
-    <app-data-table
-      label="Activos fixos"
-      [columns]="columns"
-      [rows]="page.value()?.items ?? []"
-      [total]="page.value()?.total ?? 0"
-      [loading]="page.loading()"
-      [error]="page.error()"
-      [offset]="offset()"
-      [limit]="limit"
-      [exportable]="true"
-      [exporting]="exporting()"
-      emptyText="Sem activos fixos."
-      (offsetChange)="go($event)"
-      (retry)="page.load()"
-      (export)="export()"
-    >
-      <ng-template appCell="status" let-row>
-        <span class="badge" [class]="tone(row.status)">{{ statusText(row.status) }}</span>
-      </ng-template>
-    </app-data-table>
+      <app-filter-bar
+        id="fa"
+        label="activos fixos"
+        placeholder="N.º, designação, série ou localização"
+        [state]="list"
+        [filters]="filters()"
+      />
+      <app-data-table
+        label="Activos fixos"
+        tableId="acc-assets"
+        [columns]="columns"
+        [rows]="list.page.value()?.items ?? []"
+        [total]="list.page.value()?.total ?? 0"
+        [loading]="list.page.loading()"
+        [error]="list.page.error()"
+        [offset]="list.offset()"
+        [limit]="list.limit"
+        [exportable]="true"
+        [exporting]="exporting()"
+        [emptyText]="
+          list.q() || list.activeFilters() ? 'Sem activos com estes filtros.' : 'Sem activos fixos.'
+        "
+        (offsetChange)="list.goTo($event)"
+        (retry)="list.reload()"
+        (export)="export($event)"
+      >
+        <ng-template appCell="status" let-row>
+          <span class="badge" [class]="tone(row.status)">{{ statusText(row.status) }}</span>
+        </ng-template>
+      </app-data-table>
+    </app-entity-list-page>
   `,
 })
 export class Assets {
@@ -101,10 +69,6 @@ export class Assets {
   protected readonly statuses = Object.entries(ASSET_STATUS);
   protected readonly canManage = computed(() => this.deps.workspace.can('fixed_assets.manage'));
   protected readonly classes = signal<AssetClass[]>([]);
-  protected readonly q = signal('');
-  protected readonly status = signal('');
-  protected readonly classId = signal('');
-  protected readonly offset = signal(0);
   protected readonly exporting = signal(false);
   protected readonly statusText = (s: AssetStatus) => ASSET_STATUS[s] ?? s;
   protected readonly tone = (s: AssetStatus) =>
@@ -115,7 +79,7 @@ export class Assets {
         : 'bg-surface-2 text-fg';
   private readonly classNames = computed(() => new Map(this.classes().map((c) => [c.id, c.code])));
   protected readonly columns: Column<FixedAsset>[] = [
-    { key: 'number', label: 'N.º', link: (r) => ['/contabilidade/activos', r.id] },
+    { key: 'number', label: 'N.º', required: true, link: (r) => ['/contabilidade/activos', r.id] },
     { key: 'name', label: 'Designação' },
     {
       key: 'classId',
@@ -146,42 +110,40 @@ export class Assets {
     { key: 'location', label: 'Localização', hideOnMobile: true, value: (r) => r.location ?? '—' },
     { key: 'status', label: 'Estado' },
   ];
-  protected readonly page = new Loadable(() =>
-    this.deps.api.page<FixedAsset>('accounting/fixed-assets', this.query()),
-  );
+  protected readonly list = new ListState<FixedAsset>(this.deps.api, {
+    url: 'accounting/fixed-assets',
+    filterKeys: ['status', 'classId'],
+    limit: LIMIT,
+    extra: () => ({ legalEntityId: this.deps.workspace.legalEntityId() ?? undefined }),
+  });
+  protected readonly filters = computed<FilterDef[]>(() => [
+    {
+      key: 'status',
+      label: 'Estado',
+      options: this.statuses.map(([value, label]) => ({ value, label })),
+    },
+    {
+      key: 'classId',
+      label: 'Classe',
+      options: this.classes().map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` })),
+    },
+  ]);
 
   constructor() {
-    void this.page.load();
     this.deps.api.page<AssetClass>('accounting/fixed-asset-classes', { limit: 200 }).then(
       (p) => this.classes.set(p.items),
       () => undefined,
     );
   }
 
-  private query() {
-    return {
-      q: this.q().trim() || undefined,
-      status: this.status() || undefined,
-      classId: this.classId() || undefined,
-      legalEntityId: this.deps.workspace.legalEntityId() ?? undefined,
-      limit: LIMIT,
-      offset: this.offset(),
-    };
-  }
-
-  protected go(offset: number) {
-    this.offset.set(offset);
-    void this.page.load();
-  }
-
-  protected async export() {
+  protected async export(columns: Column<FixedAsset>[]) {
     this.exporting.set(true);
     try {
       const n = await exportList(
         this.deps.api,
         'accounting/fixed-assets',
-        withoutPaging(this.query()),
-        this.columns,
+        withoutPaging(this.list.query()),
+        columns,
         'activos-fixos.csv',
       );
       this.toasts.show(`Exportados ${n} activo(s).`);

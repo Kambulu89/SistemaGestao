@@ -85,7 +85,7 @@ Classes base: `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-danger`, `btn-li
 | SettingsPage                      | `SettingsPage` (índice de secções + secções)               | Configurações da empresa                                           |
 
 | ApprovalWorkflowPage | `ApprovalWorkflowPage` + `ApprovalTimeline` + `Stepper` | Pedido de aprovação |
-| ReportPage | `ReportPage` (parâmetros, Gerar, vazio, exportar, imprimir, metadados) | Balancete, Razão, Analítica |
+| ReportPage | `ReportPage` (parâmetros, Gerar, vazio, exportar (`exportLabel`), imprimir, metadados) | Balancete, Razão, Analítica, Demonstrações financeiras |
 | WizardPage | `WizardPage` (passos, Anterior/Seguinte, Concluir uma vez) | Encerramento do exercício |
 | CalendarPage | `CalendarPage` (mês, descanso, hoje, acontecimentos; `monthGrid`) | Calendários da empresa (feriados + dias úteis do servidor) |
 | KanbanPage | `KanbanPage` + `KanbanCard` (arrastar ou botões "Mover para…") | Tarefas de fecho (por fazer / feitas) |
@@ -106,6 +106,9 @@ Classes base: `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-danger`, `btn-li
 - **`Drafts`** (`core/drafts.ts`): rascunhos locais por utilizador e empresa (7 dias), guardados 1 s após a última
   alteração e só com alterações por guardar; o aviso "Recuperar/Descartar" aparece ao voltar ao formulário. Usado no
   formulário de lançamento (novo e por versão do rascunho) e na criação de registos organizacionais.
+- **`FormActionBar`** (EntityEditPage): barra fixa no fundo dos formulários de edição com "Alterações por guardar",
+  acções extra projectadas (ex.: Eliminar) e o botão de submissão do formulário (`formId`); usada em configurações da
+  empresa, perfis, registos da organização e tabelas da empresa.
 - **`EntityFormPage`**: barra de acções fixa no fundo (Cancelar/Guardar, "A guardar…", sem submissão dupla) e
   "Alterações por guardar".
 

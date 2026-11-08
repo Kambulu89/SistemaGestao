@@ -6,7 +6,7 @@ import { formatDate } from '../ui/dates';
 import { ErrorAlert } from '../ui/error-alert';
 import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { Action, Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import {
@@ -43,7 +43,7 @@ const ACCOUNT_FIELDS = [
   imports: [
     FormsModule,
     RouterLink,
-    PageHeader,
+    EntityListPage,
     DataTable,
     CellDef,
     StatusBadge,
@@ -53,199 +53,208 @@ const ACCOUNT_FIELDS = [
     FieldControl,
   ],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Provisões"
       subtitle="Constituições, reversões e utilizações; cada movimento gera um rascunho para aprovar."
-    />
-    <app-data-table
-      label="Provisões"
-      [columns]="columns"
-      [rows]="list.value() ?? []"
-      [total]="list.value()?.length ?? 0"
-      [loading]="list.loading()"
-      [error]="list.error()"
-      emptyText="Ainda não há provisões."
-      (retry)="list.load()"
+      permission="accounting.read"
+      feature="accounting"
     >
-      <ng-template appCell="code" let-row>
-        <button type="button" class="btn-link" (click)="select(row)">{{ row.code }}</button>
-      </ng-template>
-      <ng-template appCell="status" let-row><app-status-badge [status]="row.status" /></ng-template>
-    </app-data-table>
+      <app-data-table
+        tableId="acc-provisions"
+        label="Provisões"
+        [columns]="columns"
+        [rows]="list.value() ?? []"
+        [total]="list.value()?.length ?? 0"
+        [loading]="list.loading()"
+        [error]="list.error()"
+        emptyText="Ainda não há provisões."
+        (retry)="list.load()"
+      >
+        <ng-template appCell="code" let-row>
+          <button type="button" class="btn-link" (click)="select(row)">{{ row.code }}</button>
+        </ng-template>
+        <ng-template appCell="status" let-row
+          ><app-status-badge [status]="row.status"
+        /></ng-template>
+      </app-data-table>
 
-    @if (current(); as p) {
-      <section class="card mt-4" aria-labelledby="prv-detail">
-        <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="prv-detail" class="font-semibold">{{ p.code }} — {{ p.name }}</h2>
-          <p class="text-sm" data-testid="prv-balance">
-            Saldo <strong>{{ money(p.balance) }}</strong> · contabilizado
-            {{ money(p.postedBalance) }}
-          </p>
-        </div>
-        @if (p.movements?.length) {
-          <ul class="mb-3 divide-y divide-border text-sm">
-            @for (m of p.movements; track m.id) {
-              <li class="flex flex-wrap justify-between gap-2 py-1" [class.text-muted]="m.reversed">
-                <span>
-                  {{ date(m.date) }} · <strong>{{ typeText(m.type) }}</strong> ·
-                  {{ money(m.amount) }} —
-                  {{ m.reason }}
-                  @if (m.reversed) {
-                    (estornado)
+      @if (current(); as p) {
+        <section class="card mt-4" aria-labelledby="prv-detail">
+          <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="prv-detail" class="font-semibold">{{ p.code }} — {{ p.name }}</h2>
+            <p class="text-sm" data-testid="prv-balance">
+              Saldo <strong>{{ money(p.balance) }}</strong> · contabilizado
+              {{ money(p.postedBalance) }}
+            </p>
+          </div>
+          @if (p.movements?.length) {
+            <ul class="mb-3 divide-y divide-border text-sm">
+              @for (m of p.movements; track m.id) {
+                <li
+                  class="flex flex-wrap justify-between gap-2 py-1"
+                  [class.text-muted]="m.reversed"
+                >
+                  <span>
+                    {{ date(m.date) }} · <strong>{{ typeText(m.type) }}</strong> ·
+                    {{ money(m.amount) }} —
+                    {{ m.reason }}
+                    @if (m.reversed) {
+                      (estornado)
+                    }
+                  </span>
+                  <a class="btn-link" [routerLink]="['/contabilidade/lancamentos', m.entryId]">{{
+                    m.entryNumber ?? 'rascunho'
+                  }}</a>
+                </li>
+              }
+            </ul>
+          }
+          @if (canManage()) {
+            <form
+              class="flex flex-wrap items-end gap-2"
+              (ngSubmit)="move()"
+              aria-label="Movimento da provisão"
+            >
+              <div>
+                <label class="label" for="mv-type">Movimento</label>
+                <select id="mv-type" name="type" class="input w-52" [(ngModel)]="mv.type">
+                  @for (t of types; track t[0]) {
+                    <option [value]="t[0]">{{ t[1] }}</option>
                   }
-                </span>
-                <a class="btn-link" [routerLink]="['/contabilidade/lancamentos', m.entryId]">{{
-                  m.entryNumber ?? 'rascunho'
-                }}</a>
-              </li>
-            }
-          </ul>
-        }
-        @if (canManage()) {
-          <form
-            class="flex flex-wrap items-end gap-2"
-            (ngSubmit)="move()"
-            aria-label="Movimento da provisão"
-          >
-            <div>
-              <label class="label" for="mv-type">Movimento</label>
-              <select id="mv-type" name="type" class="input w-52" [(ngModel)]="mv.type">
-                @for (t of types; track t[0]) {
-                  <option [value]="t[0]">{{ t[1] }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="label" for="mv-date">Data</label>
+                <input
+                  id="mv-date"
+                  name="date"
+                  type="date"
+                  class="input w-44"
+                  [(ngModel)]="mv.date"
+                />
+              </div>
+              <div>
+                <label class="label" for="mv-amount">Montante</label>
+                <input
+                  id="mv-amount"
+                  name="amount"
+                  inputmode="decimal"
+                  class="input w-36"
+                  [(ngModel)]="mv.amount"
+                />
+              </div>
+              @if (mv.type === 'USE') {
+                <div>
+                  <label class="label" for="mv-counter">Conta de contrapartida</label>
+                  <select
+                    id="mv-counter"
+                    name="counter"
+                    class="input w-64"
+                    [(ngModel)]="mv.counterAccountId"
+                  >
+                    <option [ngValue]="null">—</option>
+                    @for (a of accounts(); track a.id) {
+                      <option [ngValue]="a.id">{{ a.label }}</option>
+                    }
+                  </select>
+                </div>
+              }
+              <div class="min-w-48 flex-1">
+                <label class="label" for="mv-reason">Motivo</label>
+                <input id="mv-reason" name="reason" class="input" [(ngModel)]="mv.reason" />
+              </div>
+              <button type="submit" class="btn-primary" [disabled]="moveAction.busy()">
+                Registar movimento
+              </button>
+            </form>
+            <app-error-alert [error]="moveAction.error()" [showDetails]="true" />
+          }
+        </section>
+      }
+
+      @if (canManage()) {
+        <form
+          class="mt-4 space-y-3"
+          (ngSubmit)="save()"
+          [attr.aria-label]="current() ? 'Alterar provisão' : 'Nova provisão'"
+        >
+          <app-error-alert [error]="action.error()" [showDetails]="true" />
+          <app-form-section [title]="current() ? 'Alterar ' + current()!.code : 'Nova provisão'">
+            <app-field
+              label="Entidade legal"
+              [required]="true"
+              [error]="action.field('legalEntityId')"
+            >
+              <select
+                appControl
+                class="input"
+                name="le"
+                [disabled]="!!current()"
+                [(ngModel)]="form.legalEntityId"
+                (ngModelChange)="loadRefs()"
+              >
+                <option [ngValue]="null">—</option>
+                @for (e of entities(); track e.id) {
+                  <option [ngValue]="e.id">{{ e.label }}</option>
                 }
               </select>
-            </div>
-            <div>
-              <label class="label" for="mv-date">Data</label>
+            </app-field>
+            <app-field label="Código" [required]="true" [error]="action.field('code')">
               <input
-                id="mv-date"
-                name="date"
-                type="date"
-                class="input w-44"
-                [(ngModel)]="mv.date"
+                appControl
+                class="input"
+                name="code"
+                [disabled]="!!current()"
+                [(ngModel)]="form.code"
               />
-            </div>
-            <div>
-              <label class="label" for="mv-amount">Montante</label>
-              <input
-                id="mv-amount"
-                name="amount"
-                inputmode="decimal"
-                class="input w-36"
-                [(ngModel)]="mv.amount"
-              />
-            </div>
-            @if (mv.type === 'USE') {
-              <div>
-                <label class="label" for="mv-counter">Conta de contrapartida</label>
-                <select
-                  id="mv-counter"
-                  name="counter"
-                  class="input w-64"
-                  [(ngModel)]="mv.counterAccountId"
-                >
+            </app-field>
+            <app-field label="Nome" [required]="true" [error]="action.field('name')">
+              <input appControl class="input" name="name" [(ngModel)]="form.name" />
+            </app-field>
+            <app-field label="Diário" [required]="true" [error]="action.field('journalId')">
+              <select appControl class="input" name="journal" [(ngModel)]="form.journalId">
+                <option [ngValue]="null">—</option>
+                @for (j of journals(); track j.id) {
+                  <option [ngValue]="j.id">{{ j.label }}</option>
+                }
+              </select>
+            </app-field>
+            @for (f of accountFields; track f[0]) {
+              <app-field [label]="f[1]" [required]="true" [error]="action.field(f[0])">
+                <select appControl class="input" [name]="f[0]" [(ngModel)]="form[f[0]]">
                   <option [ngValue]="null">—</option>
                   @for (a of accounts(); track a.id) {
                     <option [ngValue]="a.id">{{ a.label }}</option>
                   }
                 </select>
-              </div>
+              </app-field>
             }
-            <div class="min-w-48 flex-1">
-              <label class="label" for="mv-reason">Motivo</label>
-              <input id="mv-reason" name="reason" class="input" [(ngModel)]="mv.reason" />
-            </div>
-            <button type="submit" class="btn-primary" [disabled]="moveAction.busy()">
-              Registar movimento
-            </button>
-          </form>
-          <app-error-alert [error]="moveAction.error()" [showDetails]="true" />
-        }
-      </section>
-    }
-
-    @if (canManage()) {
-      <form
-        class="mt-4 space-y-3"
-        (ngSubmit)="save()"
-        [attr.aria-label]="current() ? 'Alterar provisão' : 'Nova provisão'"
-      >
-        <app-error-alert [error]="action.error()" [showDetails]="true" />
-        <app-form-section [title]="current() ? 'Alterar ' + current()!.code : 'Nova provisão'">
-          <app-field
-            label="Entidade legal"
-            [required]="true"
-            [error]="action.field('legalEntityId')"
-          >
-            <select
-              appControl
-              class="input"
-              name="le"
-              [disabled]="!!current()"
-              [(ngModel)]="form.legalEntityId"
-              (ngModelChange)="loadRefs()"
-            >
-              <option [ngValue]="null">—</option>
-              @for (e of entities(); track e.id) {
-                <option [ngValue]="e.id">{{ e.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Código" [required]="true" [error]="action.field('code')">
-            <input
-              appControl
-              class="input"
-              name="code"
-              [disabled]="!!current()"
-              [(ngModel)]="form.code"
-            />
-          </app-field>
-          <app-field label="Nome" [required]="true" [error]="action.field('name')">
-            <input appControl class="input" name="name" [(ngModel)]="form.name" />
-          </app-field>
-          <app-field label="Diário" [required]="true" [error]="action.field('journalId')">
-            <select appControl class="input" name="journal" [(ngModel)]="form.journalId">
-              <option [ngValue]="null">—</option>
-              @for (j of journals(); track j.id) {
-                <option [ngValue]="j.id">{{ j.label }}</option>
-              }
-            </select>
-          </app-field>
-          @for (f of accountFields; track f[0]) {
-            <app-field [label]="f[1]" [required]="true" [error]="action.field(f[0])">
-              <select appControl class="input" [name]="f[0]" [(ngModel)]="form[f[0]]">
+            <app-field label="Centro de custo" [error]="action.field('costCenterId')">
+              <select appControl class="input" name="cc" [(ngModel)]="form.costCenterId">
                 <option [ngValue]="null">—</option>
-                @for (a of accounts(); track a.id) {
-                  <option [ngValue]="a.id">{{ a.label }}</option>
+                @for (c of centers(); track c.id) {
+                  <option [ngValue]="c.id">{{ c.label }}</option>
                 }
               </select>
             </app-field>
-          }
-          <app-field label="Centro de custo" [error]="action.field('costCenterId')">
-            <select appControl class="input" name="cc" [(ngModel)]="form.costCenterId">
-              <option [ngValue]="null">—</option>
-              @for (c of centers(); track c.id) {
-                <option [ngValue]="c.id">{{ c.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Estado">
-            <select appControl class="input" name="status" [(ngModel)]="form.status">
-              <option value="ACTIVE">Activa</option>
-              <option value="INACTIVE">Inactiva</option>
-            </select>
-          </app-field>
-        </app-form-section>
-        <div class="flex gap-2">
-          <button type="submit" class="btn-primary" [disabled]="action.busy()">
-            {{ current() ? 'Guardar provisão' : 'Criar provisão' }}
-          </button>
-          @if (current()) {
-            <button type="button" class="btn-secondary" (click)="reset()">Nova provisão</button>
-          }
-        </div>
-      </form>
-    }
+            <app-field label="Estado">
+              <select appControl class="input" name="status" [(ngModel)]="form.status">
+                <option value="ACTIVE">Activa</option>
+                <option value="INACTIVE">Inactiva</option>
+              </select>
+            </app-field>
+          </app-form-section>
+          <div class="flex gap-2">
+            <button type="submit" class="btn-primary" [disabled]="action.busy()">
+              {{ current() ? 'Guardar provisão' : 'Criar provisão' }}
+            </button>
+            @if (current()) {
+              <button type="button" class="btn-secondary" (click)="reset()">Nova provisão</button>
+            }
+          </div>
+        </form>
+      }
+    </app-entity-list-page>
   `,
 })
 export class Provisions {
@@ -270,7 +279,7 @@ export class Provisions {
       (await this.deps.api.page<Provision>('accounting/provisions', { limit: 200 })).items,
   );
   protected readonly columns: Column<Provision>[] = [
-    { key: 'code', label: 'Código' },
+    { key: 'code', required: true, label: 'Código' },
     { key: 'name', label: 'Nome' },
     {
       key: 'legalEntityId',

@@ -9,6 +9,7 @@ import {
   untracked,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { FormActionBar } from '../ui/form-action-bar';
 import { FormsModule } from '@angular/forms';
 import { type Draft, Drafts } from '../core/drafts';
 import { EntityFormPage } from '../ui/templates';
@@ -48,6 +49,7 @@ interface Dependent {
 @Component({
   selector: 'app-organization-form',
   imports: [
+    FormActionBar,
     FormsModule,
     RouterLink,
     PageDetail,
@@ -93,18 +95,16 @@ interface Dependent {
           <ng-container actions>
             <a class="btn-secondary" [routerLink]="['/organizacao', k.segment]">Voltar à lista</a>
           </ng-container>
-          <form class="space-y-4" (ngSubmit)="save()" novalidate>
+          <form id="org-form" class="space-y-4" (ngSubmit)="save()" novalidate>
             <app-error-alert [error]="action.error()" [showDetails]="false" />
             <ng-container *ngTemplateOutlet="fieldsTpl" />
             @if (canManage()) {
-              <div class="flex items-center gap-3">
-                <button type="submit" class="btn-primary" [disabled]="action.busy()">
-                  {{ action.busy() ? 'A guardar…' : 'Guardar alterações' }}
-                </button>
-                @if (hasUnsavedChanges()) {
-                  <span class="text-sm text-muted" role="status">Alterações por guardar</span>
-                }
-              </div>
+              <app-form-action-bar
+                formId="org-form"
+                [dirty]="hasUnsavedChanges()"
+                [busy]="action.busy()"
+                [saveLabel]="'Guardar alterações'"
+              />
             }
           </form>
           <div aside>

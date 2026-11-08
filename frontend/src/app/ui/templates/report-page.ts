@@ -39,7 +39,7 @@ import { EmptyState } from '../states';
         <div class="no-print flex gap-2">
           @if (exportable()) {
             <button type="button" class="btn-secondary" (click)="exported.emit()">
-              <app-icon name="download" [size]="16" /> Exportar CSV
+              <app-icon name="download" [size]="16" /> {{ exportLabel() }}
             </button>
           }
           <button type="button" class="btn-secondary" (click)="print()">Imprimir / PDF</button>
@@ -63,6 +63,7 @@ export class ReportPage {
   readonly canRun = input(true);
   readonly hasResult = input(false);
   readonly exportable = input(true);
+  readonly exportLabel = input('Exportar CSV');
   /** Resumo legível dos parâmetros usados (vai também para a impressão). */
   readonly summary = input<string | null>(null);
   readonly generatedAt = input<string>(new Date().toISOString());

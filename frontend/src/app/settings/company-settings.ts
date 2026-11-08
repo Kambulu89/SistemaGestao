@@ -9,6 +9,7 @@ import { ErrorAlert } from '../ui/error-alert';
 import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { Action } from '../ui/load';
 import { SettingsPage, type SettingsSection } from '../ui/templates';
+import { FormActionBar } from '../ui/form-action-bar';
 import { ErrorState, Skeleton } from '../ui/states';
 import { ToastService } from '../ui/toasts';
 
@@ -65,6 +66,7 @@ interface Workflow {
     FormsModule,
     RouterLink,
     SettingsPage,
+    FormActionBar,
     ErrorAlert,
     ErrorState,
     Skeleton,
@@ -84,7 +86,7 @@ interface Workflow {
         subtitle="Regras gerais usadas por todos os módulos desta empresa."
         [sections]="sections"
       >
-        <form class="space-y-4" (ngSubmit)="save()" novalidate>
+        <form id="settings-form" class="space-y-4" (ngSubmit)="save()" novalidate>
           <app-error-alert [error]="action.error()" [showDetails]="false" />
           <app-form-section
             id="precisao"
@@ -236,16 +238,12 @@ interface Workflow {
             }
           </app-form-section>
           @if (canManage()) {
-            <div
-              class="no-print sticky bottom-0 z-20 flex items-center gap-3 border-t border-border bg-surface py-3"
-            >
-              <button type="submit" class="btn-primary" [disabled]="action.busy()">
-                {{ action.busy() ? 'A guardar…' : 'Guardar configurações' }}
-              </button>
-              @if (hasUnsavedChanges()) {
-                <span class="text-sm text-muted" role="status">Alterações por guardar</span>
-              }
-            </div>
+            <app-form-action-bar
+              formId="settings-form"
+              [dirty]="hasUnsavedChanges()"
+              [busy]="action.busy()"
+              saveLabel="Guardar configurações"
+            />
           }
         </form>
         <section id="historico" tabindex="-1" aria-label="Histórico de alterações">

@@ -4,7 +4,7 @@ import { ErrorAlert } from '../ui/error-alert';
 import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { Action, Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
 import { StatusBadge } from '../ui/status-badge';
 import { ToastService } from '../ui/toasts';
 import { inject } from '@angular/core';
@@ -16,7 +16,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
   selector: 'app-charts',
   imports: [
     FormsModule,
-    PageHeader,
+    EntityListPage,
     DataTable,
     CellDef,
     StatusBadge,
@@ -26,66 +26,72 @@ import { accountingDeps, legalEntityOptions } from './shared';
     FieldControl,
   ],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Planos de contas"
       subtitle="Um plano activo por entidade legal. A estrutura é definida pela empresa e deve ser validada com o normativo em vigor."
-    />
-    <app-data-table
-      label="Planos de contas"
-      [columns]="columns"
-      [rows]="charts.value() ?? []"
-      [total]="charts.value()?.length ?? 0"
-      [loading]="charts.loading()"
-      [error]="charts.error()"
-      emptyText="Ainda não há planos de contas."
-      (retry)="charts.load()"
+      permission="accounting.read"
+      feature="accounting"
     >
-      <ng-template appCell="status" let-row><app-status-badge [status]="row.status" /></ng-template>
-    </app-data-table>
-    @if (canManage()) {
-      <form class="mt-4 space-y-3" (ngSubmit)="create()" aria-label="Novo plano de contas">
-        <app-error-alert [error]="action.error()" [showDetails]="false" />
-        <app-form-section
-          title="Novo plano"
-          description="Depois de criado, acrescente as classes e contas."
-        >
-          <app-field
-            label="Entidade legal"
-            [required]="true"
-            [error]="action.field('legalEntityId')"
+      <app-data-table
+        tableId="acc-charts"
+        label="Planos de contas"
+        [columns]="columns"
+        [rows]="charts.value() ?? []"
+        [total]="charts.value()?.length ?? 0"
+        [loading]="charts.loading()"
+        [error]="charts.error()"
+        emptyText="Ainda não há planos de contas."
+        (retry)="charts.load()"
+      >
+        <ng-template appCell="status" let-row
+          ><app-status-badge [status]="row.status"
+        /></ng-template>
+      </app-data-table>
+      @if (canManage()) {
+        <form class="mt-4 space-y-3" (ngSubmit)="create()" aria-label="Novo plano de contas">
+          <app-error-alert [error]="action.error()" [showDetails]="false" />
+          <app-form-section
+            title="Novo plano"
+            description="Depois de criado, acrescente as classes e contas."
           >
-            <select appControl class="input" name="le" [(ngModel)]="form.legalEntityId">
-              <option [ngValue]="null">—</option>
-              @for (o of entities(); track o.id) {
-                <option [ngValue]="o.id">{{ o.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Código" [required]="true" [error]="action.field('code')">
-            <input appControl class="input" name="code" [(ngModel)]="form.code" />
-          </app-field>
-          <app-field label="Nome" [required]="true" [error]="action.field('name')">
-            <input appControl class="input" name="name" [(ngModel)]="form.name" />
-          </app-field>
-          <app-field
-            label="Jurisdição (país ISO)"
-            [required]="true"
-            [error]="action.field('jurisdiction')"
-          >
-            <input appControl class="input" name="jurisdiction" [(ngModel)]="form.jurisdiction" />
-          </app-field>
-          <app-field
-            label="Modelo de referência"
-            hint="Texto livre, p. ex. a norma em que o plano se baseia. Não é uma certificação."
-            [error]="action.field('baseModel')"
-            class="md:col-span-2"
-          >
-            <input appControl class="input" name="baseModel" [(ngModel)]="form.baseModel" />
-          </app-field>
-        </app-form-section>
-        <button type="submit" class="btn-primary" [disabled]="action.busy()">Criar plano</button>
-      </form>
-    }
+            <app-field
+              label="Entidade legal"
+              [required]="true"
+              [error]="action.field('legalEntityId')"
+            >
+              <select appControl class="input" name="le" [(ngModel)]="form.legalEntityId">
+                <option [ngValue]="null">—</option>
+                @for (o of entities(); track o.id) {
+                  <option [ngValue]="o.id">{{ o.label }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Código" [required]="true" [error]="action.field('code')">
+              <input appControl class="input" name="code" [(ngModel)]="form.code" />
+            </app-field>
+            <app-field label="Nome" [required]="true" [error]="action.field('name')">
+              <input appControl class="input" name="name" [(ngModel)]="form.name" />
+            </app-field>
+            <app-field
+              label="Jurisdição (país ISO)"
+              [required]="true"
+              [error]="action.field('jurisdiction')"
+            >
+              <input appControl class="input" name="jurisdiction" [(ngModel)]="form.jurisdiction" />
+            </app-field>
+            <app-field
+              label="Modelo de referência"
+              hint="Texto livre, p. ex. a norma em que o plano se baseia. Não é uma certificação."
+              [error]="action.field('baseModel')"
+              class="md:col-span-2"
+            >
+              <input appControl class="input" name="baseModel" [(ngModel)]="form.baseModel" />
+            </app-field>
+          </app-form-section>
+          <button type="submit" class="btn-primary" [disabled]="action.busy()">Criar plano</button>
+        </form>
+      }
+    </app-entity-list-page>
   `,
 })
 export class Charts {
@@ -106,7 +112,7 @@ export class Charts {
   );
   private readonly names = computed(() => new Map(this.entities().map((e) => [e.id, e.label])));
   protected readonly columns: Column<Chart>[] = [
-    { key: 'code', label: 'Código', link: (r) => ['/contabilidade/planos', r.id] },
+    { key: 'code', required: true, label: 'Código', link: (r) => ['/contabilidade/planos', r.id] },
     { key: 'name', label: 'Nome' },
     {
       key: 'legalEntityId',

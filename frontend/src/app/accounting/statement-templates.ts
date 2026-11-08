@@ -5,7 +5,7 @@ import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { ErrorAlert } from '../ui/error-alert';
 import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { Action, Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
 import { ToastService } from '../ui/toasts';
 import {
   type Chart,
@@ -48,7 +48,7 @@ const blankLine = (kind: StatementLineKind = 'ACCOUNTS'): LineDraft => ({
   selector: 'app-statement-templates',
   imports: [
     FormsModule,
-    PageHeader,
+    EntityListPage,
     DataTable,
     CellDef,
     ErrorAlert,
@@ -57,321 +57,333 @@ const blankLine = (kind: StatementLineKind = 'ACCOUNTS'): LineDraft => ({
     FieldControl,
   ],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Modelos de demonstrações"
       subtitle="Balanço e demonstração de resultados por plano de contas, com versões. Nenhum modelo vem pré-definido: confirme o PGC em vigor."
-    />
-    <app-data-table
-      label="Modelos de demonstrações"
-      [columns]="columns"
-      [rows]="templates.value() ?? []"
-      [total]="templates.value()?.length ?? 0"
-      [loading]="templates.loading()"
-      [error]="templates.error()"
-      emptyText="Ainda não há modelos."
-      (retry)="templates.load()"
+      permission="accounting.read"
+      feature="accounting"
     >
-      <ng-template appCell="code" let-row>
-        <button type="button" class="btn-link" (click)="edit(row)">{{ row.code }}</button>
-      </ng-template>
-      <ng-template appCell="status" let-row>
-        <span class="badge" [class]="tone(row.status)">{{ statusText(row.status) }}</span>
-      </ng-template>
-    </app-data-table>
-
-    @if (canManage() || current()) {
-      <form
-        class="mt-4 space-y-3"
-        (ngSubmit)="save()"
-        [attr.aria-label]="current() ? 'Modelo ' + current()!.code : 'Novo modelo'"
+      <app-data-table
+        tableId="acc-statement-templates"
+        label="Modelos de demonstrações"
+        [columns]="columns"
+        [rows]="templates.value() ?? []"
+        [total]="templates.value()?.length ?? 0"
+        [loading]="templates.loading()"
+        [error]="templates.error()"
+        emptyText="Ainda não há modelos."
+        (retry)="templates.load()"
       >
-        <app-error-alert [error]="action.error()" [showDetails]="true" />
-        <app-form-section
-          [title]="
-            current()
-              ? current()!.code +
-                ' v' +
-                current()!.version +
-                ' (' +
-                statusText(current()!.status) +
-                ')'
-              : 'Novo modelo'
-          "
+        <ng-template appCell="code" let-row>
+          <button type="button" class="btn-link" (click)="edit(row)">{{ row.code }}</button>
+        </ng-template>
+        <ng-template appCell="status" let-row>
+          <span class="badge" [class]="tone(row.status)">{{ statusText(row.status) }}</span>
+        </ng-template>
+      </app-data-table>
+
+      @if (canManage() || current()) {
+        <form
+          class="mt-4 space-y-3"
+          (ngSubmit)="save()"
+          [attr.aria-label]="current() ? 'Modelo ' + current()!.code : 'Novo modelo'"
         >
-          <app-field label="Plano de contas" [required]="true" [error]="action.field('chartId')">
-            <select
-              appControl
-              class="input"
-              name="chart"
-              [disabled]="!!current()"
-              [(ngModel)]="form.chartId"
-            >
-              <option [ngValue]="null">—</option>
-              @for (c of charts(); track c.id) {
-                <option [ngValue]="c.id">{{ c.code }} — {{ c.name }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Tipo" [required]="true" [error]="action.field('kind')">
-            <select
-              appControl
-              class="input"
-              name="kind"
-              [disabled]="!!current()"
-              [(ngModel)]="form.kind"
-            >
-              @for (k of kinds; track k[0]) {
-                <option [value]="k[0]">{{ k[1] }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field label="Código" [required]="true" [error]="action.field('code')">
-            <input
-              appControl
-              class="input"
-              name="code"
-              [disabled]="!!current()"
-              [(ngModel)]="form.code"
-            />
-          </app-field>
-          <app-field label="Nome" [required]="true" [error]="action.field('name')">
-            <input
-              appControl
-              class="input"
-              name="name"
-              [disabled]="readOnly()"
-              [(ngModel)]="form.name"
-            />
-          </app-field>
-          <app-field
-            [label]="
-              form.kind === 'BALANCE_SHEET'
-                ? 'Controlo: linha do activo'
-                : 'Controlo: linha do resultado'
+          <app-error-alert [error]="action.error()" [showDetails]="true" />
+          <app-form-section
+            [title]="
+              current()
+                ? current()!.code +
+                  ' v' +
+                  current()!.version +
+                  ' (' +
+                  statusText(current()!.status) +
+                  ')'
+                : 'Novo modelo'
             "
-            [hint]="
-              form.kind === 'BALANCE_SHEET'
-                ? 'Tem de igualar a linha seguinte.'
-                : 'Tem de igualar o resultado do razão.'
-            "
-            [error]="action.field('checkA')"
           >
-            <input
-              appControl
-              class="input"
-              name="checkA"
-              [disabled]="readOnly()"
-              [(ngModel)]="form.checkA"
-            />
-          </app-field>
-          @if (form.kind === 'BALANCE_SHEET') {
+            <app-field label="Plano de contas" [required]="true" [error]="action.field('chartId')">
+              <select
+                appControl
+                class="input"
+                name="chart"
+                [disabled]="!!current()"
+                [(ngModel)]="form.chartId"
+              >
+                <option [ngValue]="null">—</option>
+                @for (c of charts(); track c.id) {
+                  <option [ngValue]="c.id">{{ c.code }} — {{ c.name }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Tipo" [required]="true" [error]="action.field('kind')">
+              <select
+                appControl
+                class="input"
+                name="kind"
+                [disabled]="!!current()"
+                [(ngModel)]="form.kind"
+              >
+                @for (k of kinds; track k[0]) {
+                  <option [value]="k[0]">{{ k[1] }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field label="Código" [required]="true" [error]="action.field('code')">
+              <input
+                appControl
+                class="input"
+                name="code"
+                [disabled]="!!current()"
+                [(ngModel)]="form.code"
+              />
+            </app-field>
+            <app-field label="Nome" [required]="true" [error]="action.field('name')">
+              <input
+                appControl
+                class="input"
+                name="name"
+                [disabled]="readOnly()"
+                [(ngModel)]="form.name"
+              />
+            </app-field>
             <app-field
-              label="Controlo: linha do capital próprio e passivo"
-              [error]="action.field('checkB')"
+              [label]="
+                form.kind === 'BALANCE_SHEET'
+                  ? 'Controlo: linha do activo'
+                  : 'Controlo: linha do resultado'
+              "
+              [hint]="
+                form.kind === 'BALANCE_SHEET'
+                  ? 'Tem de igualar a linha seguinte.'
+                  : 'Tem de igualar o resultado do razão.'
+              "
+              [error]="action.field('checkA')"
             >
               <input
                 appControl
                 class="input"
-                name="checkB"
+                name="checkA"
                 [disabled]="readOnly()"
-                [(ngModel)]="form.checkB"
+                [(ngModel)]="form.checkA"
               />
             </app-field>
-          }
-        </app-form-section>
-
-        <fieldset class="card space-y-2 overflow-x-auto">
-          <legend class="font-semibold">Linhas</legend>
-          <p class="text-sm text-muted">
-            Contas: prefixos de código separados por vírgulas; <code>:D</code> só saldo devedor,
-            <code>:C</code> só credor (p. ex. <code>111, 113:D</code>). Cada conta vai para o
-            prefixo mais longo. Sinal −1 apresenta saldos credores como positivos. Totais: códigos
-            somados ou subtraídos (<code>A1+A2-A3</code>).
-          </p>
-          @if (action.field('lines')) {
-            <p class="field-error" role="alert">{{ action.field('lines') }}</p>
-          }
-          <table class="w-full min-w-[60rem] text-sm">
-            <thead>
-              <tr class="text-left">
-                <th scope="col" class="p-1">Tipo</th>
-                <th scope="col" class="p-1">Código</th>
-                <th scope="col" class="p-1">Texto</th>
-                <th scope="col" class="p-1">Sinal</th>
-                <th scope="col" class="p-1">Prefixos / fórmula</th>
-                <th scope="col" class="p-1">Nota</th>
-                <th scope="col" class="p-1"><span class="sr-only">Acções</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (l of lines; track $index; let i = $index) {
-                <tr>
-                  <td class="p-1">
-                    <select
-                      class="input"
-                      [attr.aria-label]="'Tipo da linha ' + (i + 1)"
-                      [name]="'k' + i"
-                      [disabled]="readOnly()"
-                      [(ngModel)]="l.kind"
-                    >
-                      @for (k of lineKinds; track k[0]) {
-                        <option [value]="k[0]">{{ k[1] }}</option>
-                      }
-                    </select>
-                  </td>
-                  <td class="p-1">
-                    <input
-                      class="input w-20"
-                      [attr.aria-label]="'Código da linha ' + (i + 1)"
-                      [name]="'c' + i"
-                      [disabled]="readOnly() || l.kind === 'HEADER'"
-                      [(ngModel)]="l.code"
-                    />
-                  </td>
-                  <td class="p-1">
-                    <input
-                      class="input"
-                      [attr.aria-label]="'Texto da linha ' + (i + 1)"
-                      [name]="'l' + i"
-                      [disabled]="readOnly()"
-                      [(ngModel)]="l.label"
-                    />
-                  </td>
-                  <td class="p-1">
-                    <select
-                      class="input w-20"
-                      [attr.aria-label]="'Sinal da linha ' + (i + 1)"
-                      [name]="'s' + i"
-                      [disabled]="readOnly() || l.kind === 'HEADER' || l.kind === 'TOTAL'"
-                      [(ngModel)]="l.sign"
-                    >
-                      <option [ngValue]="1">+1</option>
-                      <option [ngValue]="-1">−1</option>
-                    </select>
-                  </td>
-                  <td class="p-1">
-                    @if (l.kind === 'ACCOUNTS') {
-                      <input
-                        class="input"
-                        [attr.aria-label]="'Prefixos da linha ' + (i + 1)"
-                        [name]="'m' + i"
-                        [disabled]="readOnly()"
-                        [(ngModel)]="l.mappings"
-                      />
-                    } @else if (l.kind === 'TOTAL') {
-                      <input
-                        class="input"
-                        [attr.aria-label]="'Fórmula da linha ' + (i + 1)"
-                        [name]="'f' + i"
-                        [disabled]="readOnly()"
-                        [(ngModel)]="l.formula"
-                      />
-                    }
-                  </td>
-                  <td class="p-1">
-                    <input
-                      class="input w-16"
-                      [attr.aria-label]="'Nota da linha ' + (i + 1)"
-                      [name]="'n' + i"
-                      [disabled]="readOnly()"
-                      [(ngModel)]="l.noteRef"
-                    />
-                  </td>
-                  <td class="p-1 whitespace-nowrap">
-                    @if (!readOnly()) {
-                      <button
-                        type="button"
-                        class="btn-ghost px-2"
-                        [attr.aria-label]="'Subir linha ' + (i + 1)"
-                        [disabled]="i === 0"
-                        (click)="move(i, -1)"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-ghost px-2"
-                        [attr.aria-label]="'Descer linha ' + (i + 1)"
-                        [disabled]="i === lines.length - 1"
-                        (click)="move(i, 1)"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-ghost px-2"
-                        [attr.aria-label]="'Remover linha ' + (i + 1)"
-                        (click)="lines.splice(i, 1)"
-                      >
-                        ✕
-                      </button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-          @if (!readOnly()) {
-            <div class="flex gap-2">
-              <button type="button" class="btn-secondary" (click)="lines.push(blankLine('HEADER'))">
-                Acrescentar título
-              </button>
-              <button
-                type="button"
-                class="btn-secondary"
-                (click)="lines.push(blankLine('ACCOUNTS'))"
+            @if (form.kind === 'BALANCE_SHEET') {
+              <app-field
+                label="Controlo: linha do capital próprio e passivo"
+                [error]="action.field('checkB')"
               >
-                Acrescentar linha de contas
-              </button>
-              <button type="button" class="btn-secondary" (click)="lines.push(blankLine('TOTAL'))">
-                Acrescentar total
-              </button>
+                <input
+                  appControl
+                  class="input"
+                  name="checkB"
+                  [disabled]="readOnly()"
+                  [(ngModel)]="form.checkB"
+                />
+              </app-field>
+            }
+          </app-form-section>
+
+          <fieldset class="card space-y-2 overflow-x-auto">
+            <legend class="font-semibold">Linhas</legend>
+            <p class="text-sm text-muted">
+              Contas: prefixos de código separados por vírgulas; <code>:D</code> só saldo devedor,
+              <code>:C</code> só credor (p. ex. <code>111, 113:D</code>). Cada conta vai para o
+              prefixo mais longo. Sinal −1 apresenta saldos credores como positivos. Totais: códigos
+              somados ou subtraídos (<code>A1+A2-A3</code>).
+            </p>
+            @if (action.field('lines')) {
+              <p class="field-error" role="alert">{{ action.field('lines') }}</p>
+            }
+            <table class="w-full min-w-[60rem] text-sm">
+              <thead>
+                <tr class="text-left">
+                  <th scope="col" class="p-1">Tipo</th>
+                  <th scope="col" class="p-1">Código</th>
+                  <th scope="col" class="p-1">Texto</th>
+                  <th scope="col" class="p-1">Sinal</th>
+                  <th scope="col" class="p-1">Prefixos / fórmula</th>
+                  <th scope="col" class="p-1">Nota</th>
+                  <th scope="col" class="p-1"><span class="sr-only">Acções</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of lines; track $index; let i = $index) {
+                  <tr>
+                    <td class="p-1">
+                      <select
+                        class="input"
+                        [attr.aria-label]="'Tipo da linha ' + (i + 1)"
+                        [name]="'k' + i"
+                        [disabled]="readOnly()"
+                        [(ngModel)]="l.kind"
+                      >
+                        @for (k of lineKinds; track k[0]) {
+                          <option [value]="k[0]">{{ k[1] }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td class="p-1">
+                      <input
+                        class="input w-20"
+                        [attr.aria-label]="'Código da linha ' + (i + 1)"
+                        [name]="'c' + i"
+                        [disabled]="readOnly() || l.kind === 'HEADER'"
+                        [(ngModel)]="l.code"
+                      />
+                    </td>
+                    <td class="p-1">
+                      <input
+                        class="input"
+                        [attr.aria-label]="'Texto da linha ' + (i + 1)"
+                        [name]="'l' + i"
+                        [disabled]="readOnly()"
+                        [(ngModel)]="l.label"
+                      />
+                    </td>
+                    <td class="p-1">
+                      <select
+                        class="input w-20"
+                        [attr.aria-label]="'Sinal da linha ' + (i + 1)"
+                        [name]="'s' + i"
+                        [disabled]="readOnly() || l.kind === 'HEADER' || l.kind === 'TOTAL'"
+                        [(ngModel)]="l.sign"
+                      >
+                        <option [ngValue]="1">+1</option>
+                        <option [ngValue]="-1">−1</option>
+                      </select>
+                    </td>
+                    <td class="p-1">
+                      @if (l.kind === 'ACCOUNTS') {
+                        <input
+                          class="input"
+                          [attr.aria-label]="'Prefixos da linha ' + (i + 1)"
+                          [name]="'m' + i"
+                          [disabled]="readOnly()"
+                          [(ngModel)]="l.mappings"
+                        />
+                      } @else if (l.kind === 'TOTAL') {
+                        <input
+                          class="input"
+                          [attr.aria-label]="'Fórmula da linha ' + (i + 1)"
+                          [name]="'f' + i"
+                          [disabled]="readOnly()"
+                          [(ngModel)]="l.formula"
+                        />
+                      }
+                    </td>
+                    <td class="p-1">
+                      <input
+                        class="input w-16"
+                        [attr.aria-label]="'Nota da linha ' + (i + 1)"
+                        [name]="'n' + i"
+                        [disabled]="readOnly()"
+                        [(ngModel)]="l.noteRef"
+                      />
+                    </td>
+                    <td class="p-1 whitespace-nowrap">
+                      @if (!readOnly()) {
+                        <button
+                          type="button"
+                          class="btn-ghost px-2"
+                          [attr.aria-label]="'Subir linha ' + (i + 1)"
+                          [disabled]="i === 0"
+                          (click)="move(i, -1)"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-ghost px-2"
+                          [attr.aria-label]="'Descer linha ' + (i + 1)"
+                          [disabled]="i === lines.length - 1"
+                          (click)="move(i, 1)"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-ghost px-2"
+                          [attr.aria-label]="'Remover linha ' + (i + 1)"
+                          (click)="lines.splice(i, 1)"
+                        >
+                          ✕
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (!readOnly()) {
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="lines.push(blankLine('HEADER'))"
+                >
+                  Acrescentar título
+                </button>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="lines.push(blankLine('ACCOUNTS'))"
+                >
+                  Acrescentar linha de contas
+                </button>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="lines.push(blankLine('TOTAL'))"
+                >
+                  Acrescentar total
+                </button>
+              </div>
+            }
+          </fieldset>
+
+          @if (canManage()) {
+            <div class="flex flex-wrap gap-2">
+              @if (!readOnly()) {
+                <button type="submit" class="btn-primary" [disabled]="action.busy()">
+                  {{ current() ? 'Guardar rascunho' : 'Criar modelo' }}
+                </button>
+              }
+              @if (current()?.status === 'DRAFT') {
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  [disabled]="action.busy()"
+                  (click)="publish()"
+                >
+                  Publicar
+                </button>
+                <button
+                  type="button"
+                  class="btn-danger"
+                  [disabled]="action.busy()"
+                  (click)="remove()"
+                >
+                  Apagar rascunho
+                </button>
+              }
+              @if (current() && current()!.status !== 'DRAFT') {
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  [disabled]="action.busy()"
+                  (click)="newVersion()"
+                >
+                  Nova versão
+                </button>
+              }
+              @if (current()) {
+                <button type="button" class="btn-secondary" (click)="reset()">Novo modelo</button>
+              }
             </div>
           }
-        </fieldset>
-
-        @if (canManage()) {
-          <div class="flex flex-wrap gap-2">
-            @if (!readOnly()) {
-              <button type="submit" class="btn-primary" [disabled]="action.busy()">
-                {{ current() ? 'Guardar rascunho' : 'Criar modelo' }}
-              </button>
-            }
-            @if (current()?.status === 'DRAFT') {
-              <button
-                type="button"
-                class="btn-secondary"
-                [disabled]="action.busy()"
-                (click)="publish()"
-              >
-                Publicar
-              </button>
-              <button
-                type="button"
-                class="btn-danger"
-                [disabled]="action.busy()"
-                (click)="remove()"
-              >
-                Apagar rascunho
-              </button>
-            }
-            @if (current() && current()!.status !== 'DRAFT') {
-              <button
-                type="button"
-                class="btn-secondary"
-                [disabled]="action.busy()"
-                (click)="newVersion()"
-              >
-                Nova versão
-              </button>
-            }
-            @if (current()) {
-              <button type="button" class="btn-secondary" (click)="reset()">Novo modelo</button>
-            }
-          </div>
-        }
-      </form>
-    }
+        </form>
+      }
+    </app-entity-list-page>
   `,
 })
 export class StatementTemplates {
@@ -395,7 +407,7 @@ export class StatementTemplates {
     this.deps.api.get<StatementTemplate[]>('accounting/statement-templates'),
   );
   protected readonly columns: Column<StatementTemplate>[] = [
-    { key: 'code', label: 'Código' },
+    { key: 'code', required: true, label: 'Código' },
     { key: 'version', label: 'Versão', value: (r) => `v${r.version}` },
     { key: 'name', label: 'Nome' },
     { key: 'kind', label: 'Tipo', value: (r) => STATEMENT_KIND_LABELS[r.kind] },

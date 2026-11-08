@@ -1,3 +1,4 @@
+import { FormActionBar } from '../ui/form-action-bar';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -34,6 +35,7 @@ interface Holiday {
 @Component({
   selector: 'app-reference-form',
   imports: [
+    FormActionBar,
     FormsModule,
     RouterLink,
     PageDetail,
@@ -98,7 +100,7 @@ interface Holiday {
             </section>
           }
 
-          <form class="space-y-4" (ngSubmit)="save()" novalidate>
+          <form id="ref-form" class="space-y-4" (ngSubmit)="save()" novalidate>
             <app-error-alert [error]="action.error()" [showDetails]="false" />
             <app-form-section [title]="k.title" description="Campos marcados são obrigatórios.">
               @for (f of k.fields; track f.key) {
@@ -207,14 +209,12 @@ interface Holiday {
               }
             </app-form-section>
             @if (canManage() && editable()) {
-              <div class="flex items-center gap-3">
-                <button type="submit" class="btn-primary" [disabled]="action.busy()">
-                  {{ action.busy() ? 'A guardar…' : isNew() ? 'Criar' : 'Guardar alterações' }}
-                </button>
-                @if (hasUnsavedChanges()) {
-                  <span class="text-sm text-muted" role="status">Alterações por guardar</span>
-                }
-              </div>
+              <app-form-action-bar
+                formId="ref-form"
+                [dirty]="hasUnsavedChanges()"
+                [busy]="action.busy()"
+                [saveLabel]="isNew() ? 'Criar' : 'Guardar alterações'"
+              />
             }
           </form>
 

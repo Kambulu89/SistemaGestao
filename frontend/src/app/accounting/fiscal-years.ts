@@ -5,7 +5,7 @@ import { FieldControl, FormField, FormSection } from '../ui/form-field';
 import { CellDef, type Column, DataTable } from '../ui/data-table';
 import { formatDate } from '../ui/dates';
 import { Action, Loadable } from '../ui/load';
-import { PageHeader } from '../ui/page-header';
+import { EntityListPage } from '../ui/templates';
 import { ToastService } from '../ui/toasts';
 import type { FiscalYear } from './model';
 import { accountingDeps, legalEntityOptions } from './shared';
@@ -15,7 +15,7 @@ import { accountingDeps, legalEntityOptions } from './shared';
   selector: 'app-fiscal-years',
   imports: [
     FormsModule,
-    PageHeader,
+    EntityListPage,
     DataTable,
     CellDef,
     ErrorAlert,
@@ -24,69 +24,79 @@ import { accountingDeps, legalEntityOptions } from './shared';
     FieldControl,
   ],
   template: `
-    <app-page-header
+    <app-entity-list-page
       title="Exercícios e períodos"
       subtitle="Os lançamentos só entram em períodos abertos."
-    />
-    <app-data-table
-      label="Exercícios"
-      [columns]="columns"
-      [rows]="years.value() ?? []"
-      [total]="years.value()?.length ?? 0"
-      [loading]="years.loading()"
-      [error]="years.error()"
-      emptyText="Ainda não há exercícios."
-      (retry)="years.load()"
+      permission="accounting.read"
+      feature="accounting"
     >
-      <ng-template appCell="status" let-row
-        ><span
-          class="badge"
-          [class]="
-            row.status === 'OPEN' ? 'bg-success-soft text-success-text' : 'bg-surface-2 text-fg'
-          "
-          >{{ row.status === 'OPEN' ? 'Aberto' : 'Fechado' }}</span
-        ></ng-template
+      <app-data-table
+        tableId="acc-fiscal-years"
+        label="Exercícios"
+        [columns]="columns"
+        [rows]="years.value() ?? []"
+        [total]="years.value()?.length ?? 0"
+        [loading]="years.loading()"
+        [error]="years.error()"
+        emptyText="Ainda não há exercícios."
+        (retry)="years.load()"
       >
-    </app-data-table>
-    @if (canManage()) {
-      <form class="mt-4 space-y-3" (ngSubmit)="create()" aria-label="Novo exercício">
-        <app-error-alert [error]="action.error()" [showDetails]="false" />
-        <app-form-section
-          title="Novo exercício"
-          description="De 1 a 24 meses; não se sobrepõe a outro da mesma entidade legal."
+        <ng-template appCell="status" let-row
+          ><span
+            class="badge"
+            [class]="
+              row.status === 'OPEN' ? 'bg-success-soft text-success-text' : 'bg-surface-2 text-fg'
+            "
+            >{{ row.status === 'OPEN' ? 'Aberto' : 'Fechado' }}</span
+          ></ng-template
         >
-          <app-field
-            label="Entidade legal"
-            [required]="true"
-            [error]="action.field('legalEntityId')"
+      </app-data-table>
+      @if (canManage()) {
+        <form class="mt-4 space-y-3" (ngSubmit)="create()" aria-label="Novo exercício">
+          <app-error-alert [error]="action.error()" [showDetails]="false" />
+          <app-form-section
+            title="Novo exercício"
+            description="De 1 a 24 meses; não se sobrepõe a outro da mesma entidade legal."
           >
-            <select appControl class="input" name="le" [(ngModel)]="form.legalEntityId">
-              <option [ngValue]="null">—</option>
-              @for (o of entities(); track o.id) {
-                <option [ngValue]="o.id">{{ o.label }}</option>
-              }
-            </select>
-          </app-field>
-          <app-field
-            label="Código"
-            [required]="true"
-            hint="Ex.: 2026"
-            [error]="action.field('code')"
-          >
-            <input appControl class="input" name="code" [(ngModel)]="form.code" />
-          </app-field>
-          <app-field label="Início" [required]="true" [error]="action.field('startDate')">
-            <input appControl type="date" class="input" name="start" [(ngModel)]="form.startDate" />
-          </app-field>
-          <app-field label="Fim" [required]="true" [error]="action.field('endDate')">
-            <input appControl type="date" class="input" name="end" [(ngModel)]="form.endDate" />
-          </app-field>
-        </app-form-section>
-        <button type="submit" class="btn-primary" [disabled]="action.busy()">
-          Criar exercício
-        </button>
-      </form>
-    }
+            <app-field
+              label="Entidade legal"
+              [required]="true"
+              [error]="action.field('legalEntityId')"
+            >
+              <select appControl class="input" name="le" [(ngModel)]="form.legalEntityId">
+                <option [ngValue]="null">—</option>
+                @for (o of entities(); track o.id) {
+                  <option [ngValue]="o.id">{{ o.label }}</option>
+                }
+              </select>
+            </app-field>
+            <app-field
+              label="Código"
+              [required]="true"
+              hint="Ex.: 2026"
+              [error]="action.field('code')"
+            >
+              <input appControl class="input" name="code" [(ngModel)]="form.code" />
+            </app-field>
+            <app-field label="Início" [required]="true" [error]="action.field('startDate')">
+              <input
+                appControl
+                type="date"
+                class="input"
+                name="start"
+                [(ngModel)]="form.startDate"
+              />
+            </app-field>
+            <app-field label="Fim" [required]="true" [error]="action.field('endDate')">
+              <input appControl type="date" class="input" name="end" [(ngModel)]="form.endDate" />
+            </app-field>
+          </app-form-section>
+          <button type="submit" class="btn-primary" [disabled]="action.busy()">
+            Criar exercício
+          </button>
+        </form>
+      }
+    </app-entity-list-page>
   `,
 })
 export class FiscalYears {
@@ -102,7 +112,12 @@ export class FiscalYears {
       (await this.deps.api.page<FiscalYear>('accounting/fiscal-years', { limit: 200 })).items,
   );
   protected readonly columns: Column<FiscalYear>[] = [
-    { key: 'code', label: 'Exercício', link: (r) => ['/contabilidade/exercicios', r.id] },
+    {
+      key: 'code',
+      required: true,
+      label: 'Exercício',
+      link: (r) => ['/contabilidade/exercicios', r.id],
+    },
     {
       key: 'legalEntityId',
       label: 'Entidade legal',
