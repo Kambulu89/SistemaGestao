@@ -64,6 +64,7 @@ describe('navegação por domínios', () => {
     expect(NAVIGATION.map((g) => g.label)).toEqual([
       'Início',
       'Gestão Financeira',
+      'Pessoas e Talento',
       'Administração e Plataforma',
       'Integrações e Compliance',
     ]);

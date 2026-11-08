@@ -22,6 +22,7 @@ técnico partilhado e não depende de módulos.
 | `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
 | `dashboard`                                                   | Painel e pesquisa global                                                                  |
 | `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                     |
+| `hr`                                                          | Colaboradores (ficha 360), âmbitos de RH e dados pessoais por campo                       |
 
 ## Multi-tenancy
 
@@ -323,3 +324,20 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
   isolamento.
 - Listas com ordenação no servidor: só campos declarados (organização: os da especificação e as datas; membros:
   `fullName`, `email`, `status`, `joinedAt`); outro campo dá 422. Os nomes de colunas nunca vêm do pedido.
+
+## Recursos humanos (módulo `hr`, Prompt 07)
+
+Bloco 7.1 feito (ver `docs/reports/prompt-07.md` e D-024).
+
+- **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
+  cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
+  pessoais em colunas próprias: nascimento, nacionalidade, documento e validade, NIF, INSS, contactos e morada pessoais,
+  emergência, formação e banco (IBAN validado e normalizado). NIF, INSS e membership únicos por empresa (índices
+  parciais); nascimento antes da admissão; não pode ser o próprio superior; ciclos recusados (CTE recursiva).
+- **Âmbito**: `hr.read`, `hr.manage`, `hr.sensitive` com âmbito empresa, entidade legal, filial, departamento (com
+  subárvore) ou o próprio; verificado em `EmployeeService` (`scopeClause`/`covers`). Fora do âmbito → 404; gerir sem
+  âmbito → 403 `OUT_OF_SCOPE`; dados pessoais sem permissão → 403 `SENSITIVE_FORBIDDEN`.
+- **Concorrência**: `expectedVersion` obrigatório em alterações (409 `VERSION_CONFLICT`).
+- **Auditoria**: `hr.employee.created|updated|status_changed`, com os campos pessoais como `[RESERVADO]`.
+- **Anexos**: tipo `employee` (funcionalidade `hr`), só com acesso aos dados pessoais do colaborador.
+- Funcionalidade `hr` (plano); sem ela as rotas dão 403 `NOT_ENTITLED`.

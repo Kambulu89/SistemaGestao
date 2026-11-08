@@ -1,0 +1,7 @@
+/** API pública dos recursos humanos (Prompt 07). */
+export {
+  EmployeeService,
+  EMPLOYEE_SORT_FIELDS,
+  employeeAccess,
+} from '#modules/hr/application/employee_service'
+export { EMPLOYEE_STATUSES, SENSITIVE_KEYS } from '#modules/hr/domain/employee'

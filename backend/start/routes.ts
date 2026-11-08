@@ -30,6 +30,7 @@ const FixedAssetsController = () => import('#modules/accounting/http/fixed_asset
 const AdjustmentsController = () => import('#modules/accounting/http/adjustments_controller')
 const StatementsController = () => import('#modules/accounting/http/statements_controller')
 const ClosingController = () => import('#modules/accounting/http/closing_controller')
+const EmployeesController = () => import('#modules/hr/http/employees_controller')
 
 router
   .group(() => {
@@ -542,6 +543,19 @@ router
               })
               .prefix('approvals')
               .use(middleware.entitled({ feature: 'approvals' }))
+
+            // Recursos humanos (Prompt 07): o âmbito RBAC (empresa, entidade, filial, departamento, próprio) e os dados
+            // pessoais são verificados no serviço com hr.read / hr.manage / hr.sensitive.
+            router
+              .group(() => {
+                router.get('employees', [EmployeesController, 'index'])
+                router.post('employees', [EmployeesController, 'store'])
+                router.get('employees/:id', [EmployeesController, 'show'])
+                router.patch('employees/:id', [EmployeesController, 'update'])
+                router.post('employees/:id/status', [EmployeesController, 'setStatus'])
+              })
+              .prefix('hr')
+              .use(middleware.entitled({ feature: 'hr' }))
 
             // Anexos: o acesso (e a funcionalidade) herda do registo a que pertencem.
             router.get('attachments', [AttachmentsController, 'index'])

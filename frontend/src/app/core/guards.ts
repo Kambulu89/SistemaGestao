@@ -50,8 +50,11 @@ export const accessGuard: CanActivateFn = (route) => {
   const workspace = inject(Workspace);
   const permission = route.data['permission'] as string | undefined;
   const feature = route.data['feature'] as string | undefined;
+  // `anyScope`: basta a permissão nalgum âmbito (a API filtra os registos pelo âmbito do membro).
+  const anyScope = route.data['anyScope'] === true;
   const allowed =
-    (!permission || workspace.can(permission)) && (!feature || workspace.has(feature));
+    (!permission || (anyScope ? workspace.canAny(permission) : workspace.can(permission))) &&
+    (!feature || workspace.has(feature));
   return allowed || inject(Router).createUrlTree(['/sem-acesso']);
 };
 

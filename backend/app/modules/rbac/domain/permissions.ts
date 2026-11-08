@@ -168,6 +168,23 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     module: 'accounting',
     description: 'Contabilizar aquisições, depreciações e abates de activos fixos (e anulá-los).',
   },
+  {
+    code: 'hr.read',
+    module: 'hr',
+    description: 'Ver colaboradores (dados profissionais) no âmbito atribuído.',
+  },
+  {
+    code: 'hr.manage',
+    module: 'hr',
+    description:
+      'Criar e alterar fichas de colaboradores, suspender e reactivar, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.sensitive',
+    module: 'hr',
+    description:
+      'Ver e alterar dados pessoais (documentos, NIF, segurança social, morada, banco) e anexos dos colaboradores no âmbito atribuído.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

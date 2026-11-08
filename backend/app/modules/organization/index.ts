@@ -6,6 +6,7 @@ export {
   organizationCounts,
   legalEntityFacts,
   costCenterFacts,
+  orgReferenceFacts,
   costCentersByCode,
   searchOrganization,
   SPECS as ORGANIZATION_SPECS,

@@ -40,11 +40,18 @@ export class EntityListPage {
   readonly subtitle = input<string | null>(null);
   readonly permission = input<string | null>(null);
   readonly feature = input<string | null>(null);
+  /** A permissão vale em qualquer âmbito (a API filtra pelo âmbito do membro). */
+  readonly anyScope = input(false);
   private readonly workspace = inject(Workspace);
   protected readonly featureMissing = computed(
     () => !!this.feature() && !this.workspace.has(this.feature()!),
   );
   protected readonly allowed = computed(
-    () => !this.featureMissing() && (!this.permission() || this.workspace.can(this.permission()!)),
+    () =>
+      !this.featureMissing() &&
+      (!this.permission() ||
+        (this.anyScope()
+          ? this.workspace.canAny(this.permission()!)
+          : this.workspace.can(this.permission()!))),
   );
 }

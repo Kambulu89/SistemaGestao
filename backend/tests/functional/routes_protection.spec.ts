@@ -73,6 +73,16 @@ const SELF_AUTHORIZED: Record<string, string> = {
   'POST /api/v1/me/notifications/read-all': 'só as do destinatário',
   'POST /api/v1/me/notifications/:id/read': 'só as do destinatário (404 nas outras)',
   'GET /api/v1/me/tasks': 'tarefas do próprio',
+  'GET /api/v1/hr/employees':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'POST /api/v1/hr/employees':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'GET /api/v1/hr/employees/:id':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'PATCH /api/v1/hr/employees/:id':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'POST /api/v1/hr/employees/:id/status':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
   'GET /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'PUT /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'GET /api/v1/dashboard': 'cada secção exige a permissão e a funcionalidade do módulo dono',

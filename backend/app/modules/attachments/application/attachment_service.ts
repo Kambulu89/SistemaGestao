@@ -6,6 +6,7 @@ import { assertEntitled, assertWithinQuota } from '#modules/subscription/index'
 import { audit } from '#modules/audit/index'
 import { canViewRequest } from '#modules/approvals/index'
 import { ORGANIZATION_ENTITY_TYPES, organizationRecordExists } from '#modules/organization/index'
+import { employeeAccess } from '#modules/hr/index'
 import {
   extensionOf,
   FILE_TYPES,
@@ -75,6 +76,11 @@ function policies(): Record<string, SubjectPolicy> {
       if (!entry) return null
       return { read: true, write: held.has('accounting.create') && entry.status !== 'POSTED' }
     },
+  }
+  // Documentos do colaborador (BI, contrato, certificados): dados pessoais, seguem `hr.sensitive` no âmbito.
+  map.employee = {
+    feature: 'hr',
+    access: (scope, id) => employeeAccess(scope, id, 'sensitive'),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

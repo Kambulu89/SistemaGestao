@@ -300,8 +300,19 @@ async function populate(client: any) {
       title: 'Tarefa A',
     })
   )[0]
+  const employee = ok(
+    await as(client, s).post('/api/v1/hr/employees', {
+      code: 'COL-A',
+      fullName: 'Colaborador A',
+      legalEntityId: le.id,
+      branchId: branch.id,
+      hireDate: '2026-01-05',
+      taxId: '004567890LA041',
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    employee,
     closeTask,
     stmtTemplate,
     stmtNote,
@@ -363,6 +374,15 @@ test.group('isolamento | matriz entre empresas', (group) => {
       ['PATCH perfil', B.patch(`/api/v1/roles/${a.role.id}`, { ...v, name: 'x' })],
       ['DELETE perfil', B.delete(`/api/v1/roles/${a.role.id}`)],
       ['GET membro', B.get(`/api/v1/members/${a.member}`)],
+      ['GET colaborador', B.get(`/api/v1/hr/employees/${a.employee.id}`)],
+      [
+        'PATCH colaborador',
+        B.patch(`/api/v1/hr/employees/${a.employee.id}`, { ...v, fullName: 'xx' }),
+      ],
+      [
+        'suspender colaborador',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/status`, { ...v, status: 'SUSPENDED' }),
+      ],
       ['GET dimensão', B.get(`/api/v1/accounting/dimensions/${a.dimension.id}`)],
       [
         'PATCH dimensão',
@@ -614,6 +634,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
     })
     assert.include([404, 422], crossRef.status())
     ;(await upload(client, b, 'legal_entity', a.le.id)).assertStatus(404)
+    ;(await upload(client, b, 'employee', a.employee.id)).assertStatus(404)
     const wfCross = await B.post('/api/v1/approvals/workflows', {
       code: 'WFX',
       name: 'Workflow cruzado',
@@ -759,6 +780,22 @@ test.group('isolamento | matriz entre empresas', (group) => {
       nature: 'ASSET',
     })
     crossAccount.assertStatus(422)
+    // Um colaborador de B não se liga à estrutura de A.
+    const crossEmployee = await B.post('/api/v1/hr/employees', {
+      code: 'COL-X',
+      fullName: 'Cruzado',
+      legalEntityId: a.le.id,
+      hireDate: '2026-01-05',
+    })
+    assert.include([403, 404, 422], crossEmployee.status())
+    const crossManager = await B.post('/api/v1/hr/employees', {
+      code: 'COL-Y',
+      fullName: 'Cruzado',
+      legalEntityId: leB.id,
+      managerId: a.employee.id,
+      hireDate: '2026-01-05',
+    })
+    crossManager.assertStatus(422)
     // Eventos de B com a entidade legal de A não usam as regras de A.
     const crossEvent = await B.post('/api/v1/accounting/posting-events', {
       legalEntityId: a.le.id,
@@ -804,6 +841,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/bank-accounts/${a.bank.id}`,
       '/api/v1/accounting/entries',
       `/api/v1/accounting/charts/${a.chart.id}`,
+      '/api/v1/hr/employees',
+      `/api/v1/hr/employees/${a.employee.id}`,
     ]) {
       const r = await spoof.get(url)
       assert.equal(r.status(), 403, url)

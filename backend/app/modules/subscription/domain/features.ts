@@ -50,6 +50,12 @@ export const FEATURES: readonly FeatureDefinition[] = [
     kind: 'BOOLEAN',
     description: 'Contabilidade: planos de contas, exercícios, diários e lançamentos.',
   },
+  {
+    code: 'hr',
+    module: 'hr',
+    kind: 'BOOLEAN',
+    description: 'Recursos humanos: colaboradores, contratos, férias e processamento salarial.',
+  },
 ]
 
 export const FEATURE_KINDS: ReadonlyMap<string, FeatureKind> = new Map(

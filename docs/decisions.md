@@ -198,3 +198,18 @@ sessão de outro. O ficheiro vem pela mesma rota autorizada da descarga e o URL 
 quadro kanban e o assistente não decidem nada: mover um cartão ou concluir um assistente é um pedido à API, e o estado
 mostrado é sempre o que a API devolve depois (se recusar, nada muda). O assistente de encerramento substitui a
 confirmação por um passo de revisão explícito com todos os parâmetros.
+
+## D-024 RH: âmbito verificado no serviço, dados pessoais por campo e colaborador ≠ utilizador (aceite)
+
+O colaborador (`employees`) é uma ficha de RH e não uma conta: pode existir sem utilizador e liga-se opcionalmente a uma
+membership (uma por empresa) para self-service. Filial, departamento, cargo e centro de custo são referências à
+estrutura organizacional (sem cópias); o servidor exige que sejam da mesma entidade legal, activos e coerentes
+(departamento da filial escolhida) e recusa ciclos na hierarquia. A autorização de RH precisa de âmbitos parciais
+(chefe de departamento, RH de uma entidade legal, o próprio colaborador), que o middleware `can()` não aceita — por
+isso as rotas de RH verificam `permissionScope` no serviço (justificado no teste de protecção de rotas): listas e fichas
+fora do âmbito não existem (404), gerir exige âmbito sobre a colocação antiga e a nova (`own` nunca chega para gerir).
+Os dados pessoais (`hr.sensitive`) são controlados por campo: as listas e a exportação nunca os trazem, a ficha só os
+preenche a quem tem a permissão no âmbito do colaborador, escrevê-los sem ela dá 403 e a auditoria regista que mudaram
+mas nunca os valores (`[RESERVADO]`). Os anexos do colaborador seguem o acesso aos dados pessoais. Por conterem dados
+pessoais, os formulários de RH não guardam rascunhos no browser (excepção a D-022). A cessação fica reservada ao fluxo
+de desligamento (7.11); aqui só há activo ↔ suspenso, com motivo opcional e auditado.

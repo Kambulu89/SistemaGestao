@@ -5,6 +5,8 @@ export interface NavItem {
   icon: string;
   permission?: string;
   feature?: string;
+  /** A permissão vale em qualquer âmbito (a API filtra os registos pelo âmbito do membro). */
+  anyScope?: boolean;
   /** Subtítulo dentro do domínio (ex.: "Relatórios financeiros"). */
   section?: string;
 }
@@ -228,6 +230,21 @@ export const NAVIGATION: NavGroup[] = [
     ],
   },
   {
+    label: 'Pessoas e Talento',
+    icon: 'users',
+    items: [
+      {
+        label: 'Colaboradores',
+        path: '/rh/colaboradores',
+        icon: 'users',
+        permission: 'hr.read',
+        feature: 'hr',
+        anyScope: true,
+        section: 'Pessoas',
+      },
+    ],
+  },
+  {
     label: 'Administração e Plataforma',
     icon: 'settings',
     items: [
@@ -364,7 +381,7 @@ export const PLATFORM_NAVIGATION: NavGroup = {
 
 /** Grupos visíveis para as permissões e funcionalidades dadas (grupos vazios desaparecem). */
 export function visibleNavigation(
-  can: (permission: string) => boolean,
+  can: (permission: string, anyScope?: boolean) => boolean,
   has: (feature: string) => boolean,
   withTenant: boolean,
   platformAdmin: boolean,
@@ -373,7 +390,7 @@ export function visibleNavigation(
     ? NAVIGATION.map((g) => ({
         ...g,
         items: g.items.filter(
-          (i) => (!i.permission || can(i.permission)) && (!i.feature || has(i.feature)),
+          (i) => (!i.permission || can(i.permission, i.anyScope)) && (!i.feature || has(i.feature)),
         ),
       })).filter((g) => g.items.length > 0)
     : [];

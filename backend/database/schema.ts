@@ -947,6 +947,91 @@ export class DocumentSerySchema extends BaseModel {
   declare version: number
 }
 
+export class EmployeeSchema extends BaseModel {
+  static $columns = ['addressLine', 'bankIban', 'bankName', 'birthDate', 'branchId', 'city', 'code', 'costCenterId', 'countryCode', 'createdAt', 'createdBy', 'departmentId', 'educationField', 'educationLevel', 'emergencyName', 'emergencyPhone', 'emergencyRelation', 'fullName', 'hireDate', 'id', 'idDocumentExpiry', 'idDocumentNumber', 'idDocumentType', 'legalEntityId', 'managerId', 'membershipId', 'nationality', 'personalEmail', 'personalPhone', 'positionId', 'province', 'socialSecurityNumber', 'status', 'taxId', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'workEmail', 'workPhone'] as const
+  $columns = EmployeeSchema.$columns
+  @column()
+  declare addressLine: string | null
+  @column()
+  declare bankIban: string | null
+  @column()
+  declare bankName: string | null
+  @column.date()
+  declare birthDate: DateTime | null
+  @column()
+  declare branchId: string | null
+  @column()
+  declare city: string | null
+  @column()
+  declare code: string
+  @column()
+  declare costCenterId: string | null
+  @column()
+  declare countryCode: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare departmentId: string | null
+  @column()
+  declare educationField: string | null
+  @column()
+  declare educationLevel: string | null
+  @column()
+  declare emergencyName: string | null
+  @column()
+  declare emergencyPhone: string | null
+  @column()
+  declare emergencyRelation: string | null
+  @column()
+  declare fullName: string
+  @column.date()
+  declare hireDate: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare idDocumentExpiry: DateTime | null
+  @column()
+  declare idDocumentNumber: string | null
+  @column()
+  declare idDocumentType: string | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare managerId: string | null
+  @column()
+  declare membershipId: string | null
+  @column()
+  declare nationality: string | null
+  @column()
+  declare personalEmail: string | null
+  @column()
+  declare personalPhone: string | null
+  @column()
+  declare positionId: string | null
+  @column()
+  declare province: string | null
+  @column()
+  declare socialSecurityNumber: string | null
+  @column()
+  declare status: string
+  @column()
+  declare taxId: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare workEmail: string | null
+  @column()
+  declare workPhone: string | null
+}
+
 export class ExchangeRateSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'fromCurrency', 'id', 'rate', 'source', 'tenantId', 'toCurrency', 'updatedAt', 'updatedBy', 'validOn', 'version'] as const
   $columns = ExchangeRateSchema.$columns
