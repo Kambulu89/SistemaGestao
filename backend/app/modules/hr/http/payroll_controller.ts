@@ -35,6 +35,9 @@ const decisionBody = vine.create(
     ...version,
   })
 )
+const confirmBody = vine.create(
+  vine.object({ note: vine.string().trim().minLength(1).maxLength(2000), ...version })
+)
 const exclusionBody = vine.create(
   vine.object({ employeeId: vine.string().uuid(), excluded: vine.boolean(), ...version })
 )
@@ -68,6 +71,19 @@ export default class PayrollController {
   async publishRuleSet(ctx: HttpContext) {
     const { expectedVersion } = await body(ctx, onlyVersion)
     return ok(ctx, await rules.publish(ctx.tenantContext!, param(ctx), expectedVersion))
+  }
+
+  async verifyRuleSet(ctx: HttpContext) {
+    return ok(ctx, await rules.verify(ctx.tenantContext!, param(ctx)))
+  }
+
+  async simulateRuleSet(ctx: HttpContext) {
+    return ok(ctx, await rules.simulate(ctx.tenantContext!, param(ctx), await body(ctx, anyBody)))
+  }
+
+  async confirmRuleSet(ctx: HttpContext) {
+    const b = await body(ctx, confirmBody)
+    return ok(ctx, await rules.confirm(ctx.tenantContext!, param(ctx), b.note, b.expectedVersion))
   }
 
   async deleteRuleSet(ctx: HttpContext) {

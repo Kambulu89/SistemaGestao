@@ -310,7 +310,7 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Configuração',
       },
       {
-        label: 'Regras de processamento',
+        label: 'Regras de IRT e INSS',
         path: '/rh/processamento/regras',
         icon: 'settings',
         permission: 'hr.payroll.settings',

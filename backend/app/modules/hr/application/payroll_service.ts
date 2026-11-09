@@ -9,7 +9,7 @@ import { approvedAbsences } from '#modules/hr/application/leave_service'
 import { compensationAt } from '#modules/hr/application/compensation_service'
 import { dueLoanInstallments, recordLoanDeduction } from '#modules/hr/application/loan_service'
 import { cents, normalizeFields } from '#modules/hr/domain/recruitment'
-import { periodEnd, periodStart } from '#modules/hr/domain/loans'
+import { moneyLabel, periodEnd, periodStart } from '#modules/hr/domain/loans'
 import {
   bracketIssues,
   type Bracket,
@@ -23,7 +23,12 @@ import {
   type PayLine,
   type Rules,
   RUN_KINDS,
+  runCase,
   type RunKind,
+  sampleIssues,
+  simulate,
+  type TestCase,
+  testCaseIssues,
   totalsOf,
 } from '#modules/hr/domain/payroll'
 
@@ -97,7 +102,76 @@ async function bracketsOf(scope: TenantScope, ruleSetId: string): Promise<Bracke
   }))
 }
 
-function ruleSetView(r: any, brackets: Bracket[]) {
+async function testCasesOf(scope: TenantScope, ruleSetId: string): Promise<TestCase[]> {
+  const r = await scope.trx.rawQuery(
+    `select * from payroll_rule_test_cases where tenant_id = ? and rule_set_id = ? order by sequence`,
+    [scope.context.tenantId, ruleSetId]
+  )
+  return (r.rows as any[]).map((c) => ({
+    description: c.description,
+    source: c.source,
+    baseSalary: c.base_salary,
+    allowancesSubject: c.allowances_subject,
+    allowancesIrtOnly: c.allowances_irt_only,
+    allowancesExempt: c.allowances_exempt,
+    expectedInssEmployee: c.expected_inss_employee,
+    expectedIrt: c.expected_irt,
+    expectedInssEmployer: c.expected_inss_employer ?? null,
+    expectedNet: c.expected_net ?? null,
+  }))
+}
+
+async function writeTestCases(scope: TenantScope, ruleSetId: string, cases: TestCase[]) {
+  await scope.trx.rawQuery(
+    `delete from payroll_rule_test_cases where tenant_id = ? and rule_set_id = ?`,
+    [scope.context.tenantId, ruleSetId]
+  )
+  for (const [i, c] of cases.entries())
+    await scope.trx.rawQuery(
+      `insert into payroll_rule_test_cases (tenant_id, rule_set_id, sequence, description, source, base_salary,
+         allowances_subject, allowances_irt_only, allowances_exempt, expected_inss_employee, expected_irt,
+         expected_inss_employer, expected_net, created_by, updated_by)
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        scope.context.tenantId,
+        ruleSetId,
+        i + 1,
+        c.description,
+        c.source,
+        c.baseSalary,
+        c.allowancesSubject,
+        c.allowancesIrtOnly,
+        c.allowancesExempt,
+        c.expectedInssEmployee,
+        c.expectedIrt,
+        c.expectedInssEmployer,
+        c.expectedNet,
+        scope.context.userId,
+        scope.context.userId,
+      ] as never[]
+    )
+}
+
+const CASE_LABEL: Record<string, string> = {
+  inssEmployee: 'INSS do trabalhador',
+  irt: 'IRT',
+  inssEmployer: 'INSS da empresa',
+  net: 'Líquido',
+}
+const label = (v: string) => moneyLabel(cents(v) ?? 0n)
+
+/** Corre os casos de teste com as regras da versão. */
+function verifyCases(view: ReturnType<typeof ruleSetView>, cases: TestCase[]) {
+  const rules = rulesOf(view)
+  const results = cases.map((c, i) => ({
+    sequence: i + 1,
+    description: c.description,
+    ...runCase(rules, c),
+  }))
+  return { total: results.length, passed: results.filter((x) => x.pass).length, results }
+}
+
+function ruleSetView(r: any, brackets: Bracket[], testCases: TestCase[] = []) {
   return {
     id: r.id as string,
     version: Number(r.version),
@@ -105,6 +179,7 @@ function ruleSetView(r: any, brackets: Bracket[]) {
     name: r.name as string,
     currency: r.currency as string,
     validFrom: r.from_text as string,
+    validTo: (r.to_text as string) ?? null,
     inssEmployeeRate: r.inss_employee_rate as string,
     inssEmployerRate: r.inss_employer_rate as string,
     baseIrtSubject: Boolean(r.base_irt_subject),
@@ -114,16 +189,22 @@ function ruleSetView(r: any, brackets: Bracket[]) {
     legalReference: r.legal_reference as string,
     status: r.status as 'DRAFT' | 'PUBLISHED',
     publishedAt: r.published_at ?? null,
+    confirmedBy: (r.confirmed_by_name as string) ?? null,
+    confirmedAt: r.confirmed_at ?? null,
+    confirmationNote: (r.confirmation_note as string) ?? null,
     brackets,
+    testCases,
   }
 }
 
-const RS_SELECT = `select r.*, r.valid_from::text as from_text from payroll_rule_sets r`
+const RS_SELECT = `select r.*, r.valid_from::text as from_text, r.valid_to::text as to_text,
+    cu.full_name as confirmed_by_name
+  from payroll_rule_sets r left join users cu on cu.id = r.confirmed_by`
 
 async function findRuleSet(scope: TenantScope, id: string, lock = false) {
   if (!isUuid(id)) return null
   const r = await scope.trx.rawQuery(
-    `${RS_SELECT} where r.tenant_id = ? and r.id = ?${lock ? ' for update' : ''}`,
+    `${RS_SELECT} where r.tenant_id = ? and r.id = ?${lock ? ' for update of r' : ''}`,
     [scope.context.tenantId, id]
   )
   return (r.rows[0] as any) ?? null
@@ -137,7 +218,8 @@ export async function ruleSetAt(scope: TenantScope, currency: string, date: stri
     [scope.context.tenantId, currency, date]
   )
   const row = r.rows[0] as any
-  if (!row) return null
+  // A versão mais recente que começou; se tem fim e a data já passou, não há regras em vigor (nunca se usa uma antiga).
+  if (!row || (row.to_text && row.to_text < date)) return null
   return ruleSetView(row, await bracketsOf(scope, row.id))
 }
 
@@ -147,6 +229,7 @@ function ruleSetInput(input: Record<string, unknown>, creating: boolean) {
     name: { kind: 'text', min: 3, max: 160, label: 'Nome' },
     currency: { kind: 'currency', label: 'Moeda' },
     validFrom: { kind: 'date', label: 'Início de vigência' },
+    validTo: { kind: 'date', label: 'Fim de vigência' },
     legalReference: { kind: 'longtext', min: 5, max: 2000, label: 'Fonte' },
   })
   const pct = (k: string) => {
@@ -170,6 +253,11 @@ function ruleSetInput(input: Record<string, unknown>, creating: boolean) {
     else v.dayBasis = input.dayBasis
   }
   if ('brackets' in input) issues.push(...bracketIssues(input.brackets))
+  if ('testCases' in input) {
+    const t = testCaseIssues(input.testCases)
+    issues.push(...t.issues)
+    v.testCases = t.value
+  }
   if (creating)
     for (const k of [
       'code',
@@ -220,6 +308,7 @@ const RS_COLUMNS: Record<string, string> = {
   name: 'name',
   currency: 'currency',
   validFrom: 'valid_from',
+  validTo: 'valid_to',
   inssEmployeeRate: 'inss_employee_rate',
   inssEmployerRate: 'inss_employer_rate',
   baseIrtSubject: 'base_irt_subject',
@@ -259,16 +348,16 @@ export class PayrollRuleService {
         [context.tenantId]
       )
       const items = []
-      for (const x of r.rows as any[]) items.push(ruleSetView(x, await bracketsOf(scope, x.id)))
+      for (const x of r.rows as any[])
+        items.push(ruleSetView(x, await bracketsOf(scope, x.id), await testCasesOf(scope, x.id)))
       return items
     })
   }
 
   get(context: TenantContext, id: string) {
     return runInTenant(context, async (scope) => {
-      const r = await findRuleSet(scope, id)
-      if (!r) throw ApiError.notFound()
-      return ruleSetView(r, await bracketsOf(scope, id))
+      if (!(await findRuleSet(scope, id))) throw ApiError.notFound()
+      return this.viewIn(scope, id)
     })
   }
 
@@ -276,6 +365,8 @@ export class PayrollRuleService {
     return runInTenant(context, async (scope) => {
       const { values: v, issues } = ruleSetInput(input, true)
       fail(issues)
+      if (v.validTo && v.validFrom && (v.validTo as string) < (v.validFrom as string))
+        fail([{ path: 'validTo', code: 'RANGE', message: 'O fim é anterior ao início.' }])
       const keys = Object.keys(RS_COLUMNS).filter((k) => k in v)
       let id: string
       try {
@@ -289,13 +380,14 @@ export class PayrollRuleService {
         ruleCodeTaken(error)
       }
       await writeBrackets(scope, id!, input.brackets as any[])
+      if (v.testCases) await writeTestCases(scope, id!, v.testCases as TestCase[])
       await audit(scope, {
         action: 'hr.payroll.rules_created',
         entityType: 'payroll_rule_set',
         entityId: id!,
         metadata: { code: v.code, currency: v.currency, validFrom: v.validFrom },
       })
-      return ruleSetView(await findRuleSet(scope, id!), await bracketsOf(scope, id!))
+      return this.viewIn(scope, id!)
     })
   }
 
@@ -314,10 +406,16 @@ export class PayrollRuleService {
         wrongState('Regras publicadas não se alteram: crie uma nova versão com outra data.')
       const { values: v, issues } = ruleSetInput(input, false)
       fail(issues)
+      const from = (v.validFrom as string) ?? cur.from_text
+      const to = 'validTo' in v ? (v.validTo as string | null) : cur.to_text
+      if (to && to < from)
+        fail([{ path: 'validTo', code: 'RANGE', message: 'O fim é anterior ao início.' }])
       const keys = Object.keys(RS_COLUMNS).filter((k) => k in v)
       try {
+        // Qualquer alteração invalida a confirmação anterior: é preciso voltar a confirmar.
         await scope.trx.rawQuery(
-          `update payroll_rule_sets set ${keys.map((k) => `${RS_COLUMNS[k]} = ?, `).join('')}version = version + 1,
+          `update payroll_rule_sets set ${keys.map((k) => `${RS_COLUMNS[k]} = ?, `).join('')}confirmed_by = null,
+             confirmed_at = null, confirmation_note = null, version = version + 1,
              updated_by = ?, updated_at = now() where tenant_id = ? and id = ?`,
           [...keys.map((k) => v[k]), context.userId, context.tenantId, id] as never[]
         )
@@ -325,13 +423,19 @@ export class PayrollRuleService {
         ruleCodeTaken(error)
       }
       if ('brackets' in input) await writeBrackets(scope, id, input.brackets as any[])
+      if (v.testCases) await writeTestCases(scope, id, v.testCases as TestCase[])
       await audit(scope, {
         action: 'hr.payroll.rules_updated',
         entityType: 'payroll_rule_set',
         entityId: id,
-        metadata: { fields: keys, bracketsChanged: 'brackets' in input },
+        metadata: {
+          fields: keys,
+          bracketsChanged: 'brackets' in input,
+          testCasesChanged: 'testCases' in input,
+          confirmationCleared: Boolean(cur.confirmed_at),
+        },
       })
-      return ruleSetView(await findRuleSet(scope, id), await bracketsOf(scope, id))
+      return this.viewIn(scope, id)
     })
   }
 
@@ -344,6 +448,12 @@ export class PayrollRuleService {
       if (cur.status !== 'DRAFT') wrongState('Estas regras já estão publicadas.')
       const brackets = await bracketsOf(scope, id)
       fail(bracketIssues(brackets))
+      await this.assertCasesPass(scope, id)
+      if (!cur.confirmed_at)
+        throw ApiError.conflict(
+          'NOT_CONFIRMED',
+          'Confirme primeiro que os valores correspondem às normas em vigor na fonte indicada.'
+        )
       try {
         await scope.trx.rawQuery(
           `update payroll_rule_sets set status = 'PUBLISHED', published_by = ?, published_at = now(),
@@ -362,11 +472,114 @@ export class PayrollRuleService {
           code: cur.code,
           currency: cur.currency,
           validFrom: cur.from_text,
+          validTo: cur.to_text ?? null,
           legalReference: cur.legal_reference,
+          confirmedBy: cur.confirmed_by,
+          testCases: (await testCasesOf(scope, id)).length,
         },
       })
-      return ruleSetView(await findRuleSet(scope, id), brackets)
+      return this.viewIn(scope, id)
     })
+  }
+
+  /** Corre os casos de teste da versão (qualquer estado) e devolve o resultado de cada um. */
+  verify(context: TenantContext, id: string) {
+    return runInTenant(context, async (scope) => {
+      if (!(await findRuleSet(scope, id))) throw ApiError.notFound()
+      const view = await this.viewIn(scope, id)
+      return verifyCases(view, view.testCases)
+    })
+  }
+
+  /** Recibo de um exemplo com estas regras (sem gravar nada): para preparar casos e conferir valores. */
+  simulate(context: TenantContext, id: string, input: Record<string, unknown>) {
+    return runInTenant(context, async (scope) => {
+      if (!(await findRuleSet(scope, id))) throw ApiError.notFound()
+      const { value, issues } = sampleIssues(input)
+      fail(issues)
+      const view = await this.viewIn(scope, id)
+      const r = simulate(rulesOf(view), value!)
+      return {
+        errors: r.errors,
+        lines: r.lines.map((l) => ({
+          code: l.code,
+          name: l.name,
+          kind: l.kind,
+          source: l.source,
+          amount: moneyText(l.amount),
+        })),
+        totals: Object.fromEntries(
+          Object.entries(r.totals).map(([k, v]) => [k, moneyText(v as bigint)])
+        ),
+      }
+    })
+  }
+
+  /**
+   * Confirmação, por uma pessoa e com nota, de que os valores correspondem às normas em vigor na fonte indicada (ex.:
+   * diploma e data de publicação consultados). Exige casos de teste e que todos passem; qualquer alteração posterior
+   * apaga a confirmação.
+   */
+  confirm(context: TenantContext, id: string, note: string, expectedVersion: number) {
+    return runInTenant(context, async (scope) => {
+      const cur = await findRuleSet(scope, id, true)
+      if (!cur) throw ApiError.notFound()
+      if (Number(cur.version) !== expectedVersion)
+        throw ApiError.versionConflict(Number(cur.version))
+      if (cur.status !== 'DRAFT') wrongState('Só um rascunho se confirma.')
+      if (note.trim().length < 5)
+        fail([{ path: 'note', code: 'REQUIRED', message: 'Indique o que foi confirmado e onde.' }])
+      fail(bracketIssues(await bracketsOf(scope, id)))
+      await this.assertCasesPass(scope, id)
+      await scope.trx.rawQuery(
+        `update payroll_rule_sets set confirmed_by = ?, confirmed_at = now(), confirmation_note = ?,
+           version = version + 1, updated_by = ?, updated_at = now() where tenant_id = ? and id = ?`,
+        [context.userId, note.trim(), context.userId, context.tenantId, id]
+      )
+      await audit(scope, {
+        action: 'hr.payroll.rules_confirmed',
+        entityType: 'payroll_rule_set',
+        entityId: id,
+        metadata: { code: cur.code, note: note.trim() },
+      })
+      return this.viewIn(scope, id)
+    })
+  }
+
+  private async assertCasesPass(scope: TenantScope, id: string) {
+    const view = await this.viewIn(scope, id)
+    if (!view.testCases.length)
+      throw ApiError.conflict(
+        'NO_TEST_CASES',
+        'Registe pelo menos um caso de teste oficial (com a fonte) antes de confirmar ou publicar.'
+      )
+    const v = verifyCases(view, view.testCases)
+    if (v.passed !== v.total)
+      throw new ApiError(
+        409,
+        'CASES_FAILING',
+        `${v.total - v.passed} de ${v.total} caso(s) de teste não dão o valor esperado.`,
+        v.results
+          .filter((x) => !x.pass)
+          .map((x) => ({
+            path: `testCases.${x.sequence - 1}`,
+            code: 'CASE_FAILED',
+            message: `${x.description}: ${x.mismatches
+              .map(
+                (d) =>
+                  `${CASE_LABEL[d.field] ?? d.field} esperado ${label(d.expected)}, calculado ${label(d.actual)}`
+              )
+              .join('; ')}${x.errors.map((e) => e.message).join('; ')}`,
+          }))
+      )
+  }
+
+  private async viewIn(scope: TenantScope, id: string) {
+    return ruleSetView(
+      await findRuleSet(scope, id),
+      await bracketsOf(scope, id),
+      await testCasesOf(scope, id)
+    )
   }
 
   remove(context: TenantContext, id: string) {
@@ -533,6 +746,7 @@ function rulesOf(rs: Awaited<ReturnType<typeof ruleSetAt>>): Rules {
 const rulesSnapshot = (rs: NonNullable<Awaited<ReturnType<typeof ruleSetAt>>>) => ({
   code: rs.code,
   validFrom: rs.validFrom,
+  validTo: rs.validTo,
   legalReference: rs.legalReference,
   ...rulesOf(rs),
 })

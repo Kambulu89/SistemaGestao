@@ -9,6 +9,10 @@ import {
   prorate,
   rateUnits,
   type Rules,
+  runCase,
+  sampleIssues,
+  simulate,
+  testCaseIssues,
 } from '#modules/hr/domain/payroll'
 
 /**
@@ -210,5 +214,66 @@ test.group('RH | motor de processamento (domínio)', () => {
     assert.isUndefined(d.find((l) => l.source === 'LOAN'))
     assert.isTrue(d.every((l) => l.name.startsWith('Diferença: ')))
     assert.deepEqual(difference(before.lines, before.lines), [])
+  })
+
+  test('simulador e casos de teste: comparação ao cêntimo, só nos campos indicados', ({
+    assert,
+  }) => {
+    const sample = {
+      baseSalary: '200000.00',
+      allowancesSubject: '10000.00',
+      allowancesIrtOnly: '30000.00',
+      allowancesExempt: '5000.00',
+    }
+    const t = simulate(rules, sample).totals
+    assert.equal(money(t.gross), '245000.00')
+    assert.equal(money(t.inssBase), '210000.00')
+    assert.equal(money(t.irtBase), '233700.00')
+    const base = {
+      ...sample,
+      description: 'Caso',
+      source: 'Fonte de teste',
+      expectedInssEmployee: '6300.00',
+      expectedIrt: '16740.00',
+      expectedInssEmployer: null,
+      expectedNet: null,
+    }
+    assert.isTrue(runCase(rules, base).pass)
+    const wrong = runCase(rules, { ...base, expectedNet: '1.00', expectedIrt: '16740.01' })
+    assert.isFalse(wrong.pass)
+    assert.deepEqual(
+      wrong.mismatches.map((x) => x.field),
+      ['irt', 'net']
+    )
+  })
+
+  test('validação de exemplos e casos', ({ assert }) => {
+    assert.deepEqual(
+      sampleIssues({ baseSalary: '1 000' }).issues.map((i) => i.code),
+      ['INVALID_AMOUNT']
+    )
+    assert.equal(sampleIssues({ baseSalary: '1000,5' }).value?.baseSalary, '1000.50')
+    assert.equal(sampleIssues({ baseSalary: '1000' }).value?.allowancesExempt, '0.00')
+    const r = testCaseIssues([
+      {
+        description: 'Ok',
+        source: 'Fonte boa',
+        baseSalary: '1',
+        expectedInssEmployee: '0',
+        expectedIrt: '0',
+      },
+      { description: 'x', baseSalary: '1' },
+    ])
+    assert.lengthOf(r.value, 1)
+    assert.includeMembers(
+      r.issues.map((i) => `${i.path}:${i.code}`),
+      [
+        'testCases.1.description:LENGTH',
+        'testCases.1.source:LENGTH',
+        'testCases.1.expectedInssEmployee:REQUIRED',
+        'testCases.1.expectedIrt:REQUIRED',
+      ]
+    )
+    assert.equal(testCaseIssues('x').issues[0].code, 'INVALID')
   })
 })

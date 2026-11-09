@@ -792,6 +792,15 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.patch(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}`, { ...v, name: 'xxx' }),
       ],
       ['publicar regras', B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/publish`, v)],
+      ['verificar casos', B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/verify`)],
+      [
+        'simular regras',
+        B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/simulate`, { baseSalary: '1' }),
+      ],
+      [
+        'confirmar regras',
+        B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/confirm`, { ...v, note: 'xxxxxx' }),
+      ],
       ['GET lote', B.get(`/api/v1/hr/payroll/runs/${a.payrollRun.id}`)],
       [
         'GET recibo',

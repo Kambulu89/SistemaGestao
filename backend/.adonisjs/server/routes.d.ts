@@ -247,6 +247,9 @@ export type ScannedRoutes = {
     'payroll.rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.update_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.publish_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.verify_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.simulate_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.confirm_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.delete_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.periods': { paramsTuple?: []; params?: {} }
     'payroll.index': { paramsTuple?: []; params?: {} }
@@ -677,6 +680,9 @@ export type ScannedRoutes = {
     'loans.pay': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'installmentId': ParamValue} }
     'payroll.create_rule_set': { paramsTuple?: []; params?: {} }
     'payroll.publish_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.verify_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.simulate_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.confirm_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.store': { paramsTuple?: []; params?: {} }
     'payroll.set_excluded': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.calculate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

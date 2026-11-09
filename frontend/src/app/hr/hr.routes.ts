@@ -101,7 +101,7 @@ export const HR_ROUTES: Routes = [
       },
       {
         path: 'regras',
-        title: 'Regras de processamento',
+        title: 'Regras de IRT e INSS',
         canActivate: [accessGuard],
         data: { permission: 'hr.payroll.settings' },
         loadComponent: () => import('./payroll-rules').then((m) => m.PayrollRules),

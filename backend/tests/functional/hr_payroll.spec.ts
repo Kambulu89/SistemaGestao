@@ -39,6 +39,43 @@ const RULES = {
     { lower: '100000.01', upper: '200000', fixedAmount: '0', rate: '10', excessOver: '100000' },
     { lower: '200000.01', upper: null, fixedAmount: '10000', rate: '20', excessOver: '200000' },
   ],
+  // Casos com a mesma tabela de teste (calculados à mão).
+  testCases: [
+    {
+      description: 'Só salário base',
+      source: 'Exemplo de teste do mecanismo',
+      baseSalary: '200000',
+      expectedInssEmployee: '6000',
+      expectedIrt: '9400',
+      expectedInssEmployer: '16000',
+      expectedNet: '184600',
+    },
+    {
+      description: 'Base com abonos de incidências diferentes',
+      source: 'Exemplo de teste do mecanismo',
+      baseSalary: '200000',
+      allowancesSubject: '10000',
+      allowancesIrtOnly: '30000',
+      allowancesExempt: '5000',
+      expectedInssEmployee: '6300',
+      expectedIrt: '16740',
+      expectedInssEmployer: '16800',
+      expectedNet: '221960',
+    },
+  ],
+}
+
+/** Cria, confirma e publica uma versão das regras. */
+async function publishRules(api: any, body: Record<string, unknown> = RULES) {
+  const rs = ok(await api.post(`${P}/rule-sets`, body))
+  const c = ok(
+    await api.post(`${P}/rule-sets/${rs.id}/confirm`, {
+      note: 'Valores conferidos com a fonte indicada',
+      expectedVersion: rs.version,
+    }),
+    200
+  )
+  return ok(await api.post(`${P}/rule-sets/${rs.id}/publish`, { expectedVersion: c.version }), 200)
 }
 
 async function roleMember(
@@ -105,8 +142,7 @@ async function setup(client: any, withRules = true) {
   const le = ok(await entity('A', '5000000777'))
   const le2 = ok(await entity('B', '5000000778'))
   if (withRules) {
-    const rs = ok(await api.post(`${P}/rule-sets`, RULES))
-    ok(await api.post(`${P}/rule-sets/${rs.id}/publish`, { expectedVersion: rs.version }), 200)
+    await publishRules(api)
   }
   const overtime = ok(
     await api.post(`${H}/pay-components`, {
@@ -167,8 +203,36 @@ test.group('RH | processamento salarial (7.7)', (group) => {
       200
     )
     assert.equal(edited.inssEmployerRate, '8.5000')
+    // Os casos de teste deixam de dar o esperado (INSS patronal): não se confirma nem publica.
+    const failing = await o.api.post(`${P}/rule-sets/${rs.id}/publish`, {
+      expectedVersion: edited.version,
+    })
+    assert.equal(code(failing), 'CASES_FAILING')
+    assert.match(
+      failing.body().error.details[0].message,
+      /INSS da empresa esperado 16 000,00, calculado 17 000,00/
+    )
+    const back = ok(
+      await o.api.patch(`${P}/rule-sets/${rs.id}`, {
+        inssEmployerRate: '8',
+        expectedVersion: edited.version,
+      }),
+      200
+    )
+    assert.equal(
+      code(await o.api.post(`${P}/rule-sets/${rs.id}/publish`, { expectedVersion: back.version })),
+      'NOT_CONFIRMED'
+    )
+    const confirmed = ok(
+      await o.api.post(`${P}/rule-sets/${rs.id}/confirm`, {
+        note: 'Conferido com a fonte',
+        expectedVersion: back.version,
+      }),
+      200
+    )
+    assert.isNotNull(confirmed.confirmedAt)
     const pub = ok(
-      await o.api.post(`${P}/rule-sets/${rs.id}/publish`, { expectedVersion: edited.version }),
+      await o.api.post(`${P}/rule-sets/${rs.id}/publish`, { expectedVersion: confirmed.version }),
       200
     )
     assert.equal(pub.status, 'PUBLISHED')
@@ -182,7 +246,14 @@ test.group('RH | processamento salarial (7.7)', (group) => {
       owner().rawQuery(`update payroll_irt_brackets set rate = 1 where rule_set_id = ?`, [rs.id])
     )
     // Outra versão na mesma data não se publica.
-    const twin = ok(await o.api.post(`${P}/rule-sets`, { ...RULES, code: 'TESTE-B' }))
+    const twin0 = ok(await o.api.post(`${P}/rule-sets`, { ...RULES, code: 'TESTE-B' }))
+    const twin = ok(
+      await o.api.post(`${P}/rule-sets/${twin0.id}/confirm`, {
+        note: 'Conferido com a fonte',
+        expectedVersion: twin0.version,
+      }),
+      200
+    )
     assert.equal(
       code(
         await o.api.post(`${P}/rule-sets/${twin.id}/publish`, { expectedVersion: twin.version })

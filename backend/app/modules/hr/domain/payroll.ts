@@ -398,3 +398,171 @@ export function overlapDays(from: string, to: string, start: string, end: string
 }
 
 export { moneyText }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Simulação e casos de teste oficiais (7.8)
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Remuneração de um exemplo: salário base e outros abonos pela sua incidência. */
+export interface Sample {
+  baseSalary: string
+  /** Sujeitos a IRT e a INSS. */
+  allowancesSubject: string
+  /** Sujeitos só a IRT. */
+  allowancesIrtOnly: string
+  /** Sem IRT nem INSS. */
+  allowancesExempt: string
+}
+
+export interface TestCase extends Sample {
+  description: string
+  source: string
+  expectedInssEmployee: string
+  expectedIrt: string
+  expectedInssEmployer: string | null
+  expectedNet: string | null
+}
+
+const MONEY_TEXT = /^\d{1,15}(\.\d{1,2})?$/
+
+/** Recibo de um mês completo para um exemplo, só com as regras (sem colaborador, empréstimos nem faltas). */
+export function simulate(rules: Rules, s: Sample) {
+  const item = (
+    code: string,
+    name: string,
+    amount: string,
+    irt: boolean,
+    inss: boolean
+  ): PayItem => ({
+    componentId: code,
+    code,
+    name,
+    kind: 'EARNING',
+    amount,
+    recurring: false,
+    incidence: { irtSubject: irt, irtExemptAmount: null, inssSubject: inss },
+  })
+  return calculate({
+    period: '2000-01-01',
+    daysInMonth: 30,
+    base: { amount: s.baseSalary, payableDays: 30 },
+    items: [
+      item('SUJ', 'Abonos sujeitos a IRT e INSS', s.allowancesSubject, true, true),
+      item('IRT', 'Abonos sujeitos só a IRT', s.allowancesIrtOnly, true, false),
+      item('ISE', 'Abonos isentos', s.allowancesExempt, false, false),
+    ],
+    unpaidAbsences: [],
+    loans: [],
+    rules,
+  })
+}
+
+/** Corre um caso: compara o INSS, o IRT e (se indicados) o INSS patronal e o líquido, ao cêntimo. */
+export function runCase(rules: Rules, c: TestCase) {
+  const r = simulate(rules, c)
+  const checks: [string, string | null, bigint][] = [
+    ['inssEmployee', c.expectedInssEmployee, r.totals.inssEmployee],
+    ['irt', c.expectedIrt, r.totals.irt],
+    ['inssEmployer', c.expectedInssEmployer, r.totals.inssEmployer],
+    ['net', c.expectedNet, r.totals.net],
+  ]
+  const mismatches = checks
+    .filter(([, expected, actual]) => expected !== null && cents(expected) !== actual)
+    .map(([field, expected, actual]) => ({ field, expected: expected!, actual: moneyText(actual) }))
+  return {
+    pass: r.errors.length === 0 && mismatches.length === 0,
+    mismatches,
+    errors: r.errors,
+    actual: {
+      gross: moneyText(r.totals.gross),
+      inssBase: moneyText(r.totals.inssBase),
+      irtBase: moneyText(r.totals.irtBase),
+      inssEmployee: moneyText(r.totals.inssEmployee),
+      irt: moneyText(r.totals.irt),
+      inssEmployer: moneyText(r.totals.inssEmployer),
+      net: moneyText(r.totals.net),
+    },
+  }
+}
+
+/** Normaliza e valida exemplos e casos (montantes com até 2 casas; fonte obrigatória nos casos). */
+export function sampleIssues(
+  raw: unknown,
+  path = ''
+): { value: Sample | null; issues: ErrorDetail[] } {
+  const issues: ErrorDetail[] = []
+  const x = (raw ?? {}) as Record<string, unknown>
+  const amount = (k: keyof Sample, required: boolean) => {
+    const v = x[k]
+    const t =
+      typeof v === 'number' ? String(v) : typeof v === 'string' ? v.trim().replace(',', '.') : ''
+    if (t === '') {
+      if (required) issues.push({ path: `${path}${k}`, code: 'REQUIRED', message: 'Obrigatório.' })
+      return '0.00'
+    }
+    if (!MONEY_TEXT.test(t)) {
+      issues.push({ path: `${path}${k}`, code: 'INVALID_AMOUNT', message: 'Montante inválido.' })
+      return '0.00'
+    }
+    return moneyText(cents(t)!)
+  }
+  const value: Sample = {
+    baseSalary: amount('baseSalary', true),
+    allowancesSubject: amount('allowancesSubject', false),
+    allowancesIrtOnly: amount('allowancesIrtOnly', false),
+    allowancesExempt: amount('allowancesExempt', false),
+  }
+  return { value: issues.length ? null : value, issues }
+}
+
+export function testCaseIssues(raw: unknown): { value: TestCase[]; issues: ErrorDetail[] } {
+  if (!Array.isArray(raw))
+    return {
+      value: [],
+      issues: [{ path: 'testCases', code: 'INVALID', message: 'Lista inválida.' }],
+    }
+  const issues: ErrorDetail[] = []
+  const value: TestCase[] = []
+  raw.forEach((c: any, i: number) => {
+    const p = `testCases.${i}.`
+    const s = sampleIssues(c, p)
+    issues.push(...s.issues)
+    const text = (k: string, min: number, max: number) => {
+      const v = typeof c?.[k] === 'string' ? c[k].trim() : ''
+      if (v.length < min || v.length > max)
+        issues.push({ path: `${p}${k}`, code: 'LENGTH', message: `${min} a ${max} caracteres.` })
+      return v
+    }
+    const money = (k: string, required: boolean) => {
+      const v = c?.[k]
+      const t =
+        typeof v === 'string' ? v.trim().replace(',', '.') : typeof v === 'number' ? String(v) : ''
+      if (t === '') {
+        if (required) issues.push({ path: `${p}${k}`, code: 'REQUIRED', message: 'Obrigatório.' })
+        return null
+      }
+      if (!MONEY_TEXT.test(t)) {
+        issues.push({ path: `${p}${k}`, code: 'INVALID_AMOUNT', message: 'Montante inválido.' })
+        return null
+      }
+      return moneyText(cents(t)!)
+    }
+    const description = text('description', 3, 200)
+    const source = text('source', 5, 500)
+    const inss = money('expectedInssEmployee', true)
+    const irt = money('expectedIrt', true)
+    const employer = money('expectedInssEmployer', false)
+    const net = money('expectedNet', false)
+    if (s.value && inss !== null && irt !== null)
+      value.push({
+        ...s.value,
+        description,
+        source,
+        expectedInssEmployee: inss,
+        expectedIrt: irt,
+        expectedInssEmployer: employer,
+        expectedNet: net,
+      })
+  })
+  return { value, issues }
+}

@@ -12,6 +12,28 @@ export interface Bracket {
   excessOver: string;
 }
 
+export interface TestCase {
+  description: string;
+  source: string;
+  baseSalary: string;
+  allowancesSubject: string;
+  allowancesIrtOnly: string;
+  allowancesExempt: string;
+  expectedInssEmployee: string;
+  expectedIrt: string;
+  expectedInssEmployer: string | null;
+  expectedNet: string | null;
+}
+
+export interface CaseResult {
+  sequence: number;
+  description: string;
+  pass: boolean;
+  mismatches: { field: string; expected: string; actual: string }[];
+  errors: { message: string }[];
+  actual: Record<string, string>;
+}
+
 export interface RuleSet {
   id: string;
   version: number;
@@ -19,6 +41,7 @@ export interface RuleSet {
   name: string;
   currency: string;
   validFrom: string;
+  validTo: string | null;
   inssEmployeeRate: string;
   inssEmployerRate: string;
   baseIrtSubject: boolean;
@@ -27,7 +50,11 @@ export interface RuleSet {
   dayBasis: 'CALENDAR' | 'FIXED_30';
   legalReference: string;
   status: 'DRAFT' | 'PUBLISHED';
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  confirmationNote: string | null;
   brackets: Bracket[];
+  testCases: TestCase[];
 }
 
 export interface RunTotals {
@@ -206,5 +233,40 @@ export function bracketsPayload(rows: Bracket[]): Bracket[] {
     fixedAmount: n(b.fixedAmount) || '0',
     rate: n(b.rate),
     excessOver: n(b.excessOver) || n(b.lower),
+  }));
+}
+
+export const CASE_FIELD: Record<string, string> = {
+  inssEmployee: 'INSS do trabalhador',
+  irt: 'IRT',
+  inssEmployer: 'INSS da empresa',
+  net: 'Líquido',
+};
+
+/** O que ainda falta para publicar uma versão (orientação; a API verifica tudo de novo). */
+export function publishBlockers(
+  r: Pick<RuleSet, 'status' | 'testCases' | 'confirmedAt'>,
+): string[] {
+  if (r.status !== 'DRAFT') return [];
+  const out: string[] = [];
+  if (!r.testCases.length) out.push('Registe pelo menos um caso de teste oficial, com a fonte.');
+  if (!r.confirmedAt) out.push('Confirme que os valores correspondem às normas em vigor.');
+  return out;
+}
+
+/** Casos vindos do formulário: vírgula decimal → ponto; esperados opcionais vazios → `null`. */
+export function testCasesPayload(rows: TestCase[]): TestCase[] {
+  const n = (v: string | null) => (v ?? '').trim().replace(/\s/g, '').replace(',', '.');
+  return rows.map((c) => ({
+    description: c.description.trim(),
+    source: c.source.trim(),
+    baseSalary: n(c.baseSalary),
+    allowancesSubject: n(c.allowancesSubject) || '0',
+    allowancesIrtOnly: n(c.allowancesIrtOnly) || '0',
+    allowancesExempt: n(c.allowancesExempt) || '0',
+    expectedInssEmployee: n(c.expectedInssEmployee),
+    expectedIrt: n(c.expectedIrt),
+    expectedInssEmployer: n(c.expectedInssEmployer) || null,
+    expectedNet: n(c.expectedNet) || null,
   }));
 }

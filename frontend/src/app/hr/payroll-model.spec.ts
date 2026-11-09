@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { bracketsPayload, monthName, nextStep, pct, runTitle, runTone } from './payroll-model';
+import {
+  bracketsPayload,
+  monthName,
+  nextStep,
+  pct,
+  publishBlockers,
+  runTitle,
+  runTone,
+  testCasesPayload,
+} from './payroll-model';
 
 describe('processamento salarial (modelo)', () => {
   it('títulos e meses', () => {
@@ -37,6 +46,40 @@ describe('processamento salarial (modelo)', () => {
     ).toEqual([
       { lower: '0', upper: '100000', fixedAmount: '0', rate: '0', excessOver: '0' },
       { lower: '100000.01', upper: null, fixedAmount: '0', rate: '10', excessOver: '100000' },
+    ]);
+  });
+
+  it('o que falta para publicar e casos do formulário', () => {
+    expect(publishBlockers({ status: 'DRAFT', testCases: [], confirmedAt: null })).toHaveLength(2);
+    expect(publishBlockers({ status: 'PUBLISHED', testCases: [], confirmedAt: null })).toEqual([]);
+    expect(
+      testCasesPayload([
+        {
+          description: ' Caso ',
+          source: 'Fonte',
+          baseSalary: '200 000',
+          allowancesSubject: '',
+          allowancesIrtOnly: '1,5',
+          allowancesExempt: '',
+          expectedInssEmployee: '6000',
+          expectedIrt: '9400',
+          expectedInssEmployer: '',
+          expectedNet: null,
+        },
+      ]),
+    ).toEqual([
+      {
+        description: 'Caso',
+        source: 'Fonte',
+        baseSalary: '200000',
+        allowancesSubject: '0',
+        allowancesIrtOnly: '1.5',
+        allowancesExempt: '0',
+        expectedInssEmployee: '6000',
+        expectedIrt: '9400',
+        expectedInssEmployer: null,
+        expectedNet: null,
+      },
     ]);
   });
 });

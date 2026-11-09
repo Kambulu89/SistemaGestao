@@ -650,6 +650,15 @@ router
                   .post('payroll/rule-sets/:id/publish', [PayrollController, 'publishRuleSet'])
                   .use(middleware.can({ permission: 'hr.payroll.settings' }))
                 router
+                  .post('payroll/rule-sets/:id/verify', [PayrollController, 'verifyRuleSet'])
+                  .use(middleware.can({ permission: 'hr.payroll.settings' }))
+                router
+                  .post('payroll/rule-sets/:id/simulate', [PayrollController, 'simulateRuleSet'])
+                  .use(middleware.can({ permission: 'hr.payroll.settings' }))
+                router
+                  .post('payroll/rule-sets/:id/confirm', [PayrollController, 'confirmRuleSet'])
+                  .use(middleware.can({ permission: 'hr.payroll.settings' }))
+                router
                   .delete('payroll/rule-sets/:id', [PayrollController, 'deleteRuleSet'])
                   .use(middleware.can({ permission: 'hr.payroll.settings' }))
                 router.get('payroll/periods', [PayrollController, 'periods'])

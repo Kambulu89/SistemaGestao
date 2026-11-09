@@ -1,7 +1,7 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.7 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.8 a 7.13 seguem, um de
-cada vez. Decisões D-024 a D-030.
+Estado: **7.1 a 7.8 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.9 a 7.13 seguem, um de
+cada vez. Decisões D-024 a D-031.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
@@ -17,6 +17,7 @@ terão de ser configuradas pela empresa e confirmadas na legislação em vigor q
 | 7.5 Compensação/benefícios    | Salário base no contrato (7.3)                                  | Catálogo de componentes (subsídios, prémios, horas extra, abonos, descontos), incidência IRT/INSS por vigência com fonte, propostas com aprovação (directa ou workflow), componentes do colaborador com vigência e histórico imutável, remuneração numa data para o processamento                     | Feito  |
 | 7.6 Adiantamentos/empréstimos | Nada                                                            | Pedido com plano exacto ao cêntimo criado na aprovação, saldo derivado, limites configuráveis com fonte (prestação máxima em % do base somando empréstimos activos, número de prestações), contrato em cada mês, aprovação segregada, pagamento directo, desconto idempotente para o processamento    | Feito  |
 | 7.7 Processamento salarial    | Nada                                                            | Regras versionadas com fonte (INSS, tabela de IRT, incidência do base, base do IRT, base de dias); lotes regular/extra/retroactivo por entidade legal; cálculo exacto com erros por colaborador; instantâneo e hash; aprovação segregada; fecho imutável com descontos de empréstimos                 | Feito  |
+| 7.8 IRT/INSS                  | Regras versionadas com fonte (7.7)                              | Validade explícita, casos de teste oficiais com fonte que têm de passar, confirmação das normas vigentes por uma pessoa, simulador; nada pré-carregado no código                                                                                                                                      | Feito  |
 
 ## Modelo
 
@@ -125,6 +126,15 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
 - Para os blocos seguintes: `ruleSetAt(scope, currency, date)` em `#modules/hr/index`; os lotes fechados são a fonte dos
   recibos (7.9) e dos lançamentos (7.9).
 
+### 7.8 IRT/INSS
+
+- Migração `0029_create_hr_payroll_rule_validation`: `payroll_rule_sets.valid_to`, `confirmed_by|at`,
+  `confirmation_note` (confirmação exigida às publicadas daqui em diante); `payroll_rule_test_cases` (imutáveis com a
+  versão publicada, por trigger).
+- `POST /hr/payroll/rule-sets/:id/verify|simulate|confirm` (`hr.payroll.settings`); criar/alterar aceitam `validTo` e
+  `testCases`; publicar exige casos a passar e confirmação.
+- Erros: `NO_TEST_CASES`, `CASES_FAILING` (por caso, com o esperado e o calculado), `NOT_CONFIRMED`, `RANGE`.
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -158,6 +168,12 @@ Compensação (7.5):
 - Compensação (lista): propostas no âmbito, vista "A aprovar por mim".
 - Componentes de remuneração: catálogo e versões da incidência de IRT/INSS com fonte. Configuração de RH: workflow das
   propostas de compensação.
+
+Regras de IRT e INSS (7.8):
+
+- Cada versão mostra a vigência, a fonte, quem confirmou e quando, o que falta para publicar, a tabela e os casos de
+  teste com o resultado (passa/falha com esperado e calculado). Acções: simular, verificar casos, editar, confirmar
+  normas (nota e declaração obrigatórias), publicar, apagar rascunho. O editor ganhou a data de fim e os casos de teste.
 
 Processamento salarial (7.7):
 
@@ -302,10 +318,25 @@ Testes do 7.7:
   funcional encontrou que os valores variáveis não entravam no regular e a matriz de isolamento que os meses de uma
   entidade de outra empresa respondiam 200 vazio; ambos corrigidos.
 
+Testes do 7.8:
+
+- Backend funcional `hr_payroll_rules.spec.ts` (3 testes): casos com fonte obrigatória, sem casos não se confirma, caso
+  falhado com esperado e calculado, confirmação com nota, a edição apaga a confirmação, publicação, casos imutáveis na
+  base, auditoria; simulador (150 000 + 20 000 só IRT + 1 000,50 isentos ⇒ IRT 6 550, líquido 159 950,50); validade (a
+  partir do mês seguinte ao fim o processamento dá "sem regras"). `hr_payroll.spec.ts` actualizado (casos que deixam de
+  passar ao mudar a taxa patronal, confirmação antes de publicar).
+- Backend unitário (2 testes novos): simulação e comparação ao cêntimo só nos campos indicados; validação de exemplos e
+  casos.
+- `isolation_matrix` (verificar, simular e confirmar regras de outra empresa), frontend `hr/payroll-model.spec.ts`
+  (4 testes).
+- Browser (5 passos, sem erros na consola): versão com caso de IRT esperado errado; verificar mostra "Falha" com
+  esperado/calculado e publicar é recusado; simulador (200 000 ⇒ líquido 184 600); corrigir, verificar (passa), confirmar
+  com nota e declaração, publicar; 390 px sem deslocamento. O E2E levou a reescrever a mensagem de caso falhado (vinha
+  com o nome técnico do campo e montantes sem formato).
+
 ## Pendências
 
-- 7.8 a 7.13 (casos de teste oficiais de IRT/INSS, IRT/INSS, recibos,
-  formação, cessação, portais e relatórios).
+- 7.9 a 7.13 (recibos e lançamentos, formação, cessação, portais e relatórios, QA).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
 - 6.9 SAF-T continua bloqueado pela especificação oficial.
@@ -318,7 +349,7 @@ Testes do 7.7:
   aprovação de propostas com efeito em períodos de processamento fechados será bloqueada no 7.7.
 - Empréstimos: limites legais por confirmar pela empresa (configurados com a fonte); sem pedido pelo próprio
   colaborador (portal, 7.12); saldo em dívida na cessação a tratar no 7.11; reescalonamento de prestações não pedido.
-- Processamento: valores de IRT/INSS por confirmar na legislação angolana em vigor e casos de teste oficiais (7.8); a
-  tributação de pagamentos extra (ex.: subsídios de férias e Natal) segue as mesmas regras do mês até o 7.8 o confirmar;
+- IRT/INSS: os valores da legislação angolana em vigor e os exemplos oficiais têm de ser introduzidos e confirmados
+  pela empresa (o projecto não os confirma nem pré-carrega). Processamento: a tributação de pagamentos extra (ex.: subsídios de férias e Natal) segue as mesmas regras do mês até o 7.8 o confirmar;
   mudança de salário a meio do mês usa o valor do último dia pago; recibos em PDF, pagamento e lançamentos contabilísticos
   no 7.9.

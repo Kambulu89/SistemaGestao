@@ -2807,7 +2807,7 @@ export class PayrollResultSchema extends BaseModel {
 }
 
 export class PayrollRuleSetSchema extends BaseModel {
-  static $columns = ['baseInssSubject', 'baseIrtSubject', 'code', 'createdAt', 'createdBy', 'currency', 'dayBasis', 'id', 'inssEmployeeRate', 'inssEmployerRate', 'irtBaseDeductsInss', 'legalReference', 'name', 'publishedAt', 'publishedBy', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'version'] as const
+  static $columns = ['baseInssSubject', 'baseIrtSubject', 'code', 'confirmationNote', 'confirmedAt', 'confirmedBy', 'createdAt', 'createdBy', 'currency', 'dayBasis', 'id', 'inssEmployeeRate', 'inssEmployerRate', 'irtBaseDeductsInss', 'legalReference', 'name', 'publishedAt', 'publishedBy', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = PayrollRuleSetSchema.$columns
   @column()
   declare baseInssSubject: boolean
@@ -2815,6 +2815,12 @@ export class PayrollRuleSetSchema extends BaseModel {
   declare baseIrtSubject: boolean
   @column()
   declare code: string
+  @column()
+  declare confirmationNote: string | null
+  @column.dateTime()
+  declare confirmedAt: DateTime | null
+  @column()
+  declare confirmedBy: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -2849,6 +2855,51 @@ export class PayrollRuleSetSchema extends BaseModel {
   declare updatedBy: string | null
   @column.date()
   declare validFrom: DateTime
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class PayrollRuleTestCaseSchema extends BaseModel {
+  static $columns = ['allowancesExempt', 'allowancesIrtOnly', 'allowancesSubject', 'baseSalary', 'createdAt', 'createdBy', 'description', 'expectedInssEmployee', 'expectedInssEmployer', 'expectedIrt', 'expectedNet', 'id', 'ruleSetId', 'sequence', 'source', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayrollRuleTestCaseSchema.$columns
+  @column()
+  declare allowancesExempt: string
+  @column()
+  declare allowancesIrtOnly: string
+  @column()
+  declare allowancesSubject: string
+  @column()
+  declare baseSalary: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column()
+  declare expectedInssEmployee: string
+  @column()
+  declare expectedInssEmployer: string | null
+  @column()
+  declare expectedIrt: string
+  @column()
+  declare expectedNet: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare ruleSetId: string
+  @column()
+  declare sequence: number
+  @column()
+  declare source: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
   @column()
   declare version: number
 }

@@ -312,3 +312,17 @@ nem quem tem o recibo no lote; recusar volta a "calculado". Fechar regista os de
 lote (idempotente) e, no regular, fecha o mês. Resultados de lotes submetidos, aprovados ou fechados não se alteram nem
 apagam (trigger); correcções fazem-se por retroactivo. A auditoria guarda contagens e o hash, nunca montantes
 individuais. A verificação contra casos de teste oficiais e a confirmação das normas angolanas ficam para o 7.8.
+
+## D-031 IRT/INSS: publicar só com casos de teste oficiais a passar e normas confirmadas por uma pessoa (aceite)
+
+As regras do processamento (D-030) ganham **validade explícita** (início e, opcionalmente, fim: depois do fim, sem versão
+seguinte, não há regras em vigor e o processamento dá erro em vez de usar uma versão antiga), **casos de teste
+oficiais** (exemplo com salário base e abonos por incidência, valores esperados de INSS do trabalhador e IRT e,
+opcionalmente, INSS da empresa e líquido, cada um com a fonte) e a **confirmação das normas vigentes**: uma pessoa com
+`hr.payroll.settings` declara, com nota, que conferiu os valores na fonte indicada. Confirmar exige pelo menos um caso e
+que todos passem ao cêntimo; publicar volta a correr os casos e exige a confirmação; qualquer alteração ao rascunho
+apaga a confirmação. Depois de publicados, regras e casos não mudam (triggers). Um simulador mostra o recibo de um
+exemplo com uma versão, sem gravar nada, para preparar os casos. Continua a não haver valores legais no código nem
+pré-carregados: o projecto não confirma a legislação angolana em vigor — é a empresa que introduz e confirma, com a
+fonte (por exemplo, o Código do IRT e as taxas de segurança social publicadas), e a LGT n.º 12/23 é a referência
+laboral indicada no prompt.
