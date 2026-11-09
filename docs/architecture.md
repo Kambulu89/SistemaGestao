@@ -327,7 +327,7 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
 
 ## Recursos humanos (módulo `hr`, Prompt 07)
 
-Blocos 7.1 a 7.9 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-032).
+Blocos 7.1 a 7.10 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-033).
 
 - **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
   cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
@@ -393,3 +393,6 @@ employeeId, from, to)` em `#modules/hr/index`.
   acréscimo; `hr.payroll.pay`), `payroll_postings` (eventos `PAYROLL/*` do motor de contabilização, uma vez cada).
   Recibos PDF por `app/shared/pdf/simple_pdf.ts`, só para o próprio ou quem processa. Contrato para Finanças:
   `payrollObligations` em `#modules/hr/index`.
+- **Formação e processos** (7.10): catálogo (`competencies`, `training_courses`), sessões e inscrições (fixas depois de
+  concluídas), `employee_competencies` (só de acréscimo) e `employee_certificates`; `disciplinary_cases`/`_events` com
+  permissões próprias `hr.discipline.*`, nunca sobre o próprio, consulta auditada e cronologia só de acréscimo.

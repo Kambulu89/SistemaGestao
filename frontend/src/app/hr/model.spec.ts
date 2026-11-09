@@ -89,6 +89,15 @@ describe('colaborador: envio da ficha', () => {
     expect(
       payroll2.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
     ).toContain('Processamento salarial');
+    const discipline = visibleNavigation(
+      (p, any) => (any ? p === 'hr.training.read' || p === 'hr.discipline.read' : false),
+      (f) => f === 'hr',
+      true,
+      false,
+    );
+    expect(
+      discipline.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
+    ).toEqual(expect.arrayContaining(['Formação', 'Processos disciplinares']));
     const noFeature = visibleNavigation(
       () => true,
       () => false,

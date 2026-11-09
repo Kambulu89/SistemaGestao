@@ -90,6 +90,47 @@ export const HR_ROUTES: Routes = [
     ],
   },
   {
+    path: 'formacao',
+    title: 'Formação',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.training.read', anyScope: true },
+        loadComponent: () => import('./training-sessions').then((m) => m.TrainingSessions),
+      },
+      {
+        path: 'catalogo',
+        title: 'Catálogo de formação',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.training.settings' },
+        loadComponent: () => import('./training-catalog').then((m) => m.TrainingCatalog),
+      },
+      {
+        path: ':id',
+        title: 'Sessão de formação',
+        loadComponent: () => import('./training-session').then((m) => m.TrainingSession),
+      },
+    ],
+  },
+  {
+    path: 'disciplina',
+    title: 'Processos disciplinares',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.discipline.read', anyScope: true },
+        loadComponent: () => import('./discipline-cases').then((m) => m.DisciplineCases),
+      },
+      {
+        path: ':id',
+        title: 'Processo disciplinar',
+        loadComponent: () => import('./discipline-case').then((m) => m.DisciplineCase),
+      },
+    ],
+  },
+  {
     path: 'recibos',
     title: 'Os meus recibos',
     loadComponent: () => import('./my-payslips').then((m) => m.MyPayslips),

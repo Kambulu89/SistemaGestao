@@ -315,6 +315,35 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Configurar as regras de processamento (taxas de INSS, tabela de IRT, incidência do salário base) por vigência e com fonte.',
   },
   {
+    code: 'hr.training.read',
+    module: 'hr',
+    description:
+      'Ver sessões de formação e a formação, competências e certificados dos colaboradores no âmbito atribuído (o próprio com OWN).',
+  },
+  {
+    code: 'hr.training.manage',
+    module: 'hr',
+    description:
+      'Planear sessões de formação, inscrever, registar resultados, concluir e registar competências e certificados, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.training.settings',
+    module: 'hr',
+    description: 'Configurar o catálogo de formação: competências e cursos.',
+  },
+  {
+    code: 'hr.discipline.read',
+    module: 'hr',
+    description:
+      'Consultar processos disciplinares no âmbito atribuído (acesso restrito e auditado; nunca os próprios).',
+  },
+  {
+    code: 'hr.discipline.manage',
+    module: 'hr',
+    description:
+      'Abrir e instruir processos disciplinares e registar a decisão, no âmbito atribuído (nunca os próprios).',
+  },
+  {
     code: 'hr.settings',
     module: 'hr',
     description:

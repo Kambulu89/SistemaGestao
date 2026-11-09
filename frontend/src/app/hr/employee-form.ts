@@ -9,6 +9,8 @@ import { CareerCard } from './career-card';
 import { ContractsCard } from './contracts-card';
 import { CompensationCard } from './compensation-card';
 import { LoansCard } from './loans-card';
+import { TrainingCard } from './training-card';
+import { DisciplineCard } from './discipline-card';
 import { LeaveCard } from './leave-card';
 import { OnboardingCard } from './onboarding-card';
 import { Workspace } from '../core/workspace';
@@ -68,6 +70,8 @@ interface Option {
     LeaveCard,
     CompensationCard,
     LoansCard,
+    TrainingCard,
+    DisciplineCard,
     ErrorState,
     Skeleton,
     Icon,
@@ -143,6 +147,8 @@ interface Option {
           <app-leave-card [employeeId]="e.id" />
           <app-compensation-card [employeeId]="e.id" />
           <app-loans-card [employeeId]="e.id" />
+          <app-training-card [employeeId]="e.id" />
+          <app-discipline-card [employeeId]="e.id" />
         </div>
         <div aside>
           <section class="card" aria-labelledby="emp-summary">

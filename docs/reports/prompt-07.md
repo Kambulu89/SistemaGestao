@@ -1,7 +1,7 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.9 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.10 a 7.13 seguem, um de
-cada vez. Decisões D-024 a D-032.
+Estado: **7.1 a 7.10 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.11 a 7.13 seguem, um de
+cada vez. Decisões D-024 a D-033.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
@@ -19,6 +19,7 @@ terão de ser configuradas pela empresa e confirmadas na legislação em vigor q
 | 7.7 Processamento salarial    | Nada                                                            | Regras versionadas com fonte (INSS, tabela de IRT, incidência do base, base do IRT, base de dias); lotes regular/extra/retroactivo por entidade legal; cálculo exacto com erros por colaborador; instantâneo e hash; aprovação segregada; fecho imutável com descontos de empréstimos                 | Feito  |
 | 7.8 IRT/INSS                  | Regras versionadas com fonte (7.7)                              | Validade explícita, casos de teste oficiais com fonte que têm de passar, confirmação das normas vigentes por uma pessoa, simulador; nada pré-carregado no código                                                                                                                                      | Feito  |
 | 7.9 Recibos e pagamento       | Contabilidade com motor de eventos (6.3); sem Finanças          | Obrigações do fecho (líquido, IRT, INSS, descontos), pagamentos parciais só de acréscimo (fechado ≠ pago), eventos PAYROLL únicos para a contabilidade, recibos PDF privados (o próprio ou quem processa), "Os meus recibos", contrato de obrigações para Finanças                                    | Feito  |
+| 7.10 Formação/processos       | Nada                                                            | Catálogo (competências, cursos), sessões com capacidade e custo, resultados, conclusão com competências e certificados, custos por curso/departamento; processos disciplinares com permissões próprias, cronologia só de acréscimo, defesa antes da sanção, leitura auditada                          | Feito  |
 
 ## Modelo
 
@@ -149,6 +150,22 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
 - Erros: `OVERPAYMENT`, `FUTURE`, `CURRENCY_MISMATCH`, `NO_RULE` (da contabilidade), `NEGATIVE_AMOUNTS`, `NOT_CLOSED`.
 - `app/shared/pdf/simple_pdf.ts`: gerador de PDF 1.4 sem dependências (Helvetica/WinAnsi, texto e linhas).
 
+### 7.10 Formação e processos laborais
+
+- Migração `0031_create_hr_training_discipline`: `competencies`, `training_courses` (+ `training_course_competencies`),
+  `training_sessions`, `training_enrollments` (fixas depois de concluída a sessão), `employee_competencies` (só de
+  acréscimo), `employee_certificates`, `disciplinary_cases` (encerrado ⇒ fixo) e `disciplinary_events` (só de acréscimo).
+- Formação: `GET|POST|PATCH /hr/training/competencies|courses` (escrita com `hr.training.settings`),
+  `GET|POST /hr/training/sessions`, `GET /hr/training/sessions/:id`, `POST …/enrollments|complete|cancel`,
+  `POST /hr/training/enrollments/:id/result`, `GET /hr/training/costs?year=`, `GET /hr/employees/:id/training`,
+  `POST /hr/employees/:id/competencies|certificates`.
+- Processos: `GET /hr/discipline/cases`, `GET /hr/discipline/cases/:id` (auditado), `POST /hr/employees/:id/discipline/cases`,
+  `POST /hr/discipline/cases/:id/events|review|close`.
+- Permissões novas: `hr.training.read|manage|settings`, `hr.discipline.read|manage`. Anexos: `employee_certificate` e
+  `disciplinary_case`.
+- Erros: `CAPACITY`, `NOT_STARTED`, `ASSESSED`, `NOT_ASSESSED`, `NO_RESULT`, `NO_CERTIFICATE`, `DUPLICATE`, `SELF_CASE`,
+  `DEFENCE_REQUIRED`, `TERMINATED`.
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -182,6 +199,17 @@ Compensação (7.5):
 - Compensação (lista): propostas no âmbito, vista "A aprovar por mim".
 - Componentes de remuneração: catálogo e versões da incidência de IRT/INSS com fonte. Configuração de RH: workflow das
   propostas de compensação.
+
+Formação e processos (7.10):
+
+- Formação (lista de sessões, nova sessão com custo e capacidade); sessão (inscrever por lista de colaboradores,
+  resultado/horas/nota por participante, concluir com confirmação, cancelar; resumo com custo por participante e
+  competências do curso); catálogo (competências e cursos com níveis); ficha do colaborador: cartão "Formação e
+  competências" (nível actual, certificados com validade e documentos, inscrições, avaliar competência, registar
+  certificado).
+- Processos disciplinares (lista restrita); processo (aviso de confidencialidade, factos, cronologia, documentos,
+  registar, passar a instrução, decidir e encerrar com aviso de defesa em falta); ficha: cartão "Processos
+  disciplinares" só para quem tem acesso.
 
 Recibos e pagamento (7.9):
 
@@ -371,9 +399,29 @@ Testes do 7.9:
   PAYROLL/SALARIES" e nada lançado; PDF do recibo a partir do lote (verificado o conteúdo); "Os meus recibos" descarrega
   e o aprovador não vê o recibo de outra pessoa; 390 px sem deslocamento.
 
+Testes do 7.10:
+
+- Backend funcional `hr_training.spec.ts` (3 testes): catálogo (código repetido, modalidade, horas, nível, competência
+  repetida ou inactiva, validade sem certificado, permissões); sessão (datas, capacidade, custo por participante
+  45 000, resultados conforme a avaliação, conclusão só com todos os resultados, competências e certificado só para o
+  aprovado com validade de 24 meses, sessão concluída fixa, histórico só de acréscimo, avaliação posterior, certificado
+  externo expirado, custos 90 000 por curso e departamento); âmbito (gestor de outro departamento, resultados antes do
+  início, o próprio com OWN).
+- Backend funcional `hr_discipline.spec.ts` (2 testes): validação, código, instrução, registos, defesa antes da sanção,
+  encerramento, cronologia e processo encerrado fixos na base, auditoria sem o texto dos factos; RH geral não vê,
+  âmbito por departamento, leitura sem gestão, ninguém vê nem abre processos sobre si, consultas auditadas.
+- `isolation_matrix` (catálogo, sessões, inscrições, formação, certificados, processos e anexos de outra empresa),
+  `routes_protection`; frontend `hr/training-model.spec.ts` (3 testes) e navegação.
+- Browser (7 passos, dois utilizadores, sem erros na consola): competência e curso pela interface; sessão com custo
+  60 000 para 2 ⇒ 30 000 por participante, inscrições, concluir recusado sem todos os resultados, concluída com
+  certificado para a aprovada; ficha com nível 3 e certificado de 02/10/2026 a 02/10/2027, nada para o reprovado;
+  processo aberto na ficha, instrução, aviso de defesa em falta, defesa, encerrado com 4 registos na cronologia; outro
+  utilizador sem permissão recebe "Recurso inexistente" e não vê o cartão; 390 px sem deslocamento. O teste funcional
+  levou a corrigir a ordem da cronologia (passou a ser a do registo) e a detecção de competência repetida.
+
 ## Pendências
 
-- 7.10 a 7.13 (formação e processos laborais, cessação, portais e relatórios, QA).
+- 7.11 a 7.13 (cessação, portais e relatórios, QA).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
 - 6.9 SAF-T continua bloqueado pela especificação oficial.
@@ -394,3 +442,6 @@ Testes do 7.9:
   contrato `payrollObligations` e os prazos legais de entrega de IRT/INSS não estão no sistema (por confirmar e
   configurar); envio de recibos por email e assinatura digital não feitos; contabilização por centro de custo e de
   retroactivos negativos fica manual.
+- Formação e processos: avaliação de eficácia da formação e planos individuais não pedidos; alertas de certificados a
+  expirar ficam para os portais/relatórios (7.12); prazos legais do processo disciplinar (LGT) e retenção dos processos
+  por definir pela empresa; o próprio colaborador ainda não vê as decisões que lhe dizem respeito (portal, 7.12).

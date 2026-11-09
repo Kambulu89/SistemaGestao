@@ -344,3 +344,22 @@ as obrigações publicam-se por um contrato (`payrollObligations` em `#modules/h
 **recibos em PDF** geram-se no servidor com um gerador mínimo próprio (texto e linhas, sem dependências), só para lotes
 fechados, com o IBAN mascarado, e só os descarrega quem processa salários na entidade legal ou o próprio colaborador
 ("Os meus recibos"); cada descarga fica na auditoria e as respostas não ficam em cache.
+
+## D-033 Formação com competências e certificados; processos disciplinares de acesso restrito e auditado (aceite)
+
+**Formação**: o catálogo da empresa (`hr.training.settings`) tem competências e cursos (modalidade, horas, entidade
+formadora, com/sem avaliação, certificado com validade opcional e as competências que dá, com nível 1–5). As sessões
+têm datas, capacidade e custo; inscreve quem gere formação no âmbito da colocação dos colaboradores; os resultados só se
+registam depois do início (aprovado/reprovado nos cursos com avaliação, presente nos outros, faltou, cancelado).
+Concluir exige resultado para todos e atribui as competências do curso a quem concluiu, só se o nível sobe, e emite o
+certificado numerado com validade; depois a sessão e os resultados não mudam (trigger). O histórico de competências é só
+de acréscimo (formação ou avaliação); o nível actual é o do registo mais recente. O custo por participante é o custo da
+sessão repartido pelos inscritos não cancelados, e há um resumo anual por curso e por departamento no âmbito de quem
+pede. O próprio vê a sua formação com OWN.
+
+**Processos disciplinares**: permissões próprias `hr.discipline.read|manage`, nunca dadas pelas de RH geral; âmbito pela
+colocação; ninguém vê, abre ou trata processos sobre si próprio; cada consulta de um processo fica na auditoria e o
+texto dos factos nunca vai para a auditoria. A cronologia (notas, notificação, audiência, defesa, decisão) é só de
+acréscimo; uma sanção exige o registo prévio da defesa ou da audiência do trabalhador; encerrado com a decisão e a
+fundamentação, o processo não muda (trigger). Os documentos usam os anexos com o mesmo acesso. As sanções são categorias
+genéricas: a sua aplicação concreta e prazos seguem a LGT e o regulamento da empresa, que o sistema não codifica.

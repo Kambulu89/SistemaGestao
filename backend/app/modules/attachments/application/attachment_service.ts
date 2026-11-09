@@ -6,7 +6,12 @@ import { assertEntitled, assertWithinQuota } from '#modules/subscription/index'
 import { audit } from '#modules/audit/index'
 import { canViewRequest } from '#modules/approvals/index'
 import { ORGANIZATION_ENTITY_TYPES, organizationRecordExists } from '#modules/organization/index'
-import { employeeAccess, leaveRequestAccess } from '#modules/hr/index'
+import {
+  certificateAccess,
+  disciplinaryCaseAccess,
+  employeeAccess,
+  leaveRequestAccess,
+} from '#modules/hr/index'
 import {
   extensionOf,
   FILE_TYPES,
@@ -86,6 +91,16 @@ function policies(): Record<string, SubjectPolicy> {
   map.leave_request = {
     feature: 'hr',
     access: (scope, id) => leaveRequestAccess(scope, id),
+  }
+  // Certificados de formação: o mesmo acesso da formação do colaborador.
+  map.employee_certificate = {
+    feature: 'hr',
+    access: (scope, id) => certificateAccess(scope, id),
+  }
+  // Documentos de processos disciplinares (acesso restrito; encerrado, só leitura).
+  map.disciplinary_case = {
+    feature: 'hr',
+    access: (scope, id) => disciplinaryCaseAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

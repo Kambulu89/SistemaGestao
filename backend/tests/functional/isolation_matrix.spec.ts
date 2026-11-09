@@ -458,6 +458,42 @@ async function populate(client: any) {
       kind: 'EXTRA',
     })
   )
+  const competency = ok(
+    await as(client, s).post('/api/v1/hr/training/competencies', {
+      code: 'COMP-A',
+      name: 'Competência A',
+    })
+  )
+  const course = ok(
+    await as(client, s).post('/api/v1/hr/training/courses', {
+      code: 'CUR-A',
+      name: 'Curso A',
+      mode: 'INTERNAL',
+      durationHours: '8',
+    })
+  )
+  const trainingSession = ok(
+    await as(client, s).post('/api/v1/hr/training/sessions', {
+      courseId: course.id,
+      startsOn: '2026-03-01',
+      endsOn: '2026-03-02',
+    })
+  )
+  const certificate = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/certificates`, {
+      name: 'Certificado A',
+      issuer: 'Entidade A',
+      issuedOn: '2026-01-10',
+    })
+  )
+  const disciplinaryCase = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/discipline/cases`, {
+      category: 'OTHER',
+      occurredOn: '2026-01-10',
+      summary: 'Processo A',
+      description: 'Descrição dos factos do processo A.',
+    })
+  )
   const loan = ok(
     await as(client, s).post(`/api/v1/hr/employees/${employee.id}/loans`, {
       kind: 'ADVANCE',
@@ -502,6 +538,11 @@ async function populate(client: any) {
     payComponent,
     compProposal,
     loan,
+    competency,
+    course,
+    trainingSession,
+    certificate,
+    disciplinaryCase,
     ruleSet,
     payrollRun,
     closeTask,
@@ -849,6 +890,90 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'meses de outra empresa',
         B.get(`/api/v1/hr/payroll/periods?legalEntityId=${a.employee.legalEntityId}`),
+      ],
+      [
+        'PATCH competência',
+        B.patch(`/api/v1/hr/training/competencies/${a.competency.id}`, { name: 'xxx' }),
+      ],
+      ['PATCH curso', B.patch(`/api/v1/hr/training/courses/${a.course.id}`, { name: 'xxx' })],
+      ['GET sessão de formação', B.get(`/api/v1/hr/training/sessions/${a.trainingSession.id}`)],
+      [
+        'inscrever na sessão',
+        B.post(`/api/v1/hr/training/sessions/${a.trainingSession.id}/enrollments`, {
+          ...v,
+          employeeIds: [a.employee.id],
+        }),
+      ],
+      [
+        'concluir sessão',
+        B.post(`/api/v1/hr/training/sessions/${a.trainingSession.id}/complete`, v),
+      ],
+      ['cancelar sessão', B.post(`/api/v1/hr/training/sessions/${a.trainingSession.id}/cancel`, v)],
+      [
+        'resultado de inscrição',
+        B.post(`/api/v1/hr/training/enrollments/${a.trainingSession.id}/result`, {
+          ...v,
+          status: 'PASSED',
+        }),
+      ],
+      ['GET formação do colaborador', B.get(`/api/v1/hr/employees/${a.employee.id}/training`)],
+      [
+        'avaliar competência',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/competencies`, {
+          competencyId: a.competency.id,
+          level: 1,
+          acquiredOn: '2026-01-01',
+        }),
+      ],
+      [
+        'certificado noutra empresa',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/certificates`, {
+          name: 'X',
+          issuer: 'Y',
+          issuedOn: '2026-01-01',
+        }),
+      ],
+      ['GET processo disciplinar', B.get(`/api/v1/hr/discipline/cases/${a.disciplinaryCase.id}`)],
+      [
+        'abrir processo',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/discipline/cases`, {
+          category: 'OTHER',
+          occurredOn: '2026-01-01',
+          summary: 'xxx',
+          description: 'xxxxxxxxxxxx',
+        }),
+      ],
+      [
+        'registo no processo',
+        B.post(`/api/v1/hr/discipline/cases/${a.disciplinaryCase.id}/events`, {
+          ...v,
+          kind: 'NOTE',
+          occurredOn: '2026-01-11',
+          text: 'xxx',
+        }),
+      ],
+      [
+        'instruir processo',
+        B.post(`/api/v1/hr/discipline/cases/${a.disciplinaryCase.id}/review`, v),
+      ],
+      [
+        'encerrar processo',
+        B.post(`/api/v1/hr/discipline/cases/${a.disciplinaryCase.id}/close`, {
+          ...v,
+          outcome: 'NO_ACTION',
+          decidedOn: '2026-01-11',
+          outcomeDetails: 'xxx',
+        }),
+      ],
+      [
+        'anexos do certificado',
+        B.get(`/api/v1/attachments?subjectType=employee_certificate&subjectId=${a.certificate.id}`),
+      ],
+      [
+        'anexos do processo',
+        B.get(
+          `/api/v1/attachments?subjectType=disciplinary_case&subjectId=${a.disciplinaryCase.id}`
+        ),
       ],
       ['GET carreira', B.get(`/api/v1/hr/employees/${a.employee.id}/assignments`)],
       [
@@ -1309,6 +1434,9 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/hr/loans')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/payroll/runs')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/payslips')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/training/sessions')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/training/courses')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/discipline/cases')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/payroll/rule-sets')).body().data, 0)
     for (const url of [
       '/api/v1/hr/leave/requests',
@@ -1381,6 +1509,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/hr/loans',
       '/api/v1/hr/payroll/runs',
       '/api/v1/hr/payroll/rule-sets',
+      '/api/v1/hr/training/sessions',
+      '/api/v1/hr/discipline/cases',
       `/api/v1/hr/employees/${a.employee.id}/loans`,
     ]) {
       const r = await spoof.get(url)

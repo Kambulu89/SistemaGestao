@@ -12,3 +12,5 @@ export { compensationAt, onCompensationDecided } from '#modules/hr/application/c
 export { dueLoanInstallments, recordLoanDeduction } from '#modules/hr/application/loan_service'
 export { ruleSetAt } from '#modules/hr/application/payroll_service'
 export { payrollObligations } from '#modules/hr/application/payroll_payment_service'
+export { certificateAccess } from '#modules/hr/application/training_service'
+export { disciplinaryCaseAccess } from '#modules/hr/application/discipline_service'

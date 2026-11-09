@@ -923,6 +923,33 @@ export class CompensationProposalSchema extends BaseModel {
   declare version: number
 }
 
+export class CompetencySchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'description', 'id', 'name', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CompetencySchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class CostCenterSchema extends BaseModel {
   static $columns = ['code', 'createdAt', 'createdBy', 'departmentId', 'id', 'legalEntityId', 'managerMembershipId', 'name', 'parentId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = CostCenterSchema.$columns
@@ -999,6 +1026,74 @@ export class DepartmentSchema extends BaseModel {
   declare version: number
 }
 
+export class DisciplinaryCaseSchema extends BaseModel {
+  static $columns = ['category', 'code', 'createdAt', 'createdBy', 'decidedByMembershipId', 'decidedOn', 'description', 'employeeId', 'id', 'occurredOn', 'outcome', 'outcomeDetails', 'status', 'summary', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = DisciplinaryCaseSchema.$columns
+  @column()
+  declare category: string
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare decidedByMembershipId: string | null
+  @column.date()
+  declare decidedOn: DateTime | null
+  @column()
+  declare description: string
+  @column()
+  declare employeeId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare occurredOn: DateTime
+  @column()
+  declare outcome: string | null
+  @column()
+  declare outcomeDetails: string | null
+  @column()
+  declare status: string
+  @column()
+  declare summary: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class DisciplinaryEventSchema extends BaseModel {
+  static $columns = ['caseId', 'createdAt', 'createdBy', 'id', 'kind', 'occurredOn', 'tenantId', 'text', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = DisciplinaryEventSchema.$columns
+  @column()
+  declare caseId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column.date()
+  declare occurredOn: DateTime
+  @column()
+  declare tenantId: string
+  @column()
+  declare text: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class DocumentSerySchema extends BaseModel {
   static $columns = ['branchId', 'code', 'createdAt', 'createdBy', 'documentType', 'fiscalYear', 'id', 'legalEntityId', 'nextNumber', 'padding', 'prefix', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = DocumentSerySchema.$columns
@@ -1036,6 +1131,72 @@ export class DocumentSerySchema extends BaseModel {
   declare validFrom: DateTime | null
   @column.date()
   declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class EmployeeCertificateSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'employeeId', 'enrollmentId', 'expiresOn', 'id', 'issuedOn', 'issuer', 'name', 'number', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = EmployeeCertificateSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare employeeId: string
+  @column()
+  declare enrollmentId: string | null
+  @column.date()
+  declare expiresOn: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare issuedOn: DateTime
+  @column()
+  declare issuer: string
+  @column()
+  declare name: string
+  @column()
+  declare number: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class EmployeeCompetencySchema extends BaseModel {
+  static $columns = ['acquiredOn', 'competencyId', 'createdAt', 'createdBy', 'employeeId', 'enrollmentId', 'id', 'level', 'notes', 'source', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = EmployeeCompetencySchema.$columns
+  @column.date()
+  declare acquiredOn: DateTime
+  @column()
+  declare competencyId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare employeeId: string
+  @column()
+  declare enrollmentId: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare level: number
+  @column()
+  declare notes: string | null
+  @column()
+  declare source: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
   @column()
   declare version: number
 }
@@ -3806,6 +3967,144 @@ export class TenantSchema extends BaseModel {
   declare timezone: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+  @column()
+  declare version: number
+}
+
+export class TrainingCourseCompetencySchema extends BaseModel {
+  static $columns = ['competencyId', 'courseId', 'createdAt', 'createdBy', 'id', 'level', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = TrainingCourseCompetencySchema.$columns
+  @column()
+  declare competencyId: string
+  @column()
+  declare courseId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare level: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class TrainingCourseSchema extends BaseModel {
+  static $columns = ['assessed', 'certificateValidityMonths', 'code', 'createdAt', 'createdBy', 'description', 'durationHours', 'id', 'issuesCertificate', 'mode', 'name', 'provider', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = TrainingCourseSchema.$columns
+  @column()
+  declare assessed: boolean
+  @column()
+  declare certificateValidityMonths: number | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string | null
+  @column()
+  declare durationHours: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare issuesCertificate: boolean
+  @column()
+  declare mode: string
+  @column()
+  declare name: string
+  @column()
+  declare provider: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class TrainingEnrollmentSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'employeeId', 'hoursAttended', 'id', 'notes', 'score', 'sessionId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = TrainingEnrollmentSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare employeeId: string
+  @column()
+  declare hoursAttended: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare score: string | null
+  @column()
+  declare sessionId: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class TrainingSessionSchema extends BaseModel {
+  static $columns = ['capacity', 'code', 'completedAt', 'completedBy', 'costTotal', 'courseId', 'createdAt', 'createdBy', 'currency', 'endsOn', 'id', 'location', 'startsOn', 'status', 'tenantId', 'trainer', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = TrainingSessionSchema.$columns
+  @column()
+  declare capacity: number | null
+  @column()
+  declare code: string
+  @column.dateTime()
+  declare completedAt: DateTime | null
+  @column()
+  declare completedBy: string | null
+  @column()
+  declare costTotal: string | null
+  @column()
+  declare courseId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string | null
+  @column.date()
+  declare endsOn: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare location: string | null
+  @column.date()
+  declare startsOn: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare trainer: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
   @column()
   declare version: number
 }

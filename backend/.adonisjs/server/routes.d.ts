@@ -268,6 +268,29 @@ export type ScannedRoutes = {
     'payroll.account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.my_payslips': { paramsTuple?: []; params?: {} }
     'payroll.payslip': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.create_competency': { paramsTuple?: []; params?: {} }
+    'training.update_competency': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.create_course': { paramsTuple?: []; params?: {} }
+    'training.update_course': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.competencies': { paramsTuple?: []; params?: {} }
+    'training.courses': { paramsTuple?: []; params?: {} }
+    'training.sessions': { paramsTuple?: []; params?: {} }
+    'training.create_session': { paramsTuple?: []; params?: {} }
+    'training.session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.enroll': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.complete': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cancel_session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.result': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.costs': { paramsTuple?: []; params?: {} }
+    'training.employee_training': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.assess': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.add_certificate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cases': { paramsTuple?: []; params?: {} }
+    'training.case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.open_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.case_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.review_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.close_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -443,6 +466,14 @@ export type ScannedRoutes = {
     'payroll.payments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.my_payslips': { paramsTuple?: []; params?: {} }
     'payroll.payslip': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.competencies': { paramsTuple?: []; params?: {} }
+    'training.courses': { paramsTuple?: []; params?: {} }
+    'training.sessions': { paramsTuple?: []; params?: {} }
+    'training.session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.costs': { paramsTuple?: []; params?: {} }
+    'training.employee_training': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cases': { paramsTuple?: []; params?: {} }
+    'training.case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -574,6 +605,14 @@ export type ScannedRoutes = {
     'payroll.payments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.my_payslips': { paramsTuple?: []; params?: {} }
     'payroll.payslip': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.competencies': { paramsTuple?: []; params?: {} }
+    'training.courses': { paramsTuple?: []; params?: {} }
+    'training.sessions': { paramsTuple?: []; params?: {} }
+    'training.session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.costs': { paramsTuple?: []; params?: {} }
+    'training.employee_training': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cases': { paramsTuple?: []; params?: {} }
+    'training.case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -703,6 +742,19 @@ export type ScannedRoutes = {
     'payroll.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.pay': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.create_competency': { paramsTuple?: []; params?: {} }
+    'training.create_course': { paramsTuple?: []; params?: {} }
+    'training.create_session': { paramsTuple?: []; params?: {} }
+    'training.enroll': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.complete': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cancel_session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.result': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.assess': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.add_certificate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.open_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.case_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.review_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.close_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -784,6 +836,8 @@ export type ScannedRoutes = {
     'compensation.update_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'loans.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.update_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.update_competency': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.update_course': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.update_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

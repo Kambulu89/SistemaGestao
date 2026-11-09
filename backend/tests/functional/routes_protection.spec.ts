@@ -198,6 +198,44 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'recibos do próprio colaborador (membership da sessão); sem permissão: só devolve os recibos ligados a quem pede',
   'GET /api/v1/hr/payslips/:id':
     'recibo em PDF: hr.payroll.* na entidade legal do lote ou o próprio colaborador, verificado no serviço',
+  'GET /api/v1/hr/training/competencies':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/training/courses':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/training/sessions':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/sessions':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/training/sessions/:id':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/sessions/:id/enrollments':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/sessions/:id/complete':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/sessions/:id/cancel':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/enrollments/:id/result':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/training/costs':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/employees/:id/training':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/employees/:id/competencies':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/employees/:id/certificates':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/discipline/cases':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'GET /api/v1/hr/discipline/cases/:id':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'POST /api/v1/hr/employees/:id/discipline/cases':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'POST /api/v1/hr/discipline/cases/:id/events':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'POST /api/v1/hr/discipline/cases/:id/review':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'POST /api/v1/hr/discipline/cases/:id/close':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
   'GET /api/v1/hr/payroll/periods':
     'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
   'GET /api/v1/hr/payroll/runs':
