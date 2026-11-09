@@ -11,3 +11,4 @@ export { approvedAbsences, leaveRequestAccess } from '#modules/hr/application/le
 export { compensationAt, onCompensationDecided } from '#modules/hr/application/compensation_service'
 export { dueLoanInstallments, recordLoanDeduction } from '#modules/hr/application/loan_service'
 export { ruleSetAt } from '#modules/hr/application/payroll_service'
+export { payrollObligations } from '#modules/hr/application/payroll_payment_service'

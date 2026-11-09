@@ -2687,6 +2687,70 @@ export class PayrollIrtBracketSchema extends BaseModel {
   declare version: number
 }
 
+export class PayrollObligationPaymentSchema extends BaseModel {
+  static $columns = ['amount', 'bankAccountId', 'createdAt', 'createdBy', 'id', 'note', 'obligationId', 'paidOn', 'reference', 'sequence', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayrollObligationPaymentSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare bankAccountId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare note: string | null
+  @column()
+  declare obligationId: string
+  @column.date()
+  declare paidOn: DateTime
+  @column()
+  declare reference: string
+  @column()
+  declare sequence: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PayrollObligationSchema extends BaseModel {
+  static $columns = ['amount', 'createdAt', 'createdBy', 'currency', 'dueDate', 'id', 'kind', 'paidAmount', 'runId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayrollObligationSchema.$columns
+  @column()
+  declare amount: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column.date()
+  declare dueDate: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare paidAmount: string
+  @column()
+  declare runId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class PayrollPeriodSchema extends BaseModel {
   static $columns = ['closedAt', 'closedBy', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'period', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = PayrollPeriodSchema.$columns
@@ -2706,6 +2770,35 @@ export class PayrollPeriodSchema extends BaseModel {
   declare period: DateTime
   @column()
   declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PayrollPostingSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'currency', 'id', 'kind', 'paymentId', 'postingEventId', 'runId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayrollPostingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare paymentId: string | null
+  @column()
+  declare postingEventId: string
+  @column()
+  declare runId: string
   @column()
   declare tenantId: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })

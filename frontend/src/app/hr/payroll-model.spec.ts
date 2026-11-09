@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  accountingLabel,
   bracketsPayload,
+  paymentTone,
   monthName,
   nextStep,
   pct,
@@ -81,5 +83,20 @@ describe('processamento salarial (modelo)', () => {
         expectedNet: null,
       },
     ]);
+  });
+
+  it('pagamento e contabilidade em texto', () => {
+    expect(paymentTone('PAID')).toContain('success');
+    expect(paymentTone('UNPAID')).toContain('danger');
+    expect(accountingLabel({ accrued: [], paymentsAccounted: 0, paymentsTotal: 0 })).toContain(
+      'ainda não',
+    );
+    expect(
+      accountingLabel({
+        accrued: [{ currency: 'AOA', entryNumber: 'DG/0001', entryStatus: 'POSTED' }],
+        paymentsAccounted: 1,
+        paymentsTotal: 2,
+      }),
+    ).toBe('Salários contabilizados (DG/0001) · 1 pagamento(s) por contabilizar.');
   });
 });

@@ -802,6 +802,18 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/confirm`, { ...v, note: 'xxxxxx' }),
       ],
       ['GET lote', B.get(`/api/v1/hr/payroll/runs/${a.payrollRun.id}`)],
+      ['GET pagamentos do lote', B.get(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/payments`)],
+      [
+        'pagar obrigação',
+        B.post(`/api/v1/hr/payroll/obligations/${a.payrollRun.id}/payments`, {
+          ...v,
+          amount: '1',
+          paidOn: '2026-01-01',
+          reference: 'X',
+        }),
+      ],
+      ['contabilizar lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/accounting`)],
+      ['GET recibo PDF', B.get(`/api/v1/hr/payslips/${a.payrollRun.id}`)],
       [
         'GET recibo',
         B.get(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/results/${a.payrollRun.id}`),
@@ -1296,6 +1308,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/hr/interviews/mine')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/loans')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/payroll/runs')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/payslips')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/payroll/rule-sets')).body().data, 0)
     for (const url of [
       '/api/v1/hr/leave/requests',

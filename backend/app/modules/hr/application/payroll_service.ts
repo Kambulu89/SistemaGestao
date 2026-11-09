@@ -58,24 +58,27 @@ interface PayScopes {
   read: PermissionScope
   manage: PermissionScope
   approve: PermissionScope
+  pay: PermissionScope
 }
 
-async function payScopes(scope: TenantScope): Promise<PayScopes> {
+export async function payScopes(scope: TenantScope): Promise<PayScopes> {
   const read = await permissionScope(scope, 'hr.payroll.read')
   const manage = await permissionScope(scope, 'hr.payroll.manage')
   const approve = await permissionScope(scope, 'hr.payroll.approve')
-  return { read, manage, approve }
+  const pay = await permissionScope(scope, 'hr.payroll.pay')
+  return { read, manage, approve, pay }
 }
 
 /** O processamento é por entidade legal: só o âmbito da empresa ou dessa entidade serve. */
 const coversEntity = (s: PermissionScope, legalEntityId: string) =>
   s.tenant || s.legalEntityIds.has(legalEntityId)
 
-function entityAccess(s: PayScopes, legalEntityId: string) {
+export function entityAccess(s: PayScopes, legalEntityId: string) {
   const manage = coversEntity(s.manage, legalEntityId)
   const approve = coversEntity(s.approve, legalEntityId)
-  const read = manage || approve || coversEntity(s.read, legalEntityId)
-  return { read, manage, approve }
+  const pay = coversEntity(s.pay, legalEntityId)
+  const read = manage || approve || pay || coversEntity(s.read, legalEntityId)
+  return { read, manage, approve, pay }
 }
 
 const entityClause = (s: PermissionScope, alias: string) => {
@@ -1062,7 +1065,7 @@ const RUN_SELECT = `select u.*, p.period::text as period_text, p.legal_entity_id
   left join tenant_memberships dm on dm.tenant_id = u.tenant_id and dm.id = u.decided_by_membership_id
   left join users du on du.id = dm.user_id`
 
-async function findRun(scope: TenantScope, id: string, lock = false) {
+export async function findRun(scope: TenantScope, id: string, lock = false) {
   if (!isUuid(id)) return null
   const r = await scope.trx.rawQuery(
     `${RUN_SELECT} where u.tenant_id = ? and u.id = ?${lock ? ' for update of u' : ''}`,
@@ -1143,7 +1146,7 @@ async function resultsOf(scope: TenantScope, runId: string) {
   }))
 }
 
-async function runFor(scope: TenantScope, id: string, lock = false) {
+export async function runFor(scope: TenantScope, id: string, lock = false) {
   const u = await findRun(scope, id, lock)
   if (!u) throw ApiError.notFound()
   const s = await payScopes(scope)
@@ -1232,6 +1235,40 @@ async function assertFresh(scope: TenantScope, u: any) {
     )
 }
 
+/**
+ * Obrigações que o fecho deixa a pagar, por moeda: líquido aos colaboradores, IRT, INSS (trabalhador + entidade
+ * patronal) e outros descontos a entregar a terceiros. As prestações de empréstimos não geram obrigação (são da
+ * própria empresa). Totais não positivos (ex.: retroactivo que devolve) não geram obrigação.
+ */
+export async function createObligations(scope: TenantScope, runId: string) {
+  await scope.trx.rawQuery(
+    `insert into payroll_obligations (tenant_id, run_id, kind, currency, amount, created_by, updated_by)
+     select ?, ?, k.kind, k.currency, k.amount, ?, ? from (
+       select currency, 'NET_PAY' as kind, sum(net) as amount from payroll_results
+        where tenant_id = ? and run_id = ? and status = 'OK' group by currency
+       union all
+       select currency, 'IRT', sum(irt) from payroll_results
+        where tenant_id = ? and run_id = ? and status = 'OK' group by currency
+       union all
+       select currency, 'INSS', sum(inss_employee + inss_employer) from payroll_results
+        where tenant_id = ? and run_id = ? and status = 'OK' group by currency
+       union all
+       select currency, 'DEDUCTIONS', sum(deductions) from payroll_results
+        where tenant_id = ? and run_id = ? and status = 'OK' group by currency
+     ) k where k.amount > 0
+     on conflict (tenant_id, run_id, kind, currency) do nothing`,
+    [
+      scope.context.tenantId,
+      runId,
+      scope.context.userId,
+      scope.context.userId,
+      ...Array(4)
+        .fill(0)
+        .flatMap(() => [scope.context.tenantId, runId]),
+    ]
+  )
+}
+
 export class PayrollRunService {
   list(
     context: TenantContext,
@@ -1241,7 +1278,7 @@ export class PayrollRunService {
       const s = await payScopes(scope)
       const parts: string[] = []
       const params: unknown[] = []
-      for (const p of [s.read, s.manage, s.approve]) {
+      for (const p of [s.read, s.manage, s.approve, s.pay]) {
         const c = entityClause(p, 'p')
         if (c) {
           parts.push(c.sql)
@@ -1786,6 +1823,7 @@ export class PayrollRunService {
         { closed_by: context.userId, closed_at: new Date().toISOString() },
         { loanDeductions: loans.rows.length }
       )
+      await createObligations(scope, id)
       if (u.kind === 'REGULAR') {
         await scope.trx.rawQuery(
           `update payroll_periods set status = 'CLOSED', closed_by = ?, closed_at = now(), version = version + 1,

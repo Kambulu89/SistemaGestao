@@ -268,6 +268,13 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Pessoas',
       },
       {
+        label: 'Os meus recibos',
+        path: '/rh/recibos',
+        icon: 'file',
+        feature: 'hr',
+        section: 'Pessoas',
+      },
+      {
         label: 'Processamento salarial',
         path: '/rh/processamento',
         icon: 'coins',

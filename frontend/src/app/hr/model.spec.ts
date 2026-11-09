@@ -41,9 +41,10 @@ describe('colaborador: envio da ficha', () => {
       true,
       false,
     );
-    // Sem permissões de RH ficam as áreas do próprio: ausências e entrevistas atribuídas.
+    // Sem permissões de RH ficam as áreas do próprio: ausências, recibos e entrevistas atribuídas.
     expect(none.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label)).toEqual([
       'Férias e ausências',
+      'Os meus recibos',
       'As minhas entrevistas',
     ]);
     const recruiter = visibleNavigation(
@@ -54,7 +55,13 @@ describe('colaborador: envio da ficha', () => {
     );
     expect(
       recruiter.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
-    ).toEqual(['Férias e ausências', 'Vagas', 'Candidatos', 'As minhas entrevistas']);
+    ).toEqual([
+      'Férias e ausências',
+      'Os meus recibos',
+      'Vagas',
+      'Candidatos',
+      'As minhas entrevistas',
+    ]);
     const payroll = visibleNavigation(
       (p, any) => (any ? p === 'hr.compensation.read' : false),
       (f) => f === 'hr',

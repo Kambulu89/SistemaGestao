@@ -303,6 +303,12 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Aprovar processamentos salariais da empresa ou das entidades legais atribuídas, nunca os que preparou ou calculou nem um lote com o próprio recibo.',
   },
   {
+    code: 'hr.payroll.pay',
+    module: 'hr',
+    description:
+      'Registar pagamentos dos salários e das obrigações (IRT, INSS, descontos) de lotes fechados, da empresa ou das entidades legais atribuídas.',
+  },
+  {
     code: 'hr.payroll.settings',
     module: 'hr',
     description:

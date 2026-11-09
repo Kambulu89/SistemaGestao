@@ -326,3 +326,21 @@ exemplo com uma versão, sem gravar nada, para preparar os casos. Continua a nã
 pré-carregados: o projecto não confirma a legislação angolana em vigor — é a empresa que introduz e confirma, com a
 fonte (por exemplo, o Código do IRT e as taxas de segurança social publicadas), e a LGT n.º 12/23 é a referência
 laboral indicada no prompt.
+
+## D-032 Recibos, pagamento e contabilização: fechado ≠ pago, obrigações por lote, eventos únicos para a contabilidade (aceite)
+
+O fecho de um lote (D-030) cria as **obrigações** a pagar por moeda: líquido aos colaboradores, IRT, INSS (trabalhador e
+entidade patronal) e outros descontos a entregar a terceiros (as prestações de empréstimos não, porque são da própria
+empresa; totais não positivos não geram obrigação). Os **pagamentos** registam-se à parte, com a permissão própria
+`hr.payroll.pay` (tesouraria), parciais ou totais, nunca acima do que falta, com data não futura, referência e conta
+bancária activa da entidade legal na mesma moeda; são só de acréscimo (trigger). O estado do lote para o colaborador
+("pago") vem dos pagamentos do líquido, não do fecho. A **contabilização** (`hr.payroll.manage`) envia ao motor da
+contabilidade (D-014/6.3) um evento `PAYROLL/SALARIES` por lote e moeda — montantes `gross`, `inssEmployee`, `irt`,
+`deductions`, `loans`, `net`, `inssEmployer`, `inssTotal`, `employerCost` — e um evento `PAYROLL/<TIPO>_PAID` por
+pagamento (`amount`); as contas são as das regras que a empresa configura na contabilidade. Cada evento vai uma só vez
+(chave idempotente do motor e registo `payroll_postings`); sem regra, nada é lançado e o erro diz qual falta; totais
+negativos (retroactivo que devolve) recusam-se para lançamento manual. Como ainda não há módulo de Finanças/Tesouraria,
+as obrigações publicam-se por um contrato (`payrollObligations` em `#modules/hr/index`) para esse módulo usar. Os
+**recibos em PDF** geram-se no servidor com um gerador mínimo próprio (texto e linhas, sem dependências), só para lotes
+fechados, com o IBAN mascarado, e só os descarrega quem processa salários na entidade legal ou o próprio colaborador
+("Os meus recibos"); cada descarga fica na auditoria e as respostas não ficam em cache.

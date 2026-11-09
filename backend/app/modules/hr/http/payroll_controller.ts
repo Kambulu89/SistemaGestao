@@ -4,6 +4,7 @@ import { ApiError } from '#shared/http/api_error'
 import { created, ok } from '#shared/http/respond'
 import { isUuid } from '#shared/db/sql'
 import { PayrollRuleService, PayrollRunService } from '#modules/hr/application/payroll_service'
+import { PayrollPaymentService } from '#modules/hr/application/payroll_payment_service'
 
 /**
  * Processamento salarial (7.7). Regras: `hr.payroll.settings` (rota). Lotes: âmbito `hr.payroll.*` sobre a entidade
@@ -11,6 +12,7 @@ import { PayrollRuleService, PayrollRunService } from '#modules/hr/application/p
  */
 const rules = new PayrollRuleService()
 const runs = new PayrollRunService()
+const payments = new PayrollPaymentService()
 
 const version = { expectedVersion: vine.number().withoutDecimals().min(0) }
 const anyBody = vine.create(vine.object({}).allowUnknownProperties())
@@ -168,5 +170,35 @@ export default class PayrollController {
   async cancel(ctx: HttpContext) {
     const { expectedVersion } = await body(ctx, onlyVersion)
     return ok(ctx, await runs.cancel(ctx.tenantContext!, param(ctx), expectedVersion))
+  }
+
+  async payments(ctx: HttpContext) {
+    return ok(ctx, await payments.summary(ctx.tenantContext!, param(ctx)))
+  }
+
+  async pay(ctx: HttpContext) {
+    const { expectedVersion, ...b } = await body(ctx, versioned)
+    return created(ctx, await payments.pay(ctx.tenantContext!, param(ctx), b, expectedVersion))
+  }
+
+  async account(ctx: HttpContext) {
+    return ok(ctx, await payments.account(ctx.tenantContext!, param(ctx)))
+  }
+
+  async myPayslips(ctx: HttpContext) {
+    return ok(ctx, await payments.mine(ctx.tenantContext!))
+  }
+
+  async payslip(ctx: HttpContext) {
+    const { buffer, fileName } = await payments.payslip(ctx.tenantContext!, param(ctx))
+    ctx.response.header('content-type', 'application/pdf')
+    ctx.response.header('content-length', String(buffer.length))
+    ctx.response.header(
+      'content-disposition',
+      `attachment; filename="${fileName.replace(/[^\x20-\x7e]|["\\]/g, '_')}"`
+    )
+    ctx.response.header('x-content-type-options', 'nosniff')
+    ctx.response.header('cache-control', 'private, no-store')
+    return ctx.response.send(buffer)
   }
 }

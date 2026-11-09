@@ -90,6 +90,11 @@ export const HR_ROUTES: Routes = [
     ],
   },
   {
+    path: 'recibos',
+    title: 'Os meus recibos',
+    loadComponent: () => import('./my-payslips').then((m) => m.MyPayslips),
+  },
+  {
     path: 'processamento',
     title: 'Processamento salarial',
     children: [

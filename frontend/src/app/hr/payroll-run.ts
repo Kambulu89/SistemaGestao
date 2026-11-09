@@ -15,6 +15,8 @@ import { formatMoney, MoneyInput } from '../ui/money-input';
 import { PageDetail } from '../ui/page-detail';
 import { ErrorState, Skeleton } from '../ui/states';
 import { ToastService } from '../ui/toasts';
+import { PayrollPayments } from './payroll-payments';
+import { saveFile } from './save-file';
 import {
   monthName,
   nextStep,
@@ -51,6 +53,7 @@ interface Option {
     Skeleton,
     Kpi,
     MoneyInput,
+    PayrollPayments,
   ],
   template: `
     @if (loadError()) {
@@ -201,6 +204,17 @@ interface Option {
                         >
                           Ver
                         </button>
+                        @if (x.status === 'CLOSED' && p.status === 'OK') {
+                          <button
+                            type="button"
+                            class="btn-ghost px-2 py-1"
+                            [attr.data-testid]="'ps-pdf-' + p.employee.code"
+                            [attr.aria-label]="'Recibo em PDF de ' + p.employee.fullName"
+                            (click)="pdf(p)"
+                          >
+                            PDF
+                          </button>
+                        }
                         @if (x.access?.edit) {
                           <button
                             type="button"
@@ -236,7 +250,11 @@ interface Option {
           }
         </section>
 
-        @if (x.kind !== 'RETRO') {
+        @if (x.status === 'CLOSED') {
+          <app-payroll-payments [runId]="x.id" [legalEntityId]="x.legalEntity.id" />
+        }
+
+        @if (x.kind !== 'RETRO' && x.status !== 'CLOSED') {
           <section class="card mt-4" aria-labelledby="ps-inputs-title">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 id="ps-inputs-title" class="font-semibold">
@@ -529,6 +547,15 @@ export class PayrollRunPage {
     const t = c(p.deductions) + c(p.loans);
     const s = (t < 0n ? -t : t).toString().padStart(3, '0');
     return `${t < 0n ? '-' : ''}${s.slice(0, -2)}.${s.slice(-2)}`;
+  }
+
+  protected async pdf(p: RunResult) {
+    try {
+      const { blob, fileName } = await this.api.download(`hr/payslips/${p.id}`);
+      saveFile(blob, fileName ?? `recibo-${p.employee.code}.pdf`);
+    } catch (error) {
+      this.toasts.show(ApiError.from(error).message, 'error');
+    }
   }
 
   protected rulesLabel(d: ResultDetail) {

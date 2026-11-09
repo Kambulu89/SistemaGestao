@@ -1,7 +1,7 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.8 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.9 a 7.13 seguem, um de
-cada vez. Decisões D-024 a D-031.
+Estado: **7.1 a 7.9 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.10 a 7.13 seguem, um de
+cada vez. Decisões D-024 a D-032.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
@@ -18,6 +18,7 @@ terão de ser configuradas pela empresa e confirmadas na legislação em vigor q
 | 7.6 Adiantamentos/empréstimos | Nada                                                            | Pedido com plano exacto ao cêntimo criado na aprovação, saldo derivado, limites configuráveis com fonte (prestação máxima em % do base somando empréstimos activos, número de prestações), contrato em cada mês, aprovação segregada, pagamento directo, desconto idempotente para o processamento    | Feito  |
 | 7.7 Processamento salarial    | Nada                                                            | Regras versionadas com fonte (INSS, tabela de IRT, incidência do base, base do IRT, base de dias); lotes regular/extra/retroactivo por entidade legal; cálculo exacto com erros por colaborador; instantâneo e hash; aprovação segregada; fecho imutável com descontos de empréstimos                 | Feito  |
 | 7.8 IRT/INSS                  | Regras versionadas com fonte (7.7)                              | Validade explícita, casos de teste oficiais com fonte que têm de passar, confirmação das normas vigentes por uma pessoa, simulador; nada pré-carregado no código                                                                                                                                      | Feito  |
+| 7.9 Recibos e pagamento       | Contabilidade com motor de eventos (6.3); sem Finanças          | Obrigações do fecho (líquido, IRT, INSS, descontos), pagamentos parciais só de acréscimo (fechado ≠ pago), eventos PAYROLL únicos para a contabilidade, recibos PDF privados (o próprio ou quem processa), "Os meus recibos", contrato de obrigações para Finanças                                    | Feito  |
 
 ## Modelo
 
@@ -135,6 +136,19 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
   `testCases`; publicar exige casos a passar e confirmação.
 - Erros: `NO_TEST_CASES`, `CASES_FAILING` (por caso, com o esperado e o calculado), `NOT_CONFIRMED`, `RANGE`.
 
+### 7.9 Recibos, pagamento e contabilização
+
+- Migração `0030_create_hr_payroll_payments`: `payroll_obligations` (por lote, tipo e moeda; pago ≤ valor),
+  `payroll_obligation_payments` (só de acréscimo), `payroll_postings` (um evento de contabilidade por lote/moeda e por
+  pagamento).
+- `GET /hr/payroll/runs/:id/payments`, `POST /hr/payroll/obligations/:id/payments` (`hr.payroll.pay`),
+  `POST /hr/payroll/runs/:id/accounting` (`hr.payroll.manage`), `GET /hr/payslips` (os do próprio),
+  `GET /hr/payslips/:id` (PDF: o próprio ou quem processa).
+- Permissão nova: `hr.payroll.pay`. Contrato para Finanças: `payrollObligations(scope, filtros)`.
+- Eventos para a contabilidade: `PAYROLL/SALARIES` e `PAYROLL/NET_PAY_PAID|IRT_PAID|INSS_PAID|DEDUCTIONS_PAID`.
+- Erros: `OVERPAYMENT`, `FUTURE`, `CURRENCY_MISMATCH`, `NO_RULE` (da contabilidade), `NEGATIVE_AMOUNTS`, `NOT_CLOSED`.
+- `app/shared/pdf/simple_pdf.ts`: gerador de PDF 1.4 sem dependências (Helvetica/WinAnsi, texto e linhas).
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -168,6 +182,13 @@ Compensação (7.5):
 - Compensação (lista): propostas no âmbito, vista "A aprovar por mim".
 - Componentes de remuneração: catálogo e versões da incidência de IRT/INSS com fonte. Configuração de RH: workflow das
   propostas de compensação.
+
+Recibos e pagamento (7.9):
+
+- Lote fechado: secção "Pagamento e contabilidade" com o estado (por pagar, parcial, pago), as obrigações com o que
+  falta, "Registar pagamento" (montante, data, referência, conta bancária) e "Contabilizar" com o estado dos
+  lançamentos; botão PDF em cada recibo.
+- Os meus recibos (todos os membros): recibos de lotes fechados do próprio, pago/por pagar, descarga em PDF.
 
 Regras de IRT e INSS (7.8):
 
@@ -334,9 +355,25 @@ Testes do 7.8:
   com nota e declaração, publicar; 390 px sem deslocamento. O E2E levou a reescrever a mensagem de caso falhado (vinha
   com o nome técnico do campo e montantes sem formato).
 
+Testes do 7.9:
+
+- Backend funcional `hr_payroll_payments.spec.ts` (3 testes): obrigações do fecho (líquido 184 600, IRT 9 400, INSS
+  22 000), pagamento acima do que falta, futuro, conta inválida, quem aprova não paga, conflito de versão, parcial e
+  pago, pagamentos e obrigações protegidos na base; contabilização sem regra (nada lançado), com regras (salários
+  216 000 = 200 000 + 16 000 e pagamento do líquido, ambos lançados), repetir não duplica, pagamento de IRT sem regra
+  falha sem deixar nada a meio; recibo PDF do próprio (texto, IBAN mascarado, sem cache), outro membro não o vê, quem
+  processa vê, lote por fechar sem recibo, descargas na auditoria.
+- Backend unitário `simple_pdf.spec.ts` (3 testes): WinAnsi e escapes, estrutura e tabela de referências do PDF,
+  formatação do recibo. `isolation_matrix` e `routes_protection` com as rotas novas.
+- Frontend `hr/payroll-model.spec.ts` (5 testes) e navegação ("Os meus recibos" para todos).
+- Browser (6 passos, dois utilizadores, sem erros na consola): lote fechado "por pagar" com as três obrigações;
+  pagamento do líquido ⇒ "Pago" e IRT/INSS por pagar; contabilizar sem regras ⇒ erro "Não há regra activa para
+  PAYROLL/SALARIES" e nada lançado; PDF do recibo a partir do lote (verificado o conteúdo); "Os meus recibos" descarrega
+  e o aprovador não vê o recibo de outra pessoa; 390 px sem deslocamento.
+
 ## Pendências
 
-- 7.9 a 7.13 (recibos e lançamentos, formação, cessação, portais e relatórios, QA).
+- 7.10 a 7.13 (formação e processos laborais, cessação, portais e relatórios, QA).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
 - 6.9 SAF-T continua bloqueado pela especificação oficial.
@@ -353,3 +390,7 @@ Testes do 7.8:
   pela empresa (o projecto não os confirma nem pré-carrega). Processamento: a tributação de pagamentos extra (ex.: subsídios de férias e Natal) segue as mesmas regras do mês até o 7.8 o confirmar;
   mudança de salário a meio do mês usa o valor do último dia pago; recibos em PDF, pagamento e lançamentos contabilísticos
   no 7.9.
+- Recibos e pagamento: não há módulo de Finanças/Tesouraria nesta reconstrução — as obrigações ficam no RH com o
+  contrato `payrollObligations` e os prazos legais de entrega de IRT/INSS não estão no sistema (por confirmar e
+  configurar); envio de recibos por email e assinatura digital não feitos; contabilização por centro de custo e de
+  retroactivos negativos fica manual.

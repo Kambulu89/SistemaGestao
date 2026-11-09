@@ -270,3 +270,79 @@ export function testCasesPayload(rows: TestCase[]): TestCase[] {
     expectedNet: n(c.expectedNet) || null,
   }));
 }
+
+export type ObligationKind = 'NET_PAY' | 'IRT' | 'INSS' | 'DEDUCTIONS';
+export type PaymentState = 'UNPAID' | 'PARTIAL' | 'PAID' | 'NONE';
+
+export interface Obligation {
+  id: string;
+  version: number;
+  kind: ObligationKind;
+  label: string;
+  currency: string;
+  amount: string;
+  paidAmount: string;
+  outstanding: string;
+  status: Exclude<PaymentState, 'NONE'>;
+  payments: {
+    id: string;
+    sequence: number;
+    amount: string;
+    paidOn: string;
+    reference: string;
+    bankName: string | null;
+    accounted: boolean;
+  }[];
+}
+
+export interface PaymentSummary {
+  closed: boolean;
+  paymentStatus: PaymentState;
+  obligations: Obligation[];
+  accounting: {
+    accrued: { currency: string; entryNumber: string | null; entryStatus: string | null }[];
+    paymentsAccounted: number;
+    paymentsTotal: number;
+  };
+  access: { pay: boolean; account: boolean };
+}
+
+export interface MyPayslip {
+  id: string;
+  runCode: string;
+  kind: RunKind;
+  period: string;
+  company: string;
+  currency: string;
+  gross: string;
+  net: string;
+  paid: boolean;
+}
+
+export const PAYMENT_STATE: Record<PaymentState, string> = {
+  UNPAID: 'Por pagar',
+  PARTIAL: 'Pago parcialmente',
+  PAID: 'Pago',
+  NONE: 'Sem valores a pagar',
+};
+
+export function paymentTone(s: PaymentState): string {
+  if (s === 'PAID') return 'bg-success-soft text-success-text';
+  if (s === 'PARTIAL') return 'bg-warning-soft text-warning-text';
+  if (s === 'UNPAID') return 'bg-danger-soft text-danger-text';
+  return 'bg-surface-2 text-muted';
+}
+
+/** Estado da contabilização em texto (orientação). */
+export function accountingLabel(a: PaymentSummary['accounting']): string {
+  if (!a.accrued.length) return 'Salários ainda não contabilizados.';
+  const entries = a.accrued.map((x) => x.entryNumber ?? '—').join(', ');
+  const pending = a.paymentsTotal - a.paymentsAccounted;
+  return `Salários contabilizados (${entries})${
+    pending
+      ? ` · ${pending} pagamento(s) por contabilizar`
+      : a.paymentsTotal
+        ? ' · pagamentos contabilizados'
+        : ''
+  }.`;
+}

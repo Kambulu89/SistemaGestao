@@ -263,6 +263,11 @@ export type ScannedRoutes = {
     'payroll.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.payments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.pay': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.my_payslips': { paramsTuple?: []; params?: {} }
+    'payroll.payslip': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -435,6 +440,9 @@ export type ScannedRoutes = {
     'payroll.index': { paramsTuple?: []; params?: {} }
     'payroll.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.result': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'resultId': ParamValue} }
+    'payroll.payments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.my_payslips': { paramsTuple?: []; params?: {} }
+    'payroll.payslip': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -563,6 +571,9 @@ export type ScannedRoutes = {
     'payroll.index': { paramsTuple?: []; params?: {} }
     'payroll.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.result': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'resultId': ParamValue} }
+    'payroll.payments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.my_payslips': { paramsTuple?: []; params?: {} }
+    'payroll.payslip': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -690,6 +701,8 @@ export type ScannedRoutes = {
     'payroll.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'payroll.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.pay': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

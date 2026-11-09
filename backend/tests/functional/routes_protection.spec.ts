@@ -188,6 +188,16 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
   'GET /api/v1/hr/pay-components':
     'catálogo sem valores; exige uma permissão hr.compensation.* em qualquer âmbito (verificado no serviço)',
+  'GET /api/v1/hr/payroll/runs/:id/payments':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (pagamentos com hr.payroll.pay)',
+  'POST /api/v1/hr/payroll/obligations/:id/payments':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (pagamentos com hr.payroll.pay)',
+  'POST /api/v1/hr/payroll/runs/:id/accounting':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (pagamentos com hr.payroll.pay)',
+  'GET /api/v1/hr/payslips':
+    'recibos do próprio colaborador (membership da sessão); sem permissão: só devolve os recibos ligados a quem pede',
+  'GET /api/v1/hr/payslips/:id':
+    'recibo em PDF: hr.payroll.* na entidade legal do lote ou o próprio colaborador, verificado no serviço',
   'GET /api/v1/hr/payroll/periods':
     'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
   'GET /api/v1/hr/payroll/runs':
