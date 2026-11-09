@@ -286,6 +286,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Pessoas',
       },
       {
+        label: 'Cessações',
+        path: '/rh/cessacoes',
+        icon: 'logout',
+        permission: 'hr.terminations.read',
+        feature: 'hr',
+        anyScope: true,
+        section: 'Pessoas',
+      },
+      {
         label: 'Os meus recibos',
         path: '/rh/recibos',
         icon: 'file',

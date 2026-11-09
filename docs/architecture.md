@@ -327,7 +327,7 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
 
 ## Recursos humanos (módulo `hr`, Prompt 07)
 
-Blocos 7.1 a 7.10 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-033).
+Blocos 7.1 a 7.11 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-034).
 
 - **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
   cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
@@ -396,3 +396,6 @@ employeeId, from, to)` em `#modules/hr/index`.
 - **Formação e processos** (7.10): catálogo (`competencies`, `training_courses`), sessões e inscrições (fixas depois de
   concluídas), `employee_competencies` (só de acréscimo) e `employee_certificates`; `disciplinary_cases`/`_events` com
   permissões próprias `hr.discipline.*`, nunca sobre o próprio, consulta auditada e cronologia só de acréscimo.
+- **Cessação** (7.11): `employee_terminations` com aprovação segregada que termina contrato, colocação, estado e saldo
+  de férias numa transacção; `termination_settlement_lines` (com componente; pagas por um lote EXTRA que não se altera)
+  e `termination_tasks` (acesso e empréstimos verificados); sem valores legais no código.

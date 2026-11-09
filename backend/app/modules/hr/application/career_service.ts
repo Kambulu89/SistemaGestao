@@ -166,7 +166,7 @@ const assertCanManage = (canManage: boolean) => {
   if (!canManage) throw ApiError.forbidden('OUT_OF_SCOPE', 'Não gere contratos deste colaborador.')
 }
 
-async function contractEvent(
+export async function contractEvent(
   scope: TenantScope,
   contractId: string,
   kind: string,

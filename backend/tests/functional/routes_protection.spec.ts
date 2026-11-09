@@ -236,6 +236,34 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
   'POST /api/v1/hr/discipline/cases/:id/close':
     'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'GET /api/v1/hr/terminations':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'GET /api/v1/hr/terminations/:id':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/employees/:id/terminations':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'PATCH /api/v1/hr/terminations/:id':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/lines':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'PATCH /api/v1/hr/terminations/:id/lines/:lineId':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'DELETE /api/v1/hr/terminations/:id/lines/:lineId':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/submit':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/decision':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/cancel':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/settlement':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/complete':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/tasks':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'PATCH /api/v1/hr/termination-tasks/:id':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
   'GET /api/v1/hr/payroll/periods':
     'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
   'GET /api/v1/hr/payroll/runs':

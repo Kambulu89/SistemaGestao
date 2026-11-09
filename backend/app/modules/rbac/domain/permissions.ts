@@ -344,6 +344,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Abrir e instruir processos disciplinares e registar a decisão, no âmbito atribuído (nunca os próprios).',
   },
   {
+    code: 'hr.terminations.read',
+    module: 'hr',
+    description:
+      'Consultar processos de cessação, liquidação final e checklist de saída no âmbito atribuído (nunca o próprio).',
+  },
+  {
+    code: 'hr.terminations.manage',
+    module: 'hr',
+    description:
+      'Preparar cessações (motivo, aviso, indemnização com base legal, liquidação final), gerar o lote da liquidação e tratar a checklist de saída, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.terminations.approve',
+    module: 'hr',
+    description:
+      'Aprovar ou devolver cessações no âmbito atribuído (nunca as que preparou ou submeteu); a aprovação termina o contrato.',
+  },
+  {
     code: 'hr.settings',
     module: 'hr',
     description:

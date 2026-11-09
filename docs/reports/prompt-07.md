@@ -1,7 +1,7 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.10 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.11 a 7.13 seguem, um de
-cada vez. Decisões D-024 a D-033.
+Estado: **7.1 a 7.11 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.12 e 7.13 seguem, um de
+cada vez. Decisões D-024 a D-034.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
@@ -20,6 +20,7 @@ terão de ser configuradas pela empresa e confirmadas na legislação em vigor q
 | 7.8 IRT/INSS                  | Regras versionadas com fonte (7.7)                              | Validade explícita, casos de teste oficiais com fonte que têm de passar, confirmação das normas vigentes por uma pessoa, simulador; nada pré-carregado no código                                                                                                                                      | Feito  |
 | 7.9 Recibos e pagamento       | Contabilidade com motor de eventos (6.3); sem Finanças          | Obrigações do fecho (líquido, IRT, INSS, descontos), pagamentos parciais só de acréscimo (fechado ≠ pago), eventos PAYROLL únicos para a contabilidade, recibos PDF privados (o próprio ou quem processa), "Os meus recibos", contrato de obrigações para Finanças                                    | Feito  |
 | 7.10 Formação/processos       | Nada                                                            | Catálogo (competências, cursos), sessões com capacidade e custo, resultados, conclusão com competências e certificados, custos por curso/departamento; processos disciplinares com permissões próprias, cronologia só de acréscimo, defesa antes da sanção, leitura auditada                          | Feito  |
+| 7.11 Cessação                 | Contrato com terminar (7.3), férias (7.4), lotes EXTRA (7.7)    | Processo com motivo, aviso com fonte, indemnização só se aplicável com base legal, liquidação em linhas com componente, aprovação segregada com efeitos (contrato, colocação, estado, férias), lote EXTRA da liquidação, checklist de saída verificada | Feito  |
 
 ## Modelo
 
@@ -166,6 +167,21 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
 - Erros: `CAPACITY`, `NOT_STARTED`, `ASSESSED`, `NOT_ASSESSED`, `NO_RESULT`, `NO_CERTIFICATE`, `DUPLICATE`, `SELF_CASE`,
   `DEFENCE_REQUIRED`, `TERMINATED`.
 
+### 7.11 Cessação
+
+- Migração `0032_create_hr_terminations`: `employee_terminations` (um em curso/concluído por colaborador; aprovado ⇒ só
+  lote e conclusão mudam; concluído/cancelado ⇒ fixo), `termination_settlement_lines` (só em rascunho) e
+  `termination_tasks` (fixas depois de concluído).
+- API: `GET /hr/terminations`, `GET /hr/terminations/:id` (com factos, impedimentos e acessos),
+  `POST /hr/employees/:id/terminations`, `PATCH /hr/terminations/:id`, `POST|PATCH|DELETE /hr/terminations/:id/lines[/:lineId]`,
+  `POST /hr/terminations/:id/submit|decision|cancel|settlement|complete|tasks`, `PATCH /hr/termination-tasks/:id`.
+- Permissões novas: `hr.terminations.read|manage|approve`. Anexos: `employee_termination`.
+- Processamento: lotes de liquidação não aceitam entradas nem exclusões (`SETTLEMENT_RUN`); um EXTRA num mês posterior
+  à cessação usa as condições do último contrato terminado.
+- Erros: `TERMINATION_EXISTS`, `NO_OPEN_CONTRACT`, `SELF_TERMINATION`, `SEGREGATION`, `INDEMNITY_MISSING`,
+  `INDEMNITY_NOT_APPLICABLE`, `INDEMNITY_LINES`, `KIND_MISMATCH`, `AMOUNT_MISMATCH`, `CASE_NOT_DECIDED`, `LEAVE_OPEN`,
+  `LOAN_REQUEST_OPEN`, `PROCESSED_AFTER`, `TASKS_PENDING`, `SETTLEMENT_OPEN`, `ACCESS_ACTIVE`, `LOANS_OUTSTANDING`.
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -210,6 +226,15 @@ Formação e processos (7.10):
 - Processos disciplinares (lista restrita); processo (aviso de confidencialidade, factos, cronologia, documentos,
   registar, passar a instrução, decidir e encerrar com aviso de defesa em falta); ficha: cartão "Processos
   disciplinares" só para quem tem acesso.
+
+Cessação (7.11):
+
+- Ficha do colaborador: cartão "Cessação" (processo e "Iniciar cessação" com os campos de aviso e indemnização; sem
+  valores pré-preenchidos).
+- Cessações (lista no âmbito); cessação: próximo passo, impedimentos, dados, liquidação final (linhas com quantidade ×
+  valor unitário calculado sem `float`, totais), apoio ao cálculo (antiguidade, aviso, férias, sugestão proporcional,
+  processamentos pendentes, empréstimos, subordinados), checklist com progresso, documentos, editar/submeter/aprovar/
+  devolver/cancelar/gerar lote/concluir.
 
 Recibos e pagamento (7.9):
 
@@ -419,9 +444,27 @@ Testes do 7.10:
   utilizador sem permissão recebe "Recurso inexistente" e não vê o cartão; 390 px sem deslocamento. O teste funcional
   levou a corrigir a ordem da cronologia (passou a ser a do registo) e a detecção de competência repetida.
 
+Testes do 7.11:
+
+- Backend funcional `hr_terminations.spec.ts` (3 testes): validação (motivo, fonte do aviso, base da indemnização, aviso
+  depois do último dia), código, factos (61 dias dados de 60, 10 meses e 26 dias, saldo 10), processo repetido,
+  indemnização em falta, componente de desconto numa linha de abono, montante ≠ quantidade × valor, indemnização não
+  aplicável com linha, segregação, devolução com nota, aprovação com contrato terminado, colocação fechada e saldo de
+  férias a zero, base de dados recusa alterar processo e linhas aprovados, conclusão recusada sem lote e checklist, lote
+  EXTRA com bruto 466 666,67 e sem entradas manuais, conclusão, auditoria sem montantes; âmbito por departamento, a
+  própria cessação, lista vazia sem permissões, acesso da conta só feito com a conta suspensa; processo disciplinar por
+  decidir, mês posterior fechado, cancelar com motivo e novo processo.
+- Unitário `hr_termination_domain.spec.ts` (5 testes): datas, aviso, aritmética exacta, linhas, iniciativa.
+- `isolation_matrix` (processo, linhas, decisões, lote, tarefas e anexos de outra empresa), `routes_protection`;
+  frontend `hr/termination-model.spec.ts` (4 testes) e navegação.
+- Browser (8 passos, dois utilizadores, sem erros na consola): iniciar na ficha com erros de fonte e base em falta;
+  liquidação com 10 × 6 666,6667 = 66 666,67 e indemnização 400 000 ⇒ 466 666,67; submeter (quem preparou não vê
+  "Aprovar"); o aprovador aprova; concluir recusado com os motivos; lote gerado, calculado, aprovado e fechado; checklist
+  e conclusão; ficha sem "Iniciar cessação"; 390 px sem deslocamento.
+
 ## Pendências
 
-- 7.11 a 7.13 (cessação, portais e relatórios, QA).
+- 7.12 e 7.13 (portais e relatórios, QA).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
 - 6.9 SAF-T continua bloqueado pela especificação oficial.
@@ -445,3 +488,8 @@ Testes do 7.10:
 - Formação e processos: avaliação de eficácia da formação e planos individuais não pedidos; alertas de certificados a
   expirar ficam para os portais/relatórios (7.12); prazos legais do processo disciplinar (LGT) e retenção dos processos
   por definir pela empresa; o próprio colaborador ainda não vê as decisões que lhe dizem respeito (portal, 7.12).
+- Cessação: dias de aviso, critérios de indemnização, férias e subsídios proporcionais da LGT 12/23 por confirmar e
+  indicar pela empresa em cada processo (o sistema não os calcula); declaração/certificado de trabalho em PDF e
+  notificação ao trabalhador ficam para os portais (7.12); suspender a conta continua em Membros (permissão própria);
+  o desconto do saldo de empréstimos na liquidação é registado à mão (linha de desconto + liquidação única no 7.6).
+

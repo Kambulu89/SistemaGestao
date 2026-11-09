@@ -90,14 +90,17 @@ describe('colaborador: envio da ficha', () => {
       payroll2.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
     ).toContain('Processamento salarial');
     const discipline = visibleNavigation(
-      (p, any) => (any ? p === 'hr.training.read' || p === 'hr.discipline.read' : false),
+      (p, any) =>
+        any
+          ? p === 'hr.training.read' || p === 'hr.discipline.read' || p === 'hr.terminations.read'
+          : false,
       (f) => f === 'hr',
       true,
       false,
     );
     expect(
       discipline.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
-    ).toEqual(expect.arrayContaining(['Formação', 'Processos disciplinares']));
+    ).toEqual(expect.arrayContaining(['Formação', 'Processos disciplinares', 'Cessações']));
     const noFeature = visibleNavigation(
       () => true,
       () => false,

@@ -9,6 +9,7 @@ import { ORGANIZATION_ENTITY_TYPES, organizationRecordExists } from '#modules/or
 import {
   certificateAccess,
   disciplinaryCaseAccess,
+  terminationAccess,
   employeeAccess,
   leaveRequestAccess,
 } from '#modules/hr/index'
@@ -101,6 +102,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.disciplinary_case = {
     feature: 'hr',
     access: (scope, id) => disciplinaryCaseAccess(scope, id),
+  }
+  // Documentos da cessação (carta de denúncia, acordo, declarações): o mesmo acesso do processo.
+  map.employee_termination = {
+    feature: 'hr',
+    access: (scope, id) => terminationAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

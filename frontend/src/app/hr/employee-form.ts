@@ -11,6 +11,7 @@ import { CompensationCard } from './compensation-card';
 import { LoansCard } from './loans-card';
 import { TrainingCard } from './training-card';
 import { DisciplineCard } from './discipline-card';
+import { TerminationCard } from './termination-card';
 import { LeaveCard } from './leave-card';
 import { OnboardingCard } from './onboarding-card';
 import { Workspace } from '../core/workspace';
@@ -72,6 +73,7 @@ interface Option {
     LoansCard,
     TrainingCard,
     DisciplineCard,
+    TerminationCard,
     ErrorState,
     Skeleton,
     Icon,
@@ -149,6 +151,7 @@ interface Option {
           <app-loans-card [employeeId]="e.id" />
           <app-training-card [employeeId]="e.id" />
           <app-discipline-card [employeeId]="e.id" />
+          <app-termination-card [employeeId]="e.id" [employeeStatus]="e.status" />
         </div>
         <div aside>
           <section class="card" aria-labelledby="emp-summary">

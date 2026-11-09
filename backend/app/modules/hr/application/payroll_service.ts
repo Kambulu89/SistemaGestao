@@ -871,6 +871,33 @@ async function buildRegular(
   })
 }
 
+/**
+ * Condições do último contrato terminado antes do mês (liquidação final paga num mês posterior à cessação, 7.11).
+ */
+async function endedTermsBefore(scope: TenantScope, employeeId: string, period: string) {
+  const r = await scope.trx.rawQuery(
+    `select termination_date::text as d from employment_contracts where tenant_id = ? and employee_id = ?
+       and status = 'ENDED' and termination_date < ?::date order by termination_date desc limit 1`,
+    [scope.context.tenantId, employeeId, period]
+  )
+  const d = (r.rows[0] as { d: string } | undefined)?.d
+  return d ? contractTermsAt(scope, employeeId, d) : null
+}
+
+/** Lote de liquidação final de uma cessação: os valores vêm do processo aprovado e não se mexem aqui. */
+async function assertNotSettlement(scope: TenantScope, runId: string) {
+  const r = await scope.trx.rawQuery(
+    `select code from employee_terminations where tenant_id = ? and settlement_run_id = ? limit 1`,
+    [scope.context.tenantId, runId]
+  )
+  const t = r.rows[0] as { code: string } | undefined
+  if (t)
+    throw ApiError.conflict(
+      'SETTLEMENT_RUN',
+      `Os valores deste lote vêm da cessação ${t.code} aprovada; altere-os no processo (cancele o lote e gere de novo).`
+    )
+}
+
 async function buildExtra(scope: TenantScope, e: EmployeeRow, run: any): Promise<Built> {
   const period = run.period_text as string
   const end = periodEnd(period)
@@ -884,7 +911,9 @@ async function buildExtra(scope: TenantScope, e: EmployeeRow, run: any): Promise
     ruleSetId: null,
   }
   const terms =
-    (await contractTermsAt(scope, e.id, end)) ?? (await contractTermsAt(scope, e.id, period))
+    (await contractTermsAt(scope, e.id, end)) ??
+    (await contractTermsAt(scope, e.id, period)) ??
+    (await endedTermsBefore(scope, e.id, period))
   const inputs = await runInputs(scope, run.id, e.id)
   const items: PayItem[] = []
   for (const i of inputs)
@@ -1160,7 +1189,7 @@ const needManage = (a: { manage: boolean }) => {
     throw ApiError.forbidden('OUT_OF_SCOPE', 'Não gere o processamento desta entidade legal.')
 }
 
-async function nextRunCode(scope: TenantScope, period: string) {
+export async function nextRunCode(scope: TenantScope, period: string) {
   const prefix = `PS-${period.slice(0, 4)}${period.slice(5, 7)}-`
   await scope.trx.rawQuery(`select pg_advisory_xact_lock(hashtext(?))`, [
     `${scope.context.tenantId}:${prefix}`,
@@ -1173,7 +1202,7 @@ async function nextRunCode(scope: TenantScope, period: string) {
   return `${prefix}${String((r.rows[0] as { n: number }).n).padStart(3, '0')}`
 }
 
-async function periodRow(
+export async function periodRow(
   scope: TenantScope,
   legalEntityId: string,
   period: string,
@@ -1493,6 +1522,7 @@ export class PayrollRunService {
       if (!['DRAFT', 'CALCULATED'].includes(u.status))
         wrongState('Só um lote por aprovar recebe valores variáveis.')
       if (u.kind === 'RETRO') wrongState('O retroactivo não recebe valores: recalcula o mês.')
+      await assertNotSettlement(scope, id)
       const issues: ErrorDetail[] = []
       const { values: v, issues: i1 } = normalizeFields(input, {
         employeeId: { kind: 'uuid', label: 'Colaborador' },
@@ -1598,6 +1628,7 @@ export class PayrollRunService {
       if (Number(u.version) !== expectedVersion) throw ApiError.versionConflict(Number(u.version))
       if (!['DRAFT', 'CALCULATED'].includes(u.status))
         wrongState('Só um lote por aprovar muda de colaboradores.')
+      await assertNotSettlement(scope, id)
       if (!isUuid(employeeId)) throw ApiError.notFound()
       const list = new Set<string>(u.excluded_employee_ids ?? [])
       if (excluded) list.add(employeeId)

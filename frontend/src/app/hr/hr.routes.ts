@@ -131,6 +131,23 @@ export const HR_ROUTES: Routes = [
     ],
   },
   {
+    path: 'cessacoes',
+    title: 'Cessações',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.terminations.read', anyScope: true },
+        loadComponent: () => import('./terminations').then((m) => m.Terminations),
+      },
+      {
+        path: ':id',
+        title: 'Cessação',
+        loadComponent: () => import('./termination').then((m) => m.TerminationPage),
+      },
+    ],
+  },
+  {
     path: 'recibos',
     title: 'Os meus recibos',
     loadComponent: () => import('./my-payslips').then((m) => m.MyPayslips),

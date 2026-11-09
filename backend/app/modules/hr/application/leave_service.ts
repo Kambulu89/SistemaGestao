@@ -767,6 +767,36 @@ async function accrue(scope: TenantScope, e: any, year: number) {
   return { status: result, days: daysText(due) }
 }
 
+/** Saldo de férias de um ano (para a cessação, 7.11). */
+export async function leaveBalanceOf(scope: TenantScope, employeeId: string, year: number) {
+  const b = await balanceOf(scope, employeeId, year)
+  return { ...b, raw: undefined, balanceCents: b.raw.balance, pendingCents: b.raw.pending }
+}
+
+/**
+ * Encerra o saldo de férias de um ano na cessação (7.11): um ajuste que leva o saldo a zero, com a referência do
+ * processo (os dias pagos vão na liquidação). Devolve os dias ajustados (cêntimos de dia).
+ */
+export async function closeLeaveBalance(
+  scope: TenantScope,
+  employeeId: string,
+  year: number,
+  effectiveDate: string,
+  reason: string
+) {
+  const b = await balanceOf(scope, employeeId, year)
+  if (b.raw.balance === 0n) return 0n
+  await ledgerInsert(scope, {
+    employeeId,
+    year,
+    kind: 'ADJUSTMENT',
+    days: -b.raw.balance,
+    effectiveDate,
+    reason,
+  })
+  return -b.raw.balance
+}
+
 export class LeaveBalanceService {
   /** Self-service: a ficha ligada à conta do actor, com o saldo do ano (404 se a conta não tem ficha). */
   mine(context: TenantContext, year: number) {

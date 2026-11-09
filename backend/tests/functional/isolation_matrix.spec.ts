@@ -522,8 +522,42 @@ async function populate(client: any) {
       baseSalary: '200000',
     })
   )
+  const leaver = ok(
+    await as(client, s).post('/api/v1/hr/employees', {
+      code: 'COL-A2',
+      fullName: 'Colaborador A2',
+      legalEntityId: le.id,
+      hireDate: '2026-01-05',
+    })
+  )
+  const leaverContract = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${leaver.id}/contracts`, {
+      code: 'CT-A2',
+      contractType: 'PERMANENT',
+      startDate: '2026-01-05',
+      weeklyHours: '40',
+      currency: 'AOA',
+      baseSalary: '200000',
+    })
+  )
+  ok(
+    await as(client, s).post(`/api/v1/hr/contracts/${leaverContract.id}/activate`, {
+      expectedVersion: leaverContract.version,
+    }),
+    200
+  )
+  const termination = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${leaver.id}/terminations`, {
+      reason: 'RESIGNATION',
+      details: 'Denúncia do contrato pelo colaborador A2.',
+      lastWorkingDay: '2026-12-31',
+      indemnityApplicable: false,
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    leaver,
+    termination,
     employee,
     requisition,
     candidate,
@@ -974,6 +1008,61 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.get(
           `/api/v1/attachments?subjectType=disciplinary_case&subjectId=${a.disciplinaryCase.id}`
         ),
+      ],
+      ['GET cessação', B.get(`/api/v1/hr/terminations/${a.termination.id}`)],
+      [
+        'abrir cessação',
+        B.post(`/api/v1/hr/employees/${a.leaver.id}/terminations`, {
+          reason: 'RESIGNATION',
+          details: 'xxxx',
+          lastWorkingDay: '2026-12-31',
+          indemnityApplicable: false,
+        }),
+      ],
+      [
+        'PATCH cessação',
+        B.patch(`/api/v1/hr/terminations/${a.termination.id}`, { ...v, details: 'xxxx' }),
+      ],
+      [
+        'linha da liquidação',
+        B.post(`/api/v1/hr/terminations/${a.termination.id}/lines`, {
+          ...v,
+          kind: 'OTHER_EARNING',
+          componentId: a.payComponent.id,
+          description: 'xxx',
+          amount: '1',
+          basis: 'xxx',
+        }),
+      ],
+      ['submeter cessação', B.post(`/api/v1/hr/terminations/${a.termination.id}/submit`, v)],
+      [
+        'decidir cessação',
+        B.post(`/api/v1/hr/terminations/${a.termination.id}/decision`, { ...v, approve: true }),
+      ],
+      [
+        'cancelar cessação',
+        B.post(`/api/v1/hr/terminations/${a.termination.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['liquidação final', B.post(`/api/v1/hr/terminations/${a.termination.id}/settlement`, v)],
+      ['concluir cessação', B.post(`/api/v1/hr/terminations/${a.termination.id}/complete`, v)],
+      [
+        'tarefa da cessação',
+        B.post(`/api/v1/hr/terminations/${a.termination.id}/tasks`, {
+          ...v,
+          category: 'OTHER',
+          title: 'xxxx',
+        }),
+      ],
+      [
+        'estado da tarefa',
+        B.patch(`/api/v1/hr/termination-tasks/${a.termination.tasks[0].id}`, {
+          ...v,
+          status: 'DONE',
+        }),
+      ],
+      [
+        'anexos da cessação',
+        B.get(`/api/v1/attachments?subjectType=employee_termination&subjectId=${a.termination.id}`),
       ],
       ['GET carreira', B.get(`/api/v1/hr/employees/${a.employee.id}/assignments`)],
       [
@@ -1437,6 +1526,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/hr/training/sessions')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/training/courses')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/discipline/cases')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/terminations')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/payroll/rule-sets')).body().data, 0)
     for (const url of [
       '/api/v1/hr/leave/requests',
@@ -1511,6 +1601,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/hr/payroll/rule-sets',
       '/api/v1/hr/training/sessions',
       '/api/v1/hr/discipline/cases',
+      '/api/v1/hr/terminations',
       `/api/v1/hr/employees/${a.employee.id}/loans`,
     ]) {
       const r = await spoof.get(url)

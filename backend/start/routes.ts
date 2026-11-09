@@ -38,6 +38,7 @@ const CompensationController = () => import('#modules/hr/http/compensation_contr
 const LoansController = () => import('#modules/hr/http/loans_controller')
 const PayrollController = () => import('#modules/hr/http/payroll_controller')
 const TrainingController = () => import('#modules/hr/http/training_controller')
+const TerminationsController = () => import('#modules/hr/http/terminations_controller')
 
 router
   .group(() => {
@@ -710,6 +711,26 @@ router
                 router.post('discipline/cases/:id/events', [TrainingController, 'caseEvent'])
                 router.post('discipline/cases/:id/review', [TrainingController, 'reviewCase'])
                 router.post('discipline/cases/:id/close', [TrainingController, 'closeCase'])
+                router.get('terminations', [TerminationsController, 'index'])
+                router.get('terminations/:id', [TerminationsController, 'show'])
+                router.post('employees/:id/terminations', [TerminationsController, 'store'])
+                router.patch('terminations/:id', [TerminationsController, 'update'])
+                router.post('terminations/:id/lines', [TerminationsController, 'addLine'])
+                router.patch('terminations/:id/lines/:lineId', [
+                  TerminationsController,
+                  'updateLine',
+                ])
+                router.delete('terminations/:id/lines/:lineId', [
+                  TerminationsController,
+                  'removeLine',
+                ])
+                router.post('terminations/:id/submit', [TerminationsController, 'submit'])
+                router.post('terminations/:id/decision', [TerminationsController, 'decide'])
+                router.post('terminations/:id/cancel', [TerminationsController, 'cancel'])
+                router.post('terminations/:id/settlement', [TerminationsController, 'settlement'])
+                router.post('terminations/:id/complete', [TerminationsController, 'complete'])
+                router.post('terminations/:id/tasks', [TerminationsController, 'addTask'])
+                router.patch('termination-tasks/:id', [TerminationsController, 'setTask'])
                 router.get('employees/:id/contracts', [CareerController, 'contracts'])
                 router.post('employees/:id/contracts', [CareerController, 'createContract'])
                 router.get('employees/:id/assignments', [CareerController, 'assignments'])

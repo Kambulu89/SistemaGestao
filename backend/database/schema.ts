@@ -1314,6 +1314,71 @@ export class EmployeePayItemSchema extends BaseModel {
   declare version: number
 }
 
+export class EmployeeTerminationSchema extends BaseModel {
+  static $columns = ['cancelReason', 'code', 'contractId', 'createdAt', 'createdBy', 'currency', 'decidedAt', 'decidedByMembershipId', 'decisionNote', 'details', 'disciplinaryCaseId', 'employeeId', 'id', 'indemnityApplicable', 'indemnityBasis', 'lastWorkingDay', 'noticeBasis', 'noticeGivenOn', 'noticeRequiredDays', 'reason', 'settledAt', 'settledBy', 'settlementRunId', 'status', 'submittedAt', 'submittedBy', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = EmployeeTerminationSchema.$columns
+  @column()
+  declare cancelReason: string | null
+  @column()
+  declare code: string
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column.dateTime()
+  declare decidedAt: DateTime | null
+  @column()
+  declare decidedByMembershipId: string | null
+  @column()
+  declare decisionNote: string | null
+  @column()
+  declare details: string
+  @column()
+  declare disciplinaryCaseId: string | null
+  @column()
+  declare employeeId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare indemnityApplicable: boolean
+  @column()
+  declare indemnityBasis: string | null
+  @column.date()
+  declare lastWorkingDay: DateTime
+  @column()
+  declare noticeBasis: string | null
+  @column.date()
+  declare noticeGivenOn: DateTime | null
+  @column()
+  declare noticeRequiredDays: number | null
+  @column()
+  declare reason: string
+  @column.dateTime()
+  declare settledAt: DateTime | null
+  @column()
+  declare settledBy: string | null
+  @column()
+  declare settlementRunId: string | null
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class EmployeeSchema extends BaseModel {
   static $columns = ['addressLine', 'bankIban', 'bankName', 'birthDate', 'branchId', 'city', 'code', 'costCenterId', 'countryCode', 'createdAt', 'createdBy', 'departmentId', 'educationField', 'educationLevel', 'emergencyName', 'emergencyPhone', 'emergencyRelation', 'fullName', 'hireDate', 'id', 'idDocumentExpiry', 'idDocumentNumber', 'idDocumentType', 'legalEntityId', 'managerId', 'membershipId', 'nationality', 'personalEmail', 'personalPhone', 'positionId', 'province', 'socialSecurityNumber', 'status', 'taxId', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'workEmail', 'workPhone'] as const
   $columns = EmployeeSchema.$columns
@@ -3967,6 +4032,78 @@ export class TenantSchema extends BaseModel {
   declare timezone: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+  @column()
+  declare version: number
+}
+
+export class TerminationSettlementLineSchema extends BaseModel {
+  static $columns = ['amount', 'basis', 'componentId', 'createdAt', 'createdBy', 'description', 'id', 'kind', 'quantity', 'rate', 'tenantId', 'terminationId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = TerminationSettlementLineSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare basis: string
+  @column()
+  declare componentId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare quantity: string | null
+  @column()
+  declare rate: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare terminationId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class TerminationTaskSchema extends BaseModel {
+  static $columns = ['category', 'completedAt', 'completedBy', 'createdAt', 'createdBy', 'id', 'kind', 'notes', 'onboardingTaskId', 'status', 'tenantId', 'terminationId', 'title', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = TerminationTaskSchema.$columns
+  @column()
+  declare category: string
+  @column.dateTime()
+  declare completedAt: DateTime | null
+  @column()
+  declare completedBy: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare onboardingTaskId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare terminationId: string
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
   @column()
   declare version: number
 }

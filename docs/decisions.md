@@ -363,3 +363,34 @@ texto dos factos nunca vai para a auditoria. A cronologia (notas, notificação,
 acréscimo; uma sanção exige o registo prévio da defesa ou da audiência do trabalhador; encerrado com a decisão e a
 fundamentação, o processo não muda (trigger). Os documentos usam os anexos com o mesmo acesso. As sanções são categorias
 genéricas: a sua aplicação concreta e prazos seguem a LGT e o regulamento da empresa, que o sistema não codifica.
+
+## D-034 Cessação: processo com aprovação segregada, liquidação pelo processamento salarial e checklist verificada (aceite)
+
+A cessação é um processo próprio (`employee_terminations`, código `CES-AAAA-NNNN`), um em curso ou concluído por
+colaborador, com permissões `hr.terminations.read|manage|approve` no âmbito da colocação; ninguém trata a própria
+cessação. **Nenhum valor legal está no código**: os dias de aviso exigidos só se gravam com a fonte (contrato, lei ou
+convenção) e a indemnização só existe quando a empresa a marca como aplicável, com a base legal e o critério; o sistema
+não calcula indemnizações. Calcula só factos (antiguidade, dias de aviso dados e em falta, fracção do ano trabalhada,
+saldo de férias) e sugestões claramente rotuladas.
+
+**Liquidação final**: linhas por tipo (férias vencidas, proporcionais, subsídios proporcionais, compensação ou desconto
+por falta de aviso, indemnização, outros), cada uma com componente salarial compatível (abono/desconto), fundamentação e,
+opcionalmente, quantidade × valor unitário verificada ao cêntimo. Só se alteram em rascunho (trigger); a aprovação cobre
+os montantes. A remuneração do último mês não é linha: o processamento regular desse mês já a proporcionaliza pela data
+de fim do contrato. O pagamento faz-se por um **lote EXTRA** gerado a partir do processo aprovado (no mês do último dia ou,
+se fechado, no mês corrente; exige também `hr.payroll.manage`), com IRT/INSS pela incidência de cada componente; os
+valores desse lote não se alteram no processamento (`SETTLEMENT_RUN`) e, se o lote for cancelado, gera-se outro.
+
+**Aprovação** (nem quem preparou nem quem submeteu) bloqueada por: contrato já não em vigor, indemnização marcada sem
+linha, despedimento disciplinar sem processo encerrado com essa decisão, ausências por decidir ou posteriores ao último
+dia, pedidos de adiantamento por decidir, e meses posteriores já fechados com o colaborador (um mês fechado não se
+reabre). Ao aprovar, na mesma transacção: o contrato termina no último dia (evento `TERMINATED`), a colocação em vigor
+fecha nessa data, o colaborador passa a `TERMINATED` e o saldo de férias do ano fecha com um ajuste referenciado. Depois
+de aprovado só mudam a ligação ao lote e a conclusão (trigger); concluído ou cancelado, nada muda.
+
+**Checklist de saída** gerada na criação (acesso à aplicação se houver conta, devolução do que foi entregue no
+acolhimento, equipamentos, documentos e, havendo, empréstimos) e editável. As tarefas de sistema verificam o facto: o
+acesso só fica feito com a conta suspensa ou revogada (em Membros, com a permissão de membros — o RH não suspende contas
+sozinho) e os empréstimos só sem prestações por liquidar. Concluir exige a checklist tratada e o lote fechado; fechado ≠
+pago (D-032): o pagamento do líquido segue no processamento.
+
