@@ -73,6 +73,15 @@ describe('colaborador: envio da ficha', () => {
     expect(loans.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label)).toContain(
       'Adiantamentos e empréstimos',
     );
+    const payroll2 = visibleNavigation(
+      (p, any) => (any ? p === 'hr.payroll.read' : false),
+      (f) => f === 'hr',
+      true,
+      false,
+    );
+    expect(
+      payroll2.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
+    ).toContain('Processamento salarial');
     const noFeature = visibleNavigation(
       () => true,
       () => false,

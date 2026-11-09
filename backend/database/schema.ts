@@ -2654,6 +2654,305 @@ export class PayComponentSchema extends BaseModel {
   declare version: number
 }
 
+export class PayrollIrtBracketSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'excessOver', 'fixedAmount', 'id', 'lower', 'rate', 'ruleSetId', 'sequence', 'tenantId', 'updatedAt', 'updatedBy', 'upper', 'version'] as const
+  $columns = PayrollIrtBracketSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare excessOver: string
+  @column()
+  declare fixedAmount: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lower: string
+  @column()
+  declare rate: string
+  @column()
+  declare ruleSetId: string
+  @column()
+  declare sequence: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare upper: string | null
+  @column()
+  declare version: number
+}
+
+export class PayrollPeriodSchema extends BaseModel {
+  static $columns = ['closedAt', 'closedBy', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'period', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayrollPeriodSchema.$columns
+  @column.dateTime()
+  declare closedAt: DateTime | null
+  @column()
+  declare closedBy: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column.date()
+  declare period: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PayrollResultLineSchema extends BaseModel {
+  static $columns = ['amount', 'code', 'createdAt', 'createdBy', 'id', 'inssSubject', 'irtSubject', 'kind', 'name', 'refId', 'resultId', 'sequence', 'source', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayrollResultLineSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare inssSubject: boolean
+  @column()
+  declare irtSubject: boolean
+  @column()
+  declare kind: string
+  @column()
+  declare name: string
+  @column()
+  declare refId: string | null
+  @column()
+  declare resultId: string
+  @column()
+  declare sequence: number
+  @column()
+  declare source: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PayrollResultSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'currency', 'deductions', 'employeeId', 'employerCost', 'errors', 'gross', 'id', 'inssBase', 'inssEmployee', 'inssEmployer', 'irt', 'irtBase', 'loans', 'net', 'runId', 'snapshot', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayrollResultSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string | null
+  @column()
+  declare deductions: string | null
+  @column()
+  declare employeeId: string
+  @column()
+  declare employerCost: string | null
+  @column()
+  declare errors: any
+  @column()
+  declare gross: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare inssBase: string | null
+  @column()
+  declare inssEmployee: string | null
+  @column()
+  declare inssEmployer: string | null
+  @column()
+  declare irt: string | null
+  @column()
+  declare irtBase: string | null
+  @column()
+  declare loans: string | null
+  @column()
+  declare net: string | null
+  @column()
+  declare runId: string
+  @column()
+  declare snapshot: any
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PayrollRuleSetSchema extends BaseModel {
+  static $columns = ['baseInssSubject', 'baseIrtSubject', 'code', 'createdAt', 'createdBy', 'currency', 'dayBasis', 'id', 'inssEmployeeRate', 'inssEmployerRate', 'irtBaseDeductsInss', 'legalReference', 'name', 'publishedAt', 'publishedBy', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'version'] as const
+  $columns = PayrollRuleSetSchema.$columns
+  @column()
+  declare baseInssSubject: boolean
+  @column()
+  declare baseIrtSubject: boolean
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare dayBasis: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare inssEmployeeRate: string
+  @column()
+  declare inssEmployerRate: string
+  @column()
+  declare irtBaseDeductsInss: boolean
+  @column()
+  declare legalReference: string
+  @column()
+  declare name: string
+  @column.dateTime()
+  declare publishedAt: DateTime | null
+  @column()
+  declare publishedBy: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
+  @column()
+  declare version: number
+}
+
+export class PayrollRunInputSchema extends BaseModel {
+  static $columns = ['amount', 'componentId', 'createdAt', 'createdBy', 'employeeId', 'id', 'note', 'runId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayrollRunInputSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare componentId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare employeeId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare note: string | null
+  @column()
+  declare runId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PayrollRunSchema extends BaseModel {
+  static $columns = ['calculatedAt', 'calculatedBy', 'closedAt', 'closedBy', 'code', 'createdAt', 'createdBy', 'decidedAt', 'decidedByMembershipId', 'decisionComment', 'deductions', 'description', 'employeesCount', 'employerCost', 'errorsCount', 'excludedEmployeeIds', 'gross', 'id', 'inputsHash', 'inssEmployee', 'inssEmployer', 'irt', 'kind', 'loans', 'net', 'periodId', 'ruleSetId', 'status', 'targetPeriodId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PayrollRunSchema.$columns
+  @column.dateTime()
+  declare calculatedAt: DateTime | null
+  @column()
+  declare calculatedBy: string | null
+  @column.dateTime()
+  declare closedAt: DateTime | null
+  @column()
+  declare closedBy: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.dateTime()
+  declare decidedAt: DateTime | null
+  @column()
+  declare decidedByMembershipId: string | null
+  @column()
+  declare decisionComment: string | null
+  @column()
+  declare deductions: string
+  @column()
+  declare description: string | null
+  @column()
+  declare employeesCount: number
+  @column()
+  declare employerCost: string
+  @column()
+  declare errorsCount: number
+  @column()
+  declare excludedEmployeeIds: any
+  @column()
+  declare gross: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare inputsHash: string | null
+  @column()
+  declare inssEmployee: string
+  @column()
+  declare inssEmployer: string
+  @column()
+  declare irt: string
+  @column()
+  declare kind: string
+  @column()
+  declare loans: string
+  @column()
+  declare net: string
+  @column()
+  declare periodId: string
+  @column()
+  declare ruleSetId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare targetPeriodId: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class PermissionSchema extends BaseModel {
   static $columns = ['code', 'createdAt', 'description', 'id', 'module', 'updatedAt'] as const
   $columns = PermissionSchema.$columns

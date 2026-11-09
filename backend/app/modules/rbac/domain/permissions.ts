@@ -285,6 +285,30 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Aprovar adiantamentos e empréstimos no âmbito atribuído, nunca os que preparou nem os seus.',
   },
   {
+    code: 'hr.payroll.read',
+    module: 'hr',
+    description:
+      'Ver processamentos salariais (lotes, recibos calculados e erros) da empresa ou das entidades legais atribuídas.',
+  },
+  {
+    code: 'hr.payroll.manage',
+    module: 'hr',
+    description:
+      'Preparar, calcular (simular), submeter, fechar e cancelar processamentos salariais da empresa ou das entidades legais atribuídas.',
+  },
+  {
+    code: 'hr.payroll.approve',
+    module: 'hr',
+    description:
+      'Aprovar processamentos salariais da empresa ou das entidades legais atribuídas, nunca os que preparou ou calculou nem um lote com o próprio recibo.',
+  },
+  {
+    code: 'hr.payroll.settings',
+    module: 'hr',
+    description:
+      'Configurar as regras de processamento (taxas de INSS, tabela de IRT, incidência do salário base) por vigência e com fonte.',
+  },
+  {
     code: 'hr.settings',
     module: 'hr',
     description:

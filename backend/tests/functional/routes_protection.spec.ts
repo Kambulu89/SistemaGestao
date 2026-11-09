@@ -188,6 +188,30 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
   'GET /api/v1/hr/pay-components':
     'catálogo sem valores; exige uma permissão hr.compensation.* em qualquer âmbito (verificado no serviço)',
+  'GET /api/v1/hr/payroll/periods':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'GET /api/v1/hr/payroll/runs':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'GET /api/v1/hr/payroll/runs/:id':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'GET /api/v1/hr/payroll/runs/:id/results/:resultId':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'PUT /api/v1/hr/payroll/runs/:id/inputs':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/exclusions':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/calculate':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/submit':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/decision':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/close':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/cancel':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
   'GET /api/v1/hr/employees/:id/loans':
     'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
   'POST /api/v1/hr/employees/:id/loans':

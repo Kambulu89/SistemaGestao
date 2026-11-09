@@ -1,7 +1,7 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.6 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.7 a 7.13 seguem, um de
-cada vez. Decisões D-024 a D-029.
+Estado: **7.1 a 7.7 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.8 a 7.13 seguem, um de
+cada vez. Decisões D-024 a D-030.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
@@ -16,6 +16,7 @@ terão de ser configuradas pela empresa e confirmadas na legislação em vigor q
 | 7.4 Férias/ausências          | Calendários e feriados (Prompt 05); nada de férias              | Tipos de ausência, política versionada com fonte legal, conta-corrente de dias (direito proporcional, transporte, expiração, ajustes, gozo, reversão), pedidos com contagem pelo calendário, sobreposição e saldo, aprovação da chefia, confidencialidade médica, ausências para assiduidade/salários | Feito  |
 | 7.5 Compensação/benefícios    | Salário base no contrato (7.3)                                  | Catálogo de componentes (subsídios, prémios, horas extra, abonos, descontos), incidência IRT/INSS por vigência com fonte, propostas com aprovação (directa ou workflow), componentes do colaborador com vigência e histórico imutável, remuneração numa data para o processamento                     | Feito  |
 | 7.6 Adiantamentos/empréstimos | Nada                                                            | Pedido com plano exacto ao cêntimo criado na aprovação, saldo derivado, limites configuráveis com fonte (prestação máxima em % do base somando empréstimos activos, número de prestações), contrato em cada mês, aprovação segregada, pagamento directo, desconto idempotente para o processamento    | Feito  |
+| 7.7 Processamento salarial    | Nada                                                            | Regras versionadas com fonte (INSS, tabela de IRT, incidência do base, base do IRT, base de dias); lotes regular/extra/retroactivo por entidade legal; cálculo exacto com erros por colaborador; instantâneo e hash; aprovação segregada; fecho imutável com descontos de empréstimos                 | Feito  |
 
 ## Modelo
 
@@ -108,6 +109,22 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
 - Erros: `ADVANCE_SINGLE`, `TOO_SMALL`, `IMMUTABLE`, `NOT_RETROACTIVE`, `TOO_MANY_INSTALLMENTS`, `NO_CONTRACT`,
   `LOAN_BEYOND_CONTRACT`, `CURRENCY_MISMATCH`, `LIMIT_EXCEEDED`, `STALE_LOAN`, `SEGREGATION`, `ALREADY_SETTLED`, `FUTURE`.
 
+### 7.7 Processamento salarial
+
+- Migração `0028_create_hr_payroll`: `payroll_rule_sets` + `payroll_irt_brackets` (publicadas ⇒ imutáveis),
+  `payroll_periods`, `payroll_runs` (um regular activo por mês; retroactivo aponta para o mês fechado),
+  `payroll_run_inputs`, `payroll_results` + `payroll_result_lines` (instantâneo em JSON; imutáveis a partir da
+  submissão, por trigger).
+- `GET|POST /hr/payroll/rule-sets`, `GET|PATCH|DELETE /hr/payroll/rule-sets/:id`, `POST …/publish`
+  (`hr.payroll.settings`); `GET /hr/payroll/periods`, `GET|POST /hr/payroll/runs`, `GET /hr/payroll/runs/:id`,
+  `GET …/results/:resultId`, `PUT …/inputs`, `POST …/exclusions|calculate|submit|decision|close|cancel`.
+- Permissões novas: `hr.payroll.read`, `hr.payroll.manage`, `hr.payroll.approve`, `hr.payroll.settings`.
+- Erros: `NO_RULE_SET`, `MISSING_INCIDENCE`, `IRT_OUT_OF_TABLE`, `NEGATIVE_NET`, `NO_PAYABLE_DAYS`, `NO_CONTRACT`,
+  `RUN_HAS_ERRORS`, `STALE_RUN`, `REGULAR_EXISTS`, `PERIOD_CLOSED`, `NOT_CLOSED`, `NOT_VARIABLE`, `OTHER_LEGAL_ENTITY`,
+  `SEGREGATION`, `VERSION_EXISTS`, `GAP`, `OPEN_LAST`.
+- Para os blocos seguintes: `ruleSetAt(scope, currency, date)` em `#modules/hr/index`; os lotes fechados são a fonte dos
+  recibos (7.9) e dos lançamentos (7.9).
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -141,6 +158,15 @@ Compensação (7.5):
 - Compensação (lista): propostas no âmbito, vista "A aprovar por mim".
 - Componentes de remuneração: catálogo e versões da incidência de IRT/INSS com fonte. Configuração de RH: workflow das
   propostas de compensação.
+
+Processamento salarial (7.7):
+
+- Processamento salarial (lista): lotes no âmbito, filtros de estado e tipo; "Novo processamento" (entidade legal, tipo,
+  mês e, no retroactivo, o mês a rectificar).
+- Lote: próximo passo em texto, indicadores (colaboradores, com erros, líquido, custo), recibos por colaborador com os
+  erros, valores variáveis, excluir/incluir, calcular (simulação), pedir aprovação, aprovar ou recusar (outra pessoa),
+  fechar com confirmação; recibo em painel lateral com as linhas, bases e regras usadas.
+- Regras de processamento: versões por moeda e data com fonte, tabela de IRT em escalões, publicar e apagar rascunhos.
 
 Adiantamentos e empréstimos (7.6):
 
@@ -257,9 +283,28 @@ Testes do 7.6:
   primeira com saldo 100 000 e progresso; 390 px sem deslocamento. Sem erros na consola. O E2E encontrou mensagens com
   montantes por formatar e a tabela apertada em telemóvel; ambos corrigidos.
 
+Testes do 7.7:
+
+- Backend funcional `hr_payroll.spec.ts` (5 testes): regras (validação, publicação, imutabilidade na base, versão
+  duplicada, permissão); regular com horas extra e empréstimo (210 000 bruto, INSS 6 300, IRT 10 740, líquido 182 960,
+  patronal 16 800 com valores de teste), erro sem regras, exclusão, simulação repetível com o mesmo hash, sem efeitos até
+  ao fecho, segregação, recusa e nova submissão, fecho com desconto da prestação pela referência do lote, mês fechado,
+  lote imutável, auditoria sem montantes; dados alterados ⇒ `STALE_RUN`; mês incompleto (27/31), retroactivo
+  (diferença de 20 000, IRT recalculado 3 280), segundo retroactivo sem diferenças, extra; âmbito por entidade legal e
+  quem tem o recibo no lote não aprova.
+- Backend unitário `hr_payroll_domain.spec.ts` (7 testes): taxas e arredondamento, tabela progressiva, escalões, recibo
+  completo, mês incompleto e faltas, erros, retroactivo.
+- `isolation_matrix` (regras, lotes, recibos, valores e meses de outra empresa), `routes_protection`.
+- Frontend `hr/payroll-model.spec.ts` (3 testes) e navegação.
+- Browser (5 passos, dois utilizadores): regras criadas pela interface com fonte obrigatória e tabela em três escalões,
+  publicadas; lote regular com horas extra calculado (210 000; 6 300; 10 740; 192 960), recibo com linhas, bases e
+  regras; quem calculou não aprova; o aprovador aprova; fecho; 390 px sem deslocamento. Sem erros na consola. O teste
+  funcional encontrou que os valores variáveis não entravam no regular e a matriz de isolamento que os meses de uma
+  entidade de outra empresa respondiam 200 vazio; ambos corrigidos.
+
 ## Pendências
 
-- 7.7 a 7.13 (processamento salarial, IRT/INSS, recibos,
+- 7.8 a 7.13 (casos de teste oficiais de IRT/INSS, IRT/INSS, recibos,
   formação, cessação, portais e relatórios).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
@@ -273,3 +318,7 @@ Testes do 7.6:
   aprovação de propostas com efeito em períodos de processamento fechados será bloqueada no 7.7.
 - Empréstimos: limites legais por confirmar pela empresa (configurados com a fonte); sem pedido pelo próprio
   colaborador (portal, 7.12); saldo em dívida na cessação a tratar no 7.11; reescalonamento de prestações não pedido.
+- Processamento: valores de IRT/INSS por confirmar na legislação angolana em vigor e casos de teste oficiais (7.8); a
+  tributação de pagamentos extra (ex.: subsídios de férias e Natal) segue as mesmas regras do mês até o 7.8 o confirmar;
+  mudança de salário a meio do mês usa o valor do último dia pago; recibos em PDF, pagamento e lançamentos contabilísticos
+  no 7.9.

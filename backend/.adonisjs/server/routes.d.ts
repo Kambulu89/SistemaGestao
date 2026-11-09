@@ -242,6 +242,24 @@ export type ScannedRoutes = {
     'loans.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'loans.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'loans.pay': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'installmentId': ParamValue} }
+    'payroll.rule_sets': { paramsTuple?: []; params?: {} }
+    'payroll.create_rule_set': { paramsTuple?: []; params?: {} }
+    'payroll.rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.update_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.publish_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.delete_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.periods': { paramsTuple?: []; params?: {} }
+    'payroll.index': { paramsTuple?: []; params?: {} }
+    'payroll.store': { paramsTuple?: []; params?: {} }
+    'payroll.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.result': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'resultId': ParamValue} }
+    'payroll.set_input': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.set_excluded': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.calculate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -408,6 +426,12 @@ export type ScannedRoutes = {
     'loans.for_employee': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'loans.index': { paramsTuple?: []; params?: {} }
     'loans.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.rule_sets': { paramsTuple?: []; params?: {} }
+    'payroll.rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.periods': { paramsTuple?: []; params?: {} }
+    'payroll.index': { paramsTuple?: []; params?: {} }
+    'payroll.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.result': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'resultId': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -530,6 +554,12 @@ export type ScannedRoutes = {
     'loans.for_employee': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'loans.index': { paramsTuple?: []; params?: {} }
     'loans.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.rule_sets': { paramsTuple?: []; params?: {} }
+    'payroll.rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.periods': { paramsTuple?: []; params?: {} }
+    'payroll.index': { paramsTuple?: []; params?: {} }
+    'payroll.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.result': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'resultId': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -645,6 +675,15 @@ export type ScannedRoutes = {
     'loans.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'loans.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'loans.pay': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'installmentId': ParamValue} }
+    'payroll.create_rule_set': { paramsTuple?: []; params?: {} }
+    'payroll.publish_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.store': { paramsTuple?: []; params?: {} }
+    'payroll.set_excluded': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.calculate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -691,6 +730,7 @@ export type ScannedRoutes = {
     'adjustments.undo_reconciliation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fixed_assets.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.delete_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.delete_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.remove_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
@@ -724,6 +764,7 @@ export type ScannedRoutes = {
     'compensation.update_component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'compensation.update_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'loans.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.update_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.update_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -738,6 +779,7 @@ export type ScannedRoutes = {
     'settings.update_settings': { paramsTuple?: []; params?: {} }
     'accounting.set_allocations': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineNo': ParamValue} }
     'preferences.update': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
+    'payroll.set_input': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_settings': { paramsTuple?: []; params?: {} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }

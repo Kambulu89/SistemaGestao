@@ -36,6 +36,7 @@ const CareerController = () => import('#modules/hr/http/career_controller')
 const LeaveController = () => import('#modules/hr/http/leave_controller')
 const CompensationController = () => import('#modules/hr/http/compensation_controller')
 const LoansController = () => import('#modules/hr/http/loans_controller')
+const PayrollController = () => import('#modules/hr/http/payroll_controller')
 
 router
   .group(() => {
@@ -633,6 +634,36 @@ router
                   LoansController,
                   'pay',
                 ])
+                router
+                  .get('payroll/rule-sets', [PayrollController, 'ruleSets'])
+                  .use(middleware.can({ permission: 'hr.payroll.settings' }))
+                router
+                  .post('payroll/rule-sets', [PayrollController, 'createRuleSet'])
+                  .use(middleware.can({ permission: 'hr.payroll.settings' }))
+                router
+                  .get('payroll/rule-sets/:id', [PayrollController, 'ruleSet'])
+                  .use(middleware.can({ permission: 'hr.payroll.settings' }))
+                router
+                  .patch('payroll/rule-sets/:id', [PayrollController, 'updateRuleSet'])
+                  .use(middleware.can({ permission: 'hr.payroll.settings' }))
+                router
+                  .post('payroll/rule-sets/:id/publish', [PayrollController, 'publishRuleSet'])
+                  .use(middleware.can({ permission: 'hr.payroll.settings' }))
+                router
+                  .delete('payroll/rule-sets/:id', [PayrollController, 'deleteRuleSet'])
+                  .use(middleware.can({ permission: 'hr.payroll.settings' }))
+                router.get('payroll/periods', [PayrollController, 'periods'])
+                router.get('payroll/runs', [PayrollController, 'index'])
+                router.post('payroll/runs', [PayrollController, 'store'])
+                router.get('payroll/runs/:id', [PayrollController, 'show'])
+                router.get('payroll/runs/:id/results/:resultId', [PayrollController, 'result'])
+                router.put('payroll/runs/:id/inputs', [PayrollController, 'setInput'])
+                router.post('payroll/runs/:id/exclusions', [PayrollController, 'setExcluded'])
+                router.post('payroll/runs/:id/calculate', [PayrollController, 'calculate'])
+                router.post('payroll/runs/:id/submit', [PayrollController, 'submit'])
+                router.post('payroll/runs/:id/decision', [PayrollController, 'decide'])
+                router.post('payroll/runs/:id/close', [PayrollController, 'close'])
+                router.post('payroll/runs/:id/cancel', [PayrollController, 'cancel'])
                 router.get('employees/:id/contracts', [CareerController, 'contracts'])
                 router.post('employees/:id/contracts', [CareerController, 'createContract'])
                 router.get('employees/:id/assignments', [CareerController, 'assignments'])

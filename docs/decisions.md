@@ -292,3 +292,23 @@ sai de `PENDING` uma única vez — por desconto no processamento (`recordLoanDe
 processamento; outra referência dá 409 `ALREADY_SETTLED`) ou por pagamento directo com referência — e a base de dados
 exige referência e data em toda a prestação liquidada. O saldo é derivado das prestações, nunca guardado à parte. Quando
 não resta nada pendente o empréstimo passa a liquidado. Os montantes não vão para a auditoria.
+
+## D-030 Processamento salarial: regras versionadas com fonte, lotes com instantâneo e hash, fecho imutável (aceite)
+
+O cálculo é uma função pura em cêntimos (`bigint`, meio para cima): salário base proporcional aos dias pagáveis do mês
+(contrato e suspensões), componentes da ficha (os de abono recorrentes na mesma proporção), valores variáveis do lote,
+faltas não remuneradas (base ÷ base de dias × dias), bases de INSS e IRT pela incidência de cada linha (com a parte
+isenta), INSS do trabalhador, IRT por tabela progressiva (parcela fixa + taxa × (base − excesso)), descontos
+autorizados, prestações de empréstimos, INSS patronal e custo para a empresa. Os totais derivam das linhas. Nenhum valor
+legal está no código: as taxas, a tabela, a incidência do salário base, se a base do IRT deduz o INSS e a base de dias
+vêm de **regras versionadas por moeda e data de início, com fonte obrigatória**, imutáveis depois de publicadas (trigger).
+Valores em falta não se inventam: o colaborador fica com erro (sem regras, incidência por definir, IRT fora da tabela,
+líquido negativo, sem dias pagáveis) e o lote não avança até se corrigir ou excluir. Os lotes são por entidade legal e
+mês: regular (um activo por mês), extra (só o que se lança no lote) e retroactivo (num mês aberto, a diferença linha a
+linha entre o recálculo de um mês fechado e o já processado, sem empréstimos). Calcular é repetível e sem efeitos (a
+simulação); guarda o instantâneo de cada colaborador e um hash do conjunto. Submeter, aprovar e fechar voltam a montar os
+dados e recusam (`STALE_RUN`) se mudaram. Aprova outra pessoa com `hr.payroll.approve`, nunca quem preparou ou calculou
+nem quem tem o recibo no lote; recusar volta a "calculado". Fechar regista os descontos dos empréstimos com o código do
+lote (idempotente) e, no regular, fecha o mês. Resultados de lotes submetidos, aprovados ou fechados não se alteram nem
+apagam (trigger); correcções fazem-se por retroactivo. A auditoria guarda contagens e o hash, nunca montantes
+individuais. A verificação contra casos de teste oficiais e a confirmação das normas angolanas ficam para o 7.8.

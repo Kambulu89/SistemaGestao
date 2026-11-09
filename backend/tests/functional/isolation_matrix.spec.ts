@@ -435,6 +435,29 @@ async function populate(client: any) {
       lines: [{ componentId: payComponent.id, action: 'SET', amount: '1000' }],
     })
   )
+  const ruleSet = ok(
+    await as(client, s).post('/api/v1/hr/payroll/rule-sets', {
+      code: 'REGRAS-A',
+      name: 'Regras A',
+      currency: 'AOA',
+      validFrom: '2026-01-01',
+      inssEmployeeRate: '1',
+      inssEmployerRate: '1',
+      baseIrtSubject: true,
+      baseInssSubject: true,
+      irtBaseDeductsInss: false,
+      dayBasis: 'FIXED_30',
+      legalReference: 'Valores de teste',
+      brackets: [{ lower: '0', upper: null, fixedAmount: '0', rate: '0', excessOver: '0' }],
+    })
+  )
+  const payrollRun = ok(
+    await as(client, s).post('/api/v1/hr/payroll/runs', {
+      legalEntityId: employee.legalEntityId,
+      period: '2026-03',
+      kind: 'EXTRA',
+    })
+  )
   const loan = ok(
     await as(client, s).post(`/api/v1/hr/employees/${employee.id}/loans`, {
       kind: 'ADVANCE',
@@ -479,6 +502,8 @@ async function populate(client: any) {
     payComponent,
     compProposal,
     loan,
+    ruleSet,
+    payrollRun,
     closeTask,
     stmtTemplate,
     stmtNote,
@@ -761,6 +786,49 @@ test.group('isolamento | matriz entre empresas', (group) => {
           paidOn: '2026-01-01',
         }),
       ],
+      ['GET regras de processamento', B.get(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}`)],
+      [
+        'PATCH regras',
+        B.patch(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}`, { ...v, name: 'xxx' }),
+      ],
+      ['publicar regras', B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/publish`, v)],
+      ['GET lote', B.get(`/api/v1/hr/payroll/runs/${a.payrollRun.id}`)],
+      [
+        'GET recibo',
+        B.get(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/results/${a.payrollRun.id}`),
+      ],
+      [
+        'valor variável',
+        B.put(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/inputs`, {
+          ...v,
+          employeeId: a.employee.id,
+          componentId: a.payComponent.id,
+          amount: '1',
+        }),
+      ],
+      [
+        'excluir do lote',
+        B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/exclusions`, {
+          ...v,
+          employeeId: a.employee.id,
+          excluded: true,
+        }),
+      ],
+      ['calcular lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/calculate`, v)],
+      ['submeter lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/submit`, v)],
+      [
+        'decidir lote',
+        B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/decision`, {
+          ...v,
+          decision: 'APPROVE',
+        }),
+      ],
+      ['fechar lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/close`, v)],
+      ['cancelar lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/cancel`, v)],
+      [
+        'meses de outra empresa',
+        B.get(`/api/v1/hr/payroll/periods?legalEntityId=${a.employee.legalEntityId}`),
+      ],
       ['GET carreira', B.get(`/api/v1/hr/employees/${a.employee.id}/assignments`)],
       [
         'movimento',
@@ -1028,6 +1096,12 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.deepEqual(wrong, [])
 
     // Referências a ids de A em escritas de B: recusadas (nunca ligam linhas de empresas diferentes).
+    const crossRun = await B.post('/api/v1/hr/payroll/runs', {
+      legalEntityId: a.employee.legalEntityId,
+      period: '2026-04',
+      kind: 'EXTRA',
+    })
+    crossRun.assertStatus(422)
     const crossRef = await B.post('/api/v1/organization/branches', {
       code: 'BRX',
       name: 'Filial cruzada',
@@ -1212,6 +1286,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       assert.lengthOf((await B.get(url)).body().data, 0, url)
     assert.lengthOf((await B.get('/api/v1/hr/interviews/mine')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/loans')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/payroll/runs')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/payroll/rule-sets')).body().data, 0)
     for (const url of [
       '/api/v1/hr/leave/requests',
       '/api/v1/hr/leave/types',
@@ -1281,6 +1357,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/hr/employees/${a.employee.id}/compensation`,
       '/api/v1/hr/compensation/proposals',
       '/api/v1/hr/loans',
+      '/api/v1/hr/payroll/runs',
+      '/api/v1/hr/payroll/rule-sets',
       `/api/v1/hr/employees/${a.employee.id}/loans`,
     ]) {
       const r = await spoof.get(url)

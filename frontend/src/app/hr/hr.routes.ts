@@ -90,6 +90,30 @@ export const HR_ROUTES: Routes = [
     ],
   },
   {
+    path: 'processamento',
+    title: 'Processamento salarial',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.payroll.read', anyScope: true },
+        loadComponent: () => import('./payroll-runs').then((m) => m.PayrollRuns),
+      },
+      {
+        path: 'regras',
+        title: 'Regras de processamento',
+        canActivate: [accessGuard],
+        data: { permission: 'hr.payroll.settings' },
+        loadComponent: () => import('./payroll-rules').then((m) => m.PayrollRules),
+      },
+      {
+        path: ':id',
+        title: 'Lote de processamento',
+        loadComponent: () => import('./payroll-run').then((m) => m.PayrollRunPage),
+      },
+    ],
+  },
+  {
     path: 'emprestimos',
     title: 'Adiantamentos e empréstimos',
     children: [

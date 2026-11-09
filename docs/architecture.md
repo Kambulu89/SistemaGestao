@@ -327,7 +327,7 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
 
 ## Recursos humanos (módulo `hr`, Prompt 07)
 
-Blocos 7.1 a 7.6 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-029).
+Blocos 7.1 a 7.7 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-030).
 
 - **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
   cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
@@ -382,3 +382,8 @@ employeeId, from, to)` em `#modules/hr/index`.
   cada prestação liquida-se uma vez, com referência e data). Limites opcionais em `hr_settings` com fonte obrigatória.
   Permissões `hr.loans.read|manage|approve`. Para o processamento: `dueLoanInstallments` e `recordLoanDeduction`
   (idempotente pela referência) em `#modules/hr/index`.
+- **Processamento salarial** (7.7): cálculo puro em `hr/domain/payroll.ts` (cêntimos); regras versionadas
+  `payroll_rule_sets`/`payroll_irt_brackets` (fonte obrigatória, imutáveis publicadas); `payroll_periods` e
+  `payroll_runs` por entidade legal (regular, extra, retroactivo); `payroll_results`/`_lines` com instantâneo e hash do
+  lote (aprovar/fechar recusam dados mudados); triggers impedem alterar resultados submetidos/fechados. Permissões
+  `hr.payroll.read|manage|approve|settings` (âmbito empresa ou entidade legal).
