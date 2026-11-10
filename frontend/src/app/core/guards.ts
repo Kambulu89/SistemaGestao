@@ -49,11 +49,15 @@ export const tenantGuard: CanActivateFn = async () => {
 export const accessGuard: CanActivateFn = (route) => {
   const workspace = inject(Workspace);
   const permission = route.data['permission'] as string | undefined;
+  // `anyOf`: basta uma destas permissões.
+  const anyOf = route.data['anyOf'] as string[] | undefined;
   const feature = route.data['feature'] as string | undefined;
   // `anyScope`: basta a permissão nalgum âmbito (a API filtra os registos pelo âmbito do membro).
   const anyScope = route.data['anyScope'] === true;
+  const check = (p: string) => (anyScope ? workspace.canAny(p) : workspace.can(p));
   const allowed =
-    (!permission || (anyScope ? workspace.canAny(permission) : workspace.can(permission))) &&
+    (!permission || check(permission)) &&
+    (!anyOf || anyOf.some(check)) &&
     (!feature || workspace.has(feature));
   return allowed || inject(Router).createUrlTree(['/sem-acesso']);
 };

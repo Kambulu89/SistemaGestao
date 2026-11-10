@@ -336,6 +336,32 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
   'POST /api/v1/inventory/transfers/:id/cancel':
     'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'GET /api/v1/inventory/requisitions':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'GET /api/v1/inventory/requisitions/options':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'GET /api/v1/inventory/requisitions/:id':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'PUT /api/v1/inventory/requisitions/:id':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/submit':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/approve':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/reject':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/pick':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/issue':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/release':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/cancel':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'GET /api/v1/inventory/reservations':
+    'reservas activas derivadas dos movimentos, limitadas aos armazéns que o membro pode consultar, filtradas no serviço',
   'GET /api/v1/inventory/warehouses':
     'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
   'GET /api/v1/inventory/warehouses/candidates':

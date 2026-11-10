@@ -520,3 +520,23 @@ os lançamentos levam a origem `INTERCOMPANY_TRANSFER` (o 8.10 trata-os como ven
 Quem pede numa entidade pode escolher como destino qualquer armazém activo aberto (ou visível) de outra, sem o
 consultar; por isso o `postStock` com `checkAccess: false` só confirma que o armazém existe — a autorização de cada
 passo é do módulo que chama. Número na aprovação, pela série `STOCK_TRANSFER` da entidade de origem.
+
+## D-041 Requisições internas e reservas: pedido por departamento, aprovação que reserva, entrega por consumo e libertação (aceite)
+
+Uma **requisição interna** pede stock de um armazém para o consumo de um **departamento** (obrigatório, da mesma
+entidade legal do armazém; entre entidades usa-se uma transferência intragrupo), com **centro de custo** opcional (da
+mesma entidade) e finalidade. Ciclo: rascunho → pedida → **aprovada**, que numera (série `STOCK_REQUISITION` da
+entidade) e **reserva** as quantidades por `postStock` (o reservado baixa o disponível, não o físico; acima do
+disponível é recusado e nada muda) → separada → **entregue** (consumo: sai do stock livre e consome a reserva, em uma
+ou mais vezes, da localização que quem atende escolhe) → concluída; o que já não é preciso **liberta-se** com motivo;
+**anular** só antes de qualquer entrega (liberta a reserva se já havia). Cada passo é um evento só de acréscimo com o
+seu lançamento (origem `INTERNAL_REQUISITION` e o número), base do consumo por centro de custo no 8.11; as linhas não
+mudam depois da reserva (gatilho).
+
+**Permissões**: `inventory.requisitions.request` (no âmbito do departamento — com descendentes —, da filial ou da
+entidade; com âmbito "próprio", qualquer departamento mas só as suas), `inventory.requisitions.approve` (no âmbito do
+departamento; **quem pede não aprova**) e `inventory.requisitions.fulfil` (separar, entregar, libertar: no âmbito do
+armazém, com acesso de operação). Cada membro vê as requisições que pode pedir/aprovar e as dos armazéns que atende.
+As **reservas activas** listam-se por origem (requisições, transferências e, no 8.10, vendas) a partir dos
+movimentos — coincidem sempre com a coluna "Reservado" dos saldos. Os ecrãs aceitam agora "basta uma destas
+permissões" (`anyOf`) nas rotas e na navegação.

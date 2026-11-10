@@ -4,6 +4,19 @@ const labels = (groups: ReturnType<typeof visibleNavigation>) =>
   groups.flatMap((g) => g.items.map((i) => i.label));
 
 describe('visibleNavigation', () => {
+  it('com "anyOf" basta uma das permissões (requisições internas para quem só atende)', () => {
+    const items = labels(
+      visibleNavigation(
+        (p) => p === 'inventory.requisitions.fulfil',
+        (f) => f === 'inventory',
+        true,
+        false,
+      ),
+    );
+    expect(items).toContain('Requisições internas');
+    expect(items).not.toContain('Reservas activas');
+  });
+
   it('sem permissões nem funcionalidades só mostra o essencial', () => {
     const items = labels(
       visibleNavigation(

@@ -403,6 +403,19 @@ export type ScannedRoutes = {
     'transfers.receive': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'transfers.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'transfers.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.index': { paramsTuple?: []; params?: {} }
+    'requisitions.options': { paramsTuple?: []; params?: {} }
+    'requisitions.store': { paramsTuple?: []; params?: {} }
+    'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.pick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.release': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reservations': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -578,6 +591,10 @@ export type ScannedRoutes = {
     'transfers.index': { paramsTuple?: []; params?: {} }
     'transfers.destinations': { paramsTuple?: []; params?: {} }
     'transfers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.index': { paramsTuple?: []; params?: {} }
+    'requisitions.options': { paramsTuple?: []; params?: {} }
+    'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reservations': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -741,6 +758,10 @@ export type ScannedRoutes = {
     'transfers.index': { paramsTuple?: []; params?: {} }
     'transfers.destinations': { paramsTuple?: []; params?: {} }
     'transfers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.index': { paramsTuple?: []; params?: {} }
+    'requisitions.options': { paramsTuple?: []; params?: {} }
+    'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reservations': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -927,6 +948,14 @@ export type ScannedRoutes = {
     'transfers.receive': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'transfers.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'transfers.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.store': { paramsTuple?: []; params?: {} }
+    'requisitions.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.pick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.release': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1014,6 +1043,7 @@ export type ScannedRoutes = {
     'warehouses.set_access': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'stock_documents.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'transfers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

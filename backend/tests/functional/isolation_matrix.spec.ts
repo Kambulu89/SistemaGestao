@@ -633,6 +633,21 @@ async function populate(client: any) {
       warehouseType: 'STORE',
     })
   )
+  const reqDept = ok(
+    await as(client, s).post('/api/v1/organization/departments', {
+      code: 'DREQ',
+      name: 'Departamento requisitante',
+      legalEntityId: le.id,
+    })
+  )
+  const stockRequisition = ok(
+    await as(client, s).post('/api/v1/inventory/requisitions', {
+      warehouseId: warehouse.id,
+      departmentId: reqDept.id,
+      purpose: 'Consumo interno A',
+      lines: [{ productId: product.id, variantId: variant.id, quantity: '1' }],
+    })
+  )
   const stockTransfer = ok(
     await as(client, s).post('/api/v1/inventory/transfers', {
       sourceWarehouseId: warehouse.id,
@@ -650,6 +665,7 @@ async function populate(client: any) {
   )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    stockRequisition,
     stockTransfer,
     stockDocument,
     stockPosting,
@@ -1136,6 +1152,30 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'anular documento alheio',
         B.post(`/api/v1/inventory/documents/${a.stockDocument.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['GET requisição', B.get(`/api/v1/inventory/requisitions/${a.stockRequisition.id}`)],
+      [
+        'PUT requisição',
+        B.put(`/api/v1/inventory/requisitions/${a.stockRequisition.id}`, {
+          ...v,
+          purpose: 'x',
+          lines: [],
+        }),
+      ],
+      [
+        'submeter requisição alheia',
+        B.post(`/api/v1/inventory/requisitions/${a.stockRequisition.id}/submit`, v),
+      ],
+      [
+        'aprovar requisição alheia',
+        B.post(`/api/v1/inventory/requisitions/${a.stockRequisition.id}/approve`, v),
+      ],
+      [
+        'anular requisição alheia',
+        B.post(`/api/v1/inventory/requisitions/${a.stockRequisition.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
       ],
       ['GET transferência', B.get(`/api/v1/inventory/transfers/${a.stockTransfer.id}`)],
       [
@@ -1751,6 +1791,12 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/inventory/stock/balances')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/documents')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/transfers')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/requisitions')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/reservations')).body().data, 0)
+    assert.notInclude(
+      JSON.stringify((await B.get('/api/v1/inventory/requisitions/options')).body().data),
+      a.warehouse.id
+    )
     assert.notInclude(
       JSON.stringify((await B.get('/api/v1/inventory/transfers/destinations')).body().data),
       a.warehouse.id
@@ -1857,6 +1903,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/stock/balances',
       '/api/v1/inventory/documents',
       '/api/v1/inventory/transfers',
+      '/api/v1/inventory/requisitions',
+      '/api/v1/inventory/reservations',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',
       '/api/v1/hr/team',

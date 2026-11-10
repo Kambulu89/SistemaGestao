@@ -4,6 +4,8 @@ export interface NavItem {
   path: string;
   icon: string;
   permission?: string;
+  /** Basta uma destas permissões (em qualquer âmbito, se `anyScope`). */
+  anyOf?: string[];
   feature?: string;
   /** A permissão vale em qualquer âmbito (a API filtra os registos pelo âmbito do membro). */
   anyScope?: boolean;
@@ -431,6 +433,28 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Inventário',
       },
       {
+        label: 'Requisições internas',
+        path: '/inventario/requisicoes',
+        icon: 'check',
+        anyOf: [
+          'inventory.requisitions.request',
+          'inventory.requisitions.approve',
+          'inventory.requisitions.fulfil',
+        ],
+        feature: 'inventory',
+        anyScope: true,
+        section: 'Inventário',
+      },
+      {
+        label: 'Reservas activas',
+        path: '/inventario/reservas',
+        icon: 'layers',
+        permission: 'inventory.read',
+        feature: 'inventory',
+        anyScope: true,
+        section: 'Inventário',
+      },
+      {
         label: 'Stock',
         path: '/inventario/stock',
         icon: 'layers',
@@ -613,7 +637,10 @@ export function visibleNavigation(
     ? NAVIGATION.map((g) => ({
         ...g,
         items: g.items.filter(
-          (i) => (!i.permission || can(i.permission, i.anyScope)) && (!i.feature || has(i.feature)),
+          (i) =>
+            (!i.permission || can(i.permission, i.anyScope)) &&
+            (!i.anyOf || i.anyOf.some((p) => can(p, i.anyScope))) &&
+            (!i.feature || has(i.feature)),
         ),
       })).filter((g) => g.items.length > 0)
     : [];

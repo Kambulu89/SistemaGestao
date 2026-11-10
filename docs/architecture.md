@@ -405,7 +405,7 @@ employeeId, from, to)` em `#modules/hr/index`.
 
 ## Inventário (módulo `inventory`, Prompt 08)
 
-8.1 a 8.5 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-040). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+8.1 a 8.6 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-041). Catálogo: `uoms`, `product_categories` (hierarquia, classe
 contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
 `product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
 únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
@@ -425,4 +425,7 @@ Transferências (8.5): aprovação reserva na origem, expedição põe em trâns
 perda; eventos só de acréscimo, cada um com o seu lançamento. Intragrupo (entidades diferentes): aceitação do destino e
 referência comercial; lançamentos `INTERCOMPANY_TRANSFER`. Autorização por passo no armazém respectivo; `postStock`
 com `checkAccess: false` deixa a autorização ao módulo que chama.
+Requisições internas (8.6): departamento + centro de custo, aprovação reserva (`RESERVATION`), entrega consome
+(`ISSUE` livre + reservado), libertação/anulação (`RELEASE`); origem `INTERNAL_REQUISITION`. Reservas activas derivadas
+dos movimentos por origem. Rotas/navegação aceitam `anyOf` (basta uma das permissões).
 

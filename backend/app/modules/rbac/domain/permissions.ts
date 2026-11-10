@@ -422,6 +422,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Aprovar ou rejeitar transferências (origem), aceitar as intragrupo e fechar perdas em trânsito (destino), no âmbito atribuído.',
   },
   {
+    code: 'inventory.requisitions.request',
+    module: 'inventory',
+    description:
+      'Criar e submeter requisições internas de stock para os departamentos do âmbito atribuído (ou só as próprias).',
+  },
+  {
+    code: 'inventory.requisitions.approve',
+    module: 'inventory',
+    description:
+      'Aprovar (reserva o stock) ou rejeitar requisições internas dos departamentos do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.requisitions.fulfil',
+    module: 'inventory',
+    description:
+      'Separar, entregar (consumo) e libertar requisições internas nos armazéns do âmbito atribuído.',
+  },
+  {
     code: 'inventory.settings',
     module: 'inventory',
     description:

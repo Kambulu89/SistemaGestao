@@ -1,6 +1,6 @@
 # Relatório — Prompt 08 (inventário)
 
-Estado: **8.1 a 8.5 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.6 a 8.12 seguem, um de cada
+Estado: **8.1 a 8.6 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.7 a 8.12 seguem, um de cada
 vez. Decisões a partir de D-036.
 
 ## Inventário AS-IS → TO-BE
@@ -12,6 +12,7 @@ vez. Decisões a partir de D-036.
 | 8.3 Stock                  | Sem stock                     | Lançamentos e movimentos só de acréscimo, saldos derivados na base (livre, bloqueado, quarentena, reservado, trânsito, previsto; físico e disponível), idempotência, estornos, concorrência, reconciliação, mudança de estado | Feito  |
 | 8.4 Entradas/saídas        | Sem documentos de stock       | Documentos com cabeçalho e linhas (unidade e conversão congelada, lote, séries, validade, localização, custo), rascunho → conferência → confirmação parcial/total, número por série, fecho de saldo, anulação, estornos; stock só na confirmação | Feito  |
 | 8.5 Transferências         | Sem transferências           | Pedido → aprovação (reserva) → separação → expedição (trânsito no destino) → recepção parcial/total ou perda; segregação de funções; intragrupo com aceitação do destino e referência comercial | Feito  |
+| 8.6 Reservas/requisições   | Sem requisições internas      | Pedido por departamento e centro de custo, aprovação que reserva (disponível baixa, físico não), separação, entrega por consumo, libertação e anulação; reservas activas por origem | Feito  |
 
 ## 8.1 Produtos e serviços
 
@@ -267,9 +268,56 @@ Anular), linhas com pedido/separado/expedido/recebido/em trânsito/perdido e mov
   aceitação, referência obrigatória na expedição e recepção no destino; 390 px sem deslocamento. O E2E do 8.4 voltou a
   passar (8/8) depois das alterações.
 
+## 8.6 Reservas e requisições internas
+
+### Modelo
+
+Migração `0038_create_inventory_requisitions`: `stock_requisitions` (armazém e entidade, departamento, centro de custo,
+quem pede, finalidade, data em que é preciso, série e número, marcas e motivos), `stock_requisition_lines` (quantidade
+base, localização, separado/entregue/libertado com `CHECK` entregue + libertado ≤ pedido) e eventos + linhas (reserva,
+entrega, libertação; só acréscimo). Linhas imutáveis depois da reserva (gatilho).
+
+### API (`/api/v1/inventory`)
+
+- `GET|POST /requisitions`, `GET /requisitions/options` (armazéns, departamentos para que o membro pode requisitar,
+  centros de custo), `GET|PUT /requisitions/:id`, `POST /requisitions/:id/submit|approve|reject|pick|issue|release|cancel`,
+  `GET /reservations` (reservas activas por origem, armazém e produto).
+- Permissões novas: `inventory.requisitions.request`, `.approve` e `.fulfil`.
+- Erros: `SELF_APPROVAL`, `OUT_OF_SCOPE`, `OTHER_LEGAL_ENTITY`, `NO_SERIES`, `HAS_ISSUES`, `NOTHING_PICKED`,
+  `NOTHING_ISSUED`, `NOTHING_OPEN`, `INVALID_STATE`, e os do 8.3 (`OVER_RESERVED`, `INSUFFICIENT_STOCK`).
+
+### Ecrãs
+
+Inventário → Requisições internas (lista e requisição: rascunho com departamento e centro de custo da entidade do
+armazém, linhas com localização opcional; depois Pedir aprovação, Aprovar com confirmação, Rejeitar, Separar, Entregar
+com a localização de saída, Libertar resto, Anular; linhas com pedido/separado/entregue/libertado/em aberto, movimentos
+e histórico) e Reservas activas (origem com ligação, produto, armazém, quantidade). Navegação e rotas com "basta uma
+destas permissões".
+
+### Testes e evidências
+
+- Unitário `inventory_requisitions_domain.spec.ts` (2): âmbito do departamento (entidade, filial, departamento),
+  em aberto, entregas (acima do separado/em aberto recusadas), estados e acções.
+- Funcional `inventory_requisitions.spec.ts` (2): validações (finalidade, linhas, departamento e centro de custo de
+  outra entidade, departamento fora do âmbito); rascunho não mexe no stock; quem pede não aprova; aprovação numera
+  (`RQ-…1`) e reserva (físico 100, reservado 30, disponível 70) e aparece nas reservas activas; quem pede não atende;
+  separação 25; entrega 20 idempotente (físico 80, reservado 10); entrega acima do separado recusada; libertação com
+  motivo (reservado 0, reservas activas vazias); movimentos `INTERNAL_REQUISITION` com o número; reconciliação; auditoria;
+  a base recusa apagar eventos e alterar linhas reservadas. Segregação (o administrador não aprova a sua); âmbito
+  "próprio" (requisita para outro departamento e só vê as suas; o aprovador do departamento 1 não vê a do 2); aprovar
+  acima do disponível → `OVER_RESERVED` sem número; rejeição; anulação liberta a reserva; depois de entregas não se
+  anula; linha sem posição falha na entrega até quem atende escolher a posição; entidade sem série → `NO_SERIES`.
+- `isolation_matrix` (requisição de outra empresa: ler, editar, submeter, aprovar, anular → 404; listas de requisições e
+  reservas e opções vazias; URL forjada → 403), `routes_protection`, frontend `requisition-model.spec.ts` (3) e
+  navegação ("anyOf").
+- Browser (5 passos, três execuções seguidas, sem erros na consola; dois utilizadores): pedido pela interface com
+  departamento e centro de custo, "Aprovar" escondido a quem pede; aprovação pelo aprovador (reservado 20, disponível
+  30, físico 50) e a reserva em Reservas activas com ligação; separação 15, entrega a partir da posição escolhida
+  (físico 35, reservado 5), libertação do resto (reservado 0) com motivo; 390 px sem deslocamento.
+
 ## Pendências
 
-- 8.6 a 8.12 ( movimentos, transferências, reservas, contagens, lotes/FEFO, valorização, integrações,
+- 8.7 a 8.12 ( movimentos, transferências, reservas, contagens, lotes/FEFO, valorização, integrações,
   alertas, QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
@@ -281,3 +329,5 @@ Anular), linhas com pedido/separado/expedido/recebido/em trânsito/perdido e mov
   ligados a compras e vendas (origem com identificador) chegam no 8.10; anexos ao documento ainda não.
 - 8.5: a contabilização intragrupo (venda/compra entre entidades) é do 8.10; o custo em trânsito, do 8.9. Uma
   transferência expede-se de uma vez (o que não foi separado deixa de seguir); recepções podem ser várias.
+- 8.6: as requisições não escolhem lote/série (o stock por lote chega no 8.8); sem aprovação em vários níveis nem
+  limites por valor (o custo chega no 8.9).

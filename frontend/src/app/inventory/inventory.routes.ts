@@ -3,6 +3,12 @@ import { accessGuard } from '../core/guards';
 import { unsavedChangesGuard } from '../core/unsaved';
 
 /** Inventário (Prompt 08). A API decide as permissões; a navegação filtrada é só usabilidade. */
+const REQUISITION_PERMISSIONS = [
+  'inventory.requisitions.request',
+  'inventory.requisitions.approve',
+  'inventory.requisitions.fulfil',
+];
+
 export const INVENTORY_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'produtos' },
   {
@@ -116,6 +122,41 @@ export const INVENTORY_ROUTES: Routes = [
         loadComponent: () => import('./transfer-form').then((m) => m.TransferFormPage),
       },
     ],
+  },
+  {
+    path: 'requisicoes',
+    title: 'Requisições internas',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: REQUISITION_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./requisitions').then((m) => m.Requisitions),
+      },
+      {
+        path: 'nova',
+        title: 'Nova requisição',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'inventory.requisitions.request', anyScope: true },
+        loadComponent: () => import('./requisition-form').then((m) => m.RequisitionFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Requisição',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { anyOf: REQUISITION_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./requisition-form').then((m) => m.RequisitionFormPage),
+      },
+    ],
+  },
+  {
+    path: 'reservas',
+    title: 'Reservas activas',
+    canActivate: [accessGuard],
+    data: { permission: 'inventory.read', anyScope: true },
+    loadComponent: () => import('./reservations').then((m) => m.Reservations),
   },
   {
     path: 'stock',
