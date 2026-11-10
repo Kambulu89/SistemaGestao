@@ -589,8 +589,24 @@ async function populate(client: any) {
     })
   )
   const variant = withVariant.variants[0]
+  const warehouse = ok(
+    await as(client, s).post('/api/v1/inventory/warehouses', {
+      code: 'ARM-A',
+      name: 'Armazém A',
+      legalEntityId: le.id,
+      warehouseType: 'MAIN',
+    })
+  )
+  const withLocation = ok(
+    await as(client, s).post(`/api/v1/inventory/warehouses/${warehouse.id}/locations`, {
+      code: 'ZA',
+    })
+  )
+  const location = withLocation.locations[0]
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    warehouse,
+    location,
     uom,
     productCategory,
     brand,
@@ -1048,6 +1064,26 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.get(
           `/api/v1/attachments?subjectType=disciplinary_case&subjectId=${a.disciplinaryCase.id}`
         ),
+      ],
+      ['GET armazém', B.get(`/api/v1/inventory/warehouses/${a.warehouse.id}`)],
+      [
+        'PATCH armazém',
+        B.patch(`/api/v1/inventory/warehouses/${a.warehouse.id}`, { ...v, name: 'xxx' }),
+      ],
+      [
+        'localização em armazém alheio',
+        B.post(`/api/v1/inventory/warehouses/${a.warehouse.id}/locations`, { code: 'ZB' }),
+      ],
+      [
+        'PATCH localização',
+        B.patch(`/api/v1/inventory/warehouse-locations/${a.location.id}`, { ...v, name: 'x' }),
+      ],
+      [
+        'acesso a armazém alheio',
+        B.put(`/api/v1/inventory/warehouses/${a.warehouse.id}/access`, {
+          membershipId: a.warehouse.id,
+          level: 'VIEW',
+        }),
       ],
       ['GET produto', B.get(`/api/v1/inventory/products/${a.product.id}`)],
       [
@@ -1605,6 +1641,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/hr/discipline/cases')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/terminations')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/products')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/warehouses')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/settings/uoms')).body().data, 0)
     const hc = (await B.get('/api/v1/hr/reports/headcount')).body().data
     assert.notInclude(JSON.stringify(hc), a.le.id)
@@ -1693,6 +1730,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/hr/terminations',
       '/api/v1/inventory/products',
       '/api/v1/inventory/settings/categories',
+      '/api/v1/inventory/warehouses',
       '/api/v1/hr/me',
       '/api/v1/hr/team',
       '/api/v1/hr/reports/headcount',

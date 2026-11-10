@@ -413,6 +413,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Inventário',
       },
       {
+        label: 'Armazéns',
+        path: '/inventario/armazens',
+        icon: 'building',
+        permission: 'inventory.read',
+        feature: 'inventory',
+        anyScope: true,
+        section: 'Inventário',
+      },
+      {
         label: 'Configuração do catálogo',
         path: '/inventario/configuracao',
         icon: 'settings',

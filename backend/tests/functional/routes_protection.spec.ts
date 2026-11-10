@@ -278,6 +278,22 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
   'GET /api/v1/hr/reports/payroll':
     'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
+  'GET /api/v1/inventory/warehouses':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/warehouses/candidates':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/warehouses/:id':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'POST /api/v1/inventory/warehouses':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'PATCH /api/v1/inventory/warehouses/:id':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'POST /api/v1/inventory/warehouses/:id/locations':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'PATCH /api/v1/inventory/warehouse-locations/:id':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'PUT /api/v1/inventory/warehouses/:id/access':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
   'GET /api/v1/hr/payroll/periods':
     'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
   'GET /api/v1/hr/payroll/runs':

@@ -386,6 +386,12 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Criar e alterar produtos e serviços, variantes, conversões de unidades, kits e imagens do produto.',
   },
   {
+    code: 'inventory.warehouses.manage',
+    module: 'inventory',
+    description:
+      'Criar e alterar armazéns, localizações e a lista de acesso, no âmbito atribuído (entidade legal ou filial).',
+  },
+  {
     code: 'inventory.settings',
     module: 'inventory',
     description:

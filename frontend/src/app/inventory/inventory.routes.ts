@@ -34,6 +34,34 @@ export const INVENTORY_ROUTES: Routes = [
     ],
   },
   {
+    path: 'armazens',
+    title: 'Armazéns',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./warehouses').then((m) => m.Warehouses),
+      },
+      {
+        path: 'novo',
+        title: 'Novo armazém',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'inventory.warehouses.manage', anyScope: true },
+        loadComponent: () => import('./warehouse-form').then((m) => m.WarehouseFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Armazém',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./warehouse-form').then((m) => m.WarehouseFormPage),
+      },
+    ],
+  },
+  {
     path: 'configuracao',
     title: 'Configuração do catálogo',
     canActivate: [accessGuard],

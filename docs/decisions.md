@@ -435,3 +435,21 @@ escolher a regra de lançamento. **Preço comercial** de referência com moeda (
 Vendas. Nada se apaga: produtos, variantes, unidades, categorias e marcas inactivam-se ou descontinuam-se. Imagens e
 fichas técnicas usam os anexos (`product`: ler com `inventory.read`, acrescentar com `inventory.products.manage`).
 
+
+## D-037 Armazéns: entidade legal fixa, localizações com caminho imutável e acesso por âmbito mais lista nos restritos (aceite)
+
+Um **armazém** pertence a uma entidade legal (fixa depois de criado, tal como o código, único na empresa) e opcionalmente
+a uma filial **da mesma entidade**; tem responsável (membro activo), tipo (central, loja, trânsito, quarentena,
+consignação, outro), morada e estado. As **localizações** formam a hierarquia zona → corredor → estante → posição (cada
+nível só abaixo do anterior; só as zonas ficam na raiz, por `CHECK`). O **caminho** (`Z1-C01-E1-P03`) é único no armazém
+e é o que vai para etiquetas e documentos: código, superior, nível e caminho **não mudam** e nada se apaga (gatilho
+`warehouse_locations_fixed` na base), só se inactiva — e só sem filhas activas; reactivar exige a superior activa. As
+posições podem ser geradas em série (prefixo, de/até, largura; até 200 de uma vez, sem códigos repetidos). "Guarda stock"
+marca onde o 8.3 aceita saldos; um armazém sem localizações guarda stock sem posição.
+
+**Acesso** = âmbito RBAC + modo do armazém. Ver exige `inventory.read` num âmbito que cubra a entidade (ou a filial, se o
+armazém a tiver); gerir (criar, editar, localizações, lista) exige `inventory.warehouses.manage` no mesmo âmbito. Um
+armazém **aberto** é visto por quem tem o âmbito; um **restrito** só por quem o gere e pelos membros da lista
+(`VIEW` consultar ou `OPERATE` operar). A lista não dá permissões por si: os blocos seguintes exigem a permissão da
+operação **e** o acesso `OPERATE` (ou a gestão) — `warehouseAccessFor(scope, id)` é o contrato exportado pelo módulo.
+Fora do âmbito o armazém responde 404 (não se revela a existência).

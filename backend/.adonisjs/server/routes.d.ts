@@ -366,6 +366,14 @@ export type ScannedRoutes = {
     'catalog.settings_list': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'catalog.settings_create': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'catalog.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'warehouses.index': { paramsTuple?: []; params?: {} }
+    'warehouses.candidates': { paramsTuple?: []; params?: {} }
+    'warehouses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.store': { paramsTuple?: []; params?: {} }
+    'warehouses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.add_locations': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.update_location': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.set_access': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -529,6 +537,9 @@ export type ScannedRoutes = {
     'catalog.lookup': { paramsTuple?: []; params?: {} }
     'catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'catalog.settings_list': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'warehouses.index': { paramsTuple?: []; params?: {} }
+    'warehouses.candidates': { paramsTuple?: []; params?: {} }
+    'warehouses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -680,6 +691,9 @@ export type ScannedRoutes = {
     'catalog.lookup': { paramsTuple?: []; params?: {} }
     'catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'catalog.settings_list': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'warehouses.index': { paramsTuple?: []; params?: {} }
+    'warehouses.candidates': { paramsTuple?: []; params?: {} }
+    'warehouses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -846,6 +860,8 @@ export type ScannedRoutes = {
     'catalog.store': { paramsTuple?: []; params?: {} }
     'catalog.store_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'catalog.settings_create': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'warehouses.store': { paramsTuple?: []; params?: {} }
+    'warehouses.add_locations': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -918,6 +934,8 @@ export type ScannedRoutes = {
     'catalog.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'catalog.update_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'catalog.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'warehouses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.update_location': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
@@ -928,6 +946,7 @@ export type ScannedRoutes = {
     'preferences.update': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
     'payroll.set_input': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_settings': { paramsTuple?: []; params?: {} }
+    'warehouses.set_access': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

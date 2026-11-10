@@ -4495,3 +4495,106 @@ export class UserSchema extends BaseModel {
   @column()
   declare version: number
 }
+
+export class WarehouseAccessSchema extends BaseModel {
+  static $columns = ['accessLevel', 'createdAt', 'createdBy', 'id', 'membershipId', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = WarehouseAccessSchema.$columns
+  @column()
+  declare accessLevel: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare membershipId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
+export class WarehouseLocationSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'holdsStock', 'id', 'level', 'name', 'parentId', 'pathCode', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = WarehouseLocationSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare holdsStock: boolean
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare level: string
+  @column()
+  declare name: string | null
+  @column()
+  declare parentId: string | null
+  @column()
+  declare pathCode: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
+export class WarehouseSchema extends BaseModel {
+  static $columns = ['accessMode', 'addressLine', 'branchId', 'city', 'code', 'countryCode', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'managerMembershipId', 'name', 'province', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseType'] as const
+  $columns = WarehouseSchema.$columns
+  @column()
+  declare accessMode: string
+  @column()
+  declare addressLine: string | null
+  @column()
+  declare branchId: string | null
+  @column()
+  declare city: string | null
+  @column()
+  declare code: string
+  @column()
+  declare countryCode: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare managerMembershipId: string | null
+  @column()
+  declare name: string
+  @column()
+  declare province: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseType: string
+}

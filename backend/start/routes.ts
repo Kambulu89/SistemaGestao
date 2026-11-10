@@ -41,6 +41,7 @@ const TrainingController = () => import('#modules/hr/http/training_controller')
 const TerminationsController = () => import('#modules/hr/http/terminations_controller')
 const PortalController = () => import('#modules/hr/http/portal_controller')
 const CatalogController = () => import('#modules/inventory/http/catalog_controller')
+const WarehousesController = () => import('#modules/inventory/http/warehouses_controller')
 
 router
   .group(() => {
@@ -836,6 +837,14 @@ router
                 router
                   .patch('settings/:kind/:id', [CatalogController, 'settingsUpdate'])
                   .use(middleware.can({ permission: 'inventory.settings' }))
+                router.get('warehouses', [WarehousesController, 'index'])
+                router.get('warehouses/candidates', [WarehousesController, 'candidates'])
+                router.get('warehouses/:id', [WarehousesController, 'show'])
+                router.post('warehouses', [WarehousesController, 'store'])
+                router.patch('warehouses/:id', [WarehousesController, 'update'])
+                router.post('warehouses/:id/locations', [WarehousesController, 'addLocations'])
+                router.patch('warehouse-locations/:id', [WarehousesController, 'updateLocation'])
+                router.put('warehouses/:id/access', [WarehousesController, 'setAccess'])
               })
               .prefix('inventory')
               .use(middleware.entitled({ feature: 'inventory' }))
