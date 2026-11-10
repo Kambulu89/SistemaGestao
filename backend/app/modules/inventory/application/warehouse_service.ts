@@ -60,6 +60,23 @@ function clause(s: PermissionScope) {
   return parts.length ? { sql: `(${parts.join(' or ')})`, params } : null
 }
 
+/** Armazéns visíveis (alias `w`, com `a` = entrada do membro na lista de acesso); `null` se nenhum. */
+function visibility(s: Scopes) {
+  const m = clause(s.manage)
+  const r = clause(s.read)
+  const parts: string[] = []
+  const params: unknown[] = []
+  if (m) {
+    parts.push(m.sql)
+    params.push(...m.params)
+  }
+  if (r) {
+    parts.push(`(${r.sql} and (w.access_mode = 'OPEN' or a.access_level is not null))`)
+    params.push(...r.params)
+  }
+  return parts.length ? { sql: `(${parts.join(' or ')})`, params } : null
+}
+
 const W_SELECT = `select w.*, le.code as le_code, le.legal_name as le_name, b.name as branch_name,
     mu.full_name as manager_name, a.access_level as my_level
   from warehouses w
@@ -275,21 +292,10 @@ export class WarehouseService {
   ) {
     return runInTenant(context, async (scope) => {
       const s = await scopes(scope)
-      const m = clause(s.manage)
-      const r = clause(s.read)
-      const parts: string[] = []
-      const params: unknown[] = []
-      if (m) {
-        parts.push(m.sql)
-        params.push(...m.params)
-      }
-      if (r) {
-        parts.push(`(${r.sql} and (w.access_mode = 'OPEN' or a.access_level is not null))`)
-        params.push(...r.params)
-      }
-      if (!parts.length) return { items: [], total: 0 }
-      const where = ['w.tenant_id = ?', `(${parts.join(' or ')})`]
-      const all: unknown[] = [context.tenantId, ...params]
+      const vis = visibility(s)
+      if (!vis) return { items: [], total: 0 }
+      const where = ['w.tenant_id = ?', vis.sql]
+      const all: unknown[] = [context.tenantId, ...vis.params]
       if (f.q) {
         const like = `%${f.q.toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`)}%`
         where.push('(lower(w.code) like ? or lower(w.name) like ?)')
@@ -725,5 +731,24 @@ export async function warehouseAccessFor(scope: TenantScope, warehouseId: string
   const w = await findWarehouse(scope, warehouseId)
   if (!w) return null
   const a = access(await scopes(scope), w)
-  return a ? { ...a, legalEntityId: w.legal_entity_id as string, status: w.status as string } : null
+  return a
+    ? {
+        ...a,
+        legalEntityId: w.legal_entity_id as string,
+        branchId: (w.branch_id as string) ?? null,
+        status: w.status as string,
+      }
+    : null
+}
+
+/** Identificadores dos armazéns que o membro pode consultar (mesma regra da lista). */
+export async function readableWarehouseIds(scope: TenantScope): Promise<string[]> {
+  const vis = visibility(await scopes(scope))
+  if (!vis) return []
+  const r = await scope.trx.rawQuery(
+    `select w.id from warehouses w left join warehouse_access a on a.tenant_id = w.tenant_id
+       and a.warehouse_id = w.id and a.membership_id = ? where w.tenant_id = ? and ${vis.sql}`,
+    [scope.context.membershipId, scope.context.tenantId, ...vis.params] as never[]
+  )
+  return (r.rows as { id: string }[]).map((x) => x.id)
 }

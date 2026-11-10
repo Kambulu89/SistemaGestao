@@ -453,3 +453,29 @@ armazém **aberto** é visto por quem tem o âmbito; um **restrito** só por que
 (`VIEW` consultar ou `OPERATE` operar). A lista não dá permissões por si: os blocos seguintes exigem a permissão da
 operação **e** o acesso `OPERATE` (ou a gestão) — `warehouseAccessFor(scope, id)` é o contrato exportado pelo módulo.
 Fora do âmbito o armazém responde 404 (não se revela a existência).
+
+## D-038 Stock: lançamentos só de acréscimo, saldos derivados na base por gatilho, baldes separados e idempotência (aceite)
+
+O Inventário é o **único dono do stock**: os outros módulos (e os documentos do 8.4 em diante) pedem lançamentos com o
+contrato `postStock(scope, …)` / `reverseStockPosting(scope, …)` exportado em `inventory/index.ts`, dentro da
+transacção de quem chama. Um **lançamento** (`stock_postings`) tem tipo, origem, motivo e uma **chave de idempotência**
+única por empresa: repetir o mesmo pedido devolve o lançamento já feito; a mesma chave com outro conteúdo é recusada
+(`IDEMPOTENCY_MISMATCH`). As **linhas** (`stock_movements`) somam uma quantidade com sinal (unidades base, 6 casas) a um
+**balde**: livre, bloqueado, quarentena (físico = soma dos três), reservado (parte do livre; disponível = livre −
+reservado), em trânsito e previsto. Cada tipo só mexe em certos baldes com o sinal certo (ex.: uma mudança de estado
+não altera o físico; reservado, trânsito e previsto contam-se no armazém, sem localização).
+
+**Nada se edita nem apaga**: lançamentos e movimentos são só de acréscimo (gatilho na base); corrige-se com um
+**estorno** (novo lançamento inverso, no máximo um por lançamento, nunca de um estorno) ou com um novo lançamento. Os
+**saldos** (`stock_balances`, por armazém/localização/produto/variante) são **derivados** dos movimentos por gatilho e
+a base recusa qualquer escrita directa. Cada balde é ≥ 0 por saldo (`CHECK`) e o reservado nunca excede o livre do
+armazém (gatilho de restrição no fim da transacção; o serviço pede a verificação imediata para o erro chegar ao
+pedido — sem isso o COMMIT falha e nada fica gravado, mas o cliente da base não reporta o erro).
+
+**Concorrência**: o serviço bloqueia (advisory lock da transacção, por ordem) cada armazém/produto/variante tocado e
+verifica os saldos resultantes antes de gravar (`INSUFFICIENT_STOCK`, `OVER_RESERVED`); a base repete as verificações.
+Só produtos armazenáveis; com variantes, o stock conta-se por variante; a quantidade respeita as casas da unidade base;
+localizações têm de guardar stock e ser do armazém (FK composta); armazéns e localizações inactivos não recebem stock.
+Consultar segue o acesso aos armazéns (8.2); lançar exige acesso de operação (os módulos integradores podem dispensar a
+verificação e aplicar a sua); a mudança de estado manual exige `inventory.stock.manage` no âmbito do armazém. A
+reconciliação compara cada saldo com a soma dos movimentos.

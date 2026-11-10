@@ -1,6 +1,6 @@
 # Relatório — Prompt 08 (inventário)
 
-Estado: **8.1 e 8.2 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.3 a 8.12 seguem, um de cada
+Estado: **8.1, 8.2 e 8.3 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.4 a 8.12 seguem, um de cada
 vez. Decisões a partir de D-036.
 
 ## Inventário AS-IS → TO-BE
@@ -9,6 +9,7 @@ vez. Decisões a partir de D-036.
 | -------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------ |
 | 8.1 Produtos e serviços    | Sem módulo de inventário      | Unidades, categorias (hierarquia, classe contabilística), marcas; produto armazenável/serviço/kit com SKU e EAN únicos, conversões por produto, rastreio por lote/série/validade, stock mín./máx., preço, variantes, componentes, imagens | Feito  |
 | 8.2 Armazéns               | Sem armazéns                  | Armazém por entidade legal/filial com responsável, morada, tipo e estado; localizações zona → corredor → estante → posição com caminho fixo e séries; acesso por âmbito e lista nos restritos | Feito  |
+| 8.3 Stock                  | Sem stock                     | Lançamentos e movimentos só de acréscimo, saldos derivados na base (livre, bloqueado, quarentena, reservado, trânsito, previsto; físico e disponível), idempotência, estornos, concorrência, reconciliação, mudança de estado | Feito  |
 
 ## 8.1 Produtos e serviços
 
@@ -100,11 +101,63 @@ em série com pré-visualização dos códigos; lista de acesso com Consultar/Op
   P01–P05 (8 localizações); inactivar Z1 recusado com a mensagem do servidor, P05 inactivada; modo restrito e membro
   com "Operar"; armazém na lista; 390 px sem deslocamento horizontal.
 
+## 8.3 Stock
+
+### Modelo
+
+Migração `0035_create_inventory_stock`: `stock_postings` (tipo, chave de idempotência única, origem, motivo, estorno
+único), `stock_movements` (balde e quantidade com sinal, 6 casas; FK compostas: localização do mesmo armazém, variante
+do mesmo produto) e `stock_balances` (um saldo por armazém/localização/produto/variante, `UNIQUE NULLS NOT DISTINCT`,
+cada balde ≥ 0). Gatilhos: só acréscimo em lançamentos e movimentos; saldo actualizado por cada movimento (primeiro
+`UPDATE`, depois `INSERT` — um `INSERT … ON CONFLICT` verificaria os `CHECK` na linha proposta, com a quantidade
+negativa); escrita directa nos saldos recusada; reservado ≤ livre por armazém verificado no fim da transacção.
+
+### Contrato e API
+
+- Contrato (`inventory/index.ts`): `postStock(scope, { type, idempotencyKey, sourceType, sourceId?, sourceRef?, reason?,
+  lines[] })` e `reverseStockPosting(scope, postingId, { idempotencyKey, reason })`.
+- `GET /inventory/stock/balances` (armazém, produto, pesquisa; só saldos não nulos), `GET /inventory/stock/movements`
+  (armazém, produto, variante, tipo), `GET /inventory/stock/postings/:id`, `GET /inventory/stock/reconciliation`,
+  `POST /inventory/stock/status-changes` (livre ↔ bloqueado ↔ quarentena, com motivo e chave de idempotência).
+- Permissão nova `inventory.stock.manage` (no âmbito do armazém); consulta pelo acesso aos armazéns.
+- Erros: `INSUFFICIENT_STOCK`, `OVER_RESERVED`, `IDEMPOTENCY_MISMATCH`, `ALREADY_REVERSED`, `REVERSAL_OF_REVERSAL`,
+  `BUCKET_NOT_ALLOWED`, `NOT_BALANCED`, `NO_LOCATION`, `NOT_STOCKABLE`, `REQUIRED` (variante), `DECIMALS`,
+  `NOT_HOLDING`, `INACTIVE`, `NO_OPERATE`, `OUT_OF_SCOPE`.
+
+### Ecrãs
+
+Inventário → Stock (saldos por armazém/localização com físico, disponível e cada balde; filtro de armazém na URL;
+exportação CSV; "Conferir saldos"; "Mudar estado" com validação da quantidade face ao estado de origem e às casas da
+unidade) e Movimentos de stock (kardex com tipo, estado, quantidade com sinal, origem e autor; lançamento com as linhas,
+estorno e lançamento estornado ligados).
+
+### Testes e evidências
+
+- Unitário `inventory_stock_domain.spec.ts` (2): quantidades exactas com sinal, físico/disponível, estorno, baldes e
+  sinais por tipo, mudança de estado equilibrada.
+- Funcional `inventory_stock.spec.ts` (4): regras do contrato (tipo, casas, serviço, variante, localização, armazém);
+  previsto consumido pela entrada, quarentena, variante e quilos com 3 casas; reservado reduz o disponível e não o
+  físico, reserva excessiva e saída que deixaria o reservado acima do livre recusadas, saída que consome a reserva com
+  qualquer ordem de linhas; mudança de estado pela API; kardex, lançamento e auditoria; idempotência (repetição, chave
+  com outro conteúdo); estorno único, estorno de estorno recusado, estorno de entrada já consumida recusado; a base
+  recusa alterar/apagar movimentos e lançamentos e escrever saldos, e o reservado acima do livre inserido à mão falha
+  (verificação imediata e no COMMIT, sem gravar nada); **10 saídas em paralelo sobre 5 unidades: 5 passam, 5
+  `INSUFFICIENT_STOCK`, saldo 0**; 5 pedidos em paralelo com a mesma chave: um lançamento; acesso por âmbito, armazém
+  restrito, lista só de consulta (`NO_OPERATE`) e permissão de gestão; reconciliação sempre sem diferenças.
+- `isolation_matrix` (lançamento e mudança de estado noutra empresa → 404; saldos, movimentos e reconciliação vazios;
+  URL forjada → 403); `routes_protection`; frontend `stock-model.spec.ts` (3).
+- Browser (7 passos, sem erros na consola): stock inicial **lançado directamente na base** como preparação (as entradas
+  chegam no 8.4) — os gatilhos derivaram os saldos; Stock com físico 100, disponível 100 e previsto 50; mudança de
+  estado com validação no cliente ("Há só 100 neste estado.") e 10 para quarentena (disponível 90); conferência sem
+  diferenças; kardex do produto (−10/+10, +100, +50) e lançamento com motivo e as duas linhas; 390 px sem deslocamento.
+
 ## Pendências
 
-- 8.3 a 8.12 (stock, movimentos, transferências, reservas, contagens, lotes/FEFO, valorização, integrações,
+- 8.4 a 8.12 ( movimentos, transferências, reservas, contagens, lotes/FEFO, valorização, integrações,
   alertas, QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
 - 8.2: o acesso `OPERATE` só passa a ter efeito nas operações de stock (8.4 em diante); mudar a entidade legal de um
   armazém exige criar outro (com transferência de stock depois do 8.5).
+- 8.3: a valorização (custo) dos movimentos chega no 8.9; lotes e séries no 8.8 (o saldo ganhará essa dimensão); o saldo
+  não guarda a data do documento (fica no documento do 8.4); stock negativo não é permitido (sem configuração).

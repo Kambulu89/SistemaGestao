@@ -405,7 +405,7 @@ employeeId, from, to)` em `#modules/hr/index`.
 
 ## Inventário (módulo `inventory`, Prompt 08)
 
-8.1 e 8.2 feitos (ver `docs/reports/prompt-08.md`, D-036, D-037). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+8.1 a 8.3 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-038). Catálogo: `uoms`, `product_categories` (hierarquia, classe
 contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
 `product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
 únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
@@ -414,4 +414,8 @@ Armazéns (8.2): `warehouses` (entidade legal e código fixos, filial da mesma e
 `warehouse_locations` (zona → corredor → estante → posição; caminho único e imutável por gatilho, nada se apaga) e
 `warehouse_access` (`VIEW`/`OPERATE`). Ver/gerir = `inventory.read`/`inventory.warehouses.manage` no âmbito da
 entidade ou filial; restritos só com a lista. Os outros blocos usam `warehouseAccessFor(scope, id)` de `index.ts`.
+Stock (8.3): `stock_postings` + `stock_movements` só de acréscimo; `stock_balances` derivado por gatilho (escrita
+directa recusada; baldes ≥ 0; reservado ≤ livre por armazém no fim da transacção). **Todo o stock entra pelo contrato
+`postStock`/`reverseStockPosting`** (idempotência por chave, advisory locks por armazém/produto/variante, auditoria);
+nenhum módulo escreve nestas tabelas.
 

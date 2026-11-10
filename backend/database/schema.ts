@@ -4013,6 +4013,121 @@ export class StatementTemplateSchema extends BaseModel {
   declare version: number
 }
 
+export class StockBalanceSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'lastMovementAt', 'locationId', 'productId', 'qtyBlocked', 'qtyExpected', 'qtyInTransit', 'qtyQuarantine', 'qtyReserved', 'qtyUnrestricted', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
+  $columns = StockBalanceSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.dateTime()
+  declare lastMovementAt: DateTime | null
+  @column()
+  declare locationId: string | null
+  @column()
+  declare productId: string
+  @column()
+  declare qtyBlocked: string
+  @column()
+  declare qtyExpected: string
+  @column()
+  declare qtyInTransit: string
+  @column()
+  declare qtyQuarantine: string
+  @column()
+  declare qtyReserved: string
+  @column()
+  declare qtyUnrestricted: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
+export class StockMovementSchema extends BaseModel {
+  static $columns = ['bucket', 'createdAt', 'createdBy', 'id', 'lineNo', 'locationId', 'occurredAt', 'postingId', 'productId', 'quantity', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
+  $columns = StockMovementSchema.$columns
+  @column()
+  declare bucket: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare locationId: string | null
+  @column.dateTime()
+  declare occurredAt: DateTime
+  @column()
+  declare postingId: string
+  @column()
+  declare productId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
+export class StockPostingSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'idempotencyKey', 'occurredAt', 'postingType', 'reason', 'requestHash', 'reversalOfId', 'sourceId', 'sourceRef', 'sourceType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StockPostingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column.dateTime()
+  declare occurredAt: DateTime
+  @column()
+  declare postingType: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare requestHash: string
+  @column()
+  declare reversalOfId: string | null
+  @column()
+  declare sourceId: string | null
+  @column()
+  declare sourceRef: string | null
+  @column()
+  declare sourceType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class SubscriptionEventSchema extends BaseModel {
   static $columns = ['action', 'actorUserId', 'createdAt', 'fromStatus', 'id', 'planId', 'reason', 'subscriptionId', 'tenantId', 'toStatus', 'updatedAt'] as const
   $columns = SubscriptionEventSchema.$columns

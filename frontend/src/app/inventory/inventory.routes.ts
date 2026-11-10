@@ -62,6 +62,20 @@ export const INVENTORY_ROUTES: Routes = [
     ],
   },
   {
+    path: 'stock',
+    title: 'Stock',
+    canActivate: [accessGuard],
+    data: { permission: 'inventory.read', anyScope: true },
+    loadComponent: () => import('./stock').then((m) => m.Stock),
+  },
+  {
+    path: 'movimentos',
+    title: 'Movimentos de stock',
+    canActivate: [accessGuard],
+    data: { permission: 'inventory.read', anyScope: true },
+    loadComponent: () => import('./stock-movements').then((m) => m.StockMovements),
+  },
+  {
     path: 'configuracao',
     title: 'Configuração do catálogo',
     canActivate: [accessGuard],

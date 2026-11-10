@@ -278,6 +278,16 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
   'GET /api/v1/hr/reports/payroll':
     'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
+  'GET /api/v1/inventory/stock/balances':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/stock/movements':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/stock/postings/:id':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/stock/reconciliation':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'POST /api/v1/inventory/stock/status-changes':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
   'GET /api/v1/inventory/warehouses':
     'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
   'GET /api/v1/inventory/warehouses/candidates':

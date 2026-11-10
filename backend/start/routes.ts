@@ -42,6 +42,7 @@ const TerminationsController = () => import('#modules/hr/http/terminations_contr
 const PortalController = () => import('#modules/hr/http/portal_controller')
 const CatalogController = () => import('#modules/inventory/http/catalog_controller')
 const WarehousesController = () => import('#modules/inventory/http/warehouses_controller')
+const StockController = () => import('#modules/inventory/http/stock_controller')
 
 router
   .group(() => {
@@ -845,6 +846,11 @@ router
                 router.post('warehouses/:id/locations', [WarehousesController, 'addLocations'])
                 router.patch('warehouse-locations/:id', [WarehousesController, 'updateLocation'])
                 router.put('warehouses/:id/access', [WarehousesController, 'setAccess'])
+                router.get('stock/balances', [StockController, 'balances'])
+                router.get('stock/movements', [StockController, 'movements'])
+                router.get('stock/postings/:id', [StockController, 'posting'])
+                router.get('stock/reconciliation', [StockController, 'reconciliation'])
+                router.post('stock/status-changes', [StockController, 'changeStatus'])
               })
               .prefix('inventory')
               .use(middleware.entitled({ feature: 'inventory' }))

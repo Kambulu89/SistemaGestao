@@ -392,6 +392,12 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Criar e alterar armazéns, localizações e a lista de acesso, no âmbito atribuído (entidade legal ou filial).',
   },
   {
+    code: 'inventory.stock.manage',
+    module: 'inventory',
+    description:
+      'Mudar o estado do stock (livre, bloqueado, quarentena) nos armazéns do âmbito atribuído (entidade legal ou filial).',
+  },
+  {
     code: 'inventory.settings',
     module: 'inventory',
     description:

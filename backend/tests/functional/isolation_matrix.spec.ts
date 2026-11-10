@@ -9,6 +9,8 @@ import {
   tenantWithAdmin,
   type Session,
 } from '#tests/support/fixtures'
+import { runInTenant } from '#modules/tenancy/index'
+import { postStock } from '#modules/inventory/index'
 
 const PDF = Buffer.from('%PDF-1.4\n%%EOF\n')
 
@@ -603,8 +605,29 @@ async function populate(client: any) {
     })
   )
   const location = withLocation.locations[0]
+  const ctxA = (await as(client, s).get('/api/v1/context')).body().data
+  const stock = await runInTenant(
+    { tenantId: tenant.id, userId: admin.id, membershipId: ctxA.membershipId, requestId: 'matriz' },
+    (scope) =>
+      postStock(scope, {
+        type: 'RECEIPT',
+        idempotencyKey: 'matriz-stock-1',
+        sourceType: 'TEST',
+        lines: [
+          {
+            warehouseId: warehouse.id,
+            productId: product.id,
+            variantId: variant.id,
+            bucket: 'UNRESTRICTED',
+            quantity: '3',
+          },
+        ],
+      })
+  )
+  const stockPosting = stock.posting
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    stockPosting,
     warehouse,
     location,
     uom,
@@ -1064,6 +1087,23 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.get(
           `/api/v1/attachments?subjectType=disciplinary_case&subjectId=${a.disciplinaryCase.id}`
         ),
+      ],
+      [
+        'lançamento de stock alheio',
+        B.get(`/api/v1/inventory/stock/postings/${a.stockPosting.id}`),
+      ],
+      [
+        'mudança de estado em armazém alheio',
+        B.post('/api/v1/inventory/stock/status-changes', {
+          warehouseId: a.warehouse.id,
+          productId: a.product.id,
+          variantId: a.variant.id,
+          from: 'UNRESTRICTED',
+          to: 'BLOCKED',
+          quantity: '1',
+          reason: 'x',
+          idempotencyKey: 'matriz-b-status',
+        }),
       ],
       ['GET armazém', B.get(`/api/v1/inventory/warehouses/${a.warehouse.id}`)],
       [
@@ -1642,6 +1682,17 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/hr/terminations')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/products')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/warehouses')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/stock/balances')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/stock/movements')).body().data, 0)
+    assert.lengthOf(
+      (await B.get(`/api/v1/inventory/stock/balances?warehouseId=${a.warehouse.id}`)).body().data,
+      0
+    )
+    assert.equal(
+      (await B.get(`/api/v1/inventory/stock/reconciliation?warehouseId=${a.warehouse.id}`)).body()
+        .data.checked,
+      0
+    )
     assert.lengthOf((await B.get('/api/v1/inventory/settings/uoms')).body().data, 0)
     const hc = (await B.get('/api/v1/hr/reports/headcount')).body().data
     assert.notInclude(JSON.stringify(hc), a.le.id)
@@ -1731,6 +1782,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/products',
       '/api/v1/inventory/settings/categories',
       '/api/v1/inventory/warehouses',
+      '/api/v1/inventory/stock/balances',
+      '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',
       '/api/v1/hr/team',
       '/api/v1/hr/reports/headcount',
