@@ -15,7 +15,7 @@ import {
 import { normalizeFields } from '#modules/hr/domain/recruitment'
 import { daysText } from '#modules/hr/domain/leave'
 import { moneyText } from '#modules/hr/domain/compensation'
-import { moneyLabel, monthLabel } from '#modules/hr/domain/loans'
+import { addMonths, moneyLabel, monthLabel } from '#modules/hr/domain/loans'
 import {
   initiativeOf,
   noticeFacts,
@@ -1134,7 +1134,7 @@ export class TerminationService {
   }
 
   /**
-   * Gera o lote EXTRA da liquidação final (no mês do último dia, ou no mês corrente se esse já fechou), com uma entrada
+   * Gera o lote EXTRA da liquidação final (no primeiro mês aberto desde o do último dia ou o corrente), com uma entrada
    * por componente. Exige também `hr.payroll.manage` na entidade legal. Se o lote anterior foi cancelado, gera outro.
    */
   settlement(context: TenantContext, id: string, expectedVersion: number) {
@@ -1153,14 +1153,17 @@ export class TerminationService {
         )
       const lines = await linesOf(scope, id)
       if (!lines.length) wrongState('A liquidação não tem linhas.')
-      let period = `${(t.last_text as string).slice(0, 7)}-01`
+      // Primeiro mês aberto a partir do mês do último dia (ou do corrente, se posterior).
+      const lastMonth = `${(t.last_text as string).slice(0, 7)}-01`
+      const nowMonth = `${today().slice(0, 7)}-01`
+      let period = lastMonth > nowMonth ? lastMonth : nowMonth
       let p = await periodRow(scope, t.legal_entity_id, period, true)
-      if (p!.status !== 'OPEN') {
-        period = `${today().slice(0, 7)}-01`
+      for (let i = 0; i < 12 && p!.status !== 'OPEN'; i++) {
+        period = addMonths(period, 1)
         p = await periodRow(scope, t.legal_entity_id, period, true)
-        if (p!.status !== 'OPEN')
-          throw ApiError.conflict('PERIOD_CLOSED', `O mês ${monthLabel(period)} já está fechado.`)
       }
+      if (p!.status !== 'OPEN')
+        throw ApiError.conflict('PERIOD_CLOSED', `O mês ${monthLabel(period)} já está fechado.`)
       const code = await nextRunCode(scope, period)
       const r = await scope.trx.rawQuery(
         `insert into payroll_runs (tenant_id, period_id, code, kind, description, created_by, updated_by)

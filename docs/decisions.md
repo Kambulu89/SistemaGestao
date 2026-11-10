@@ -377,8 +377,8 @@ saldo de férias) e sugestões claramente rotuladas.
 por falta de aviso, indemnização, outros), cada uma com componente salarial compatível (abono/desconto), fundamentação e,
 opcionalmente, quantidade × valor unitário verificada ao cêntimo. Só se alteram em rascunho (trigger); a aprovação cobre
 os montantes. A remuneração do último mês não é linha: o processamento regular desse mês já a proporcionaliza pela data
-de fim do contrato. O pagamento faz-se por um **lote EXTRA** gerado a partir do processo aprovado (no mês do último dia ou,
-se fechado, no mês corrente; exige também `hr.payroll.manage`), com IRT/INSS pela incidência de cada componente; os
+de fim do contrato. O pagamento faz-se por um **lote EXTRA** gerado a partir do processo aprovado (no primeiro mês aberto a
+partir do mês do último dia ou do mês corrente, se posterior — correcção do 7.13; exige também `hr.payroll.manage`), com IRT/INSS pela incidência de cada componente; os
 valores desse lote não se alteram no processamento (`SETTLEMENT_RUN`) e, se o lote for cancelado, gera-se outro.
 
 **Aprovação** (nem quem preparou nem quem submeteu) bloqueada por: contrato já não em vigor, indemnização marcada sem

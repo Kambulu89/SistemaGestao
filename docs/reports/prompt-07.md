@@ -1,7 +1,7 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.12 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Falta o bloco 7.13 (QA e Git).
-Decisões D-024 a D-035.
+Estado: **Prompt 07 concluído (7.1 a 7.13)** no branch `claude/pensive-clarke-5gm075`. QA e regressão em
+`docs/reports/prompt-07-qa.md`. Decisões D-024 a D-035.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
@@ -499,7 +499,7 @@ Testes do 7.12:
 
 ## Pendências
 
-- 7.13 (QA e Git).
+- Scripts E2E do Prompt 07 fora do repositório (ver `prompt-07-qa.md`).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
 - 6.9 SAF-T continua bloqueado pela especificação oficial.

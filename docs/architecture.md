@@ -327,7 +327,7 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
 
 ## Recursos humanos (módulo `hr`, Prompt 07)
 
-Blocos 7.1 a 7.12 feitos (ver `docs/reports/prompt-07.md`, D-024 a D-035).
+Prompt 07 concluído, 7.1 a 7.13 (ver `docs/reports/prompt-07.md` e `prompt-07-qa.md`, D-024 a D-035).
 
 - **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
   cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
