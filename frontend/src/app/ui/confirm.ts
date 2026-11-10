@@ -23,6 +23,14 @@ export class ConfirmService {
     this.current.set(null);
     current?.resolve(ok);
   }
+
+  /**
+   * Responde só se `request` ainda for o pedido actual: o evento `close` de um diálogo já respondido pode chegar
+   * depois de aberto o pedido seguinte e não o pode cancelar.
+   */
+  answerFor(request: ConfirmOptions, ok: boolean) {
+    if (this.current() === request) this.answer(ok);
+  }
 }
 
 @Component({
@@ -30,16 +38,16 @@ export class ConfirmService {
   imports: [Modal],
   template: `
     @if (service.current(); as c) {
-      <app-modal [title]="c.title" [open]="true" (closed)="service.answer(false)">
+      <app-modal [title]="c.title" [open]="true" (closed)="service.answerFor(c, false)">
         <p class="text-sm">{{ c.message }}</p>
         <ng-container actions>
-          <button type="button" class="btn-secondary" (click)="service.answer(false)">
+          <button type="button" class="btn-secondary" (click)="service.answerFor(c, false)">
             Cancelar
           </button>
           <button
             type="button"
             [class]="c.danger ? 'btn-danger' : 'btn-primary'"
-            (click)="service.answer(true)"
+            (click)="service.answerFor(c, true)"
           >
             {{ c.confirmLabel ?? 'Confirmar' }}
           </button>

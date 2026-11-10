@@ -308,6 +308,34 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
   'POST /api/v1/inventory/document-confirmations/:id/reverse':
     'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'GET /api/v1/inventory/transfers':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'GET /api/v1/inventory/transfers/destinations':
+    'destinos de transferência: armazéns activos abertos ou visíveis ao membro, filtrados no serviço',
+  'GET /api/v1/inventory/transfers/:id':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'PUT /api/v1/inventory/transfers/:id':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/submit':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/approve':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/accept':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/reject':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/pick':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/dispatch':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/receive':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/close':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/cancel':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
   'GET /api/v1/inventory/warehouses':
     'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
   'GET /api/v1/inventory/warehouses/candidates':

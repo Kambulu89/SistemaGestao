@@ -625,6 +625,21 @@ async function populate(client: any) {
       })
   )
   const stockPosting = stock.posting
+  const warehouse2 = ok(
+    await as(client, s).post('/api/v1/inventory/warehouses', {
+      code: 'ARM-A2',
+      name: 'Armazém A2',
+      legalEntityId: le.id,
+      warehouseType: 'STORE',
+    })
+  )
+  const stockTransfer = ok(
+    await as(client, s).post('/api/v1/inventory/transfers', {
+      sourceWarehouseId: warehouse.id,
+      destWarehouseId: warehouse2.id,
+      lines: [{ productId: product.id, variantId: variant.id, quantity: '1' }],
+    })
+  )
   const stockDocument = ok(
     await as(client, s).post('/api/v1/inventory/documents', {
       docType: 'RECEIPT',
@@ -635,6 +650,7 @@ async function populate(client: any) {
   )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    stockTransfer,
     stockDocument,
     stockPosting,
     warehouse,
@@ -1096,6 +1112,47 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.get(
           `/api/v1/attachments?subjectType=disciplinary_case&subjectId=${a.disciplinaryCase.id}`
         ),
+      ],
+      ['GET documento de stock', B.get(`/api/v1/inventory/documents/${a.stockDocument.id}`)],
+      [
+        'PUT documento de stock',
+        B.put(`/api/v1/inventory/documents/${a.stockDocument.id}`, {
+          ...v,
+          origin: 'OTHER',
+          lines: [],
+        }),
+      ],
+      [
+        'conferir documento alheio',
+        B.post(`/api/v1/inventory/documents/${a.stockDocument.id}/check`, { ...v, lines: [] }),
+      ],
+      [
+        'confirmar documento alheio',
+        B.post(`/api/v1/inventory/documents/${a.stockDocument.id}/confirm`, {
+          ...v,
+          idempotencyKey: 'matriz-b-confirm',
+        }),
+      ],
+      [
+        'anular documento alheio',
+        B.post(`/api/v1/inventory/documents/${a.stockDocument.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['GET transferência', B.get(`/api/v1/inventory/transfers/${a.stockTransfer.id}`)],
+      [
+        'PUT transferência',
+        B.put(`/api/v1/inventory/transfers/${a.stockTransfer.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'submeter transferência alheia',
+        B.post(`/api/v1/inventory/transfers/${a.stockTransfer.id}/submit`, v),
+      ],
+      [
+        'aprovar transferência alheia',
+        B.post(`/api/v1/inventory/transfers/${a.stockTransfer.id}/approve`, v),
+      ],
+      [
+        'anular transferência alheia',
+        B.post(`/api/v1/inventory/transfers/${a.stockTransfer.id}/cancel`, { ...v, reason: 'x' }),
       ],
       [
         'lançamento de stock alheio',
@@ -1693,6 +1750,11 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/inventory/warehouses')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/stock/balances')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/documents')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/transfers')).body().data, 0)
+    assert.notInclude(
+      JSON.stringify((await B.get('/api/v1/inventory/transfers/destinations')).body().data),
+      a.warehouse.id
+    )
     assert.lengthOf((await B.get('/api/v1/inventory/stock/movements')).body().data, 0)
     assert.lengthOf(
       (await B.get(`/api/v1/inventory/stock/balances?warehouseId=${a.warehouse.id}`)).body().data,
@@ -1794,6 +1856,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/warehouses',
       '/api/v1/inventory/stock/balances',
       '/api/v1/inventory/documents',
+      '/api/v1/inventory/transfers',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',
       '/api/v1/hr/team',

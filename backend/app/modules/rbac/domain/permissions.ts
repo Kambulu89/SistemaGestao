@@ -410,6 +410,18 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Confirmar documentos de entrada e saída (movimenta o stock), fechar saldos e estornar confirmações no âmbito atribuído.',
   },
   {
+    code: 'inventory.transfers.manage',
+    module: 'inventory',
+    description:
+      'Pedir, separar e expedir transferências (no armazém de origem) e recebê-las (no de destino), no âmbito atribuído.',
+  },
+  {
+    code: 'inventory.transfers.approve',
+    module: 'inventory',
+    description:
+      'Aprovar ou rejeitar transferências (origem), aceitar as intragrupo e fechar perdas em trânsito (destino), no âmbito atribuído.',
+  },
+  {
     code: 'inventory.settings',
     module: 'inventory',
     description:

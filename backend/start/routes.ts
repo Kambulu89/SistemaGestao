@@ -43,6 +43,7 @@ const PortalController = () => import('#modules/hr/http/portal_controller')
 const CatalogController = () => import('#modules/inventory/http/catalog_controller')
 const WarehousesController = () => import('#modules/inventory/http/warehouses_controller')
 const StockController = () => import('#modules/inventory/http/stock_controller')
+const TransfersController = () => import('#modules/inventory/http/transfers_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
 router
@@ -865,6 +866,20 @@ router
                   StockDocumentsController,
                   'reverse',
                 ])
+                router.get('transfers', [TransfersController, 'index'])
+                router.post('transfers', [TransfersController, 'store'])
+                router.get('transfers/destinations', [TransfersController, 'destinations'])
+                router.get('transfers/:id', [TransfersController, 'show'])
+                router.put('transfers/:id', [TransfersController, 'update'])
+                router.post('transfers/:id/submit', [TransfersController, 'submit'])
+                router.post('transfers/:id/approve', [TransfersController, 'approve'])
+                router.post('transfers/:id/accept', [TransfersController, 'accept'])
+                router.post('transfers/:id/reject', [TransfersController, 'reject'])
+                router.post('transfers/:id/pick', [TransfersController, 'pick'])
+                router.post('transfers/:id/dispatch', [TransfersController, 'dispatch'])
+                router.post('transfers/:id/receive', [TransfersController, 'receive'])
+                router.post('transfers/:id/close', [TransfersController, 'close'])
+                router.post('transfers/:id/cancel', [TransfersController, 'cancel'])
               })
               .prefix('inventory')
               .use(middleware.entitled({ feature: 'inventory' }))

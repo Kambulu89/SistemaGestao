@@ -90,6 +90,34 @@ export const INVENTORY_ROUTES: Routes = [
     ],
   },
   {
+    path: 'transferencias',
+    title: 'Transferências',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./transfers').then((m) => m.Transfers),
+      },
+      {
+        path: 'nova',
+        title: 'Nova transferência',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'inventory.transfers.manage', anyScope: true },
+        loadComponent: () => import('./transfer-form').then((m) => m.TransferFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Transferência',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./transfer-form').then((m) => m.TransferFormPage),
+      },
+    ],
+  },
+  {
     path: 'stock',
     title: 'Stock',
     canActivate: [accessGuard],

@@ -1,6 +1,6 @@
 # Relatório — Prompt 08 (inventário)
 
-Estado: **8.1 a 8.4 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.5 a 8.12 seguem, um de cada
+Estado: **8.1 a 8.5 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.6 a 8.12 seguem, um de cada
 vez. Decisões a partir de D-036.
 
 ## Inventário AS-IS → TO-BE
@@ -11,6 +11,7 @@ vez. Decisões a partir de D-036.
 | 8.2 Armazéns               | Sem armazéns                  | Armazém por entidade legal/filial com responsável, morada, tipo e estado; localizações zona → corredor → estante → posição com caminho fixo e séries; acesso por âmbito e lista nos restritos | Feito  |
 | 8.3 Stock                  | Sem stock                     | Lançamentos e movimentos só de acréscimo, saldos derivados na base (livre, bloqueado, quarentena, reservado, trânsito, previsto; físico e disponível), idempotência, estornos, concorrência, reconciliação, mudança de estado | Feito  |
 | 8.4 Entradas/saídas        | Sem documentos de stock       | Documentos com cabeçalho e linhas (unidade e conversão congelada, lote, séries, validade, localização, custo), rascunho → conferência → confirmação parcial/total, número por série, fecho de saldo, anulação, estornos; stock só na confirmação | Feito  |
+| 8.5 Transferências         | Sem transferências           | Pedido → aprovação (reserva) → separação → expedição (trânsito no destino) → recepção parcial/total ou perda; segregação de funções; intragrupo com aceitação do destino e referência comercial | Feito  |
 
 ## 8.1 Produtos e serviços
 
@@ -206,9 +207,69 @@ com estornos e histórico. O modelo de formulário ganhou o modo só de leitura 
   série, Parcial, 144 em stock; segunda ronda → Concluído, 240; estorno da 1.ª (96) e fecho do saldo com motivo; saída de
   999 recusada com "Stock insuficiente" sem mexer no stock e anulada; lista filtrada; 390 px sem deslocamento.
 
+## 8.5 Transferências
+
+### Modelo
+
+Migração `0037_create_inventory_transfers`: `stock_transfers` (origem e destino, entidades legais, intragrupo
+calculado e verificado por `CHECK`, referência comercial obrigatória a partir da expedição se intragrupo, série e
+número, marcas de cada passo, motivos de rejeição/anulação/perda), `stock_transfer_lines` (quantidade base, localização
+e estado na origem, localização no destino por FK compostas, lote e séries, separado/expedido/recebido/perdido com
+`CHECK` recebido + perdido ≤ expedido), `stock_transfer_events` + linhas (reserva, libertação, expedição, recepção,
+perda; só acréscimo). Linhas expedidas imutáveis (gatilho).
+
+### API (`/api/v1/inventory`)
+
+- `GET|POST /transfers`, `GET /transfers/destinations`, `GET|PUT /transfers/:id`,
+  `POST /transfers/:id/submit|approve|accept|reject|pick|dispatch|receive|close|cancel`.
+- Permissões novas: `inventory.transfers.manage` e `inventory.transfers.approve` (no armazém de cada passo).
+- Erros: `SELF_APPROVAL`, `ALREADY_APPROVED`, `ALREADY_ACCEPTED`, `NOT_INTERCOMPANY`, `NO_SERIES`, `INVALID_STATE`,
+  `NOTHING_PICKED`, `NOTHING_TO_SHIP`, `NOTHING_RECEIVED`, `NOTHING_IN_TRANSIT`, `SAME`, e os do 8.3 (`OVER_RESERVED`,
+  `INSUFFICIENT_STOCK`).
+
+### Ecrãs
+
+Inventário → Transferências: lista (estado, armazém, pesquisa) e transferência com rascunho editável (origem, destinos
+possíveis incluindo outras entidades, linhas com localização e estado de origem, localização de destino, lote e
+séries) e, depois, passos com quem e quando, acções conforme estado e direitos (Pedir aprovação, Aprovar, Aceitar,
+Rejeitar, Separar, Expedir com transportador/guia/referência intragrupo, Receber com localização, Fechar perdas,
+Anular), linhas com pedido/separado/expedido/recebido/em trânsito/perdido e movimentos de stock.
+
+### Correcções feitas neste bloco
+
+- `postStock` com `checkAccess: false` exigia que o membro **visse** todos os armazéns das linhas; a expedição
+  intragrupo (que toca o armazém de destino) falhava com 404. Passou a confirmar só que o armazém existe na empresa.
+- A `isolation_matrix` não tinha as tentativas dos documentos do 8.4 (a inserção falhou em silêncio por formatação):
+  foram acrescentadas agora (documentos e transferências).
+- Interface: o `ConfirmService` responde só ao pedido a que a resposta pertence (um `close` atrasado de um diálogo já
+  respondido não cancela o seguinte; teste `confirm.spec.ts`); os botões de acção de documentos e transferências ficam
+  inactivos durante um pedido (no E2E, aceitar com a aprovação ainda em curso enviava uma versão antiga); o histórico
+  traduz as acções de documentos e transferências.
+
+### Testes e evidências
+
+- Unitário `inventory_transfers_domain.spec.ts` (2): aprovação completa (intragrupo exige aceitação), segregação,
+  quantidade a expedir, recepção, estados.
+- Funcional `inventory_transfers.spec.ts` (3): validações; pedido; quem pede não aprova; aprovação numera e reserva
+  (físico 100, reservado 30, disponível 70); separação curta (25/30); expedição idempotente (origem 75, reservado 0,
+  destino 25 em trânsito); recepção acima do trânsito recusada; recepção parcial (10); perda com motivo (15) e estado
+  recebida; eventos, movimentos com origem `STOCK_TRANSFER`, reconciliação sem diferenças, auditoria; a base recusa
+  apagar eventos e alterar linhas expedidas. Intragrupo: aprovação da origem não reserva nem deixa expedir; aceitação
+  reserva; referência comercial obrigatória; movimentos `INTERCOMPANY_TRANSFER`; aceitar uma interna →
+  `NOT_INTERCOMPANY`. Aprovar acima do disponível → `OVER_RESERVED` sem mudar nada; rejeição com motivo; anulação liberta
+  a reserva; quarentena transfere-se sem reserva e chega em quarentena; quem gere só a entidade A pede e expede para B
+  mas não recebe em B; o leitor de B vê só as transferências que tocam B.
+- `isolation_matrix` (transferência de outra empresa: ler, editar, submeter, aprovar, anular → 404; lista e destinos
+  vazios; URL forjada → 403), `routes_protection`, frontend `transfer-model.spec.ts` (2) e `confirm.spec.ts` (2).
+- Browser (6 passos, três execuções seguidas sem falhas, sem erros na consola; dois utilizadores): pedido pela
+  interface e "Aprovar" escondido a quem pediu; aprovação pelo aprovador (número, reserva 20); separação de 15,
+  expedição (origem 35, trânsito 15), recepção de 10 e perda de 5 fechada pelo aprovador; intragrupo com aprovação,
+  aceitação, referência obrigatória na expedição e recepção no destino; 390 px sem deslocamento. O E2E do 8.4 voltou a
+  passar (8/8) depois das alterações.
+
 ## Pendências
 
-- 8.5 a 8.12 ( movimentos, transferências, reservas, contagens, lotes/FEFO, valorização, integrações,
+- 8.6 a 8.12 ( movimentos, transferências, reservas, contagens, lotes/FEFO, valorização, integrações,
   alertas, QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
@@ -218,3 +279,5 @@ com estornos e histórico. O modelo de formulário ganhou o modo só de leitura 
   não guarda a data do documento (fica no documento do 8.4); stock negativo não é permitido (sem configuração).
 - 8.4: lote, séries e validade ficam nas linhas dos documentos; os saldos por lote/série chegam no 8.8. Documentos
   ligados a compras e vendas (origem com identificador) chegam no 8.10; anexos ao documento ainda não.
+- 8.5: a contabilização intragrupo (venda/compra entre entidades) é do 8.10; o custo em trânsito, do 8.9. Uma
+  transferência expede-se de uma vez (o que não foi separado deixa de seguir); recepções podem ser várias.

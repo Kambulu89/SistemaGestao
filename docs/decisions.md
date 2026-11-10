@@ -501,3 +501,22 @@ anulados; sem série, a confirmação explica o que configurar. **Anular** só s
 por confirmar. Nada se apaga: confirmações e as suas linhas são só de acréscimo e as linhas já confirmadas não mudam
 (gatilhos na base). Gerir (`inventory.documents.manage`) e confirmar (`inventory.documents.confirm`) são permissões
 separadas, no âmbito do armazém e com acesso de operação; quem consulta segue o acesso aos armazéns.
+
+## D-040 Transferências: reserva na aprovação, trânsito no destino, recepção parcial, perdas e fluxo intragrupo (aceite)
+
+Uma **transferência** liga dois armazéns da empresa. Todo o efeito no stock passa pelo contrato do 8.3 (`postStock`):
+a **aprovação** reserva na origem (só o stock livre; bloqueado e quarentena não contam para o disponível); a
+**expedição** tira da origem as quantidades separadas (ou pedidas), consome a reserva toda (o que não segue volta a
+ficar disponível) e põe-nas **em trânsito no armazém de destino**; a **recepção** (parcial ou total, com localização
+de destino) tira do trânsito e entra no mesmo estado do stock de origem (quarentena chega em quarentena); o que não
+chega fecha-se como **perda em trânsito**, com motivo; **anular** depois de aprovada liberta a reserva. Cada passo é
+um evento só de acréscimo com o seu lançamento e chave de idempotência; linhas expedidas não mudam (gatilho).
+
+**Autorização**: quem pede não aprova nem aceita (segregação de funções). Pedir, separar e expedir exigem
+`inventory.transfers.manage` no armazém de origem; receber, no de destino; aprovar/rejeitar, `inventory.transfers.approve`
+na origem; aceitar e fechar perdas, no destino. **Entre entidades legais (intragrupo)** o fluxo é próprio: a
+aprovação da origem não basta — o destino aceita — e a expedição exige a referência do documento comercial intragrupo;
+os lançamentos levam a origem `INTERCOMPANY_TRANSFER` (o 8.10 trata-os como venda/compra intragrupo na contabilidade).
+Quem pede numa entidade pode escolher como destino qualquer armazém activo aberto (ou visível) de outra, sem o
+consultar; por isso o `postStock` com `checkAccess: false` só confirma que o armazém existe — a autorização de cada
+passo é do módulo que chama. Número na aprovação, pela série `STOCK_TRANSFER` da entidade de origem.

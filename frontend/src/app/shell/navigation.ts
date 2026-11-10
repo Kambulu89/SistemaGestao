@@ -422,6 +422,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Inventário',
       },
       {
+        label: 'Transferências',
+        path: '/inventario/transferencias',
+        icon: 'flow',
+        permission: 'inventory.read',
+        feature: 'inventory',
+        anyScope: true,
+        section: 'Inventário',
+      },
+      {
         label: 'Stock',
         path: '/inventario/stock',
         icon: 'layers',

@@ -4300,6 +4300,188 @@ export class StockPostingSchema extends BaseModel {
   declare version: number
 }
 
+export class StockTransferEventLineSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'destLocationId', 'eventId', 'id', 'lineId', 'quantity', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StockTransferEventLineSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare destLocationId: string | null
+  @column()
+  declare eventId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StockTransferEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'idempotencyKey', 'kind', 'postingId', 'reason', 'tenantId', 'transferId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StockTransferEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare kind: string
+  @column()
+  declare postingId: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare transferId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StockTransferLineSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'destLocationId', 'destWarehouseId', 'id', 'lineNo', 'lostQuantity', 'lotCode', 'pickedQuantity', 'productId', 'quantity', 'receivedQuantity', 'serials', 'shippedQuantity', 'sourceBucket', 'sourceLocationId', 'sourceWarehouseId', 'tenantId', 'transferId', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = StockTransferLineSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare destLocationId: string | null
+  @column()
+  declare destWarehouseId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare lostQuantity: string
+  @column()
+  declare lotCode: string | null
+  @column()
+  declare pickedQuantity: string | null
+  @column()
+  declare productId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare receivedQuantity: string
+  @column()
+  declare serials: any | null
+  @column()
+  declare shippedQuantity: string
+  @column()
+  declare sourceBucket: string
+  @column()
+  declare sourceLocationId: string | null
+  @column()
+  declare sourceWarehouseId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare transferId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class StockTransferSchema extends BaseModel {
+  static $columns = ['acceptedAt', 'acceptedBy', 'approvedAt', 'approvedBy', 'cancelReason', 'carrier', 'closeReason', 'completedAt', 'createdAt', 'createdBy', 'destLegalEntityId', 'destWarehouseId', 'dispatchedAt', 'dispatchedBy', 'expectedDate', 'id', 'intercompany', 'intercompanyRef', 'notes', 'number', 'pickedAt', 'pickedBy', 'rejectReason', 'requestedDate', 'seriesId', 'sourceLegalEntityId', 'sourceWarehouseId', 'status', 'submittedAt', 'submittedBy', 'tenantId', 'trackingRef', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StockTransferSchema.$columns
+  @column.dateTime()
+  declare acceptedAt: DateTime | null
+  @column()
+  declare acceptedBy: string | null
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare cancelReason: string | null
+  @column()
+  declare carrier: string | null
+  @column()
+  declare closeReason: string | null
+  @column.dateTime()
+  declare completedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare destLegalEntityId: string
+  @column()
+  declare destWarehouseId: string
+  @column.dateTime()
+  declare dispatchedAt: DateTime | null
+  @column()
+  declare dispatchedBy: string | null
+  @column.date()
+  declare expectedDate: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare intercompany: boolean
+  @column()
+  declare intercompanyRef: string | null
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column.dateTime()
+  declare pickedAt: DateTime | null
+  @column()
+  declare pickedBy: string | null
+  @column()
+  declare rejectReason: string | null
+  @column.date()
+  declare requestedDate: DateTime
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare sourceLegalEntityId: string
+  @column()
+  declare sourceWarehouseId: string
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare trackingRef: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class SubscriptionEventSchema extends BaseModel {
   static $columns = ['action', 'actorUserId', 'createdAt', 'fromStatus', 'id', 'planId', 'reason', 'subscriptionId', 'tenantId', 'toStatus', 'updatedAt'] as const
   $columns = SubscriptionEventSchema.$columns

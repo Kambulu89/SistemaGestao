@@ -113,6 +113,7 @@ const today = () => new Date().toISOString().slice(0, 10);
                 type="button"
                 class="btn-secondary"
                 data-testid="doc-check"
+                [disabled]="act.busy()"
                 (click)="openCheck()"
               >
                 Conferir
@@ -123,6 +124,7 @@ const today = () => new Date().toISOString().slice(0, 10);
                 type="button"
                 class="btn-secondary"
                 data-testid="doc-reopen"
+                [disabled]="act.busy()"
                 (click)="reopen()"
               >
                 Reabrir conferência
@@ -133,6 +135,7 @@ const today = () => new Date().toISOString().slice(0, 10);
                 type="button"
                 class="btn-primary"
                 data-testid="doc-confirm"
+                [disabled]="act.busy()"
                 (click)="confirm()"
               >
                 Confirmar e movimentar stock
@@ -143,6 +146,7 @@ const today = () => new Date().toISOString().slice(0, 10);
                 type="button"
                 class="btn-secondary"
                 data-testid="doc-close"
+                [disabled]="act.busy()"
                 (click)="openReason('close')"
               >
                 Fechar saldo
@@ -153,6 +157,7 @@ const today = () => new Date().toISOString().slice(0, 10);
                 type="button"
                 class="btn-danger"
                 data-testid="doc-cancel"
+                [disabled]="act.busy()"
                 (click)="openReason('cancel')"
               >
                 Anular

@@ -138,14 +138,25 @@ async function checkRefs(scope: TenantScope, lines: PostingLine[], checkAccess: 
   const { tenantId } = scope.context
   const issues: ErrorDetail[] = []
   const increases = (l: PostingLine) => l.quantity > 0n && l.bucket !== 'RESERVED'
-  const warehouses = new Map<string, Awaited<ReturnType<typeof warehouseAccessFor>>>()
-  for (const id of new Set(lines.map((l) => l.warehouseId)))
-    warehouses.set(id, await warehouseAccessFor(scope, id))
-  for (const [id, a] of warehouses) {
-    if (!a) throw ApiError.notFound()
-    if (checkAccess && !a.operate)
-      throw ApiError.forbidden('NO_OPERATE', 'Não tem acesso para operar neste armazém.')
-    void id
+  const warehouses = new Map<string, { status: string }>()
+  const ids = [...new Set(lines.map((l) => l.warehouseId))]
+  if (checkAccess)
+    for (const id of ids) {
+      const a = await warehouseAccessFor(scope, id)
+      if (!a) throw ApiError.notFound()
+      if (!a.operate)
+        throw ApiError.forbidden('NO_OPERATE', 'Não tem acesso para operar neste armazém.')
+      warehouses.set(id, a)
+    }
+  else {
+    // O módulo que chama autorizou cada passo (ex.: a expedição intragrupo toca o armazém de destino, que quem expede
+    // pode não ver); aqui só se confirma que o armazém existe na empresa.
+    const r = await scope.trx.rawQuery(
+      'select id, status from warehouses where tenant_id = ? and id = any(?::uuid[])',
+      [tenantId, ids] as never[]
+    )
+    for (const w of r.rows as any[]) warehouses.set(w.id, { status: w.status })
+    if (warehouses.size !== ids.length) throw ApiError.notFound()
   }
   const products = await scope.trx.rawQuery(
     `select p.id, p.sku, p.product_type, u.decimals,

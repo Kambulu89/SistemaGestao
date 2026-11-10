@@ -91,6 +91,19 @@ export class AuditHistory {
       role_unassigned: 'Perfil retirado',
       published: 'Publicado',
       retired: 'Retirado',
+      submitted: 'Submetido',
+      approved: 'Aprovado',
+      accepted: 'Aceite',
+      rejected: 'Rejeitado',
+      checked: 'Conferido',
+      reopened: 'Reaberto',
+      confirmed: 'Confirmado',
+      reversed: 'Estornado',
+      closed: 'Fechado',
+      cancelled: 'Anulado',
+      picked: 'Separado',
+      dispatched: 'Expedido',
+      received: 'Recebido',
     };
     return labels[verb] ?? action;
   }
