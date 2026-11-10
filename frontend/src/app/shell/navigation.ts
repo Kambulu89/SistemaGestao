@@ -446,6 +446,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Inventário',
       },
       {
+        label: 'Contagens e ajustes',
+        path: '/inventario/contagens',
+        icon: 'grid',
+        anyOf: ['inventory.counts.manage', 'inventory.counts.approve'],
+        feature: 'inventory',
+        anyScope: true,
+        section: 'Inventário',
+      },
+      {
         label: 'Reservas activas',
         path: '/inventario/reservas',
         icon: 'layers',

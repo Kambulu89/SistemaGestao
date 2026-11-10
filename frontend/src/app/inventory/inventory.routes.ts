@@ -9,6 +9,8 @@ const REQUISITION_PERMISSIONS = [
   'inventory.requisitions.fulfil',
 ];
 
+const COUNT_PERMISSIONS = ['inventory.counts.manage', 'inventory.counts.approve'];
+
 export const INVENTORY_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'produtos' },
   {
@@ -148,6 +150,34 @@ export const INVENTORY_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { anyOf: REQUISITION_PERMISSIONS, anyScope: true },
         loadComponent: () => import('./requisition-form').then((m) => m.RequisitionFormPage),
+      },
+    ],
+  },
+  {
+    path: 'contagens',
+    title: 'Contagens e ajustes',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: COUNT_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./counts').then((m) => m.Counts),
+      },
+      {
+        path: 'nova',
+        title: 'Nova contagem',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'inventory.counts.manage', anyScope: true },
+        loadComponent: () => import('./count-form').then((m) => m.CountFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Contagem',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { anyOf: COUNT_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./count-form').then((m) => m.CountFormPage),
       },
     ],
   },

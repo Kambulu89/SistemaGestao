@@ -336,6 +336,32 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
   'POST /api/v1/inventory/transfers/:id/cancel':
     'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'GET /api/v1/inventory/counts':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'GET /api/v1/inventory/counts/options':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'GET /api/v1/inventory/counts/:id':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'PUT /api/v1/inventory/counts/:id':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/start':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/count':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/lines':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/submit':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/justify':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/recount':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/approve':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/cancel':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
   'GET /api/v1/inventory/requisitions':
     'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
   'GET /api/v1/inventory/requisitions/options':

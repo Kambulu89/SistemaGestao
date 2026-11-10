@@ -540,3 +540,31 @@ armazém, com acesso de operação). Cada membro vê as requisições que pode p
 As **reservas activas** listam-se por origem (requisições, transferências e, no 8.10, vendas) a partir dos
 movimentos — coincidem sempre com a coluna "Reservado" dos saldos. Os ecrãs aceitam agora "basta uma destas
 permissões" (`anyOf`) nas rotas e na navegação.
+
+## D-042 Contagens físicas e ajustes: plano, snapshot, contagem cega e recontagem, diferenças justificadas e aprovação que ajusta (aceite)
+
+Uma **contagem** é planeada para um armazém, com zona (inclui as posições abaixo) e categoria (inclui as
+subcategorias) opcionais, e é **cega por omissão**. Ciclo: plano → **início**, que numera (série `STOCK_COUNT` da
+entidade) e tira o **snapshot** do físico (livre + bloqueado + quarentena) de cada saldo no âmbito (máximo 2000 linhas)
+→ **contagem** (por partes; cada quantidade registada fica num histórico só de acréscimo; artigos encontrados fora do
+snapshot entram com o sistema actual) → **revisão**: diferença = contado − snapshot, cada diferença precisa de
+**motivo** (lista fixa) e **justificação** escrita; quem aprova pode pedir **recontagem** de linhas (nova volta, o
+snapshot dessas linhas passa a ser o sistema actual) → **aprovação**, que lança o ajuste por `postStock` (tipo
+`ADJUSTMENT`, origem `STOCK_COUNT` com o número): sobras entram no livre, faltas saem do livre, depois da quarentena e
+do bloqueado. Anular (com motivo) é possível até à aprovação e não mexe no stock.
+
+**Movimentos durante a contagem não são bloqueados.** O ajuste é relativo ao snapshot: o que entrou ou saiu depois já
+está no saldo e não é anulado; a revisão mostra "movido depois do snapshot" por linha para que quem aprova peça
+recontagem quando a contagem e os movimentos se cruzaram. Se uma falta já não cabe no saldo actual, a aprovação é
+recusada (`INSUFFICIENT_STOCK`) e nada muda. Duas contagens em curso não podem contar o mesmo saldo (`COUNT_OVERLAP`).
+
+**Permissões e segregação**: `inventory.counts.manage` (planear, iniciar, contar, acrescentar, submeter; no âmbito do
+armazém com acesso de operação) e `inventory.counts.approve` (rever, justificar, pedir recontagem, aprovar; no âmbito
+do armazém). **Quem registou quantidades não aprova** (`SELF_APPROVAL`). Numa contagem cega, o sistema (snapshot,
+diferença, movido depois) só é devolvido pela API a quem aprova, até à aprovação; numa aberta, a quem gere também (e
+quem gere justifica). A contagem cega esconde o sistema **no ecrã e na API da contagem**; quem também tem acesso à
+consulta de saldos continua a vê-los lá — a separação de perfis é uma decisão da empresa.
+
+**Imutabilidade**: aprovada ou anulada, a contagem e as linhas ficam fixas (gatilho); o plano fica fixo depois do
+início; registos de contagem e lançamentos de ajuste só de acréscimo; o ajuste corrige-se com uma nova contagem, não
+editando a anterior.

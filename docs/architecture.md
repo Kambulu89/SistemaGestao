@@ -405,7 +405,7 @@ employeeId, from, to)` em `#modules/hr/index`.
 
 ## Inventário (módulo `inventory`, Prompt 08)
 
-8.1 a 8.6 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-041). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+8.1 a 8.7 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-042). Catálogo: `uoms`, `product_categories` (hierarquia, classe
 contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
 `product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
 únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
@@ -428,4 +428,8 @@ com `checkAccess: false` deixa a autorização ao módulo que chama.
 Requisições internas (8.6): departamento + centro de custo, aprovação reserva (`RESERVATION`), entrega consome
 (`ISSUE` livre + reservado), libertação/anulação (`RELEASE`); origem `INTERNAL_REQUISITION`. Reservas activas derivadas
 dos movimentos por origem. Rotas/navegação aceitam `anyOf` (basta uma das permissões).
+Contagens (8.7): snapshot do físico no início, contagem cega (sistema só para quem aprova), recontagem renova o
+snapshot da linha, diferenças com motivo e justificação; a aprovação (quem contou não aprova) lança `ADJUSTMENT`
+(origem `STOCK_COUNT`) = contado − snapshot sobre o saldo actual. Registos e lançamentos só de acréscimo; contagem
+fixa depois de aprovada/anulada (gatilhos).
 

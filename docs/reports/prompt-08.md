@@ -1,6 +1,6 @@
 # Relatório — Prompt 08 (inventário)
 
-Estado: **8.1 a 8.6 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.7 a 8.12 seguem, um de cada
+Estado: **8.1 a 8.7 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.8 a 8.12 seguem, um de cada
 vez. Decisões a partir de D-036.
 
 ## Inventário AS-IS → TO-BE
@@ -13,6 +13,7 @@ vez. Decisões a partir de D-036.
 | 8.4 Entradas/saídas        | Sem documentos de stock       | Documentos com cabeçalho e linhas (unidade e conversão congelada, lote, séries, validade, localização, custo), rascunho → conferência → confirmação parcial/total, número por série, fecho de saldo, anulação, estornos; stock só na confirmação | Feito  |
 | 8.5 Transferências         | Sem transferências           | Pedido → aprovação (reserva) → separação → expedição (trânsito no destino) → recepção parcial/total ou perda; segregação de funções; intragrupo com aceitação do destino e referência comercial | Feito  |
 | 8.6 Reservas/requisições   | Sem requisições internas      | Pedido por departamento e centro de custo, aprovação que reserva (disponível baixa, físico não), separação, entrega por consumo, libertação e anulação; reservas activas por origem | Feito  |
+| 8.7 Contagens/ajustes      | Sem contagens                 | Plano (zona, categoria, cega), snapshot no início, contagem por partes e artigos encontrados, recontagem com snapshot renovado, diferenças com motivo e justificação, aprovação segregada que lança o ajuste; tudo fixo depois | Feito  |
 
 ## 8.1 Produtos e serviços
 
@@ -315,10 +316,65 @@ destas permissões".
   30, físico 50) e a reserva em Reservas activas com ligação; separação 15, entrega a partir da posição escolhida
   (físico 35, reservado 5), libertação do resto (reservado 0) com motivo; 390 px sem deslocamento.
 
+## 8.7 Contagens e ajustes
+
+### Modelo
+
+Migração `0039_create_inventory_counts`: `stock_counts` (armazém e entidade, zona e categoria opcionais, cega, data
+prevista, série e número no início, marcas de cada passo, motivo de anulação; `CHECK`s de número/estado/anulação/
+aprovação), `stock_count_lines` (saldo único por contagem, snapshot e momento, contado da volta, volta, recontagem pedida
+e motivo, encontrado durante a contagem, motivo e justificação — `CHECK` lista de motivos e motivo ⇔ justificação),
+`stock_count_entries` (cada quantidade registada, quem e em que volta) e `stock_count_postings` (lançamentos de
+ajuste). Gatilhos: registos e lançamentos só de acréscimo; contagem e linhas fixas depois de aprovada/anulada; plano
+fixo depois do início; linhas não se apagam nem mudam de saldo depois do início.
+
+### API (`/api/v1/inventory`)
+
+- `GET|POST /counts`, `GET /counts/options` (armazéns onde gere contagens com as zonas, categorias, motivos),
+  `GET|PUT /counts/:id`, `POST /counts/:id/start|count|lines|submit|justify|recount|approve|cancel`.
+- Permissões novas: `inventory.counts.manage` e `inventory.counts.approve`.
+- Erros: `SELF_APPROVAL`, `OUT_OF_SCOPE`, `NO_SERIES`, `COUNT_OVERLAP`, `COUNT_TOO_LARGE`, `LINE_EXISTS`,
+  `NOT_COUNTED`, `NOT_JUSTIFIED`, `NO_DIFFERENCE`, `OUT_OF_PLAN`, `INVALID_STATE`, `VERSION_CONFLICT` e, na aprovação,
+  `INSUFFICIENT_STOCK`/`OVER_RESERVED` (o ajuste não cabe no saldo actual ou deixaria reservado acima do livre).
+
+### Ecrãs
+
+Inventário → Contagens e ajustes (lista com zona, cega, progresso e estado; contagem: plano com armazém, zona,
+categoria, data, descrição e "cega"; Iniciar com confirmação; grelha de linhas com o contado editável e "Guardar
+contagem (n)"; Artigo encontrado; Terminar; na revisão, sistema/diferença/movido depois para quem pode ver,
+Justificar diferenças, Pedir recontagem com escolha das linhas, Aprovar ajuste com confirmação, Anular; aviso de
+segregação a quem contou; lançamentos de ajuste com ligação aos movimentos; histórico).
+
+### Testes e evidências
+
+- Unitário `inventory_counts_domain.spec.ts` (2): diferença, repartição do ajuste (livre → quarentena → bloqueado, falta
+  não coberta), bloqueios da aprovação, quem vê o sistema, estados.
+- Funcional `inventory_counts.spec.ts` (3): validações e zona de outro armazém; plano por zona (Z1 com a posição abaixo,
+  Z2 de fora); número `IV-…1`; cega (quem conta não vê, quem aprova vê); plano fixo; movimento −5 depois do snapshot;
+  quantidade negativa recusada; submeter com linhas por contar recusado; diferença −3 e "movido depois" −5; aprovar sem
+  justificação recusado; quem conta não justifica nem aprova; motivo inválido, linha sem diferença e formulário vazio
+  recusados; aprovação ajusta 95 → 92 (filtro e Z2 intactos); movimento `ADJUSTMENT` com origem e número;
+  reconciliação; fechada não se anula e a base recusa alterar contagem, linhas, registos e lançamentos; auditoria.
+  Contagem aberta de todo o armazém; sobreposição com outra contagem; artigo encontrado (snapshot 0) e duplicado
+  recusado; recontagem só por quem aprova, com snapshot renovado (10 → 8 depois de uma saída) e volta 2; quem reconta
+  deixa de poder aprovar (`SELF_APPROVAL`); quem gere justifica numa aberta; **duas aprovações em simultâneo: uma 200,
+  outra 409, um só lançamento**; 5 registos de contagem. Categoria (só o óleo nas duas zonas); falta depois do snapshot
+  que já não cabe → `INSUFFICIENT_STOCK` sem mexer no stock; fora do âmbito 404 e lista vazia; sem série → `NO_SERIES`;
+  anulação com motivo sem ajuste; versão desactualizada → `VERSION_CONFLICT`.
+- `isolation_matrix` (contagem de outra empresa: ler, editar, iniciar, contar, acrescentar, submeter, justificar,
+  recontar, aprovar, anular → 404; lista e opções vazias; URL forjada → 403), `routes_protection`, frontend
+  `count-model.spec.ts` (3: acções por estado/direito/cega, só envia quantidades que mudam — vírgula e espaços —,
+  linhas com diferença).
+- Browser (6 passos, três execuções seguidas com o código final, sem erros na consola; dois utilizadores): o contador
+  cria o plano cego pela interface, inicia (sem coluna do sistema nem "Aprovar"), regista 47 e 10, acrescenta um artigo
+  encontrado (5) e termina; o aprovador vê −3 e +5, a aprovação sem justificação é recusada com a linha indicada, pede
+  recontagem do filtro; o contador reconta 48; o aprovador justifica as duas diferenças e aprova — saldos 48/10/5, dois
+  movimentos `ADJUSTMENT` com o número; depois de aprovada o contador vê o sistema e nada é editável; 390 px sem
+  deslocamento horizontal.
+
 ## Pendências
 
-- 8.7 a 8.12 ( movimentos, transferências, reservas, contagens, lotes/FEFO, valorização, integrações,
-  alertas, QA).
+- 8.8 a 8.12 (lotes/FEFO, valorização, integrações, alertas, QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
 - 8.2: o acesso `OPERATE` só passa a ter efeito nas operações de stock (8.4 em diante); mudar a entidade legal de um
@@ -331,3 +387,7 @@ destas permissões".
   transferência expede-se de uma vez (o que não foi separado deixa de seguir); recepções podem ser várias.
 - 8.6: as requisições não escolhem lote/série (o stock por lote chega no 8.8); sem aprovação em vários níveis nem
   limites por valor (o custo chega no 8.9).
+- 8.7: as contagens não bloqueiam movimentos (o ajuste é relativo ao snapshot; a revisão mostra o que mudou depois);
+  contagem por lote/série chega com o 8.8 e o valor das diferenças com o 8.9; sem contagem por dispositivo/código de
+  barras nem impressão de folhas de contagem; a contagem cega esconde o sistema no ecrã/API da contagem, não na
+  consulta de saldos (separação de perfis decidida pela empresa).

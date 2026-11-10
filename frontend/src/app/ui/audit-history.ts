@@ -104,6 +104,13 @@ export class AuditHistory {
       picked: 'Separado',
       dispatched: 'Expedido',
       received: 'Recebido',
+      issued: 'Entregue',
+      released: 'Libertado',
+      started: 'Iniciado',
+      counted: 'Contado',
+      line_added: 'Artigo acrescentado',
+      justified: 'Justificado',
+      recount_requested: 'Recontagem pedida',
     };
     return labels[verb] ?? action;
   }

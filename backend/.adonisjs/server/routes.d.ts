@@ -416,6 +416,19 @@ export type ScannedRoutes = {
     'requisitions.release': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'requisitions.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'requisitions.reservations': { paramsTuple?: []; params?: {} }
+    'counts.index': { paramsTuple?: []; params?: {} }
+    'counts.options': { paramsTuple?: []; params?: {} }
+    'counts.store': { paramsTuple?: []; params?: {} }
+    'counts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.start': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.count': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.add_line': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.justify': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.recount': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -595,6 +608,9 @@ export type ScannedRoutes = {
     'requisitions.options': { paramsTuple?: []; params?: {} }
     'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'requisitions.reservations': { paramsTuple?: []; params?: {} }
+    'counts.index': { paramsTuple?: []; params?: {} }
+    'counts.options': { paramsTuple?: []; params?: {} }
+    'counts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -762,6 +778,9 @@ export type ScannedRoutes = {
     'requisitions.options': { paramsTuple?: []; params?: {} }
     'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'requisitions.reservations': { paramsTuple?: []; params?: {} }
+    'counts.index': { paramsTuple?: []; params?: {} }
+    'counts.options': { paramsTuple?: []; params?: {} }
+    'counts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -956,6 +975,15 @@ export type ScannedRoutes = {
     'requisitions.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'requisitions.release': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'requisitions.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.store': { paramsTuple?: []; params?: {} }
+    'counts.start': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.count': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.add_line': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.justify': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.recount': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1044,6 +1072,7 @@ export type ScannedRoutes = {
     'stock_documents.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'transfers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

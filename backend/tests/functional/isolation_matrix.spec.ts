@@ -663,8 +663,15 @@ async function populate(client: any) {
       lines: [{ productId: product.id, variantId: variant.id, uomId: uom.id, quantity: '2' }],
     })
   )
+  const stockCount = ok(
+    await as(client, s).post('/api/v1/inventory/counts', {
+      warehouseId: warehouse.id,
+      description: 'Contagem A',
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    stockCount,
     stockRequisition,
     stockTransfer,
     stockDocument,
@@ -1152,6 +1159,41 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'anular documento alheio',
         B.post(`/api/v1/inventory/documents/${a.stockDocument.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['GET contagem', B.get(`/api/v1/inventory/counts/${a.stockCount.id}`)],
+      [
+        'PUT contagem',
+        B.put(`/api/v1/inventory/counts/${a.stockCount.id}`, { ...v, description: 'x' }),
+      ],
+      ['iniciar contagem alheia', B.post(`/api/v1/inventory/counts/${a.stockCount.id}/start`, v)],
+      [
+        'contar contagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/count`, { ...v, lines: [] }),
+      ],
+      [
+        'acrescentar linha a contagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/lines`, {
+          ...v,
+          productId: a.product.id,
+        }),
+      ],
+      ['submeter contagem alheia', B.post(`/api/v1/inventory/counts/${a.stockCount.id}/submit`, v)],
+      [
+        'justificar contagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/justify`, { ...v, lines: [] }),
+      ],
+      [
+        'pedir recontagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/recount`, {
+          ...v,
+          reason: 'x',
+          lineIds: [],
+        }),
+      ],
+      ['aprovar contagem alheia', B.post(`/api/v1/inventory/counts/${a.stockCount.id}/approve`, v)],
+      [
+        'anular contagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/cancel`, { ...v, reason: 'x' }),
       ],
       ['GET requisição', B.get(`/api/v1/inventory/requisitions/${a.stockRequisition.id}`)],
       [
@@ -1793,6 +1835,11 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/inventory/transfers')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/requisitions')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/reservations')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/counts')).body().data, 0)
+    assert.notInclude(
+      JSON.stringify((await B.get('/api/v1/inventory/counts/options')).body().data),
+      a.warehouse.id
+    )
     assert.notInclude(
       JSON.stringify((await B.get('/api/v1/inventory/requisitions/options')).body().data),
       a.warehouse.id
@@ -1905,6 +1952,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/transfers',
       '/api/v1/inventory/requisitions',
       '/api/v1/inventory/reservations',
+      '/api/v1/inventory/counts',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',
       '/api/v1/hr/team',

@@ -4054,6 +4054,162 @@ export class StockBalanceSchema extends BaseModel {
   declare warehouseId: string
 }
 
+export class StockCountEntrySchema extends BaseModel {
+  static $columns = ['countId', 'createdAt', 'createdBy', 'id', 'lineId', 'quantity', 'round', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StockCountEntrySchema.$columns
+  @column()
+  declare countId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare round: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StockCountLineSchema extends BaseModel {
+  static $columns = ['addedDuringCount', 'countId', 'countedQuantity', 'createdAt', 'createdBy', 'id', 'justification', 'lineNo', 'locationId', 'productId', 'reasonCode', 'recountReason', 'recountRequested', 'round', 'snapshotAt', 'snapshotQuantity', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
+  $columns = StockCountLineSchema.$columns
+  @column()
+  declare addedDuringCount: boolean
+  @column()
+  declare countId: string
+  @column()
+  declare countedQuantity: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare justification: string | null
+  @column()
+  declare lineNo: number
+  @column()
+  declare locationId: string | null
+  @column()
+  declare productId: string
+  @column()
+  declare reasonCode: string | null
+  @column()
+  declare recountReason: string | null
+  @column()
+  declare recountRequested: boolean
+  @column()
+  declare round: number
+  @column.dateTime()
+  declare snapshotAt: DateTime
+  @column()
+  declare snapshotQuantity: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
+export class StockCountPostingSchema extends BaseModel {
+  static $columns = ['countId', 'createdAt', 'createdBy', 'id', 'postingId', 'seq', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StockCountPostingSchema.$columns
+  @column()
+  declare countId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare postingId: string
+  @column()
+  declare seq: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StockCountSchema extends BaseModel {
+  static $columns = ['approvedAt', 'approvedBy', 'blind', 'cancelReason', 'categoryId', 'createdAt', 'createdBy', 'description', 'id', 'legalEntityId', 'locationId', 'notes', 'number', 'plannedDate', 'seriesId', 'startedAt', 'startedBy', 'status', 'submittedAt', 'submittedBy', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = StockCountSchema.$columns
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare blind: boolean
+  @column()
+  declare cancelReason: string | null
+  @column()
+  declare categoryId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare locationId: string | null
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column.date()
+  declare plannedDate: DateTime | null
+  @column()
+  declare seriesId: string | null
+  @column.dateTime()
+  declare startedAt: DateTime | null
+  @column()
+  declare startedBy: string | null
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
 export class StockDocumentConfirmationLineSchema extends BaseModel {
   static $columns = ['baseQuantity', 'confirmationId', 'createdAt', 'createdBy', 'id', 'lineId', 'quantity', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = StockDocumentConfirmationLineSchema.$columns

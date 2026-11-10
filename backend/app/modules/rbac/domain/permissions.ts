@@ -440,6 +440,18 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Separar, entregar (consumo) e libertar requisições internas nos armazéns do âmbito atribuído.',
   },
   {
+    code: 'inventory.counts.manage',
+    module: 'inventory',
+    description:
+      'Planear, iniciar e registar contagens físicas, acrescentar artigos encontrados e submeter para revisão nos armazéns do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.counts.approve',
+    module: 'inventory',
+    description:
+      'Rever contagens (ver o sistema nas cegas), justificar diferenças, pedir recontagem e aprovar o ajuste de stock nos armazéns do âmbito atribuído.',
+  },
+  {
     code: 'inventory.settings',
     module: 'inventory',
     description:
