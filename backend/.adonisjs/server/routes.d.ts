@@ -291,6 +291,13 @@ export type ScannedRoutes = {
     'training.case_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'training.review_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'training.close_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'portal.me': { paramsTuple?: []; params?: {} }
+    'portal.update_me': { paramsTuple?: []; params?: {} }
+    'portal.team': { paramsTuple?: []; params?: {} }
+    'portal.headcount': { paramsTuple?: []; params?: {} }
+    'portal.turnover': { paramsTuple?: []; params?: {} }
+    'portal.leave': { paramsTuple?: []; params?: {} }
+    'portal.payroll': { paramsTuple?: []; params?: {} }
     'terminations.index': { paramsTuple?: []; params?: {} }
     'terminations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'terminations.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -488,6 +495,12 @@ export type ScannedRoutes = {
     'training.employee_training': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'training.cases': { paramsTuple?: []; params?: {} }
     'training.case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'portal.me': { paramsTuple?: []; params?: {} }
+    'portal.team': { paramsTuple?: []; params?: {} }
+    'portal.headcount': { paramsTuple?: []; params?: {} }
+    'portal.turnover': { paramsTuple?: []; params?: {} }
+    'portal.leave': { paramsTuple?: []; params?: {} }
+    'portal.payroll': { paramsTuple?: []; params?: {} }
     'terminations.index': { paramsTuple?: []; params?: {} }
     'terminations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -629,6 +642,12 @@ export type ScannedRoutes = {
     'training.employee_training': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'training.cases': { paramsTuple?: []; params?: {} }
     'training.case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'portal.me': { paramsTuple?: []; params?: {} }
+    'portal.team': { paramsTuple?: []; params?: {} }
+    'portal.headcount': { paramsTuple?: []; params?: {} }
+    'portal.turnover': { paramsTuple?: []; params?: {} }
+    'portal.leave': { paramsTuple?: []; params?: {} }
+    'portal.payroll': { paramsTuple?: []; params?: {} }
     'terminations.index': { paramsTuple?: []; params?: {} }
     'terminations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -865,6 +884,7 @@ export type ScannedRoutes = {
     'payroll.update_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'training.update_competency': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'training.update_course': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'portal.update_me': { paramsTuple?: []; params?: {} }
     'terminations.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'terminations.update_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
     'terminations.set_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

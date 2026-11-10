@@ -362,6 +362,12 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Aprovar ou devolver cessações no âmbito atribuído (nunca as que preparou ou submeteu); a aprovação termina o contrato.',
   },
   {
+    code: 'hr.reports.read',
+    module: 'hr',
+    description:
+      'Ver relatórios de RH (efectivos, rotatividade, férias) no âmbito atribuído; a folha salarial exige hr.payroll.read.',
+  },
+  {
     code: 'hr.settings',
     module: 'hr',
     description:

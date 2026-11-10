@@ -1527,6 +1527,16 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/hr/training/courses')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/discipline/cases')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/terminations')).body().data, 0)
+    const hc = (await B.get('/api/v1/hr/reports/headcount')).body().data
+    assert.notInclude(JSON.stringify(hc), a.le.id)
+    assert.notInclude(
+      JSON.stringify((await B.get('/api/v1/hr/reports/leave?year=2026')).body().data),
+      'Colaborador A'
+    )
+    assert.equal(
+      (await B.get(`/api/v1/hr/reports/payroll?year=2026&legalEntityId=${a.le.id}`)).status(),
+      404
+    )
     assert.lengthOf((await B.get('/api/v1/hr/payroll/rule-sets')).body().data, 0)
     for (const url of [
       '/api/v1/hr/leave/requests',
@@ -1602,6 +1612,10 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/hr/training/sessions',
       '/api/v1/hr/discipline/cases',
       '/api/v1/hr/terminations',
+      '/api/v1/hr/me',
+      '/api/v1/hr/team',
+      '/api/v1/hr/reports/headcount',
+      '/api/v1/hr/reports/payroll?year=2026',
       `/api/v1/hr/employees/${a.employee.id}/loans`,
     ]) {
       const r = await spoof.get(url)

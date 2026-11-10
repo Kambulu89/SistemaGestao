@@ -264,6 +264,20 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
   'PATCH /api/v1/hr/termination-tasks/:id':
     'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'GET /api/v1/hr/me':
+    'só a ficha ligada à conta do actor (e a equipa de que é chefia), resolvida no servidor; sem dados de outros fora disso',
+  'PATCH /api/v1/hr/me':
+    'só a ficha ligada à conta do actor (e a equipa de que é chefia), resolvida no servidor; sem dados de outros fora disso',
+  'GET /api/v1/hr/team':
+    'só a ficha ligada à conta do actor (e a equipa de que é chefia), resolvida no servidor; sem dados de outros fora disso',
+  'GET /api/v1/hr/reports/headcount':
+    'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
+  'GET /api/v1/hr/reports/turnover':
+    'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
+  'GET /api/v1/hr/reports/leave':
+    'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
+  'GET /api/v1/hr/reports/payroll':
+    'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
   'GET /api/v1/hr/payroll/periods':
     'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
   'GET /api/v1/hr/payroll/runs':

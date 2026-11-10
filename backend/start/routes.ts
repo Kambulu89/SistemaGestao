@@ -39,6 +39,7 @@ const LoansController = () => import('#modules/hr/http/loans_controller')
 const PayrollController = () => import('#modules/hr/http/payroll_controller')
 const TrainingController = () => import('#modules/hr/http/training_controller')
 const TerminationsController = () => import('#modules/hr/http/terminations_controller')
+const PortalController = () => import('#modules/hr/http/portal_controller')
 
 router
   .group(() => {
@@ -711,6 +712,13 @@ router
                 router.post('discipline/cases/:id/events', [TrainingController, 'caseEvent'])
                 router.post('discipline/cases/:id/review', [TrainingController, 'reviewCase'])
                 router.post('discipline/cases/:id/close', [TrainingController, 'closeCase'])
+                router.get('me', [PortalController, 'me'])
+                router.patch('me', [PortalController, 'updateMe'])
+                router.get('team', [PortalController, 'team'])
+                router.get('reports/headcount', [PortalController, 'headcount'])
+                router.get('reports/turnover', [PortalController, 'turnover'])
+                router.get('reports/leave', [PortalController, 'leave'])
+                router.get('reports/payroll', [PortalController, 'payroll'])
                 router.get('terminations', [TerminationsController, 'index'])
                 router.get('terminations/:id', [TerminationsController, 'show'])
                 router.post('employees/:id/terminations', [TerminationsController, 'store'])

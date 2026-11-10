@@ -148,6 +148,23 @@ export const HR_ROUTES: Routes = [
     ],
   },
   {
+    path: 'eu',
+    title: 'O meu espaço',
+    loadComponent: () => import('./my-space').then((m) => m.MySpacePage),
+  },
+  {
+    path: 'equipa',
+    title: 'A minha equipa',
+    loadComponent: () => import('./my-team').then((m) => m.MyTeamPage),
+  },
+  {
+    path: 'relatorios',
+    title: 'Relatórios de RH',
+    canActivate: [accessGuard],
+    data: { permission: 'hr.reports.read', anyScope: true },
+    loadComponent: () => import('./hr-reports').then((m) => m.HrReportsPage),
+  },
+  {
     path: 'recibos',
     title: 'Os meus recibos',
     loadComponent: () => import('./my-payslips').then((m) => m.MyPayslips),

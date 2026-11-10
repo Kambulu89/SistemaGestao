@@ -41,9 +41,11 @@ describe('colaborador: envio da ficha', () => {
       true,
       false,
     );
-    // Sem permissões de RH ficam as áreas do próprio: ausências, recibos e entrevistas atribuídas.
+    // Sem permissões de RH ficam as áreas do próprio: o meu espaço, a equipa, ausências, recibos e entrevistas.
     expect(none.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label)).toEqual([
       'Férias e ausências',
+      'O meu espaço',
+      'A minha equipa',
       'Os meus recibos',
       'As minhas entrevistas',
     ]);
@@ -57,6 +59,8 @@ describe('colaborador: envio da ficha', () => {
       recruiter.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
     ).toEqual([
       'Férias e ausências',
+      'O meu espaço',
+      'A minha equipa',
       'Os meus recibos',
       'Vagas',
       'Candidatos',
@@ -101,6 +105,15 @@ describe('colaborador: envio da ficha', () => {
     expect(
       discipline.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
     ).toEqual(expect.arrayContaining(['Formação', 'Processos disciplinares', 'Cessações']));
+    const reports = visibleNavigation(
+      (p, any) => (any ? p === 'hr.reports.read' : false),
+      (f) => f === 'hr',
+      true,
+      false,
+    );
+    expect(
+      reports.find((g) => g.label === 'Pessoas e Talento')?.items.map((i) => i.label),
+    ).toContain('Relatórios de RH');
     const noFeature = visibleNavigation(
       () => true,
       () => false,

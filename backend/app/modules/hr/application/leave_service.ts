@@ -993,6 +993,42 @@ function requestView(r: any, confidentialVisible: boolean) {
   }
 }
 
+/**
+ * Ausências de uma equipa (portal da chefia, 7.12): pedidos pendentes ou aprovados que tocam o intervalo, com o tipo
+ * confidencial mascarado para quem não vê dados reservados, e se o actor pode decidir cada pedido pendente.
+ */
+export async function teamLeave(
+  scope: TenantScope,
+  employeeIds: string[],
+  from: string,
+  to: string
+) {
+  if (!employeeIds.length) return []
+  const s = await leaveScopes(scope)
+  const r = await scope.trx.rawQuery(
+    `${R_SELECT} where r.tenant_id = ? and r.employee_id = any(?::uuid[])
+       and (r.status = 'PENDING' or (r.status = 'APPROVED' and r.end_date >= ?::date and r.start_date <= ?::date))
+     order by r.start_date, e.code`,
+    [scope.context.tenantId, employeeIds, from, to] as never[]
+  )
+  const out = []
+  for (const row of r.rows as any[]) {
+    const e = {
+      membership_id: row.employee_membership_id,
+      manager_id: row.manager_id,
+      legal_entity_id: row.legal_entity_id,
+      branch_id: row.branch_id,
+      department_id: row.department_id,
+    }
+    const a = await accessTo(scope, s, e)
+    out.push({
+      ...requestView(row, a.confidential),
+      canDecide: row.status === 'PENDING' && a.approve,
+    })
+  }
+  return out
+}
+
 async function findRequest(scope: TenantScope, id: string, lock = false) {
   if (!isUuid(id)) return null
   const r = await scope.trx.rawQuery(

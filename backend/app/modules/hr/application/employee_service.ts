@@ -80,7 +80,7 @@ function values(r: any): Record<string, unknown> {
 }
 
 /** Vista da ficha: os campos sensíveis vêm a `null` (e `sensitiveVisible: false`) para quem não os pode ver. */
-function view(r: any, sensitive: boolean) {
+export function employeeView(r: any, sensitive: boolean) {
   const v = values(r)
   if (!sensitive) for (const key of SENSITIVE_KEYS) v[key] = null
   return {
@@ -228,7 +228,7 @@ export class EmployeeService {
       )
       return {
         // Nas listas nunca vão dados sensíveis, mesmo para quem os pode ver na ficha.
-        items: (rows.rows as any[]).map((r) => view(r, false)),
+        items: (rows.rows as any[]).map((r) => employeeView(r, false)),
         total: (count.rows[0] as { n: number }).n,
       }
     })
@@ -247,7 +247,7 @@ export class EmployeeService {
         [context.tenantId, id]
       )
       return {
-        ...view(row, covers(s.sensitive, place, me)),
+        ...employeeView(row, covers(s.sensitive, place, me)),
         directReports: (reports.rows[0] as { n: number }).n,
         access: {
           manage: covers({ ...s.manage, own: false }, place, me),
@@ -332,7 +332,7 @@ export class EmployeeService {
       changes: employeeChanges({}, v),
     })
     const row = await findRow(scope, id)
-    return view(row, covers(s.sensitive, placementOf(row), context.membershipId))
+    return employeeView(row, covers(s.sensitive, placementOf(row), context.membershipId))
   }
 
   update(
@@ -403,7 +403,7 @@ export class EmployeeService {
                 : 'Mude a colocação por um movimento de carreira (transferência, promoção ou alteração).',
           }))
         )
-      if (changed.length === 0) return view(row, covers(s.sensitive, oldPlace, me))
+      if (changed.length === 0) return employeeView(row, covers(s.sensitive, oldPlace, me))
       const sets = changed.map(
         (k) => `${{ ...GENERAL_FIELDS, ...SENSITIVE_FIELDS }[k as 'code']} = ?`
       )
@@ -423,7 +423,7 @@ export class EmployeeService {
         changes: employeeChanges(before, Object.fromEntries(changed.map((k) => [k, v[k]]))),
       })
       const fresh = await findRow(scope, id)
-      return view(fresh, covers(s.sensitive, placementOf(fresh), me))
+      return employeeView(fresh, covers(s.sensitive, placementOf(fresh), me))
     })
   }
 
@@ -465,7 +465,7 @@ export class EmployeeService {
         metadata: reason ? { reason } : null,
       })
       const fresh = await findRow(scope, id)
-      return view(fresh, covers(s.sensitive, placementOf(fresh), me))
+      return employeeView(fresh, covers(s.sensitive, placementOf(fresh), me))
     })
   }
 

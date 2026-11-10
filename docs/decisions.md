@@ -394,3 +394,22 @@ acesso só fica feito com a conta suspensa ou revogada (em Membros, com a permis
 sozinho) e os empréstimos só sem prestações por liquidar. Concluir exige a checklist tratada e o lote fechado; fechado ≠
 pago (D-032): o pagamento do líquido segue no processamento.
 
+## D-035 Portais e relatórios de RH: self-service da própria ficha, chefia pela hierarquia, relatórios só agregados (aceite)
+
+**O meu espaço** (`GET|PATCH /hr/me`) é a ficha ligada à conta do actor, sem permissão adicional: dados próprios (os
+pessoais incluídos; IBAN mascarado), contratos e condições em vigor, empréstimos e certificados; férias e recibos vêm
+dos endpoints próprios já existentes. O próprio só altera contactos pessoais e de emergência (lista fechada); o resto
+(identificação, IBAN, contrato) é dos RH (`NOT_SELF_EDITABLE`). A auditoria guarda os nomes dos campos, nunca os valores.
+
+**A minha equipa** (`GET /hr/team`) deriva da hierarquia da ficha (`manager_id`, até 5 níveis), não de uma permissão:
+quem é chefia vê dados básicos da equipa (cargo, departamento, estado), ausências pendentes e aprovadas nos próximos 30
+dias com tipos confidenciais mascarados (regra do 7.4), alertas a 60 dias (fim de contrato, fim do período experimental,
+certificados) e os pedidos pendentes com a indicação de quais pode decidir — a decisão continua no endpoint e nas regras
+do 7.4 (chefia directa ou `hr.leave.approve` no âmbito). Nunca salários nem dados pessoais da equipa.
+
+**Relatórios** (`/hr/reports/*`): efectivos numa data (pela colocação com vigência nessa data e pelo contrato em vigor),
+rotatividade mensal e anual (saídas = cessações aprovadas pelo último dia; taxa = saídas / média dos efectivos,
+centésimas exactas sem `float`), férias do ano por colaborador e departamento com `hr.reports.read` no âmbito da
+colocação actual; folha salarial, IRT, INSS e custo para a empresa só de lotes fechados e só nas entidades legais com
+`hr.payroll.read`. Os relatórios devolvem agregados e totais; a exportação CSV é feita no browser a partir do resultado.
+

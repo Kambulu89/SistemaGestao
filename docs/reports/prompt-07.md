@@ -1,7 +1,7 @@
 # Relatório — Prompt 07 (recursos humanos)
 
-Estado: **7.1 a 7.11 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 7.12 e 7.13 seguem, um de
-cada vez. Decisões D-024 a D-034.
+Estado: **7.1 a 7.12 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Falta o bloco 7.13 (QA e Git).
+Decisões D-024 a D-035.
 
 Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
 terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
@@ -21,6 +21,7 @@ terão de ser configuradas pela empresa e confirmadas na legislação em vigor q
 | 7.9 Recibos e pagamento       | Contabilidade com motor de eventos (6.3); sem Finanças          | Obrigações do fecho (líquido, IRT, INSS, descontos), pagamentos parciais só de acréscimo (fechado ≠ pago), eventos PAYROLL únicos para a contabilidade, recibos PDF privados (o próprio ou quem processa), "Os meus recibos", contrato de obrigações para Finanças                                    | Feito  |
 | 7.10 Formação/processos       | Nada                                                            | Catálogo (competências, cursos), sessões com capacidade e custo, resultados, conclusão com competências e certificados, custos por curso/departamento; processos disciplinares com permissões próprias, cronologia só de acréscimo, defesa antes da sanção, leitura auditada                          | Feito  |
 | 7.11 Cessação                 | Contrato com terminar (7.3), férias (7.4), lotes EXTRA (7.7)    | Processo com motivo, aviso com fonte, indemnização só se aplicável com base legal, liquidação em linhas com componente, aprovação segregada com efeitos (contrato, colocação, estado, férias), lote EXTRA da liquidação, checklist de saída verificada | Feito  |
+| 7.12 Portais e relatórios     | Endpoints próprios de férias e recibos                          | O meu espaço (ficha, contratos, férias, recibos, formação, empréstimos; só contactos editáveis), a minha equipa (hierarquia, ausências mascaradas, alertas, pedidos a decidir), relatórios de efectivos, rotatividade, férias e folha/IRT/INSS/custos com CSV | Feito  |
 
 ## Modelo
 
@@ -182,6 +183,14 @@ Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANC
   `INDEMNITY_NOT_APPLICABLE`, `INDEMNITY_LINES`, `KIND_MISMATCH`, `AMOUNT_MISMATCH`, `CASE_NOT_DECIDED`, `LEAVE_OPEN`,
   `LOAN_REQUEST_OPEN`, `PROCESSED_AFTER`, `TASKS_PENDING`, `SETTLEMENT_OPEN`, `ACCESS_ACTIVE`, `LOANS_OUTSTANDING`.
 
+### 7.12 Portais e relatórios
+
+- Sem migração. API: `GET|PATCH /hr/me`, `GET /hr/team`, `GET /hr/reports/headcount?date=`,
+  `GET /hr/reports/turnover|leave|payroll?year=` (todos com `legalEntityId` opcional).
+- Permissão nova: `hr.reports.read`. Domínio puro `hr/domain/reports.ts` (em funções, colocação e contrato numa data,
+  efectivos, rotatividade, percentagem exacta).
+- Erros: `NOT_LINKED`, `NOT_SELF_EDITABLE`, `OUT_OF_SCOPE`.
+
 ## Ecrãs
 
 Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
@@ -235,6 +244,17 @@ Cessação (7.11):
   valor unitário calculado sem `float`, totais), apoio ao cálculo (antiguidade, aviso, férias, sugestão proporcional,
   processamentos pendentes, empréstimos, subordinados), checklist com progresso, documentos, editar/submeter/aprovar/
   devolver/cancelar/gerar lote/concluir.
+
+Portais e relatórios (7.12):
+
+- O meu espaço (/rh/eu): indicadores (férias disponíveis, pedidos pendentes, recibos, certificados), os meus dados
+  com "Actualizar contactos", contrato em vigor, as minhas ausências com "Pedir ausência", últimos recibos com PDF,
+  histórico de contratos, certificados e empréstimos.
+- A minha equipa (/rh/equipa): indicadores, pessoas (com quem chefia abaixo), presença hoje, próxima ausência,
+  alertas, pedidos pendentes com "Decidir" só nos que pode decidir, ausências até 30 dias.
+- Relatórios de RH (/rh/relatorios): separadores Efectivos, Rotatividade, Férias e Folha salarial (este com
+  `hr.payroll.read`), com gráficos de barras (no máximo 8, resto em "Outros"), tabelas, exportação CSV e impressão;
+  a entidade legal da barra superior filtra.
 
 Recibos e pagamento (7.9):
 
@@ -462,9 +482,24 @@ Testes do 7.11:
   "Aprovar"); o aprovador aprova; concluir recusado com os motivos; lote gerado, calculado, aprovado e fechado; checklist
   e conclusão; ficha sem "Iniciar cessação"; 390 px sem deslocamento.
 
+Testes do 7.12:
+
+- Backend funcional `hr_portal.spec.ts` (3 testes): o meu espaço (dados próprios, IBAN mascarado, contrato, campo não
+  editável, email inválido, conflito de versão, auditoria só com nomes de campos, conta sem ficha); a minha equipa
+  (dois níveis, ausente hoje com tipo confidencial mascarado, quem decide cada pedido, alerta de fim de contrato, nada de
+  salários nem dados pessoais, a chefia intermédia só vê a sua equipa); relatórios (sem permissão 403, efectivos 4 → 3
+  após uma cessação, rotatividade de janeiro 25,00 %, âmbito por departamento, folha só com `hr.payroll.read`, lote
+  fechado com bruto 800 000, INSS 24 000 + 64 000 e IRT 37 600, entidade alheia 404).
+- Unitário `hr_reports_domain.spec.ts` (3 testes); `isolation_matrix` (relatórios e portais de outra empresa) e
+  `routes_protection`; frontend `hr/portal-model.spec.ts` (3 testes) e navegação.
+- Browser (5 passos, dois utilizadores, sem erros na consola): o meu espaço com contrato e ausência, contactos com erro
+  de email e depois gravados; a chefia vê a equipa, o pedido com "Decidir" (abre o pedido) e nenhum salário; relatórios
+  com CSV verificado, rotatividade, férias e folha; 390 px sem deslocamento em /rh/eu e /rh/relatorios (o E2E levou a
+  limitar as barras e a corrigir a largura mínima dos cartões).
+
 ## Pendências
 
-- 7.12 e 7.13 (portais e relatórios, QA).
+- 7.13 (QA e Git).
 - Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
 - Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
 - 6.9 SAF-T continua bloqueado pela especificação oficial.
@@ -492,4 +527,8 @@ Testes do 7.11:
   indicar pela empresa em cada processo (o sistema não os calcula); declaração/certificado de trabalho em PDF e
   notificação ao trabalhador ficam para os portais (7.12); suspender a conta continua em Membros (permissão própria);
   o desconto do saldo de empréstimos na liquidação é registado à mão (linha de desconto + liquidação única no 7.6).
+- Portais e relatórios: a página de relatórios exige `hr.reports.read` (quem só tem `hr.payroll.read` usa o
+  processamento); relatórios por departamento usam a colocação com vigência, mas o âmbito de acesso é o da colocação
+  actual; sem pedido de alteração de dados (IBAN, identificação) pelo próprio com aprovação, nem calendário gráfico da
+  equipa; declaração de trabalho em PDF ainda por fazer.
 
