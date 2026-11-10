@@ -128,13 +128,18 @@ async function lineRows(scope: TenantScope, id: string) {
 async function physicalNow(
   scope: TenantScope,
   warehouseId: string,
-  keys: { location_id: string | null; product_id: string; variant_id: string | null }[]
+  keys: {
+    location_id: string | null
+    product_id: string
+    variant_id: string | null
+    lot_id?: string | null
+  }[]
 ) {
   const out = new Map<string, { unrestricted: bigint; blocked: bigint; quarantine: bigint }>()
   if (!keys.length) return out
   const pids = [...new Set(keys.map((k) => k.product_id))]
   const r = await scope.trx.rawQuery(
-    `select location_id, product_id, variant_id, qty_unrestricted, qty_blocked, qty_quarantine from stock_balances
+    `select location_id, product_id, variant_id, lot_id, qty_unrestricted, qty_blocked, qty_quarantine from stock_balances
       where tenant_id = ? and warehouse_id = ? and product_id = any(?::uuid[])`,
     [scope.context.tenantId, warehouseId, pids] as never[]
   )
@@ -146,8 +151,13 @@ async function physicalNow(
     })
   return out
 }
-const keyOf = (l: { location_id: string | null; product_id: string; variant_id: string | null }) =>
-  `${l.location_id ?? ''}|${l.product_id}|${l.variant_id ?? ''}`
+/** Saldo contado: localização, produto, variante e lote (8.8). */
+const keyOf = (l: {
+  location_id: string | null
+  product_id: string
+  variant_id: string | null
+  lot_id?: string | null
+}) => `${l.location_id ?? ''}|${l.product_id}|${l.variant_id ?? ''}|${l.lot_id ?? ''}`
 const physical = (q?: { unrestricted: bigint; blocked: bigint; quarantine: bigint }) =>
   q ? q.unrestricted + q.blocked + q.quarantine : 0n
 
@@ -251,6 +261,7 @@ async function overlapCheck(scope: TenantScope, c: any) {
     `select o.number from stock_count_lines a
        join stock_count_lines b on b.tenant_id = a.tenant_id and b.count_id <> a.count_id and b.product_id = a.product_id
         and b.location_id is not distinct from a.location_id and b.variant_id is not distinct from a.variant_id
+        and b.lot_id is not distinct from a.lot_id
        join stock_counts o on o.tenant_id = b.tenant_id and o.id = b.count_id
       where a.tenant_id = ? and a.count_id = ? and o.warehouse_id = ? and o.status in ('COUNTING', 'REVIEW')
       limit 1`,
@@ -292,8 +303,10 @@ async function view(scope: TenantScope, id: string) {
   const book = seesBook({ blind: x.blind, status: x.status }, g.approve)
   const ls = await scope.trx.rawQuery(
     `select l.*, p.sku, p.name as product_name, v.sku as variant_sku, u.code as uom_code, u.decimals,
-        loc.path_code, (select count(*)::int from stock_count_entries e where e.tenant_id = l.tenant_id and e.line_id = l.id) as entry_count
+        loc.path_code, lt.code as lot_code, lt.expiry_date::text as lot_expiry, p.track_lots, p.track_serials,
+        (select count(*)::int from stock_count_entries e where e.tenant_id = l.tenant_id and e.line_id = l.id) as entry_count
        from stock_count_lines l
+       left join stock_lots lt on lt.tenant_id = l.tenant_id and lt.id = l.lot_id
        join products p on p.tenant_id = l.tenant_id and p.id = l.product_id
        join uoms u on u.tenant_id = p.tenant_id and u.id = p.base_uom_id
        left join product_variants v on v.tenant_id = l.tenant_id and v.id = l.variant_id
@@ -326,6 +339,15 @@ async function view(scope: TenantScope, id: string) {
         : null,
       product: { id: l.product_id as string, sku: l.sku as string, name: l.product_name as string },
       variant: l.variant_id ? { id: l.variant_id as string, sku: l.variant_sku as string } : null,
+      lot: l.lot_id
+        ? {
+            id: l.lot_id as string,
+            code: l.lot_code as string,
+            expiryDate: (l.lot_expiry as string) ?? null,
+          }
+        : null,
+      tracksLots: Boolean(l.track_lots),
+      tracksSerials: Boolean(l.track_serials),
       uom: l.uom_code as string,
       decimals: Number(l.decimals),
       countedQuantity: countedQ === null ? null : txt(countedQ),
@@ -570,14 +592,15 @@ export class CountService {
         params.push(t, c.category_id, t)
       }
       const snap = await scope.trx.rawQuery(
-        `select b.location_id, b.product_id, b.variant_id,
+        `select b.location_id, b.product_id, b.variant_id, b.lot_id,
             (b.qty_unrestricted + b.qty_blocked + b.qty_quarantine) as phys
            from stock_balances b
            join products p on p.tenant_id = b.tenant_id and p.id = b.product_id
            left join warehouse_locations loc on loc.tenant_id = b.tenant_id and loc.id = b.location_id
            left join product_variants v on v.tenant_id = b.tenant_id and v.id = b.variant_id
+           left join stock_lots lt on lt.tenant_id = b.tenant_id and lt.id = b.lot_id
           where ${where.join(' and ')}
-          order by loc.path_code nulls first, p.sku, v.sku nulls first`,
+          order by loc.path_code nulls first, p.sku, v.sku nulls first, lt.expiry_date nulls last, lt.code`,
         params as never[]
       )
       const rows = snap.rows as any[]
@@ -613,6 +636,7 @@ export class CountService {
             b.location_id,
             b.product_id,
             b.variant_id,
+            b.lot_id,
             txt(dec(b.phys)),
             context.userId,
             context.userId
@@ -620,8 +644,8 @@ export class CountService {
         )
         await scope.trx.rawQuery(
           `insert into stock_count_lines (tenant_id, count_id, line_no, warehouse_id, location_id, product_id, variant_id,
-              snapshot_quantity, snapshot_at, created_by, updated_by)
-           values ${chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, now(), ?, ?)').join(', ')}`,
+              lot_id, snapshot_quantity, snapshot_at, created_by, updated_by)
+           values ${chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, now(), ?, ?)').join(', ')}`,
           values as never[]
         )
       }
@@ -727,7 +751,7 @@ export class CountService {
       const p = isUuid(raw?.productId)
         ? ((
             await scope.trx.rawQuery(
-              `select p.id, p.sku, p.product_type,
+              `select p.id, p.sku, p.product_type, p.track_lots,
                   exists (select 1 from product_variants v where v.tenant_id = p.tenant_id and v.product_id = p.id) as has_variants
                  from products p where p.tenant_id = ? and p.id = ?`,
               [t, raw.productId]
@@ -806,32 +830,66 @@ export class CountService {
           code: 'REQUIRED',
           message: 'Indique a localização (zona do plano).',
         })
+      // Lote (8.8): um lote existente deste produto/variante; um lote novo entra no ajuste pelo código.
+      let lotId: string | null = null
+      if (p?.track_lots) {
+        if (raw?.lotId) {
+          const lt = isUuid(raw.lotId)
+            ? (
+                await scope.trx.rawQuery(
+                  'select id from stock_lots where tenant_id = ? and product_id = ? and variant_id is not distinct from ? and id = ?',
+                  [t, p.id, variantId, raw.lotId] as never[]
+                )
+              ).rows[0]
+            : null
+          if (!lt)
+            issues.push({
+              path: 'lotId',
+              code: 'NOT_FOUND',
+              message: 'O lote não é deste produto.',
+            })
+          else lotId = raw.lotId
+        } else
+          issues.push({
+            path: 'lotId',
+            code: 'REQUIRED',
+            message: `${p.sku} controla lotes: escolha o lote (registe um lote novo por uma entrada).`,
+          })
+      } else if (raw?.lotId)
+        issues.push({
+          path: 'lotId',
+          code: 'NOT_TRACKED',
+          message: 'Este produto não controla lotes.',
+        })
       fail(issues)
       await warehouseLock(scope, c.warehouse_id)
       const dup = await scope.trx.rawQuery(
         `select line_no from stock_count_lines where tenant_id = ? and count_id = ? and product_id = ?
-            and location_id is not distinct from ? and variant_id is not distinct from ?`,
-        [t, id, p.id, locationId, variantId] as never[]
+            and location_id is not distinct from ? and variant_id is not distinct from ?
+            and lot_id is not distinct from ?`,
+        [t, id, p.id, locationId, variantId, lotId] as never[]
       )
       if (dup.rows.length)
         throw ApiError.conflict(
           'LINE_EXISTS',
           `Este saldo já está na linha ${(dup.rows[0] as any).line_no}.`
         )
-      const now = await physicalNow(scope, c.warehouse_id, [
-        { location_id: locationId, product_id: p.id, variant_id: variantId },
-      ])
-      const snapshot = physical(
-        now.get(keyOf({ location_id: locationId, product_id: p.id, variant_id: variantId }))
-      )
+      const key = {
+        location_id: locationId,
+        product_id: p.id,
+        variant_id: variantId,
+        lot_id: lotId,
+      }
+      const now = await physicalNow(scope, c.warehouse_id, [key])
+      const snapshot = physical(now.get(keyOf(key)))
       const next = await scope.trx.rawQuery(
         'select coalesce(max(line_no), 0) + 1 as n from stock_count_lines where tenant_id = ? and count_id = ?',
         [t, id]
       )
       const ins = await scope.trx.rawQuery(
         `insert into stock_count_lines (tenant_id, count_id, line_no, warehouse_id, location_id, product_id, variant_id,
-            snapshot_quantity, snapshot_at, added_during_count, created_by, updated_by)
-         values (?, ?, ?, ?, ?, ?, ?, ?, now(), true, ?, ?) returning id`,
+            lot_id, snapshot_quantity, snapshot_at, added_during_count, created_by, updated_by)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, now(), true, ?, ?) returning id`,
         [
           t,
           id,
@@ -840,6 +898,7 @@ export class CountService {
           locationId,
           p.id,
           variantId,
+          lotId,
           txt(snapshot),
           context.userId,
           context.userId,
@@ -1047,6 +1106,22 @@ export class CountService {
       const diffs = lines
         .map((l) => ({ l, d: dec(l.counted_quantity) - dec(l.snapshot_quantity) }))
         .filter((x) => x.d !== 0n)
+      // Séries (8.8): o ajuste não sabe que unidades faltam ou sobram — regulariza-se por documento com as séries.
+      const serialRows = diffs.length
+        ? await scope.trx.rawQuery(
+            'select id from products where tenant_id = ? and track_serials and id = any(?::uuid[])',
+            [context.tenantId, [...new Set(diffs.map((x) => x.l.product_id))]] as never[]
+          )
+        : { rows: [] }
+      const serialIds = new Set((serialRows.rows as any[]).map((x) => x.id as string))
+      const serialIssues = diffs
+        .filter((x) => serialIds.has(x.l.product_id))
+        .map((x) => ({
+          path: `lines.${x.l.line_no}`,
+          code: 'SERIALS_REQUIRED',
+          message: `Linha ${x.l.line_no}: produto com séries — regularize a diferença com uma entrada ou saída que indique as séries.`,
+        }))
+      fail(serialIssues)
       const now = await physicalNow(
         scope,
         c.warehouse_id,
@@ -1071,6 +1146,7 @@ export class CountService {
             locationId: l.location_id,
             productId: l.product_id,
             variantId: l.variant_id,
+            lotId: l.lot_id ?? null,
             bucket: part.bucket,
             quantity: txt(part.quantity),
           })

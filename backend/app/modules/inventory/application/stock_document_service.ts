@@ -489,7 +489,7 @@ async function documentView(scope: TenantScope, id: string) {
 
 async function lineRows(scope: TenantScope, docId: string) {
   const r = await scope.trx.rawQuery(
-    `select l.*, p.track_serials from stock_document_lines l
+    `select l.*, l.expiry_date::text as expiry_text, p.track_serials from stock_document_lines l
        join products p on p.tenant_id = l.tenant_id and p.id = l.product_id
       where l.tenant_id = ? and l.document_id = ? order by l.line_no for update of l`,
     [scope.context.tenantId, docId]
@@ -857,6 +857,10 @@ export class StockDocumentService {
           variantId: l.variant_id,
           bucket: l.bucket,
           quantity: `${sign}${txt(base)}`,
+          // Lote (criado na entrada, com a validade) e séries das unidades (8.8).
+          lotCode: l.lot_code ?? null,
+          expiryDate: l.expiry_text ?? null,
+          serials: l.serials ?? [],
         })),
       })
       const seq = (await confirmationCount(scope, id)) + 1

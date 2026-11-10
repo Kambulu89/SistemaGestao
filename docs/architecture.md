@@ -405,7 +405,7 @@ employeeId, from, to)` em `#modules/hr/index`.
 
 ## Inventário (módulo `inventory`, Prompt 08)
 
-8.1 a 8.7 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-042). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+8.1 a 8.8 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-043). Catálogo: `uoms`, `product_categories` (hierarquia, classe
 contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
 `product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
 únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
@@ -432,4 +432,8 @@ Contagens (8.7): snapshot do físico no início, contagem cega (sistema só para
 snapshot da linha, diferenças com motivo e justificação; a aprovação (quem contou não aprova) lança `ADJUSTMENT`
 (origem `STOCK_COUNT`) = contado − snapshot sobre o saldo actual. Registos e lançamentos só de acréscimo; contagem
 fixa depois de aprovada/anulada (gatilhos).
+Lotes e séries (8.8): `lot_id` é dimensão de movimentos e saldos (físico e trânsito); `stock_serials` guarda onde está
+cada unidade. O motor resolve lotes e séries em `stock_tracking.ts` (depois dos advisory locks): FEFO nas saídas sem
+lote (bloqueados/recolhidos/expirados não saem do livre), séries indicadas ou as mais antigas, e as entradas do mesmo
+lançamento herdam os lotes/séries que saíram. Bloquear/recolher um lote é um `STATUS_CHANGE` livre → bloqueado.
 

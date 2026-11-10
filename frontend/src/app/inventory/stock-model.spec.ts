@@ -17,6 +17,7 @@ const row = (over: Partial<StockBalance> = {}): StockBalance => ({
   location: { id: 'l', pathCode: 'Z1-C1' },
   product: { id: 'p', sku: 'AGUA', name: 'Água' },
   variant: null,
+  lot: null,
   uom: 'UN',
   uomDecimals: 0,
   physical: '1250.500000',

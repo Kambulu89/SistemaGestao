@@ -23,6 +23,13 @@ import {
   readableWarehouseIds,
   warehouseAccessFor,
 } from '#modules/inventory/application/warehouse_service'
+import {
+  applySerials,
+  postingSerials,
+  resolveTracking,
+  trackingInputIssues,
+  type TrackedLine,
+} from '#modules/inventory/application/stock_tracking'
 
 /*
  * Stock (8.3). O Inventário é o único dono dos movimentos físicos: os outros módulos (e os documentos do 8.4 em
@@ -39,6 +46,13 @@ export interface PostStockLineInput {
   bucket: Bucket
   /** Unidades base, com sinal, até 6 casas (texto). */
   quantity: string
+  /** Lote (8.8): pelo id, ou pelo código (criado nas entradas e ajustes, com a validade). Sem lote, as saídas
+   * repartem-se em FEFO e as entradas levam os lotes que saíram no mesmo lançamento. */
+  lotId?: string | null
+  lotCode?: string | null
+  expiryDate?: string | null
+  /** Séries das unidades (produtos com séries); sem elas, as saídas escolhem por ordem de entrada. */
+  serials?: string[] | null
 }
 
 export interface PostStockInput {
@@ -100,9 +114,9 @@ const quantitiesView = (q: BalanceQuantities) => ({
   expected: quantityText(q.expected),
 })
 
-function normalizeLines(raw: unknown): { lines: PostingLine[]; issues: ErrorDetail[] } {
+function normalizeLines(raw: unknown): { lines: TrackedLine[]; issues: ErrorDetail[] } {
   const issues: ErrorDetail[] = []
-  const lines: PostingLine[] = []
+  const lines: TrackedLine[] = []
   if (!Array.isArray(raw))
     return { lines, issues: [{ path: 'lines', code: 'REQUIRED', message: 'Indique as linhas.' }] }
   raw.forEach((l: any, i) => {
@@ -118,6 +132,7 @@ function normalizeLines(raw: unknown): { lines: PostingLine[]; issues: ErrorDeta
     if (!BUCKETS.includes(l?.bucket)) bad('bucket', 'Estado de stock inválido.')
     if (q === null)
       bad('quantity', 'Quantidade inválida (diferente de zero, até 6 casas decimais).')
+    issues.push(...trackingInputIssues(l, i))
     lines.push({
       warehouseId: l?.warehouseId,
       locationId: l?.locationId ?? null,
@@ -125,6 +140,10 @@ function normalizeLines(raw: unknown): { lines: PostingLine[]; issues: ErrorDeta
       variantId: l?.variantId ?? null,
       bucket: l?.bucket,
       quantity: q ?? 0n,
+      lotId: l?.lotId ?? null,
+      lotCode: l?.lotCode ? String(l.lotCode).trim() : null,
+      expiryDate: l?.expiryDate || null,
+      serials: Array.isArray(l?.serials) ? l.serials.map((x: string) => String(x).trim()) : [],
     })
   })
   return { lines, issues }
@@ -159,7 +178,7 @@ async function checkRefs(scope: TenantScope, lines: PostingLine[], checkAccess: 
     if (warehouses.size !== ids.length) throw ApiError.notFound()
   }
   const products = await scope.trx.rawQuery(
-    `select p.id, p.sku, p.product_type, u.decimals,
+    `select p.id, p.sku, p.product_type, u.decimals, p.track_lots, p.track_serials, p.track_expiry,
         exists (select 1 from product_variants v where v.tenant_id = p.tenant_id and v.product_id = p.id) as has_variants
        from products p join uoms u on u.tenant_id = p.tenant_id and u.id = p.base_uom_id
       where p.tenant_id = ? and p.id = any(?::uuid[])`,
@@ -220,15 +239,27 @@ async function checkRefs(scope: TenantScope, lines: PostingLine[], checkAccess: 
  * Bloqueia (até ao fim da transacção) cada armazém/produto/variante tocado, por ordem, e verifica os saldos que
  * resultariam: nenhum balde negativo por saldo e reservado ≤ livre no armazém. A base de dados repete a verificação.
  */
-async function lockAndCheck(scope: TenantScope, lines: PostingLine[], pmap: Map<string, any>) {
-  const { tenantId } = scope.context
-  const groups = [
-    ...new Set(lines.map((l) => `${l.warehouseId}|${l.productId}|${l.variantId ?? ''}`)),
-  ].sort()
-  for (const g of groups)
+const groupsOf = (lines: PostingLine[]) =>
+  [...new Set(lines.map((l) => `${l.warehouseId}|${l.productId}|${l.variantId ?? ''}`))].sort()
+
+async function lockGroups(scope: TenantScope, lines: PostingLine[]) {
+  for (const g of groupsOf(lines))
     await scope.trx.rawQuery('select pg_advisory_xact_lock(hashtextextended(?, 0))', [
-      `stock:${tenantId}:${g}`,
+      `stock:${scope.context.tenantId}:${g}`,
     ])
+}
+
+/** Bloqueia, resolve lotes/séries e verifica os saldos; devolve as linhas finais. */
+async function lockAndCheck(
+  scope: TenantScope,
+  type: PostingType,
+  input: TrackedLine[],
+  pmap: Map<string, any>
+) {
+  await lockGroups(scope, input)
+  const lines = await resolveTracking(scope, type, input, pmap)
+  const { tenantId } = scope.context
+  const groups = groupsOf(lines)
   const rows = await scope.trx.rawQuery(
     `select * from stock_balances b where b.tenant_id = ?
        and (b.warehouse_id::text || '|' || b.product_id::text || '|' || coalesce(b.variant_id::text, '')) = any(?::text[])`,
@@ -242,6 +273,7 @@ async function lockAndCheck(scope: TenantScope, lines: PostingLine[], pmap: Map<
         locationId: r.location_id,
         productId: r.product_id,
         variantId: r.variant_id,
+        lotId: r.lot_id,
       }),
       quantities(r)
     )
@@ -284,6 +316,7 @@ async function lockAndCheck(scope: TenantScope, lines: PostingLine[], pmap: Map<
         message: `O reservado de ${pmap.get(g.split('|')[1])?.sku ?? 'produto'} excederia o stock livre do armazém.`,
       })
   if (issues.length) throw new ApiError(409, issues[0].code, issues[0].message, issues)
+  return lines
 }
 
 async function insertPosting(
@@ -339,6 +372,7 @@ async function insertPosting(
       l.locationId,
       l.productId,
       l.variantId,
+      l.lotId ?? null,
       l.bucket,
       quantityText(l.quantity),
       row.occurred_at,
@@ -348,10 +382,11 @@ async function insertPosting(
   )
   await scope.trx.rawQuery(
     `insert into stock_movements (tenant_id, posting_id, line_no, warehouse_id, location_id, product_id, variant_id,
-        bucket, quantity, occurred_at, created_by, updated_by)
-     values ${lines.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
+        lot_id, bucket, quantity, occurred_at, created_by, updated_by)
+     values ${lines.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
     values as never[]
   )
+  await applySerials(scope, row.id, lines)
   // A base verifica o reservado ≤ livre no fim da transacção; aqui pede-se já, para o erro vir deste pedido.
   try {
     await scope.trx.rawQuery('set constraints stock_balances_reserved immediate')
@@ -431,8 +466,8 @@ export async function postStock(scope: TenantScope, input: PostStockInput) {
   const before = await existing(scope, head.key)
   if (before) return { posting: await replayView(scope, replay(before, hash)), replayed: true }
   const pmap = await checkRefs(scope, lines, input.checkAccess !== false)
-  await lockAndCheck(scope, lines, pmap)
-  const id = await insertPosting(scope, { ...head, hash }, lines)
+  const final = await lockAndCheck(scope, head.type, lines, pmap)
+  const id = await insertPosting(scope, { ...head, hash }, final)
   if (!id) {
     const e = (await existing(scope, head.key))!
     return { posting: await replayView(scope, replay(e, hash)), replayed: true }
@@ -476,18 +511,21 @@ export async function reverseStockPosting(
     'select * from stock_movements where tenant_id = ? and posting_id = ? order by line_no',
     [tenantId, postingId]
   )
+  const serials = await postingSerials(scope, postingId)
   const lines = reversalLines(
     (m.rows as any[]).map((r) => ({
       warehouseId: r.warehouse_id,
       locationId: r.location_id,
       productId: r.product_id,
       variantId: r.variant_id,
+      lotId: r.lot_id ?? null,
+      serials: serials.get(Number(r.line_no)) ?? [],
       bucket: r.bucket,
       quantity: big(r.quantity),
     }))
   )
   const pmap = await checkRefs(scope, lines, input.checkAccess !== false)
-  await lockAndCheck(scope, lines, pmap)
+  const final = await lockAndCheck(scope, 'REVERSAL', lines, pmap)
   const id = await insertPosting(
     scope,
     {
@@ -500,7 +538,7 @@ export async function reverseStockPosting(
       reason: input.reason.trim().slice(0, 300),
       reversalOf: postingId,
     },
-    lines
+    final
   )
   if (!id) {
     const e = (await existing(scope, input.idempotencyKey))!
@@ -510,8 +548,9 @@ export async function reverseStockPosting(
 }
 
 const MOVE_SELECT = `select m.*, p.sku, p.name as product_name, v.sku as variant_sku, w.code as warehouse_code,
-    l.path_code, u.code as uom_code
+    l.path_code, u.code as uom_code, lt.code as lot_code, lt.expiry_date::text as lot_expiry
   from stock_movements m
+  left join stock_lots lt on lt.tenant_id = m.tenant_id and lt.id = m.lot_id
   join products p on p.tenant_id = m.tenant_id and p.id = m.product_id
   join uoms u on u.tenant_id = p.tenant_id and u.id = p.base_uom_id
   join warehouses w on w.tenant_id = m.tenant_id and w.id = m.warehouse_id
@@ -526,6 +565,13 @@ const lineView = (r: any) => ({
   product: { id: r.product_id as string, sku: r.sku as string, name: r.product_name as string },
   variant: r.variant_id ? { id: r.variant_id as string, sku: r.variant_sku as string } : null,
   uom: r.uom_code as string,
+  lot: r.lot_id
+    ? {
+        id: r.lot_id as string,
+        code: r.lot_code as string,
+        expiryDate: (r.lot_expiry as string) ?? null,
+      }
+    : null,
   bucket: r.bucket as Bucket,
   quantity: quantityText(big(r.quantity)),
 })
@@ -576,6 +622,7 @@ export class StockService {
     f: {
       warehouseId?: string
       productId?: string
+      lotId?: string
       q?: string
       nonZero?: boolean
       limit: number
@@ -595,6 +642,10 @@ export class StockService {
         where.push('b.product_id = ?')
         params.push(f.productId)
       }
+      if (f.lotId) {
+        where.push('b.lot_id = ?')
+        params.push(f.lotId)
+      }
       if (f.q) {
         const like = `%${f.q.toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`)}%`
         where.push(
@@ -612,11 +663,14 @@ export class StockService {
         join warehouses w on w.tenant_id = b.tenant_id and w.id = b.warehouse_id
         left join product_variants v on v.tenant_id = b.tenant_id and v.id = b.variant_id
         left join warehouse_locations l on l.tenant_id = b.tenant_id and l.id = b.location_id
+        left join stock_lots lt on lt.tenant_id = b.tenant_id and lt.id = b.lot_id
         where ${where.join(' and ')}`
       const rows = await scope.trx.rawQuery(
         `select b.*, p.sku, p.name as product_name, u.code as uom_code, u.decimals as uom_decimals, v.sku as variant_sku, w.code as warehouse_code,
-            w.name as warehouse_name, l.path_code
-         ${from} order by p.sku, v.sku nulls first, w.code, l.path_code nulls first limit ? offset ?`,
+            w.name as warehouse_name, l.path_code, lt.code as lot_code, lt.expiry_date::text as lot_expiry,
+            lt.status as lot_status
+         ${from} order by p.sku, v.sku nulls first, w.code, l.path_code nulls first, lt.expiry_date nulls last, lt.code
+         limit ? offset ?`,
         [...params, f.limit, f.offset] as never[]
       )
       const count = await scope.trx.rawQuery(`select count(*)::int as n ${from}`, params as never[])
@@ -628,6 +682,14 @@ export class StockService {
           location: r.location_id ? { id: r.location_id, pathCode: r.path_code } : null,
           product: { id: r.product_id, sku: r.sku, name: r.product_name },
           variant: r.variant_id ? { id: r.variant_id, sku: r.variant_sku } : null,
+          lot: r.lot_id
+            ? {
+                id: r.lot_id as string,
+                code: r.lot_code as string,
+                expiryDate: (r.lot_expiry as string) ?? null,
+                status: r.lot_status as string,
+              }
+            : null,
           uom: r.uom_code as string,
           uomDecimals: Number(r.uom_decimals),
           ...quantitiesView(quantities(r)),
@@ -644,6 +706,7 @@ export class StockService {
       warehouseId?: string
       productId?: string
       variantId?: string
+      lotId?: string
       type?: string
       limit: number
       offset: number
@@ -658,6 +721,7 @@ export class StockService {
         ['warehouseId', 'm.warehouse_id'],
         ['productId', 'm.product_id'],
         ['variantId', 'm.variant_id'],
+        ['lotId', 'm.lot_id'],
         ['type', 's.posting_type'],
       ] as const)
         if (f[k]) {
@@ -710,6 +774,7 @@ export class StockService {
       locationId?: string | null
       productId: string
       variantId?: string | null
+      lotId?: string | null
       from: string
       to: string
       quantity: string
@@ -750,6 +815,7 @@ export class StockService {
         locationId: v.locationId ?? null,
         productId: v.productId,
         variantId: v.variantId ?? null,
+        lotId: v.lotId ?? null,
       }
       const qty = quantityText(q!)
       const r = await postStock(scope, {
@@ -781,17 +847,19 @@ export class StockService {
       const cols = ['unrestricted', 'blocked', 'quarantine', 'reserved', 'in_transit', 'expected']
       const r = await scope.trx.rawQuery(
         `with m as (
-           select warehouse_id, location_id, product_id, variant_id, ${sums}
+           select warehouse_id, location_id, product_id, variant_id, lot_id, ${sums}
              from stock_movements where tenant_id = ? and warehouse_id = any(?::uuid[])
-            group by warehouse_id, location_id, product_id, variant_id),
+            group by warehouse_id, location_id, product_id, variant_id, lot_id),
          b as (select * from stock_balances where tenant_id = ? and warehouse_id = any(?::uuid[]))
          select coalesce(m.warehouse_id, b.warehouse_id) as warehouse_id,
                 coalesce(m.location_id, b.location_id) as location_id,
                 coalesce(m.product_id, b.product_id) as product_id,
                 coalesce(m.variant_id, b.variant_id) as variant_id,
+                coalesce(m.lot_id, b.lot_id) as lot_id,
                 ${cols.map((c) => `coalesce(m.qty_${c}, 0) as m_${c}, coalesce(b.qty_${c}, 0) as b_${c}`).join(', ')}
            from m full join b on b.warehouse_id = m.warehouse_id and b.product_id = m.product_id
-             and b.location_id is not distinct from m.location_id and b.variant_id is not distinct from m.variant_id`,
+             and b.location_id is not distinct from m.location_id and b.variant_id is not distinct from m.variant_id
+             and b.lot_id is not distinct from m.lot_id`,
         [context.tenantId, ids, context.tenantId, ids] as never[]
       )
       const differences = (r.rows as any[])
@@ -801,6 +869,7 @@ export class StockService {
           locationId: (x.location_id as string) ?? null,
           productId: x.product_id as string,
           variantId: (x.variant_id as string) ?? null,
+          lotId: (x.lot_id as string) ?? null,
           movements: Object.fromEntries(cols.map((c) => [c, quantityText(big(x[`m_${c}`]))])),
           balance: Object.fromEntries(cols.map((c) => [c, quantityText(big(x[`b_${c}`]))])),
         }))

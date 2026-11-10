@@ -23,6 +23,7 @@ import {
   type StockCount,
 } from './count-model';
 import type { Product } from './inventory-model';
+import { type LotRow, lotLabel } from './lot-model';
 import { qty } from './stock-model';
 
 interface Options {
@@ -344,6 +345,11 @@ type ModalKind = 'add' | 'justify' | 'recount' | 'cancel';
                       <td class="py-2 pr-3">{{ l.location?.pathCode ?? 'sem posição' }}</td>
                       <td class="py-2 pr-3">
                         <span class="font-medium">{{ l.variant?.sku ?? l.product.sku }}</span>
+                        @if (l.lot) {
+                          <span class="block text-xs" data-testid="ct-lot"
+                            >Lote {{ lot(l.lot) }}</span
+                          >
+                        }
                         <span class="block text-xs text-muted"
                           >{{ l.product.name }}{{ l.addedDuringCount ? ' · encontrado' : ''
                           }}{{ l.round > 1 ? ' · volta ' + l.round : '' }}</span
@@ -461,6 +467,27 @@ type ModalKind = 'add' | 'justify' | 'recount' | 'cancel';
                 <option value="">—</option>
                 @for (v of addProduct()?.variants ?? []; track v.id) {
                   <option [value]="v.id">{{ v.sku }}</option>
+                }
+              </select>
+            </app-field>
+          }
+          @if (addProduct()?.trackLots) {
+            <app-field
+              label="Lote"
+              [required]="true"
+              hint="Um lote novo regista-se por uma entrada (documento)."
+              [error]="act.field('lotId')"
+            >
+              <select
+                appControl
+                class="input"
+                data-testid="ad-lot"
+                [(ngModel)]="add.lotId"
+                [ngModelOptions]="{ standalone: true }"
+              >
+                <option value="">—</option>
+                @for (x of addLots(); track x.id) {
+                  <option [value]="x.id">{{ lot(x) }}</option>
                 }
               </select>
             </app-field>
@@ -599,7 +626,9 @@ export class CountFormPage implements HasUnsavedChanges {
   protected typed: Record<string, string> = {};
   protected just: Record<string, { reasonCode: string; justification: string }> = {};
   protected recountIds: Record<string, boolean> = {};
-  protected add = { productId: '', variantId: '', locationId: '' };
+  protected add = { productId: '', variantId: '', locationId: '', lotId: '' };
+  protected readonly addLots = signal<LotRow[]>([]);
+  protected readonly lot = lotLabel;
   protected why = '';
   protected f = this.emptyForm();
   private initial = snapshot(this.f);
@@ -865,7 +894,14 @@ export class CountFormPage implements HasUnsavedChanges {
     this.addProduct.set(null);
     if (!this.add.productId) return;
     try {
-      this.addProduct.set(await this.api.get<Product>(`inventory/products/${this.add.productId}`));
+      const p = await this.api.get<Product>(`inventory/products/${this.add.productId}`);
+      this.addProduct.set(p);
+      this.add.lotId = '';
+      this.addLots.set(
+        p.trackLots
+          ? await this.api.get<LotRow[]>('inventory/lots', { productId: p.id, limit: 200 })
+          : [],
+      );
     } catch {
       /* validado no servidor */
     }
@@ -874,7 +910,8 @@ export class CountFormPage implements HasUnsavedChanges {
   protected open(kind: ModalKind) {
     this.act.error.set(null);
     this.why = '';
-    this.add = { productId: '', variantId: '', locationId: '' };
+    this.add = { productId: '', variantId: '', locationId: '', lotId: '' };
+    this.addLots.set([]);
     this.addProduct.set(null);
     this.recountIds = {};
     this.just = Object.fromEntries(
@@ -899,6 +936,7 @@ export class CountFormPage implements HasUnsavedChanges {
               productId: this.add.productId || null,
               variantId: this.add.variantId || null,
               locationId: this.add.locationId || null,
+              lotId: this.add.lotId || null,
             },
           ]
         : kind === 'justify'

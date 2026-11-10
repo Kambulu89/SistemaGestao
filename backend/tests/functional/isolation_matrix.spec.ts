@@ -625,6 +625,39 @@ async function populate(client: any) {
       })
   )
   const stockPosting = stock.posting
+  // Lote e série (8.8).
+  const lotted = ok(
+    await as(client, s).post('/api/v1/inventory/products', {
+      sku: 'LOTE-A',
+      name: 'Produto com lote A',
+      productType: 'STOCKABLE',
+      baseUomId: uom.id,
+      trackLots: true,
+      trackSerials: true,
+    })
+  )
+  await runInTenant(
+    { tenantId: tenant.id, userId: admin.id, membershipId: ctxA.membershipId, requestId: 'matriz' },
+    (scope) =>
+      postStock(scope, {
+        type: 'RECEIPT',
+        idempotencyKey: 'matriz-lote-1',
+        sourceType: 'TEST',
+        lines: [
+          {
+            warehouseId: warehouse.id,
+            productId: lotted.id,
+            bucket: 'UNRESTRICTED',
+            quantity: '1',
+            lotCode: 'LA-1',
+            serials: ['SN-A-1'],
+          },
+        ],
+      })
+  )
+  const stockLot = (await as(client, s).get(`/api/v1/inventory/lots?productId=${lotted.id}`)).body()
+    .data[0]
+  const stockSerial = (await as(client, s).get('/api/v1/inventory/serials?q=SN-A-1')).body().data[0]
   const warehouse2 = ok(
     await as(client, s).post('/api/v1/inventory/warehouses', {
       code: 'ARM-A2',
@@ -671,6 +704,8 @@ async function populate(client: any) {
   )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    stockLot,
+    stockSerial,
     stockCount,
     stockRequisition,
     stockTransfer,
@@ -1160,6 +1195,20 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'anular documento alheio',
         B.post(`/api/v1/inventory/documents/${a.stockDocument.id}/cancel`, { ...v, reason: 'x' }),
       ],
+      ['GET lote', B.get(`/api/v1/inventory/lots/${a.stockLot.id}`)],
+      [
+        'bloquear lote alheio',
+        B.post(`/api/v1/inventory/lots/${a.stockLot.id}/block`, { ...v, reason: 'x' }),
+      ],
+      [
+        'desbloquear lote alheio',
+        B.post(`/api/v1/inventory/lots/${a.stockLot.id}/unblock`, { ...v, reason: 'x' }),
+      ],
+      [
+        'recolher lote alheio',
+        B.post(`/api/v1/inventory/lots/${a.stockLot.id}/recall`, { ...v, reason: 'x' }),
+      ],
+      ['GET série', B.get(`/api/v1/inventory/serials/${a.stockSerial.id}`)],
       ['GET contagem', B.get(`/api/v1/inventory/counts/${a.stockCount.id}`)],
       [
         'PUT contagem',
@@ -1836,6 +1885,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/inventory/requisitions')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/reservations')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/counts')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/lots')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/serials')).body().data, 0)
     assert.notInclude(
       JSON.stringify((await B.get('/api/v1/inventory/counts/options')).body().data),
       a.warehouse.id
@@ -1953,6 +2004,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/requisitions',
       '/api/v1/inventory/reservations',
       '/api/v1/inventory/counts',
+      '/api/v1/inventory/lots',
+      '/api/v1/inventory/serials',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',
       '/api/v1/hr/team',

@@ -4014,7 +4014,7 @@ export class StatementTemplateSchema extends BaseModel {
 }
 
 export class StockBalanceSchema extends BaseModel {
-  static $columns = ['createdAt', 'createdBy', 'id', 'lastMovementAt', 'locationId', 'productId', 'qtyBlocked', 'qtyExpected', 'qtyInTransit', 'qtyQuarantine', 'qtyReserved', 'qtyUnrestricted', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
+  static $columns = ['createdAt', 'createdBy', 'id', 'lastMovementAt', 'locationId', 'lotId', 'productId', 'qtyBlocked', 'qtyExpected', 'qtyInTransit', 'qtyQuarantine', 'qtyReserved', 'qtyUnrestricted', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
   $columns = StockBalanceSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -4026,6 +4026,8 @@ export class StockBalanceSchema extends BaseModel {
   declare lastMovementAt: DateTime | null
   @column()
   declare locationId: string | null
+  @column()
+  declare lotId: string | null
   @column()
   declare productId: string
   @column()
@@ -4082,7 +4084,7 @@ export class StockCountEntrySchema extends BaseModel {
 }
 
 export class StockCountLineSchema extends BaseModel {
-  static $columns = ['addedDuringCount', 'countId', 'countedQuantity', 'createdAt', 'createdBy', 'id', 'justification', 'lineNo', 'locationId', 'productId', 'reasonCode', 'recountReason', 'recountRequested', 'round', 'snapshotAt', 'snapshotQuantity', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
+  static $columns = ['addedDuringCount', 'countId', 'countedQuantity', 'createdAt', 'createdBy', 'id', 'justification', 'lineNo', 'locationId', 'lotId', 'productId', 'reasonCode', 'recountReason', 'recountRequested', 'round', 'snapshotAt', 'snapshotQuantity', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
   $columns = StockCountLineSchema.$columns
   @column()
   declare addedDuringCount: boolean
@@ -4102,6 +4104,8 @@ export class StockCountLineSchema extends BaseModel {
   declare lineNo: number
   @column()
   declare locationId: string | null
+  @column()
+  declare lotId: string | null
   @column()
   declare productId: string
   @column()
@@ -4382,8 +4386,74 @@ export class StockDocumentSchema extends BaseModel {
   declare warehouseId: string
 }
 
+export class StockLotEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'kind', 'lotId', 'postingId', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StockLotEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare lotId: string
+  @column()
+  declare postingId: string | null
+  @column()
+  declare reason: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StockLotSchema extends BaseModel {
+  static $columns = ['blockReason', 'code', 'createdAt', 'createdBy', 'expiryDate', 'id', 'manufacturedDate', 'productId', 'recallReason', 'recalledAt', 'recalledBy', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = StockLotSchema.$columns
+  @column()
+  declare blockReason: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare expiryDate: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare manufacturedDate: DateTime | null
+  @column()
+  declare productId: string
+  @column()
+  declare recallReason: string | null
+  @column.dateTime()
+  declare recalledAt: DateTime | null
+  @column()
+  declare recalledBy: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
 export class StockMovementSchema extends BaseModel {
-  static $columns = ['bucket', 'createdAt', 'createdBy', 'id', 'lineNo', 'locationId', 'occurredAt', 'postingId', 'productId', 'quantity', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
+  static $columns = ['bucket', 'createdAt', 'createdBy', 'id', 'lineNo', 'locationId', 'lotId', 'occurredAt', 'postingId', 'productId', 'quantity', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
   $columns = StockMovementSchema.$columns
   @column()
   declare bucket: string
@@ -4397,6 +4467,8 @@ export class StockMovementSchema extends BaseModel {
   declare lineNo: number
   @column()
   declare locationId: string | null
+  @column()
+  declare lotId: string | null
   @column.dateTime()
   declare occurredAt: DateTime
   @column()
@@ -4606,6 +4678,78 @@ export class StockRequisitionSchema extends BaseModel {
   declare version: number
   @column()
   declare warehouseId: string
+}
+
+export class StockSerialMovementSchema extends BaseModel {
+  static $columns = ['bucket', 'createdAt', 'createdBy', 'delta', 'id', 'lineNo', 'locationId', 'lotId', 'postingId', 'serialId', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = StockSerialMovementSchema.$columns
+  @column()
+  declare bucket: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare delta: number
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare locationId: string | null
+  @column()
+  declare lotId: string | null
+  @column()
+  declare postingId: string
+  @column()
+  declare serialId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
+export class StockSerialSchema extends BaseModel {
+  static $columns = ['bucket', 'createdAt', 'createdBy', 'id', 'lastPostingId', 'locationId', 'lotId', 'productId', 'serial', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
+  $columns = StockSerialSchema.$columns
+  @column()
+  declare bucket: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lastPostingId: string
+  @column()
+  declare locationId: string | null
+  @column()
+  declare lotId: string | null
+  @column()
+  declare productId: string
+  @column()
+  declare serial: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string | null
 }
 
 export class StockTransferEventLineSchema extends BaseModel {

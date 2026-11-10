@@ -17,6 +17,7 @@ import {
   type StockMovement,
   type StockPosting,
 } from './stock-model';
+import { lotLabel } from './lot-model';
 import type { Warehouse } from './warehouse-model';
 
 /**
@@ -182,6 +183,13 @@ export class StockMovements {
       label: 'Armazém',
       value: (m) =>
         m.location ? `${m.warehouse.code} · ${m.location.pathCode}` : m.warehouse.code,
+    },
+    {
+      key: 'lot',
+      label: 'Lote',
+      hideOnMobile: true,
+      value: (m) => (m.lot ? lotLabel(m.lot) : '—'),
+      link: (m) => (m.lot ? ['/inventario/lotes', m.lot.id] : null),
     },
     { key: 'bucket', label: 'Estado', hideOnMobile: true, value: (m) => this.bucket(m.bucket) },
     { key: 'quantity', label: 'Quantidade', align: 'end', value: (m) => signedQty(m.quantity) },

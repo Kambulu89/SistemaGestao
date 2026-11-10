@@ -182,6 +182,44 @@ export const INVENTORY_ROUTES: Routes = [
     ],
   },
   {
+    path: 'lotes',
+    title: 'Lotes',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./lots').then((m) => m.Lots),
+      },
+      {
+        path: ':id',
+        title: 'Lote',
+        canActivate: [accessGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./lot-detail').then((m) => m.LotDetailPage),
+      },
+    ],
+  },
+  {
+    path: 'series',
+    title: 'Números de série',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./serials').then((m) => m.Serials),
+      },
+      {
+        path: ':id',
+        title: 'Série',
+        canActivate: [accessGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./serial-detail').then((m) => m.SerialDetailPage),
+      },
+    ],
+  },
+  {
     path: 'reservas',
     title: 'Reservas activas',
     canActivate: [accessGuard],

@@ -111,6 +111,9 @@ export class AuditHistory {
       line_added: 'Artigo acrescentado',
       justified: 'Justificado',
       recount_requested: 'Recontagem pedida',
+      blocked: 'Bloqueado',
+      unblocked: 'Desbloqueado',
+      recalled: 'Recolhido',
     };
     return labels[verb] ?? action;
   }

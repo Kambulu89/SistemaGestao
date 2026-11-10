@@ -15,6 +15,9 @@ export interface CountLine {
   recountRequested: boolean;
   recountReason: string | null;
   addedDuringCount: boolean;
+  lot?: { id: string; code: string; expiryDate: string | null } | null;
+  tracksLots?: boolean;
+  tracksSerials?: boolean;
   entries: number;
   /** Quantidades do sistema: `null` numa contagem cega para quem só conta. */
   snapshotQuantity: string | null;

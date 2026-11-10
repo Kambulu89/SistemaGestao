@@ -688,6 +688,29 @@ export class ProductService {
           hasVariants: before ? Boolean(before.has_variants) : false,
         })
       )
+      // Lotes e séries (8.8): com movimentos, o rastreio já não muda (o saldo e as séries dependem dele).
+      if (before) {
+        const changed = (['trackLots', 'trackSerials'] as const).filter(
+          (k) =>
+            k in v &&
+            bool(v[k]) !== Boolean(before[k === 'trackLots' ? 'track_lots' : 'track_serials'])
+        )
+        if (changed.length) {
+          const moved = await scope.trx.rawQuery(
+            'select 1 from stock_movements where tenant_id = ? and product_id = ? limit 1',
+            [t, id!]
+          )
+          if (moved.rows.length)
+            fail(
+              changed.map((k) => ({
+                path: k,
+                code: 'TRACKING_LOCKED',
+                message:
+                  'O produto já tem movimentos de stock: o rastreio por lote/série não muda.',
+              }))
+            )
+        }
+      }
       if (
         merged.minStock !== null &&
         merged.minStock !== undefined &&

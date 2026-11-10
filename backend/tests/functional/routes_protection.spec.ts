@@ -362,6 +362,20 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
   'POST /api/v1/inventory/counts/:id/cancel':
     'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'GET /api/v1/inventory/lots':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'GET /api/v1/inventory/lots/:id':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'POST /api/v1/inventory/lots/:id/block':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'POST /api/v1/inventory/lots/:id/unblock':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'POST /api/v1/inventory/lots/:id/recall':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'GET /api/v1/inventory/serials':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'GET /api/v1/inventory/serials/:id':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
   'GET /api/v1/inventory/requisitions':
     'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
   'GET /api/v1/inventory/requisitions/options':

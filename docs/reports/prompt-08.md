@@ -1,6 +1,6 @@
 # Relatório — Prompt 08 (inventário)
 
-Estado: **8.1 a 8.7 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.8 a 8.12 seguem, um de cada
+Estado: **8.1 a 8.8 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.9 a 8.12 seguem, um de cada
 vez. Decisões a partir de D-036.
 
 ## Inventário AS-IS → TO-BE
@@ -14,6 +14,7 @@ vez. Decisões a partir de D-036.
 | 8.5 Transferências         | Sem transferências           | Pedido → aprovação (reserva) → separação → expedição (trânsito no destino) → recepção parcial/total ou perda; segregação de funções; intragrupo com aceitação do destino e referência comercial | Feito  |
 | 8.6 Reservas/requisições   | Sem requisições internas      | Pedido por departamento e centro de custo, aprovação que reserva (disponível baixa, físico não), separação, entrega por consumo, libertação e anulação; reservas activas por origem | Feito  |
 | 8.7 Contagens/ajustes      | Sem contagens                 | Plano (zona, categoria, cega), snapshot no início, contagem por partes e artigos encontrados, recontagem com snapshot renovado, diferenças com motivo e justificação, aprovação segregada que lança o ajuste; tudo fixo depois | Feito  |
+| 8.8 Lotes/séries/FEFO      | Lote e séries só nos documentos | Lote como dimensão do saldo, validade no lote, séries por unidade com percurso, saídas FEFO automáticas no motor (bloqueados/expirados não saem), bloqueio/desbloqueio e recolha definitiva, rastreabilidade de onde veio, onde está e para onde foi | Feito  |
 
 ## 8.1 Produtos e serviços
 
@@ -372,9 +373,68 @@ segregação a quem contou; lançamentos de ajuste com ligação aos movimentos;
   movimentos `ADJUSTMENT` com o número; depois de aprovada o contador vê o sistema e nada é editável; 390 px sem
   deslocamento horizontal.
 
+## 8.8 Lotes, séries e FEFO
+
+### Modelo
+
+Migração `0040_create_inventory_lots`: `stock_lots` (código único por produto/variante, validade, fabrico, estado e
+motivos; gatilho: código/produto/validade fixos, recolha definitiva), `stock_lot_events` (bloqueios, desbloqueios,
+recolhas com o lançamento; só acréscimo), `lot_id` em `stock_movements` e `stock_balances` (chave única do saldo com o
+lote; `CHECK` só baldes físicos/trânsito; gatilho do saldo derivado actualizado), `stock_serials` (estado e lugar de cada
+série, única por produto) e `stock_serial_movements` (só acréscimo), `lot_id` nas linhas de contagem.
+
+### Motor e API (`/api/v1/inventory`)
+
+- `postStock`/`reverseStockPosting`: lote por id ou código (criado nas entradas/ajustes com a validade), FEFO nas
+  saídas sem lote, séries indicadas ou escolhidas, emparelhamento das entradas do mesmo lançamento; estornos repõem
+  lotes e séries. Documentos (8.4) passam o lote, a validade e as séries; requisições, transferências e contagens
+  usam o FEFO/emparelhamento sem alterações; contagens contam por lote.
+- `GET /lots` (estado, pesquisa, a expirar em N dias, só com stock), `GET /lots/:id` (rastreabilidade),
+  `POST /lots/:id/block|unblock|recall`, `GET /serials`, `GET /serials/:id`; saldos e movimentos com o lote e filtro
+  `lotId`. Permissão nova: `inventory.lots.manage`.
+- Produtos: validade exige lotes (`EXPIRY_NEEDS_LOTS`); rastreio fixo depois de movimentos (`TRACKING_LOCKED`).
+- Erros: `LOT_REQUIRED`, `LOT_NOT_FOUND`, `LOT_MISMATCH`, `LOT_EXPIRY_MISMATCH`, `LOT_NOT_ALLOWED`, `LOT_BLOCKED`,
+  `LOT_EXPIRED`, `SERIALS_REQUIRED`, `SERIAL_COUNT`, `SERIAL_UNITS`, `SERIAL_NOT_HERE`, `SERIAL_IN_STOCK`,
+  `SERIAL_DUPLICATE`, `SERIALS_MISSING`, `INSUFFICIENT_STOCK` (só lotes utilizáveis), `OVER_RESERVED` no bloqueio.
+
+### Ecrãs
+
+Inventário → Lotes (por validade; estado com "Expirado"; filtros por estado, validade e stock) e Lote (validade e dias,
+onde está, para onde foi com ligações às origens, movimentos, séries, bloqueios/recolhas, histórico; Bloquear,
+Desbloquear e Recolher com motivo, a recolha com confirmação); Números de série (onde está cada unidade) e Série
+(percurso). Stock e Movimentos mostram o lote com ligação; a contagem mostra o lote de cada linha e o "artigo
+encontrado" pede o lote nos produtos com lotes.
+
+### Testes e evidências
+
+- Unitário `inventory_lots_domain.spec.ts` (3): validade e uso; ordem FEFO (validade, sem validade, empate pela entrada,
+  sem lote por último), bloqueados/expirados, falta; fila de emparelhamento de lotes e séries; chave do saldo com lote.
+- Funcional `inventory_lots.spec.ts` (3): entrada por documento cria os lotes com validade; validade diferente,
+  entrada sem lote e reservado com lote recusados; pesquisa e filtro de expirados; saída sem lote em FEFO (PERTO 10 +
+  LONGE 3); lote expirado não sai do livre (`LOT_EXPIRED`) nem conta para o disponível; abate do expirado por ajuste;
+  transferência sem lote leva o lote ao trânsito e ao destino; rastreabilidade (saldos por armazém, origem documento,
+  destino); estorno volta ao mesmo lote; contagem por lote ajusta o lote contado; reconciliação sem diferenças; rastreio
+  fixo e validade sem lotes recusados. Bloqueio: gestor de outra entidade recusado, sem leitura 404, reserva que ficaria
+  acima do livre → `OVER_RESERVED`, bloqueio move livre → bloqueado em dois armazéns, FEFO salta o bloqueado, entrada
+  livre num lote bloqueado recusada (quarentena aceite), desbloqueio devolve, recolha bloqueia e lista o destino
+  (`RQ-9`), recolhido não desbloqueia, saída do bloqueado, a base recusa desfazer a recolha, mudar a validade e apagar
+  eventos; auditoria; versão. Séries: entrada sem séries/contagem errada recusadas, série em stock não entra outra vez,
+  saída automática e indicada, série fora do lugar recusada, transferência leva a série, estorno devolve-a, percurso
+  completo, série que saiu volta a entrar, **duas saídas simultâneas da mesma série: uma passa** e saldo = séries em
+  stock; histórico só de acréscimo; contagem com diferença numa série → `SERIALS_REQUIRED`; quem não consulta o armazém
+  não vê onde a série está.
+- `isolation_matrix` (lote e série de outra empresa: ler, bloquear, desbloquear, recolher → 404; listas vazias; URL
+  forjada → 403), `routes_protection`, regressão de stock/documentos/transferências/requisições/contagens; frontend
+  `lot-model.spec.ts` (2).
+- Browser (7 passos, três execuções seguidas, sem erros na consola; dois utilizadores): lista por validade com o
+  expirado assinalado; requisição aprovada por outro utilizador e entregue sem escolher lote → FEFO (PERTO 10 + LONGE
+  3); rastreabilidade do PERTO com ligação à requisição; bloquear/desbloquear o LONGE pela interface (livre 0 /
+  bloqueado 17 e volta) e quem só consulta não vê as acções; recolha com confirmação; pesquisa de série e percurso;
+  lote com ligação no Stock; 390 px sem deslocamento.
+
 ## Pendências
 
-- 8.8 a 8.12 (lotes/FEFO, valorização, integrações, alertas, QA).
+- 8.9 a 8.12 (valorização, integrações, alertas, QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
 - 8.2: o acesso `OPERATE` só passa a ter efeito nas operações de stock (8.4 em diante); mudar a entidade legal de um
@@ -391,3 +451,7 @@ segregação a quem contou; lançamentos de ajuste com ligação aos movimentos;
   contagem por lote/série chega com o 8.8 e o valor das diferenças com o 8.9; sem contagem por dispositivo/código de
   barras nem impressão de folhas de contagem; a contagem cega esconde o sistema no ecrã/API da contagem, não na
   consulta de saldos (separação de perfis decidida pela empresa).
+- 8.8: o trânsito sem lote escolhe em FEFO entre o que está em trânsito para o mesmo armazém (várias transferências
+  do mesmo produto em simultâneo podem trocar lotes entre si); stock recebido antes do 8.8 fica "sem lote" e sai por
+  último; diferenças de contagem em produtos com séries regularizam-se por documento; sem etiquetas/leitura de código
+  de barras de lote; os alertas de validade são do 8.11.

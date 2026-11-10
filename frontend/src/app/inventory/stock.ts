@@ -25,6 +25,7 @@ import {
   type StockBalance,
   statusQuantityError,
 } from './stock-model';
+import { lotLabel } from './lot-model';
 import type { Warehouse } from './warehouse-model';
 
 const FIELD: Record<StatusBucket, 'unrestricted' | 'blocked' | 'quarantine'> = {
@@ -271,6 +272,13 @@ export class Stock {
       label: 'Localização',
       hideOnMobile: true,
       value: (r) => r.location?.pathCode ?? '—',
+    },
+    {
+      key: 'lot',
+      label: 'Lote',
+      hideOnMobile: true,
+      value: (r) => (r.lot ? lotLabel(r.lot) : '—'),
+      link: (r) => (r.lot ? ['/inventario/lotes', r.lot.id] : null),
     },
     { key: 'physical', label: 'Físico', align: 'end', value: (r) => qty(r.physical) },
     { key: 'available', label: 'Disponível', align: 'end', value: (r) => qty(r.available) },

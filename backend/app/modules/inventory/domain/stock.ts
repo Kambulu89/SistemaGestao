@@ -78,11 +78,16 @@ export interface PostingLine {
   variantId: string | null
   bucket: Bucket
   quantity: bigint
+  /** Lote (8.8): só nos baldes físicos e em trânsito. */
+  lotId?: string | null
+  /** Números de série das unidades movidas (produtos com séries). */
+  serials?: string[]
 }
 
+/** Chave do saldo: armazém, localização, produto, variante e lote. */
 export const keyOf = (
-  l: Pick<PostingLine, 'warehouseId' | 'locationId' | 'productId' | 'variantId'>
-) => `${l.warehouseId}|${l.locationId ?? ''}|${l.productId}|${l.variantId ?? ''}`
+  l: Pick<PostingLine, 'warehouseId' | 'locationId' | 'productId' | 'variantId' | 'lotId'>
+) => `${l.warehouseId}|${l.locationId ?? ''}|${l.productId}|${l.variantId ?? ''}|${l.lotId ?? ''}`
 
 /** Coerência das linhas com o tipo de lançamento. */
 export function postingIssues(type: PostingType, lines: PostingLine[]): ErrorDetail[] {

@@ -19,6 +19,8 @@ export interface StockBalance {
   location: (Ref & { pathCode: string }) | null;
   product: Ref & { sku: string; name: string };
   variant: (Ref & { sku: string }) | null;
+  /** Lote (8.8): só nos produtos com lotes. */
+  lot: { id: string; code: string; expiryDate: string | null; status?: string } | null;
   uom: string;
   uomDecimals: number;
   physical: string;
@@ -39,6 +41,8 @@ export interface StockLine {
   location: { id: string; pathCode: string } | null;
   product: { id: string; sku: string; name: string };
   variant: { id: string; sku: string } | null;
+  /** Lote (8.8): só nos produtos com lotes. */
+  lot: { id: string; code: string; expiryDate: string | null; status?: string } | null;
   uom: string;
   bucket: Bucket;
   quantity: string;
@@ -103,6 +107,8 @@ export const POSTING_TYPE: Record<string, string> = {
 /** Origens conhecidas (os módulos que pedem lançamentos acrescentam as suas). */
 const SOURCE: Record<string, string> = {
   STOCK_STATUS: 'Inventário · mudança de estado',
+  STOCK_LOT: 'Inventário · lote',
+  STOCK_COUNT: 'Contagem',
 };
 export const sourceLabel = (s: { type: string; ref: string | null }) =>
   s.ref ?? SOURCE[s.type] ?? s.type;

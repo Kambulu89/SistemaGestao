@@ -568,3 +568,32 @@ consulta de saldos continua a vê-los lá — a separação de perfis é uma dec
 **Imutabilidade**: aprovada ou anulada, a contagem e as linhas ficam fixas (gatilho); o plano fica fixo depois do
 início; registos de contagem e lançamentos de ajuste só de acréscimo; o ajuste corrige-se com uma nova contagem, não
 editando a anterior.
+
+## D-043 Lotes, séries e FEFO: o lote é dimensão do saldo, séries por unidade, saídas FEFO no motor, bloqueio e recolha (aceite)
+
+O **lote** (`stock_lots`: código único por produto/variante, validade, fabrico, estado activo/bloqueado/recolhido)
+passa a ser uma **dimensão dos movimentos e dos saldos** — só nos baldes físicos e em trânsito; reservado e previsto
+continuam sem lote. A validade guarda-se no lote (um produto com validade tem de controlar lotes). Cada unidade de um
+produto com séries tem uma linha em `stock_serials` (onde está: armazém, localização, lote, balde — ou fora do stock)
+e um histórico só de acréscimo por lançamento. Com movimentos, o rastreio por lote/série do produto já não muda.
+
+**Tudo no motor (`postStock`)**: as linhas aceitam `lotId`, `lotCode` (+ validade; o lote é criado nas entradas e
+ajustes) e `serials`. Uma **saída sem lote** reparte-se em **FEFO** (validade mais próxima; sem validade no fim;
+empate pela entrada do lote; stock sem lote anterior ao 8.8 por último) — nas saídas do livre (consumo, venda,
+transferência) ignora lotes bloqueados, recolhidos e expirados, e um lote assim indicado explicitamente é recusado
+(`LOT_BLOCKED`, `LOT_EXPIRED`); o abate (ajuste) e as mudanças de estado podem usá-los. As **séries** de uma saída são
+as indicadas (têm de estar nesse lugar) ou as mais antigas ali. As **entradas do mesmo lançamento** sem lote/séries
+(o outro lado de uma transferência ou de uma mudança de estado) recebem os que saíram — por isso transferências,
+requisições, estornos e contagens funcionam sem mudanças e mantêm a rastreabilidade; uma entrada nova sem lote/séries é
+recusada (`LOT_REQUIRED`, `SERIALS_REQUIRED`). Uma série não entra duas vezes em stock (`SERIAL_IN_STOCK`).
+
+**Bloqueio e recolha** (`inventory.lots.manage` no âmbito de todos os armazéns com stock do lote): bloquear move o
+livre do lote (em todos os armazéns) para bloqueado com um lançamento `STATUS_CHANGE` (deixa de ser disponível; recusa
+se ficaria reservado acima do livre); desbloquear devolve o que o último bloqueio moveu; **recolher** é definitivo
+(gatilho), bloqueia o livre e o lote não volta a receber no livre — o que está bloqueado sai por documento (devolução,
+destruição). **Rastreabilidade**: o lote mostra de onde veio (entradas por origem), onde está (saldos por armazém e
+estado), para onde foi (saídas definitivas por origem — a lista de uma recolha) e as séries; cada série mostra o seu
+percurso. **FEFO/FIFO aqui é a ordem física de saída, não o método de valorização** (8.9).
+
+Contagens (8.7) contam por lote; diferenças em produtos com séries regularizam-se por documento com as séries
+(`SERIALS_REQUIRED`), porque o ajuste não sabe que unidades faltam ou sobram.

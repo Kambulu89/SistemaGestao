@@ -146,6 +146,12 @@ export function productIssues(p: ProductFacts): ErrorDetail[] {
       code: 'SERIAL_DECIMALS',
       message: 'Com números de série, a unidade base tem de ser inteira (0 casas decimais).',
     })
+  if (p.trackExpiry && !p.trackLots)
+    issues.push({
+      path: 'trackExpiry',
+      code: 'EXPIRY_NEEDS_LOTS',
+      message: 'A validade guarda-se por lote: active o controlo por lotes.',
+    })
   if (p.shelfLifeDays !== null && !p.trackExpiry)
     issues.push({
       path: 'shelfLifeDays',

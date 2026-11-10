@@ -20,6 +20,7 @@ const balancesQuery = vine.create(
   vine.object({
     warehouseId: vine.string().uuid().optional(),
     productId: vine.string().uuid().optional(),
+    lotId: vine.string().uuid().optional(),
     q: vine.string().trim().maxLength(100).optional(),
     nonZero: vine.boolean().optional(),
     ...page,
@@ -30,6 +31,7 @@ const movementsQuery = vine.create(
     warehouseId: vine.string().uuid().optional(),
     productId: vine.string().uuid().optional(),
     variantId: vine.string().uuid().optional(),
+    lotId: vine.string().uuid().optional(),
     type: vine.enum(POSTING_TYPES).optional(),
     ...page,
   })
@@ -41,6 +43,7 @@ const statusBody = vine.create(
     locationId: vine.string().uuid().nullable().optional(),
     productId: vine.string().uuid(),
     variantId: vine.string().uuid().nullable().optional(),
+    lotId: vine.string().uuid().nullable().optional(),
     from: vine.string().trim().maxLength(12),
     to: vine.string().trim().maxLength(12),
     quantity: vine.string().trim().maxLength(30),

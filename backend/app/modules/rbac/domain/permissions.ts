@@ -452,6 +452,12 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Rever contagens (ver o sistema nas cegas), justificar diferenças, pedir recontagem e aprovar o ajuste de stock nos armazéns do âmbito atribuído.',
   },
   {
+    code: 'inventory.lots.manage',
+    module: 'inventory',
+    description:
+      'Bloquear, desbloquear e recolher lotes (o stock livre do lote passa a bloqueado) quando todos os armazéns com stock do lote estão no âmbito atribuído.',
+  },
+  {
     code: 'inventory.settings',
     module: 'inventory',
     description:
