@@ -479,3 +479,25 @@ localizações têm de guardar stock e ser do armazém (FK composta); armazéns 
 Consultar segue o acesso aos armazéns (8.2); lançar exige acesso de operação (os módulos integradores podem dispensar a
 verificação e aplicar a sua); a mudança de estado manual exige `inventory.stock.manage` no âmbito do armazém. A
 reconciliação compara cada saldo com a soma dos movimentos.
+
+## D-039 Entradas e saídas: documento em rascunho, conferência, confirmações parciais que lançam stock e estornos (aceite)
+
+Um **documento de stock** (entrada ou saída) pertence a um armazém (e à sua entidade legal) e tem origem (compra,
+devolução, produção, saldo inicial, consumo, venda, perda, amostra, outra — conforme o tipo), referência, contraparte e
+notas. As **linhas** guardam produto/variante, unidade do documento com o **factor de conversão congelado** (a
+conversão do produto pode mudar depois sem alterar documentos), quantidade e quantidade base (6 casas, arredondamento
+meio para cima; tem de caber nas casas da unidade base), localização que guarda stock, estado do stock na entrada/saída
+(livre, quarentena, bloqueado), lote, números de série (um por unidade base; linha com séries confirma-se por inteiro),
+validade e custo unitário (só nas entradas, na moeda funcional da entidade; a valorização chega no 8.9).
+
+**Ciclo**: rascunho (editável) → **conferência** (quantidades contadas por linha, com motivo da diferença; reabrível) →
+**confirmação**, que lança no stock **só** as quantidades conferidas, por `postStock` (idempotente; as regras e
+bloqueios do 8.3 aplicam-se — uma saída sem stock é recusada e nada muda). O que falta fica **parcial**: nova
+conferência e nova confirmação, ou **fecho do saldo** com motivo. A última parte de uma linha leva o resto exacto da
+quantidade base (sem desvios de arredondamento). **Número**: reservado na primeira confirmação na série documental
+activa da entidade legal (`STOCK_RECEIPT` / `STOCK_ISSUE`, a da filial do armazém primeiro), sem buracos por rascunhos
+anulados; sem série, a confirmação explica o que configurar. **Anular** só sem confirmações (com motivo). Uma
+**confirmação estorna-se** (motivo, idempotente, uma vez): lançamento inverso pelo 8.3 e as quantidades voltam a estar
+por confirmar. Nada se apaga: confirmações e as suas linhas são só de acréscimo e as linhas já confirmadas não mudam
+(gatilhos na base). Gerir (`inventory.documents.manage`) e confirmar (`inventory.documents.confirm`) são permissões
+separadas, no âmbito do armazém e com acesso de operação; quem consulta segue o acesso aos armazéns.

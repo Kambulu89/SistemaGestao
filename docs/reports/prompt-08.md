@@ -1,6 +1,6 @@
 # Relatório — Prompt 08 (inventário)
 
-Estado: **8.1, 8.2 e 8.3 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.4 a 8.12 seguem, um de cada
+Estado: **8.1 a 8.4 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.5 a 8.12 seguem, um de cada
 vez. Decisões a partir de D-036.
 
 ## Inventário AS-IS → TO-BE
@@ -10,6 +10,7 @@ vez. Decisões a partir de D-036.
 | 8.1 Produtos e serviços    | Sem módulo de inventário      | Unidades, categorias (hierarquia, classe contabilística), marcas; produto armazenável/serviço/kit com SKU e EAN únicos, conversões por produto, rastreio por lote/série/validade, stock mín./máx., preço, variantes, componentes, imagens | Feito  |
 | 8.2 Armazéns               | Sem armazéns                  | Armazém por entidade legal/filial com responsável, morada, tipo e estado; localizações zona → corredor → estante → posição com caminho fixo e séries; acesso por âmbito e lista nos restritos | Feito  |
 | 8.3 Stock                  | Sem stock                     | Lançamentos e movimentos só de acréscimo, saldos derivados na base (livre, bloqueado, quarentena, reservado, trânsito, previsto; físico e disponível), idempotência, estornos, concorrência, reconciliação, mudança de estado | Feito  |
+| 8.4 Entradas/saídas        | Sem documentos de stock       | Documentos com cabeçalho e linhas (unidade e conversão congelada, lote, séries, validade, localização, custo), rascunho → conferência → confirmação parcial/total, número por série, fecho de saldo, anulação, estornos; stock só na confirmação | Feito  |
 
 ## 8.1 Produtos e serviços
 
@@ -151,9 +152,63 @@ estorno e lançamento estornado ligados).
   estado com validação no cliente ("Há só 100 neste estado.") e 10 para quarentena (disponível 90); conferência sem
   diferenças; kardex do produto (−10/+10, +100, +50) e lançamento com motivo e as duas linhas; 390 px sem deslocamento.
 
+## 8.4 Entradas e saídas
+
+### Modelo
+
+Migração `0036_create_inventory_documents`: `stock_documents` (tipo, armazém, entidade legal, série e número, data,
+origem, referência, contraparte, moeda, estado, conferência, fecho e anulação com motivo), `stock_document_lines`
+(produto/variante, unidade e factor congelado, quantidade e quantidade base, localização do mesmo armazém por FK
+composta, estado do stock, lote, séries, validade, custo, conferido e confirmado), `stock_document_confirmations` e
+`stock_document_confirmation_lines` (cada confirmação aponta o lançamento de stock e, se estornada, o lançamento
+inverso). Gatilhos: confirmações e as suas linhas só de acréscimo (o estorno preenche as suas marcas uma vez); linhas
+com confirmações não se apagam nem mudam de produto, unidade, factor, quantidade, localização, lote, séries, validade
+ou custo. `CHECK`s: confirmado ≤ quantidade, conferido + confirmado ≤ quantidade, número ⇔ série, anulação ⇔ motivo.
+
+### API (`/api/v1/inventory`)
+
+- `GET|POST /documents`, `GET|PUT /documents/:id` (rascunho), `POST /documents/:id/check|reopen|confirm|close|cancel`,
+  `POST /document-confirmations/:id/reverse`. Confirmar e estornar exigem chave de idempotência; as outras acções
+  exigem a versão.
+- Permissões novas: `inventory.documents.manage` e `inventory.documents.confirm` (âmbito do armazém).
+- Erros: `INVALID_STATE`, `VERSION_CONFLICT`, `NOTHING_CHECKED`, `NO_SERIES`, `HAS_CONFIRMATIONS`, `ALREADY_REVERSED`,
+  `NO_CONVERSION`, `DECIMALS`, `BASE_DECIMALS`, `NOT_HOLDING`, `SERIAL_COUNT`, `SERIAL_DUPLICATE`, `NOT_TRACKED`,
+  `NOT_ALLOWED` (custo numa saída), `FUTURE`, e os do 8.3 (`INSUFFICIENT_STOCK`, `OVER_RESERVED`, …).
+
+### Ecrãs
+
+Inventário → Entradas e saídas: lista (tipo, estado, armazém, pesquisa por número/referência/contraparte) com "Nova
+entrada" e "Nova saída"; documento com cabeçalho, linhas editáveis no rascunho (produto, variante, unidade com a
+conversão mostrada e a quantidade base calculada, localização, estado, lote, validade, séries, custo; erros do servidor
+na linha certa) e, depois, só leitura com confirmado/por confirmar/conferido; acções conforme estado e permissões
+(Conferir, Reabrir conferência, Confirmar — com confirmação explícita —, Fechar saldo, Anular, Estornar), confirmações
+com estornos e histórico. O modelo de formulário ganhou o modo só de leitura (sem "Guardar").
+
+### Testes e evidências
+
+- Unitário `inventory_documents_domain.spec.ts` (2): lote, séries (quantidade, inteiros, repetidos), validade, custo
+  nas saídas, origens por tipo, estado a partir das quantidades, conferência (limites, séries por inteiro), acções por
+  estado.
+- Funcional `inventory_documents.spec.ts` (3): validações (linhas, origem, data futura, conversão, lote, validade,
+  séries, casas, localização); rascunho não mexe no stock; edição com versão; confirmar sem conferir recusado;
+  conferência acima do que falta recusada; reabrir; confirmação parcial numera (`ENT-…1`) e lança 7 caixas = 168;
+  repetir a mesma confirmação não duplica; documento confirmado não se edita nem anula; segunda ronda conclui; leite em
+  quarentena; movimentos com origem `STOCK_DOCUMENT` e número; estorno (motivo, idempotente, único) devolve saldo por
+  confirmar e retira 168; fecho de saldo; auditoria de todas as acções; reconciliação sem diferenças; a base recusa
+  apagar confirmações e alterar linhas confirmadas. Saídas: séries por inteiro, custo recusado, saída acima do stock
+  recusada sem lançar nem numerar, anulação com motivo, série `SAI-…1`, entidade sem série (`NO_SERIES`). Permissões:
+  leitor não cria, fiel cria/confere mas não confirma, chefe confirma, documento de outra entidade → 404; **duas
+  confirmações em paralelo: uma 200, outra 409, um só lançamento**.
+- `isolation_matrix` (documento de outra empresa: ler, editar, conferir, confirmar, anular → 404; lista vazia; URL
+  forjada → 403); `routes_protection`; frontend `stock-document-model.spec.ts` (3).
+- Browser (8 passos, sem erros na consola): séries criadas; entrada com 10 CX (= 240 U mostrado), custo, leite com lote,
+  validade e quarentena (erro do lote na linha certa); conferência parcial de 6 CX com motivo; confirmação → número da
+  série, Parcial, 144 em stock; segunda ronda → Concluído, 240; estorno da 1.ª (96) e fecho do saldo com motivo; saída de
+  999 recusada com "Stock insuficiente" sem mexer no stock e anulada; lista filtrada; 390 px sem deslocamento.
+
 ## Pendências
 
-- 8.4 a 8.12 ( movimentos, transferências, reservas, contagens, lotes/FEFO, valorização, integrações,
+- 8.5 a 8.12 ( movimentos, transferências, reservas, contagens, lotes/FEFO, valorização, integrações,
   alertas, QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
@@ -161,3 +216,5 @@ estorno e lançamento estornado ligados).
   armazém exige criar outro (com transferência de stock depois do 8.5).
 - 8.3: a valorização (custo) dos movimentos chega no 8.9; lotes e séries no 8.8 (o saldo ganhará essa dimensão); o saldo
   não guarda a data do documento (fica no documento do 8.4); stock negativo não é permitido (sem configuração).
+- 8.4: lote, séries e validade ficam nas linhas dos documentos; os saldos por lote/série chegam no 8.8. Documentos
+  ligados a compras e vendas (origem com identificador) chegam no 8.10; anexos ao documento ainda não.

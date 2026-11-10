@@ -4054,6 +4054,178 @@ export class StockBalanceSchema extends BaseModel {
   declare warehouseId: string
 }
 
+export class StockDocumentConfirmationLineSchema extends BaseModel {
+  static $columns = ['baseQuantity', 'confirmationId', 'createdAt', 'createdBy', 'id', 'lineId', 'quantity', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StockDocumentConfirmationLineSchema.$columns
+  @column()
+  declare baseQuantity: string
+  @column()
+  declare confirmationId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StockDocumentConfirmationSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'documentId', 'id', 'idempotencyKey', 'postingId', 'reversalPostingId', 'reverseReason', 'reversedAt', 'reversedBy', 'seq', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = StockDocumentConfirmationSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare documentId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare postingId: string
+  @column()
+  declare reversalPostingId: string | null
+  @column()
+  declare reverseReason: string | null
+  @column.dateTime()
+  declare reversedAt: DateTime | null
+  @column()
+  declare reversedBy: string | null
+  @column()
+  declare seq: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StockDocumentLineSchema extends BaseModel {
+  static $columns = ['baseQuantity', 'bucket', 'checkedQuantity', 'confirmedQuantity', 'createdAt', 'createdBy', 'differenceReason', 'documentId', 'expiryDate', 'factor', 'id', 'lineNo', 'locationId', 'lotCode', 'productId', 'quantity', 'serials', 'tenantId', 'unitCost', 'uomId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
+  $columns = StockDocumentLineSchema.$columns
+  @column()
+  declare baseQuantity: string
+  @column()
+  declare bucket: string
+  @column()
+  declare checkedQuantity: string | null
+  @column()
+  declare confirmedQuantity: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare differenceReason: string | null
+  @column()
+  declare documentId: string
+  @column.date()
+  declare expiryDate: DateTime | null
+  @column()
+  declare factor: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare locationId: string | null
+  @column()
+  declare lotCode: string | null
+  @column()
+  declare productId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare serials: any | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare unitCost: string | null
+  @column()
+  declare uomId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
+export class StockDocumentSchema extends BaseModel {
+  static $columns = ['cancelReason', 'checkedAt', 'checkedBy', 'closeReason', 'closedShort', 'completedAt', 'counterparty', 'createdAt', 'createdBy', 'currency', 'docType', 'documentDate', 'id', 'legalEntityId', 'notes', 'number', 'origin', 'originRef', 'seriesId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = StockDocumentSchema.$columns
+  @column()
+  declare cancelReason: string | null
+  @column.dateTime()
+  declare checkedAt: DateTime | null
+  @column()
+  declare checkedBy: string | null
+  @column()
+  declare closeReason: string | null
+  @column()
+  declare closedShort: boolean
+  @column.dateTime()
+  declare completedAt: DateTime | null
+  @column()
+  declare counterparty: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string | null
+  @column()
+  declare docType: string
+  @column.date()
+  declare documentDate: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column()
+  declare origin: string
+  @column()
+  declare originRef: string | null
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
 export class StockMovementSchema extends BaseModel {
   static $columns = ['bucket', 'createdAt', 'createdBy', 'id', 'lineNo', 'locationId', 'occurredAt', 'postingId', 'productId', 'quantity', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version', 'warehouseId'] as const
   $columns = StockMovementSchema.$columns

@@ -405,7 +405,7 @@ employeeId, from, to)` em `#modules/hr/index`.
 
 ## Inventário (módulo `inventory`, Prompt 08)
 
-8.1 a 8.3 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-038). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+8.1 a 8.4 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-039). Catálogo: `uoms`, `product_categories` (hierarquia, classe
 contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
 `product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
 únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
@@ -418,4 +418,7 @@ Stock (8.3): `stock_postings` + `stock_movements` só de acréscimo; `stock_bala
 directa recusada; baldes ≥ 0; reservado ≤ livre por armazém no fim da transacção). **Todo o stock entra pelo contrato
 `postStock`/`reverseStockPosting`** (idempotência por chave, advisory locks por armazém/produto/variante, auditoria);
 nenhum módulo escreve nestas tabelas.
+Entradas/saídas (8.4): `stock_documents` + linhas (factor de conversão congelado) + confirmações (só acréscimo, cada
+uma com o seu lançamento e estorno). Rascunho → conferido → confirmado (parcial/total); o stock só muda na confirmação,
+por `postStock`; número reservado na primeira confirmação pela série `STOCK_RECEIPT`/`STOCK_ISSUE` da entidade legal.
 

@@ -398,6 +398,18 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Mudar o estado do stock (livre, bloqueado, quarentena) nos armazéns do âmbito atribuído (entidade legal ou filial).',
   },
   {
+    code: 'inventory.documents.manage',
+    module: 'inventory',
+    description:
+      'Criar, editar, conferir, reabrir e anular documentos de entrada e saída de stock no âmbito atribuído.',
+  },
+  {
+    code: 'inventory.documents.confirm',
+    module: 'inventory',
+    description:
+      'Confirmar documentos de entrada e saída (movimenta o stock), fechar saldos e estornar confirmações no âmbito atribuído.',
+  },
+  {
     code: 'inventory.settings',
     module: 'inventory',
     description:

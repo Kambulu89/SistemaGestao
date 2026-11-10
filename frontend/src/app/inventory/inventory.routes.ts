@@ -62,6 +62,34 @@ export const INVENTORY_ROUTES: Routes = [
     ],
   },
   {
+    path: 'documentos',
+    title: 'Entradas e saídas',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./stock-documents').then((m) => m.StockDocuments),
+      },
+      {
+        path: 'novo',
+        title: 'Novo documento',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'inventory.documents.manage', anyScope: true },
+        loadComponent: () => import('./stock-document-form').then((m) => m.StockDocumentFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Documento de stock',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'inventory.read', anyScope: true },
+        loadComponent: () => import('./stock-document-form').then((m) => m.StockDocumentFormPage),
+      },
+    ],
+  },
+  {
     path: 'stock',
     title: 'Stock',
     canActivate: [accessGuard],

@@ -288,6 +288,26 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
   'POST /api/v1/inventory/stock/status-changes':
     'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/documents':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'GET /api/v1/inventory/documents/:id':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'PUT /api/v1/inventory/documents/:id':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/check':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/reopen':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/confirm':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/close':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/cancel':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/document-confirmations/:id/reverse':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
   'GET /api/v1/inventory/warehouses':
     'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
   'GET /api/v1/inventory/warehouses/candidates':

@@ -43,10 +43,14 @@ import { ErrorState, Skeleton } from '../states';
           <span class="mr-auto text-sm text-muted" role="status">Alterações por guardar</span>
         }
         <ng-content select="[actions]" />
-        <button type="button" class="btn-secondary" (click)="cancelled.emit()">Cancelar</button>
-        <button type="submit" class="btn-primary" [attr.form]="formId()" [disabled]="busy()">
-          {{ busy() ? 'A guardar…' : saveLabel() }}
+        <button type="button" class="btn-secondary" (click)="cancelled.emit()">
+          {{ readOnly() ? 'Voltar' : 'Cancelar' }}
         </button>
+        @if (!readOnly()) {
+          <button type="submit" class="btn-primary" [attr.form]="formId()" [disabled]="busy()">
+            {{ busy() ? 'A guardar…' : saveLabel() }}
+          </button>
+        }
       </div>
     }
   `,
@@ -61,6 +65,8 @@ export class EntityFormPage {
   readonly busy = input(false);
   readonly dirty = input(false);
   readonly saveLabel = input('Guardar');
+  /** Registo que já não se edita (ex.: documento confirmado): sem botão de guardar; as acções vêm no slot. */
+  readonly readOnly = input(false);
   readonly draftSavedAt = input<string | null>(null);
   readonly save = output();
   readonly cancelled = output();
@@ -70,6 +76,6 @@ export class EntityFormPage {
 
   protected onSubmit(event: Event) {
     event.preventDefault();
-    if (!this.busy()) this.save.emit();
+    if (!this.busy() && !this.readOnly()) this.save.emit();
   }
 }

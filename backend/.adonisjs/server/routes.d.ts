@@ -379,6 +379,16 @@ export type ScannedRoutes = {
     'stock.posting': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'stock.reconciliation': { paramsTuple?: []; params?: {} }
     'stock.change_status': { paramsTuple?: []; params?: {} }
+    'stock_documents.index': { paramsTuple?: []; params?: {} }
+    'stock_documents.store': { paramsTuple?: []; params?: {} }
+    'stock_documents.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.check': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.reopen': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -549,6 +559,8 @@ export type ScannedRoutes = {
     'stock.movements': { paramsTuple?: []; params?: {} }
     'stock.posting': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'stock.reconciliation': { paramsTuple?: []; params?: {} }
+    'stock_documents.index': { paramsTuple?: []; params?: {} }
+    'stock_documents.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -707,6 +719,8 @@ export type ScannedRoutes = {
     'stock.movements': { paramsTuple?: []; params?: {} }
     'stock.posting': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'stock.reconciliation': { paramsTuple?: []; params?: {} }
+    'stock_documents.index': { paramsTuple?: []; params?: {} }
+    'stock_documents.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -876,6 +890,13 @@ export type ScannedRoutes = {
     'warehouses.store': { paramsTuple?: []; params?: {} }
     'warehouses.add_locations': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'stock.change_status': { paramsTuple?: []; params?: {} }
+    'stock_documents.store': { paramsTuple?: []; params?: {} }
+    'stock_documents.check': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.reopen': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -961,6 +982,7 @@ export type ScannedRoutes = {
     'payroll.set_input': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_settings': { paramsTuple?: []; params?: {} }
     'warehouses.set_access': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

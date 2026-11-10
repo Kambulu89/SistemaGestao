@@ -625,8 +625,17 @@ async function populate(client: any) {
       })
   )
   const stockPosting = stock.posting
+  const stockDocument = ok(
+    await as(client, s).post('/api/v1/inventory/documents', {
+      docType: 'RECEIPT',
+      warehouseId: warehouse.id,
+      origin: 'PURCHASE',
+      lines: [{ productId: product.id, variantId: variant.id, uomId: uom.id, quantity: '2' }],
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    stockDocument,
     stockPosting,
     warehouse,
     location,
@@ -1683,6 +1692,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/inventory/products')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/warehouses')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/stock/balances')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/documents')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/stock/movements')).body().data, 0)
     assert.lengthOf(
       (await B.get(`/api/v1/inventory/stock/balances?warehouseId=${a.warehouse.id}`)).body().data,
@@ -1783,6 +1793,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/settings/categories',
       '/api/v1/inventory/warehouses',
       '/api/v1/inventory/stock/balances',
+      '/api/v1/inventory/documents',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',
       '/api/v1/hr/team',

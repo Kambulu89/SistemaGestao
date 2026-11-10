@@ -43,6 +43,7 @@ const PortalController = () => import('#modules/hr/http/portal_controller')
 const CatalogController = () => import('#modules/inventory/http/catalog_controller')
 const WarehousesController = () => import('#modules/inventory/http/warehouses_controller')
 const StockController = () => import('#modules/inventory/http/stock_controller')
+const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
 router
   .group(() => {
@@ -851,6 +852,19 @@ router
                 router.get('stock/postings/:id', [StockController, 'posting'])
                 router.get('stock/reconciliation', [StockController, 'reconciliation'])
                 router.post('stock/status-changes', [StockController, 'changeStatus'])
+                router.get('documents', [StockDocumentsController, 'index'])
+                router.post('documents', [StockDocumentsController, 'store'])
+                router.get('documents/:id', [StockDocumentsController, 'show'])
+                router.put('documents/:id', [StockDocumentsController, 'update'])
+                router.post('documents/:id/check', [StockDocumentsController, 'check'])
+                router.post('documents/:id/reopen', [StockDocumentsController, 'reopen'])
+                router.post('documents/:id/confirm', [StockDocumentsController, 'confirm'])
+                router.post('documents/:id/close', [StockDocumentsController, 'close'])
+                router.post('documents/:id/cancel', [StockDocumentsController, 'cancel'])
+                router.post('document-confirmations/:id/reverse', [
+                  StockDocumentsController,
+                  'reverse',
+                ])
               })
               .prefix('inventory')
               .use(middleware.entitled({ feature: 'inventory' }))
