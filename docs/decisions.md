@@ -413,3 +413,25 @@ centésimas exactas sem `float`), férias do ano por colaborador e departamento 
 colocação actual; folha salarial, IRT, INSS e custo para a empresa só de lotes fechados e só nas entidades legais com
 `hr.payroll.read`. Os relatórios devolvem agregados e totais; a exportação CSV é feita no browser a partir do resultado.
 
+## D-036 Catálogo do inventário: SKU/EAN únicos entre produtos e variantes, unidades por produto e classe contabilística (aceite)
+
+O Inventário (módulo `inventory`, funcionalidade `inventory`) é o dono do catálogo. **Produto** com SKU e código de
+barras únicos na empresa **entre produtos e variantes** (verificação serializada por empresa + índices únicos por
+tabela); códigos numéricos de 8, 12, 13 ou 14 dígitos têm de ter o dígito de controlo GTIN certo, os restantes aceitam-se
+como códigos internos. **Tipos**: armazenável, serviço e kit; serviços e kits não movimentam stock — sem lotes, séries,
+validade nem limites (regra do serviço e `CHECK` na base); um kit tem componentes armazenáveis activos em unidades base
+do componente e não tem variantes. Números de série exigem unidade base inteira; o prazo de validade exige o controlo de
+validade.
+
+**Unidades**: a unidade base é a do stock; as conversões são **por produto** (quantas unidades base tem 1 unidade
+alternativa, 6 casas decimais exactas) e as unidades de compra e venda têm de ser a base ou ter conversão. As casas
+decimais de uma unidade usada não mudam. **Variantes**: SKU, código de barras, atributos (1 a 5 pares, combinação única
+sem distinguir maiúsculas) e preço próprio opcional; os movimentos dos blocos seguintes referem produto e variante.
+
+**Contabilização**: o produto não guarda contas (os planos de contas são por entidade legal e as regras de lançamento
+já ligam contas a eventos por entidade). Guarda uma **classe contabilística** (ex.: `MERCADORIAS`), definida na
+categoria e sobreponível no produto; a efectiva é a do produto ou a da categoria mais próxima. O 8.10 usa a classe para
+escolher a regra de lançamento. **Preço comercial** de referência com moeda (4 casas); tabelas de preços ficam para
+Vendas. Nada se apaga: produtos, variantes, unidades, categorias e marcas inactivam-se ou descontinuam-se. Imagens e
+fichas técnicas usam os anexos (`product`: ler com `inventory.read`, acrescentar com `inventory.products.manage`).
+

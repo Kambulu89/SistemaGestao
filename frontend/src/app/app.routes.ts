@@ -180,6 +180,14 @@ export const routes: Routes = [
             loadComponent: () => import('./admin/audit').then((m) => m.Audit),
           },
           {
+            path: 'inventario',
+            title: 'Inventário',
+            canActivate: [accessGuard],
+            data: { feature: 'inventory' },
+            loadChildren: () =>
+              import('./inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES),
+          },
+          {
             path: 'rh',
             title: 'Recursos humanos',
             canActivate: [accessGuard],

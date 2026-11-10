@@ -65,6 +65,7 @@ describe('navegação por domínios', () => {
       'Início',
       'Gestão Financeira',
       'Pessoas e Talento',
+      'Operações Empresariais',
       'Administração e Plataforma',
       'Integrações e Compliance',
     ]);

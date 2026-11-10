@@ -401,6 +401,28 @@ export const NAVIGATION: NavGroup[] = [
     ],
   },
   {
+    label: 'Operações Empresariais',
+    icon: 'layers',
+    items: [
+      {
+        label: 'Produtos e serviços',
+        path: '/inventario/produtos',
+        icon: 'grid',
+        permission: 'inventory.read',
+        feature: 'inventory',
+        section: 'Inventário',
+      },
+      {
+        label: 'Configuração do catálogo',
+        path: '/inventario/configuracao',
+        icon: 'settings',
+        permission: 'inventory.read',
+        feature: 'inventory',
+        section: 'Inventário',
+      },
+    ],
+  },
+  {
     label: 'Administração e Plataforma',
     icon: 'settings',
     items: [

@@ -554,8 +554,48 @@ async function populate(client: any) {
       indemnityApplicable: false,
     })
   )
+  const uom = ok(
+    await as(client, s).post('/api/v1/inventory/settings/uoms', {
+      code: 'UNA',
+      name: 'Unidade A',
+      category: 'UNIT',
+    })
+  )
+  const productCategory = ok(
+    await as(client, s).post('/api/v1/inventory/settings/categories', {
+      code: 'CATA',
+      name: 'Categoria A',
+    })
+  )
+  const brand = ok(
+    await as(client, s).post('/api/v1/inventory/settings/brands', {
+      code: 'MARCA',
+      name: 'Marca A',
+    })
+  )
+  const product = ok(
+    await as(client, s).post('/api/v1/inventory/products', {
+      sku: 'SKU-A',
+      barcode: 'INT-A-001',
+      name: 'Produto A',
+      productType: 'STOCKABLE',
+      baseUomId: uom.id,
+    })
+  )
+  const withVariant = ok(
+    await as(client, s).post(`/api/v1/inventory/products/${product.id}/variants`, {
+      sku: 'SKU-A-V',
+      attributes: { Cor: 'Azul' },
+    })
+  )
+  const variant = withVariant.variants[0]
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    uom,
+    productCategory,
+    brand,
+    product,
+    variant,
     leaver,
     termination,
     employee,
@@ -1008,6 +1048,43 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.get(
           `/api/v1/attachments?subjectType=disciplinary_case&subjectId=${a.disciplinaryCase.id}`
         ),
+      ],
+      ['GET produto', B.get(`/api/v1/inventory/products/${a.product.id}`)],
+      [
+        'PATCH produto',
+        B.patch(`/api/v1/inventory/products/${a.product.id}`, { ...v, name: 'xx' }),
+      ],
+      ['procura por SKU alheio', B.get('/api/v1/inventory/products/lookup?code=SKU-A')],
+      ['procura por código alheio', B.get('/api/v1/inventory/products/lookup?code=INT-A-001')],
+      [
+        'variante em produto alheio',
+        B.post(`/api/v1/inventory/products/${a.product.id}/variants`, {
+          sku: 'SKU-B-V',
+          attributes: { Cor: 'Verde' },
+        }),
+      ],
+      [
+        'PATCH variante',
+        B.patch(`/api/v1/inventory/product-variants/${a.variant.id}`, { ...v, status: 'INACTIVE' }),
+      ],
+      [
+        'PATCH unidade',
+        B.patch(`/api/v1/inventory/settings/uoms/${a.uom.id}`, { ...v, name: 'x' }),
+      ],
+      [
+        'PATCH categoria de produto',
+        B.patch(`/api/v1/inventory/settings/categories/${a.productCategory.id}`, {
+          ...v,
+          name: 'x',
+        }),
+      ],
+      [
+        'PATCH marca',
+        B.patch(`/api/v1/inventory/settings/brands/${a.brand.id}`, { ...v, name: 'x' }),
+      ],
+      [
+        'anexos do produto',
+        B.get(`/api/v1/attachments?subjectType=product&subjectId=${a.product.id}`),
       ],
       ['GET cessação', B.get(`/api/v1/hr/terminations/${a.termination.id}`)],
       [
@@ -1527,6 +1604,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/hr/training/courses')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/discipline/cases')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/hr/terminations')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/products')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/settings/uoms')).body().data, 0)
     const hc = (await B.get('/api/v1/hr/reports/headcount')).body().data
     assert.notInclude(JSON.stringify(hc), a.le.id)
     assert.notInclude(
@@ -1612,6 +1691,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/hr/training/sessions',
       '/api/v1/hr/discipline/cases',
       '/api/v1/hr/terminations',
+      '/api/v1/inventory/products',
+      '/api/v1/inventory/settings/categories',
       '/api/v1/hr/me',
       '/api/v1/hr/team',
       '/api/v1/hr/reports/headcount',

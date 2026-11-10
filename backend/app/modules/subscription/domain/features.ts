@@ -56,6 +56,12 @@ export const FEATURES: readonly FeatureDefinition[] = [
     kind: 'BOOLEAN',
     description: 'Recursos humanos: colaboradores, contratos, férias e processamento salarial.',
   },
+  {
+    code: 'inventory',
+    module: 'inventory',
+    kind: 'BOOLEAN',
+    description: 'Inventário: catálogo de produtos e serviços, armazéns, stock e valorização.',
+  },
 ]
 
 export const FEATURE_KINDS: ReadonlyMap<string, FeatureKind> = new Map(

@@ -356,6 +356,16 @@ export type ScannedRoutes = {
     'recruitment.respond_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.cancel_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.hire': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.index': { paramsTuple?: []; params?: {} }
+    'catalog.lookup': { paramsTuple?: []; params?: {} }
+    'catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.store': { paramsTuple?: []; params?: {} }
+    'catalog.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.store_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.update_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_list': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'catalog.settings_create': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'catalog.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -515,6 +525,10 @@ export type ScannedRoutes = {
     'recruitment.applications': { paramsTuple?: []; params?: {} }
     'recruitment.application': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.my_interviews': { paramsTuple?: []; params?: {} }
+    'catalog.index': { paramsTuple?: []; params?: {} }
+    'catalog.lookup': { paramsTuple?: []; params?: {} }
+    'catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_list': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -662,6 +676,10 @@ export type ScannedRoutes = {
     'recruitment.applications': { paramsTuple?: []; params?: {} }
     'recruitment.application': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.my_interviews': { paramsTuple?: []; params?: {} }
+    'catalog.index': { paramsTuple?: []; params?: {} }
+    'catalog.lookup': { paramsTuple?: []; params?: {} }
+    'catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_list': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -825,6 +843,9 @@ export type ScannedRoutes = {
     'recruitment.respond_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.cancel_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.hire': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.store': { paramsTuple?: []; params?: {} }
+    'catalog.store_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_create': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -894,6 +915,9 @@ export type ScannedRoutes = {
     'recruitment.update_candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_interview': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'recruitment.update_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.update_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }

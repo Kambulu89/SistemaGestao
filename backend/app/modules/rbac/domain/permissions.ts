@@ -373,6 +373,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Configurar os recursos humanos (workflows de aprovação e limites de adiantamentos e empréstimos, com fonte).',
   },
+  {
+    code: 'inventory.read',
+    module: 'inventory',
+    description:
+      'Consultar o catálogo do inventário: produtos, variantes, unidades, categorias e marcas.',
+  },
+  {
+    code: 'inventory.products.manage',
+    module: 'inventory',
+    description:
+      'Criar e alterar produtos e serviços, variantes, conversões de unidades, kits e imagens do produto.',
+  },
+  {
+    code: 'inventory.settings',
+    module: 'inventory',
+    description:
+      'Configurar o catálogo: unidades de medida, categorias (com classe contabilística) e marcas.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

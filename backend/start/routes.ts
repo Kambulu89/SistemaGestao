@@ -40,6 +40,7 @@ const PayrollController = () => import('#modules/hr/http/payroll_controller')
 const TrainingController = () => import('#modules/hr/http/training_controller')
 const TerminationsController = () => import('#modules/hr/http/terminations_controller')
 const PortalController = () => import('#modules/hr/http/portal_controller')
+const CatalogController = () => import('#modules/inventory/http/catalog_controller')
 
 router
   .group(() => {
@@ -802,6 +803,42 @@ router
               })
               .prefix('hr')
               .use(middleware.entitled({ feature: 'hr' }))
+
+            router
+              .group(() => {
+                router
+                  .get('products', [CatalogController, 'index'])
+                  .use(middleware.can({ permission: 'inventory.read' }))
+                router
+                  .get('products/lookup', [CatalogController, 'lookup'])
+                  .use(middleware.can({ permission: 'inventory.read' }))
+                router
+                  .get('products/:id', [CatalogController, 'show'])
+                  .use(middleware.can({ permission: 'inventory.read' }))
+                router
+                  .post('products', [CatalogController, 'store'])
+                  .use(middleware.can({ permission: 'inventory.products.manage' }))
+                router
+                  .patch('products/:id', [CatalogController, 'update'])
+                  .use(middleware.can({ permission: 'inventory.products.manage' }))
+                router
+                  .post('products/:id/variants', [CatalogController, 'storeVariant'])
+                  .use(middleware.can({ permission: 'inventory.products.manage' }))
+                router
+                  .patch('product-variants/:id', [CatalogController, 'updateVariant'])
+                  .use(middleware.can({ permission: 'inventory.products.manage' }))
+                router
+                  .get('settings/:kind', [CatalogController, 'settingsList'])
+                  .use(middleware.can({ permission: 'inventory.read' }))
+                router
+                  .post('settings/:kind', [CatalogController, 'settingsCreate'])
+                  .use(middleware.can({ permission: 'inventory.settings' }))
+                router
+                  .patch('settings/:kind/:id', [CatalogController, 'settingsUpdate'])
+                  .use(middleware.can({ permission: 'inventory.settings' }))
+              })
+              .prefix('inventory')
+              .use(middleware.entitled({ feature: 'inventory' }))
 
             // Anexos: o acesso (e a funcionalidade) herda do registo a que pertencem.
             router.get('attachments', [AttachmentsController, 'index'])

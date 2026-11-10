@@ -402,3 +402,12 @@ employeeId, from, to)` em `#modules/hr/index`.
 - **Portais e relatórios** (7.12): `/hr/me` (a própria ficha; só contactos editáveis), `/hr/team` (pela hierarquia
   `manager_id`, sem salários nem dados pessoais) e `/hr/reports/*` (`hr.reports.read` no âmbito; folha com
   `hr.payroll.read` por entidade legal, só lotes fechados); contas puras em `hr/domain/reports.ts`.
+
+## Inventário (módulo `inventory`, Prompt 08)
+
+8.1 feito (ver `docs/reports/prompt-08.md`, D-036). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
+`product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
+únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
+`inventory`. O Inventário será o dono único dos movimentos físicos (Compras e Vendas pedem operações por contrato).
+
