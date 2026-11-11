@@ -11,3 +11,12 @@ export {
   type PostStockLineInput,
 } from '#modules/inventory/application/stock_service'
 export type { Bucket, PostingType } from '#modules/inventory/domain/stock'
+export {
+  deliverSale,
+  receivePurchase,
+  releaseSaleReservation,
+  reserveForSale,
+  returnFromSale,
+  type IntegrationInput,
+  type IntegrationLineInput,
+} from '#modules/inventory/application/integration_service'

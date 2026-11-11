@@ -1217,6 +1217,22 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'contas de valorização alheias',
         B.get(`/api/v1/inventory/valuation/accounts?legalEntityId=${a.le.id}`),
       ],
+      [
+        'integrar recepção no armazém alheio',
+        B.post('/api/v1/inventory/integrations/purchase-receipts', {
+          idempotencyKey: 'matriz-int-1',
+          warehouseId: a.warehouse.id,
+          orderRef: 'PO-X',
+          documentRef: 'R-X',
+          lines: [{ productId: a.product.id, quantity: '1', unitCost: '1' }],
+        }),
+      ],
+      [
+        'estado de encomenda no armazém alheio',
+        B.get(
+          `/api/v1/inventory/integrations/sales-orders?warehouseId=${a.warehouse.id}&orderRef=X`
+        ),
+      ],
       ['GET lote', B.get(`/api/v1/inventory/lots/${a.stockLot.id}`)],
       [
         'bloquear lote alheio',
@@ -1909,6 +1925,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/inventory/counts')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/lots')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/valuation')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/integrations/events')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/accounting-events')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/serials')).body().data, 0)
     assert.notInclude(
       JSON.stringify((await B.get('/api/v1/inventory/counts/options')).body().data),
@@ -2030,6 +2048,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/lots',
       '/api/v1/inventory/serials',
       '/api/v1/inventory/valuation',
+      '/api/v1/inventory/integrations/events',
+      '/api/v1/inventory/accounting-events',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',
       '/api/v1/hr/team',

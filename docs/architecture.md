@@ -405,7 +405,7 @@ employeeId, from, to)` em `#modules/hr/index`.
 
 ## Inventário (módulo `inventory`, Prompt 08)
 
-8.1 a 8.9 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-044). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+8.1 a 8.10 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-045). Catálogo: `uoms`, `product_categories` (hierarquia, classe
 contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
 `product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
 únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
@@ -440,4 +440,9 @@ Valorização (8.9): `valuation_engine.ts` corre dentro de cada lançamento e es
 (`stock_valuation_entries`, só acréscimo) por entidade legal; saldos de custo e camadas derivam do livro por gatilho.
 Médio, FIFO e específico por lote; devoluções ao custo do original; estornos anulam as entradas do original; correcções
 são ajustes de custo. A contabilidade expõe `accountBalancesAt`/`accountsOfLegalEntity` para a reconciliação.
+Integrações (8.10): cada lançamento com valor e cada ajuste de custo cria um evento em `inventory_accounting_events`
+(por entidade e sentido, montantes por classe) e envia-o ao Posting Engine (`INVENTORY`) num savepoint — sem regra fica
+`FAILED` e repete-se depois, sem bloquear o stock. Compras/Vendas usam os contratos de `inventory/index.ts`
+(`receivePurchase`, `reserveForSale`, `releaseSaleReservation`, `deliverSale`, `returnFromSale`) ou a API
+`/inventory/integrations/*`, idempotentes por chave e hash (`inventory_integration_events`, só acréscimo).
 

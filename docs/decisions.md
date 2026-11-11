@@ -626,3 +626,30 @@ diferença de custo das vendas é contabilizada no 8.10). O stock anterior ao 8.
 por entidade; à data, o valor do livro por classe compara-se com o saldo lançado da conta (e descendentes). A
 contabilização automática dos movimentos (Posting Engine) é do 8.10. Permissões `inventory.valuation.read|manage` no
 âmbito da entidade legal.
+
+## D-045 Integrações do inventário: eventos contabilísticos por lançamento e contratos idempotentes para Compras e Vendas (aceite)
+
+**Contabilização.** Cada lançamento de stock com valor (e cada ajuste de custo) gera, na mesma transacção, um **evento
+contabilístico** (`inventory_accounting_events`) por entidade legal e sentido, com o total e os montantes por classe
+contabilística (`value` e `cls_<classe>` para todas as classes do tenant, a zero quando não se aplicam — as regras do
+motor usam a chave da classe). O evento é enviado ao **Posting Engine** (6.3) com origem `INVENTORY` e chave
+`inv:<chave>`; o nome do evento vem do tipo de movimento e da origem (`RECEIPT_PURCHASE`, `ISSUE_SALE`,
+`ISSUE_CONSUMPTION`, `ADJUSTMENT_GAIN|LOSS`, `TRANSFER_IN|OUT_INTERCOMPANY`, `COST_ADJUSTMENT_UP|DOWN`, …); o estorno
+envia `REV_<evento>` com os montantes do original. A requisição passa o centro de custo.
+
+**Falhar sem bloquear.** O envio corre dentro de um savepoint: sem regra (ou com a regra inválida) o savepoint é
+desfeito, o evento fica `FAILED` com o motivo e a operação de stock conclui-se. "Repetir falhados"
+(`inventory.accounting.manage`) reenvia — o motor é idempotente pela chave, por isso repetir nunca duplica o
+lançamento. O conteúdo do evento é fixo na base (gatilho) e um evento lançado não volta atrás. A reconciliação do 8.9
+passa a fechar quando todas as regras existem.
+
+**Compras e Vendas.** Os módulos ainda não existem nesta aplicação; o inventário publica os contratos (`index.ts`):
+`receivePurchase`, `reserveForSale`, `releaseSaleReservation`, `deliverSale`, `returnFromSale` — e a mesma API HTTP
+(`/inventory/integrations/*`, `inventory.integrations.post` no âmbito do armazém) para um sistema externo. Cada pedido
+leva **chave de idempotência** e as **referências** (encomenda, documento, contraparte); fica registado
+(`inventory_integration_events`, só acréscimo) com o hash do pedido — a repetição devolve o resultado original, a
+mesma chave com outro pedido dá `IDEMPOTENCY_MISMATCH` (409). Um advisory lock por encomenda serializa pedidos
+concorrentes. A reserva é da encomenda: a entrega consome-a, a libertação não passa do reservado (`OVER_RELEASE`) e a
+devolução não passa do entregue (`OVER_RETURN`) e entra ao custo a que saiu (`returnOfPostingIds`). A recepção de
+compra exige o custo unitário.
+

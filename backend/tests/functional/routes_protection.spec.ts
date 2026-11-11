@@ -388,6 +388,16 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
   'PUT /api/v1/inventory/valuation/accounts':
     'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/integrations/events':
+    'âmbito RBAC de inventory.integrations.post sobre o armazém (entidade legal ou filial) e registo pelos armazéns consultáveis, verificados no serviço',
+  'GET /api/v1/inventory/integrations/sales-orders':
+    'âmbito RBAC de inventory.integrations.post sobre o armazém (entidade legal ou filial) e registo pelos armazéns consultáveis, verificados no serviço',
+  'POST /api/v1/inventory/integrations/:kind':
+    'âmbito RBAC de inventory.integrations.post sobre o armazém (entidade legal ou filial) e registo pelos armazéns consultáveis, verificados no serviço',
+  'GET /api/v1/inventory/accounting-events':
+    'âmbito RBAC de inventory.valuation.read / inventory.accounting.manage sobre a entidade legal, verificado no serviço',
+  'POST /api/v1/inventory/accounting-events/retry':
+    'âmbito RBAC de inventory.valuation.read / inventory.accounting.manage sobre a entidade legal, verificado no serviço',
   'GET /api/v1/inventory/requisitions':
     'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
   'GET /api/v1/inventory/requisitions/options':

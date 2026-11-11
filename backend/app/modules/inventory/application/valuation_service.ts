@@ -12,6 +12,7 @@ import {
   type ValuationMethod,
 } from '#modules/inventory/domain/valuation'
 import { quantityText } from '#modules/inventory/domain/stock'
+import { queueAdjustmentAccounting } from '#modules/inventory/application/accounting_bridge'
 
 /*
  * Valorização (8.9): consulta do valor do stock por entidade legal (custo médio, camadas FIFO/lote, livro de custo),
@@ -377,6 +378,7 @@ export class ValuationService {
           context.userId,
         ] as never[]
       )
+      await queueAdjustmentAccounting(scope, adjustmentId)
       await audit(scope, {
         action: 'inventory.valuation.adjusted',
         entityType: 'stock_cost_adjustment',

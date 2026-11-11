@@ -24,6 +24,7 @@ import {
   warehouseAccessFor,
 } from '#modules/inventory/application/warehouse_service'
 import { valuePosting } from '#modules/inventory/application/valuation_engine'
+import { queuePostingAccounting } from '#modules/inventory/application/accounting_bridge'
 import { parseScaled } from '#modules/inventory/domain/valuation'
 import {
   applySerials,
@@ -418,6 +419,8 @@ async function insertPosting(
     reversalOf: head.reversalOf,
     returnOfPostingIds: head.returnOf,
   })
+  // Contabilização (8.10): eventos para o motor da contabilidade (falhar não bloqueia o stock).
+  await queuePostingAccounting(scope, row.id)
   // A base verifica o reservado ≤ livre no fim da transacção; aqui pede-se já, para o erro vir deste pedido.
   try {
     await scope.trx.rawQuery('set constraints stock_balances_reserved immediate')

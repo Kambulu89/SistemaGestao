@@ -482,9 +482,58 @@ cada classe). Produto: método de valorização. Documento: original da devoluç
   (devolução)"; ajuste de +7,00 na camada → 105,00; reconciliação com a conta escolhida e coerência interna; método fixo
   no produto; 390 px sem deslocamento.
 
+## 8.10 Integrações
+
+### Modelo
+
+Migração `0042_create_inventory_integrations`: `inventory_accounting_events` (origem lançamento **ou** ajuste de custo,
+entidade, sentido, evento, referência, data, total > 0, montantes por classe, centro de custo, chave única, estado
+`PENDING|POSTED|DRAFTED|FAILED`, evento do motor obrigatório quando lançado, erro e tentativas; gatilho: conteúdo fixo,
+lançado é final, sem apagar) e `inventory_integration_events` (tipo, módulo de origem, armazém, entidade, encomenda,
+documento, contraparte, chave única, hash do pedido, lançamento de stock, resumo; só acréscimo).
+
+### Backend e API (`/api/v1/inventory`)
+
+- `accounting_bridge.ts`: `queuePostingAccounting` (chamado por `postStock` depois da valorização) agrupa o livro de
+  custo por entidade/sentido/classe e envia ao Posting Engine (`INVENTORY`) num savepoint; `queueAdjustmentAccounting`
+  (ajuste de custo). Falha → `FAILED` com a mensagem, sem bloquear o stock.
+- `integration_service.ts`: contratos para Compras/Vendas e `POST /integrations/{purchase-receipts|sale-reservations|
+  sale-releases|sale-deliveries|sale-returns}` (201; repetição 200); `GET /integrations/events`,
+  `GET /integrations/sales-orders?warehouseId=&orderRef=` (reservado, entregue e devolvido por produto),
+  `GET /accounting-events`, `POST /accounting-events/retry`.
+- Permissões: `inventory.integrations.post` (âmbito do armazém), `inventory.accounting.manage`; a leitura dos eventos
+  aceita também `inventory.valuation.read` (âmbito da entidade).
+- Erros: `IDEMPOTENCY_MISMATCH` (409), `OVER_RELEASE`, `NOTHING_RESERVED`, `OVER_RETURN`, `OVER_RESERVED`, `REQUIRED`.
+- Auditoria: `inventory.integration.<tipo>`, `inventory.accounting.retried`.
+
+### Ecrãs
+
+Inventário → Integrações e contabilização: eventos contabilísticos (data, evento, referência, entidade, classes, valor,
+lançamento com ligação ao razão, estado e motivo da falha; filtro por estado) com "Repetir falhados"; pedidos de Compras e
+Vendas (tipo, encomenda, documento, armazém, origem; filtros por tipo e encomenda). Histórico de auditoria com os novos
+verbos.
+
+### Testes e evidências
+
+- Unitário `inventory_integrations_domain.spec.ts` (2): nomes dos eventos por tipo/origem, estorno, montantes por classe
+  em cêntimos.
+- Funcional `inventory_integrations.spec.ts` (2): recepção de compra → `RECEIPT_PURCHASE` lançado (conta 32 = 255,00);
+  repetição devolve o mesmo pedido, pedido diferente com a mesma chave → 409; contrato de módulo idempotente; entrega
+  sem regra `ISSUE_SALE` → `FAILED` com o motivo, stock movimentado; repetir depois de criar a regra → lançado, diferença
+  da reconciliação 0,00; ajuste de custo sem regra → `FAILED`; a base recusa alterar ou apagar eventos. Vendas: reserva,
+  entrega que consome a reserva, libertação acima do reservado recusada, libertar o resto, devolução acima do entregue
+  recusada, estado da encomenda; duas entregas simultâneas com a mesma chave → um lançamento (200 + 201). Integrador
+  com perfil por entidade: armazém de outra entidade → 404; leitor → `OUT_OF_SCOPE`.
+- `isolation_matrix` (pedido e estado de encomenda noutro tenant → 404; listas vazias), `routes_protection`, regressão
+  de todo o backend; frontend `integration-model.spec.ts`.
+- Browser (6 passos, três execuções seguidas, sem erros na consola): entidade com plano, exercício, diário e só a regra
+  da recepção; recepção (255,00 lançado), repetição e chave reutilizada (409), reserva 6 e entrega 4 (102,00 falhado);
+  página pela navegação com o motivo e os pedidos; criar a regra `ISSUE_SALE`, "Repetir falhados" → lançado com o
+  número e a ligação ao lançamento no razão; filtros por estado e encomenda na URL; 390 px sem deslocamento.
+
 ## Pendências
 
-- 8.10 a 8.12 (integrações, alertas, QA).
+- 8.11 e 8.12 (alertas, QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
 - 8.2: o acesso `OPERATE` só passa a ter efeito nas operações de stock (8.4 em diante); mudar a entidade legal de um
@@ -505,7 +554,12 @@ cada classe). Produto: método de valorização. Documento: original da devoluç
   do mesmo produto em simultâneo podem trocar lotes entre si); stock recebido antes do 8.8 fica "sem lote" e sai por
   último; diferenças de contagem em produtos com séries regularizam-se por documento; sem etiquetas/leitura de código
   de barras de lote; os alertas de validade são do 8.11.
-- 8.9: a contabilização dos movimentos e dos ajustes (Posting Engine) é do 8.10 — até lá a reconciliação mostra a
-  diferença; o stock anterior ao 8.9 está a zero até um ajuste de custo; custo específico por série (sem lote) não
+- 8.9: a contabilização dos movimentos e dos ajustes chegou no 8.10 (sem a regra do evento, a reconciliação mostra a
+  diferença); o stock anterior ao 8.9 está a zero até um ajuste de custo; custo específico por série (sem lote) não
   existe; sem revalorização a uma data passada (o passado não se recalcula, por desenho); moeda única por entidade
   (funcional).
+- 8.10: os módulos de Compras e Vendas ainda não existem nesta aplicação — os contratos e a API estão prontos e
+  testados, mas a recepção a partir de uma encomenda de compra e a entrega a partir de uma guia dependem desses módulos;
+  a contabilização intragrupo gera `TRANSFER_OUT|IN_INTERCOMPANY` ao custo (sem margem nem facturação intragrupo); as
+  regras do motor são configuradas pela empresa (não há regras por omissão nem plano de contas sugerido); a repetição
+  é manual (sem tarefa periódica).

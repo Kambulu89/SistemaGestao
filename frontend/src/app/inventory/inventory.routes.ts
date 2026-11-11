@@ -10,6 +10,11 @@ const REQUISITION_PERMISSIONS = [
 ];
 
 const VALUATION_PERMISSIONS = ['inventory.valuation.read', 'inventory.valuation.manage'];
+const INTEGRATION_PERMISSIONS = [
+  'inventory.valuation.read',
+  'inventory.accounting.manage',
+  'inventory.integrations.post',
+];
 const COUNT_PERMISSIONS = ['inventory.counts.manage', 'inventory.counts.approve'];
 
 export const INVENTORY_ROUTES: Routes = [
@@ -246,6 +251,13 @@ export const INVENTORY_ROUTES: Routes = [
         loadComponent: () => import('./valuation-detail').then((m) => m.ValuationDetailPage),
       },
     ],
+  },
+  {
+    path: 'integracoes',
+    title: 'Integrações e contabilização',
+    canActivate: [accessGuard],
+    data: { anyOf: INTEGRATION_PERMISSIONS },
+    loadComponent: () => import('./integrations').then((m) => m.Integrations),
   },
   {
     path: 'reservas',

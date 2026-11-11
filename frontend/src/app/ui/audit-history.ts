@@ -116,6 +116,12 @@ export class AuditHistory {
       recalled: 'Recolhido',
       adjusted: 'Custo ajustado',
       accounts_set: 'Contas configuradas',
+      retried: 'Repetido',
+      purchase_receipt: 'Recepção de compra',
+      sale_reservation: 'Reserva de venda',
+      sale_release: 'Reserva libertada',
+      sale_delivery: 'Entrega de venda',
+      sale_return: 'Devolução de cliente',
     };
     return labels[verb] ?? action;
   }

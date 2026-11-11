@@ -470,6 +470,18 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Ajustar o custo do stock existente e configurar as contas da reconciliação das entidades legais do âmbito atribuído.',
   },
   {
+    code: 'inventory.integrations.post',
+    module: 'inventory',
+    description:
+      'Integrar operações de Compras e Vendas (recepções de compra, reservas, entregas e devoluções de venda) nos armazéns do âmbito atribuído, pela API.',
+  },
+  {
+    code: 'inventory.accounting.manage',
+    module: 'inventory',
+    description:
+      'Ver e voltar a enviar ao motor de contabilização os eventos contabilísticos do inventário das entidades legais do âmbito atribuído.',
+  },
+  {
     code: 'inventory.settings',
     module: 'inventory',
     description:

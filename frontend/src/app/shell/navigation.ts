@@ -463,6 +463,19 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Inventário',
       },
       {
+        label: 'Integrações e contabilização',
+        path: '/inventario/integracoes',
+        icon: 'flow',
+        anyOf: [
+          'inventory.valuation.read',
+          'inventory.accounting.manage',
+          'inventory.integrations.post',
+        ],
+        feature: 'inventory',
+        anyScope: true,
+        section: 'Inventário',
+      },
+      {
         label: 'Lotes',
         path: '/inventario/lotes',
         icon: 'layers',

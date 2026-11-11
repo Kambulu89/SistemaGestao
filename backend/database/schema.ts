@@ -2069,6 +2069,96 @@ export class HrSettingSchema extends BaseModel {
   declare version: number
 }
 
+export class InventoryAccountingEventSchema extends BaseModel {
+  static $columns = ['adjustmentId', 'amounts', 'attempts', 'costCenterId', 'createdAt', 'createdBy', 'direction', 'error', 'event', 'id', 'idempotencyKey', 'legalEntityId', 'occurredOn', 'postingEventId', 'postingId', 'sourceRef', 'status', 'tenantId', 'total', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = InventoryAccountingEventSchema.$columns
+  @column()
+  declare adjustmentId: string | null
+  @column()
+  declare amounts: any
+  @column()
+  declare attempts: number
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare direction: string
+  @column()
+  declare error: string | null
+  @column()
+  declare event: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare legalEntityId: string
+  @column.date()
+  declare occurredOn: DateTime
+  @column()
+  declare postingEventId: string | null
+  @column()
+  declare postingId: string | null
+  @column()
+  declare sourceRef: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare total: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class InventoryIntegrationEventSchema extends BaseModel {
+  static $columns = ['counterpartyRef', 'createdAt', 'createdBy', 'documentRef', 'id', 'idempotencyKey', 'kind', 'legalEntityId', 'orderRef', 'postingId', 'requestHash', 'sourceModule', 'summary', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = InventoryIntegrationEventSchema.$columns
+  @column()
+  declare counterpartyRef: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare documentRef: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare kind: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare orderRef: string
+  @column()
+  declare postingId: string | null
+  @column()
+  declare requestHash: string
+  @column()
+  declare sourceModule: string
+  @column()
+  declare summary: any
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string
+}
+
 export class InventoryValuationAccountSchema extends BaseModel {
   static $columns = ['accountId', 'accountingClass', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = InventoryValuationAccountSchema.$columns
