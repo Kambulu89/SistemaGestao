@@ -653,3 +653,31 @@ concorrentes. A reserva é da encomenda: a entrega consome-a, a libertação nã
 devolução não passa do entregue (`OVER_RETURN`) e entra ao custo a que saiu (`returnOfPostingIds`). A recepção de
 compra exige o custo unitário.
 
+## D-046 Alertas e relatórios do inventário: calculados na hora, sem tabelas próprias, com valores só para quem vê a valorização (aceite)
+
+Os alertas (ruptura, reposição, validade) e os relatórios (rotação, cobertura, movimentos, perdas, consumo por centro
+de custo, inventário valorizado) **não guardam nada**: são consultas sobre os saldos, os movimentos e o livro de custo,
+por isso nunca divergem do stock e não precisam de tarefa periódica nem de recalcular o passado.
+
+- **Reposição e ruptura**: disponível (livre − reservado) contra o `min_stock` do produto, somando os armazéns do
+  relatório. Ruptura = disponível ≤ 0; repor = disponível ≤ mínimo; "a caminho" = abaixo do mínimo mas o que está em
+  trânsito/previsto repõe acima dele. A sugestão repõe até ao máximo (ou ao mínimo), descontando o que vem a caminho.
+  Entram os produtos com saldo nesses armazéns e os que têm mínimo e nunca tiveram stock em lado nenhum — o que só
+  existe noutros armazéns não é ruptura aqui.
+- **Validade**: lotes com stock físico e validade até N dias (30 por omissão) ou já expirados; expirar no próprio dia
+  ainda conta como válido (a regra do FEFO do 8.8).
+- **Classe do movimento**: do tipo de lançamento, da origem (documento, requisição, integração, transferência) e do
+  sentido. Cada lançamento conta pelo efeito líquido no stock valorizado de cada armazém (mudanças de estado dão zero);
+  o **estorno entra na classe do original com o sinal contrário**, por isso anula-o em vez de aparecer como entrada.
+- **Rotação** = consumo do período (vendas, consumo interno, amostras, outras saídas — sem perdas, devoluções a
+  fornecedores, transferências ou ajustes) ÷ stock médio ((abertura + fecho) ÷ 2, reconstituídos a partir do saldo
+  actual e dos movimentos). **Cobertura** = disponível ÷ consumo diário do período. Aritmética em inteiros.
+- **Perdas**: quebras (documento com origem perda), perdas em trânsito e faltas de contagem; as sobras de contagem
+  aparecem ao lado para o líquido. **Consumo por centro de custo**: o que as requisições internas entregaram.
+- **Inventário valorizado**: soma do livro de custo até à data, por entidade legal (o valor vive na entidade, não no
+  armazém), com totais por classe contabilística — bate com os saldos de custo do 8.9.
+
+**Acesso**: quantidades pelos armazéns que o membro pode consultar (a regra dos saldos); um armazém que não vê dá 404.
+Os **valores** só vêm quando o membro tem `inventory.valuation.read` em todas as entidades dos armazéns do relatório
+(senão `null`, sem totais); o inventário valorizado exige essa permissão na entidade. Sem permissões novas.
+

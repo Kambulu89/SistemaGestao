@@ -405,7 +405,7 @@ employeeId, from, to)` em `#modules/hr/index`.
 
 ## Inventário (módulo `inventory`, Prompt 08)
 
-8.1 a 8.10 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-045). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+8.1 a 8.11 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-046). Catálogo: `uoms`, `product_categories` (hierarquia, classe
 contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
 `product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
 únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
@@ -445,4 +445,7 @@ Integrações (8.10): cada lançamento com valor e cada ajuste de custo cria um 
 `FAILED` e repete-se depois, sem bloquear o stock. Compras/Vendas usam os contratos de `inventory/index.ts`
 (`receivePurchase`, `reserveForSale`, `releaseSaleReservation`, `deliverSale`, `returnFromSale`) ou a API
 `/inventory/integrations/*`, idempotentes por chave e hash (`inventory_integration_events`, só acréscimo).
+Alertas e relatórios (8.11): `report_service.ts` só lê (saldos, movimentos, livro de custo) — reposição/ruptura,
+validade, rotação e cobertura, movimentos por classe, perdas, consumo por centro de custo e inventário valorizado; as
+regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis; valores só com `inventory.valuation.read`.
 

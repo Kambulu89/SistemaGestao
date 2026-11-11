@@ -1233,6 +1233,24 @@ test.group('isolamento | matriz entre empresas', (group) => {
           `/api/v1/inventory/integrations/sales-orders?warehouseId=${a.warehouse.id}&orderRef=X`
         ),
       ],
+      [
+        'reposição no armazém alheio',
+        B.get(`/api/v1/inventory/reports/replenishment?warehouseId=${a.warehouse.id}`),
+      ],
+      [
+        'validades no armazém alheio',
+        B.get(`/api/v1/inventory/reports/expiry?warehouseId=${a.warehouse.id}`),
+      ],
+      [
+        'movimentos do armazém alheio',
+        B.get(
+          `/api/v1/inventory/reports/movements?warehouseId=${a.warehouse.id}&from=2026-01-01&to=2026-12-31`
+        ),
+      ],
+      [
+        'inventário valorizado da entidade alheia',
+        B.get(`/api/v1/inventory/reports/valued?legalEntityId=${a.le.id}`),
+      ],
       ['GET lote', B.get(`/api/v1/inventory/lots/${a.stockLot.id}`)],
       [
         'bloquear lote alheio',
@@ -1928,6 +1946,13 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/inventory/integrations/events')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/accounting-events')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/serials')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/reports/replenishment')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/reports/expiry')).body().data, 0)
+    assert.lengthOf(
+      (await B.get('/api/v1/inventory/reports/movements?from=2026-01-01&to=2026-12-31')).body().data
+        .rows,
+      0
+    )
     assert.notInclude(
       JSON.stringify((await B.get('/api/v1/inventory/counts/options')).body().data),
       a.warehouse.id
@@ -2050,6 +2075,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/valuation',
       '/api/v1/inventory/integrations/events',
       '/api/v1/inventory/accounting-events',
+      '/api/v1/inventory/reports/replenishment',
+      '/api/v1/inventory/reports/expiry',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',
       '/api/v1/hr/team',

@@ -531,9 +531,52 @@ verbos.
   página pela navegação com o motivo e os pedidos; criar a regra `ISSUE_SALE`, "Repetir falhados" → lançado com o
   número e a ligação ao lançamento no razão; filtros por estado e encomenda na URL; 390 px sem deslocamento.
 
+## 8.11 Alertas e relatórios
+
+### Modelo
+
+Sem migração: tudo é calculado a partir de `stock_balances`, `stock_movements`, `stock_postings`, `stock_lots`,
+`stock_valuation_entries`, documentos, requisições e eventos de transferência (D-046).
+
+### Backend e API (`/api/v1/inventory/reports`)
+
+- `domain/reports.ts` (regras puras em inteiros): `replenishment`, `turnover`, `expiryStatus`, `periodDays`,
+  `movementClass` e as classes de consumo e de perda.
+- `report_service.ts`: `GET alerts?days=` (contadores), `replenishment?status=&q=`, `expiry?days=`,
+  `turnover|movements|losses|consumption?from=&to=` (período até três anos), `valued?legalEntityId=&date=`; todos aceitam
+  `warehouseId` (excepto o valorizado). Até 1000 linhas por relatório, com o total.
+- Acesso verificado no serviço: armazéns consultáveis; valores só com `inventory.valuation.read`.
+- Erros: `INVALID` (datas), `TOO_LONG`, `OUT_OF_SCOPE` (valorizado), 404 (armazém ou entidade que não vê).
+
+### Ecrãs
+
+Inventário → Alertas e relatórios: filtro de armazém; cinco cartões de alerta (em ruptura, a repor, abaixo do mínimo a
+caminho, lotes expirados, a expirar) que abrem o relatório já filtrado; separadores Reposição e ruptura, Validade,
+Rotação e cobertura, Movimentos, Perdas, Consumo por centro de custo e Inventário valorizado (este só com acesso à
+valorização), cada um com parâmetros, exportação CSV e impressão. Quando os valores não podem ser mostrados, o ecrã
+di-lo.
+
+### Testes e evidências
+
+- Unitário `inventory_reports_domain.spec.ts` (3): reposição (nove casos), rotação/cobertura/validade/dias, classes.
+- Funcional `inventory_reports.spec.ts` (2): compra de 100 a 10,00, venda de 30, venda de 5 estornada, falta e sobra de
+  contagem, quebra por documento, requisição de 20 para o CC1, previstos e três lotes → alertas (1 ruptura, 1 a repor,
+  1 a caminho, 1 expirado, 1 a expirar); reposição 46 ≤ 50 → sugerir 74; validade ordenada; rotação 2,17 e cobertura de
+  1 dia; movimentos por classe com valor (o estorno anula-se); perdas 50,00, sobras 10,00, líquido 40,00; consumo CC1
+  200,00; inventário valorizado 556,00 (igual ao 8.9; vazio na véspera); validações do período. Âmbito: sem
+  valorização os valores vêm a `null` e o valorizado dá `OUT_OF_SCOPE`; armazém de outra entidade → 404; quem só vê
+  outra entidade não vê movimentos nem "ruptura" do que só existe noutros armazéns; sem permissões, vazio.
+- `isolation_matrix` (reposição, validade e movimentos em armazém alheio e valorizado de entidade alheia → 404; listas
+  vazias), `routes_protection`, regressão de todo o backend; frontend `report-model.spec.ts`.
+- Browser (7 passos, três execuções seguidas depois do último ajuste, sem erros na consola): cartões e reposição
+  (repor 73; ruptura), cartão que filtra, validade a 30 e a 365 dias, rotação 2,13 e cobertura, movimentos por classe
+  (1 000,00 / 300,00 / 200,00 / 30,00), perdas, consumo por centro de custo, inventário valorizado 560,00 com CSV,
+  390 px sem deslocamento. A primeira execução apanhou a lista de entidades paginada (corrigido, também na
+  reconciliação do 8.9) e as capturas levaram a dois ajustes: a regra da ruptura por armazém e o espaçamento das tabelas.
+
 ## Pendências
 
-- 8.11 e 8.12 (alertas, QA).
+- 8.12 (QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
 - 8.2: o acesso `OPERATE` só passa a ter efeito nas operações de stock (8.4 em diante); mudar a entidade legal de um
@@ -563,3 +606,8 @@ verbos.
   a contabilização intragrupo gera `TRANSFER_OUT|IN_INTERCOMPANY` ao custo (sem margem nem facturação intragrupo); as
   regras do motor são configuradas pela empresa (não há regras por omissão nem plano de contas sugerido); a repetição
   é manual (sem tarefa periódica).
+- 8.11: os alertas são consultados no ecrã — não há notificações automáticas nem tarefa periódica (a aplicação ainda
+  não tem agendador); o mínimo e o máximo são do produto, não por armazém; o prazo de validade é um parâmetro do
+  relatório (30 dias por omissão), não uma configuração; a rotação é em quantidade, não em valor; os relatórios não
+  desdobram por variante nem por lote (excepto a validade); datas em UTC; sem gráficos.
+

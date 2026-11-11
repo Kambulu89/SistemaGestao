@@ -205,16 +205,18 @@ export class ValuationReconciliation {
   });
 
   constructor() {
-    this.api.get<{ id: string; code: string }[]>('organization/legal-entities').then(
-      (e) => {
-        this.entities.set(e);
-        if (e.length === 1) {
-          this.legalEntityId = e[0].id;
-          void this.load();
-        }
-      },
-      () => undefined,
-    );
+    this.api
+      .get<{ id: string; code: string }[]>('organization/legal-entities', { limit: 200 })
+      .then(
+        (e) => {
+          this.entities.set(e);
+          if (e.length === 1) {
+            this.legalEntityId = e[0].id;
+            void this.load();
+          }
+        },
+        () => undefined,
+      );
   }
 
   protected problems(p: string[]) {

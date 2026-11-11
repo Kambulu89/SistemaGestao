@@ -398,6 +398,22 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de inventory.valuation.read / inventory.accounting.manage sobre a entidade legal, verificado no serviço',
   'POST /api/v1/inventory/accounting-events/retry':
     'âmbito RBAC de inventory.valuation.read / inventory.accounting.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/reports/alerts':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/replenishment':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/expiry':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/turnover':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/movements':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/losses':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/consumption':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/valued':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
   'GET /api/v1/inventory/requisitions':
     'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
   'GET /api/v1/inventory/requisitions/options':

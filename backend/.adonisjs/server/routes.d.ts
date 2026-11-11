@@ -447,6 +447,14 @@ export type ScannedRoutes = {
     'integrations.post': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'integrations.accounting_events': { paramsTuple?: []; params?: {} }
     'integrations.retry': { paramsTuple?: []; params?: {} }
+    'inventory_reports.alerts': { paramsTuple?: []; params?: {} }
+    'inventory_reports.replenishment': { paramsTuple?: []; params?: {} }
+    'inventory_reports.expiry': { paramsTuple?: []; params?: {} }
+    'inventory_reports.turnover': { paramsTuple?: []; params?: {} }
+    'inventory_reports.movements': { paramsTuple?: []; params?: {} }
+    'inventory_reports.losses': { paramsTuple?: []; params?: {} }
+    'inventory_reports.consumption': { paramsTuple?: []; params?: {} }
+    'inventory_reports.valued': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -640,6 +648,14 @@ export type ScannedRoutes = {
     'integrations.index': { paramsTuple?: []; params?: {} }
     'integrations.order': { paramsTuple?: []; params?: {} }
     'integrations.accounting_events': { paramsTuple?: []; params?: {} }
+    'inventory_reports.alerts': { paramsTuple?: []; params?: {} }
+    'inventory_reports.replenishment': { paramsTuple?: []; params?: {} }
+    'inventory_reports.expiry': { paramsTuple?: []; params?: {} }
+    'inventory_reports.turnover': { paramsTuple?: []; params?: {} }
+    'inventory_reports.movements': { paramsTuple?: []; params?: {} }
+    'inventory_reports.losses': { paramsTuple?: []; params?: {} }
+    'inventory_reports.consumption': { paramsTuple?: []; params?: {} }
+    'inventory_reports.valued': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -821,6 +837,14 @@ export type ScannedRoutes = {
     'integrations.index': { paramsTuple?: []; params?: {} }
     'integrations.order': { paramsTuple?: []; params?: {} }
     'integrations.accounting_events': { paramsTuple?: []; params?: {} }
+    'inventory_reports.alerts': { paramsTuple?: []; params?: {} }
+    'inventory_reports.replenishment': { paramsTuple?: []; params?: {} }
+    'inventory_reports.expiry': { paramsTuple?: []; params?: {} }
+    'inventory_reports.turnover': { paramsTuple?: []; params?: {} }
+    'inventory_reports.movements': { paramsTuple?: []; params?: {} }
+    'inventory_reports.losses': { paramsTuple?: []; params?: {} }
+    'inventory_reports.consumption': { paramsTuple?: []; params?: {} }
+    'inventory_reports.valued': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }

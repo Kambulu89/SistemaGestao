@@ -253,6 +253,13 @@ export const INVENTORY_ROUTES: Routes = [
     ],
   },
   {
+    path: 'relatorios',
+    title: 'Alertas e relatórios',
+    canActivate: [accessGuard],
+    data: { permission: 'inventory.read', anyScope: true },
+    loadComponent: () => import('./reports').then((m) => m.InventoryReports),
+  },
+  {
     path: 'integracoes',
     title: 'Integrações e contabilização',
     canActivate: [accessGuard],
