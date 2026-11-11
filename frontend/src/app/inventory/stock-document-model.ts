@@ -53,6 +53,8 @@ export interface StockDocument {
   counterparty: string | null;
   notes?: string | null;
   currency?: string | null;
+  /** Devolução (8.9): documento original, cujo custo a devolução usa. */
+  returnOf?: { id: string; number: string | null } | null;
   checkedBy?: string | null;
   checkedAt?: string | null;
   closedShort: boolean;

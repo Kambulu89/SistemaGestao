@@ -344,6 +344,24 @@ import {
             />
             Controlar validade
           </label>
+          <app-field
+            label="Valorização"
+            hint="Fica fixo quando o produto tiver movimentos. O custo específico é por lote."
+            [error]="action.field('valuationMethod')"
+          >
+            <select
+              appControl
+              class="input"
+              name="valuationMethod"
+              data-testid="pf-valuation"
+              [(ngModel)]="f.valuationMethod"
+              [disabled]="!canManage()"
+            >
+              <option value="AVERAGE">Custo médio ponderado</option>
+              <option value="FIFO">FIFO (primeiro a entrar, primeiro a sair)</option>
+              <option value="SPECIFIC">Custo específico (por lote)</option>
+            </select>
+          </app-field>
           @if (f.trackExpiry) {
             <app-field label="Prazo de validade (dias)" [error]="action.field('shelfLifeDays')">
               <input

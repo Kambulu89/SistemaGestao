@@ -82,6 +82,9 @@ export interface PostingLine {
   lotId?: string | null
   /** Números de série das unidades movidas (produtos com séries). */
   serials?: string[]
+  /** Custo das entradas (8.9): custo unitário (6 casas) ou valor da linha em cêntimos. */
+  unitCost?: bigint | null
+  value?: bigint | null
 }
 
 /** Chave do saldo: armazém, localização, produto, variante e lote. */

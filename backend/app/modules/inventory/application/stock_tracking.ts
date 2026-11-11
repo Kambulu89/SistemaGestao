@@ -401,7 +401,14 @@ export async function resolveTracking(
           used.add(`${l.productId}|+${s}`)
         }
       }
-      out.push({ ...l, lotId: part.lotId, quantity: part.quantity, serials: part.serials })
+      // Partida em vários lotes, o valor total da linha não se repete em cada parte (fica o custo unitário).
+      out.push({
+        ...l,
+        lotId: part.lotId,
+        quantity: part.quantity,
+        serials: part.serials,
+        value: parts.length > 1 ? null : l.value,
+      })
     }
   }
   if (issues.length) throw ApiError.validation(issues)
@@ -414,6 +421,8 @@ export async function resolveTracking(
     quantity: l.quantity,
     lotId: l.lotId ?? null,
     serials: l.serials ?? [],
+    unitCost: l.unitCost ?? null,
+    value: l.value ?? null,
   }))
 }
 

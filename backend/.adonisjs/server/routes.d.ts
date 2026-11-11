@@ -436,6 +436,12 @@ export type ScannedRoutes = {
     'lots.recall': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'lots.serials': { paramsTuple?: []; params?: {} }
     'lots.serial': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.index': { paramsTuple?: []; params?: {} }
+    'valuation.product': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.adjust': { paramsTuple?: []; params?: {} }
+    'valuation.reconciliation': { paramsTuple?: []; params?: {} }
+    'valuation.accounts': { paramsTuple?: []; params?: {} }
+    'valuation.set_accounts': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -622,6 +628,10 @@ export type ScannedRoutes = {
     'lots.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'lots.serials': { paramsTuple?: []; params?: {} }
     'lots.serial': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.index': { paramsTuple?: []; params?: {} }
+    'valuation.product': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.reconciliation': { paramsTuple?: []; params?: {} }
+    'valuation.accounts': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -796,6 +806,10 @@ export type ScannedRoutes = {
     'lots.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'lots.serials': { paramsTuple?: []; params?: {} }
     'lots.serial': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.index': { paramsTuple?: []; params?: {} }
+    'valuation.product': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.reconciliation': { paramsTuple?: []; params?: {} }
+    'valuation.accounts': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -1002,6 +1016,7 @@ export type ScannedRoutes = {
     'lots.block': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'lots.unblock': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'lots.recall': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.adjust': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1091,6 +1106,7 @@ export type ScannedRoutes = {
     'transfers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'counts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.set_accounts': { paramsTuple?: []; params?: {} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

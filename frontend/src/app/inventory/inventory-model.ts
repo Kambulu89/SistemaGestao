@@ -55,6 +55,8 @@ export interface Product {
   trackLots: boolean;
   trackSerials: boolean;
   trackExpiry: boolean;
+  /** Valorização (8.9): custo médio, FIFO ou custo específico (por lote). */
+  valuationMethod?: 'AVERAGE' | 'FIFO' | 'SPECIFIC';
   shelfLifeDays: number | null;
   minStock: string | null;
   maxStock: string | null;
@@ -154,6 +156,7 @@ export interface ProductForm {
   trackLots: boolean;
   trackSerials: boolean;
   trackExpiry: boolean;
+  valuationMethod: string;
   shelfLifeDays: string;
   minStock: string;
   maxStock: string;
@@ -180,6 +183,7 @@ export function emptyProductForm(currency = 'AOA'): ProductForm {
     trackLots: false,
     trackSerials: false,
     trackExpiry: false,
+    valuationMethod: 'AVERAGE',
     shelfLifeDays: '',
     minStock: '',
     maxStock: '',
@@ -207,6 +211,7 @@ export function formFromProduct(p: Product): ProductForm {
     trackLots: p.trackLots,
     trackSerials: p.trackSerials,
     trackExpiry: p.trackExpiry,
+    valuationMethod: p.valuationMethod ?? 'AVERAGE',
     shelfLifeDays: p.shelfLifeDays === null ? '' : String(p.shelfLifeDays),
     minStock: p.minStock ?? '',
     maxStock: p.maxStock ?? '',
@@ -243,6 +248,7 @@ export function productPayload(f: ProductForm): Record<string, unknown> {
     trackLots: stock && f.trackLots,
     trackSerials: stock && f.trackSerials,
     trackExpiry: stock && f.trackExpiry,
+    ...(stock ? { valuationMethod: f.valuationMethod } : {}),
     shelfLifeDays:
       stock && f.trackExpiry && days ? (/^\d+$/.test(days) ? Number(days) : days) : null,
     minStock: stock ? decimalText(f.minStock) : null,

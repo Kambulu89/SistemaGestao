@@ -1,3 +1,4 @@
+import { VALUATION_METHODS } from '#modules/inventory/domain/valuation'
 import { ApiError, type ErrorDetail } from '#shared/http/api_error'
 import { constraintOf, isUuid } from '#shared/db/sql'
 import { runInTenant, type TenantContext, type TenantScope } from '#modules/tenancy/index'
@@ -75,6 +76,7 @@ function productView(p: any) {
     trackLots: Boolean(p.track_lots),
     trackSerials: Boolean(p.track_serials),
     trackExpiry: Boolean(p.track_expiry),
+    valuationMethod: (p.valuation_method as string) ?? 'AVERAGE',
     shelfLifeDays: p.shelf_life_days === null ? null : Number(p.shelf_life_days),
     minStock: trim6(p.min_text ?? null),
     maxStock: trim6(p.max_text ?? null),
@@ -285,6 +287,15 @@ function normalize(
   }
   for (const k of ['trackLots', 'trackSerials', 'trackExpiry'] as const)
     if (k in input) v[k] = bool(input[k])
+  if ('valuationMethod' in input) {
+    if (!(VALUATION_METHODS as readonly unknown[]).includes(input.valuationMethod))
+      issues.push({
+        path: 'valuationMethod',
+        code: 'INVALID',
+        message: 'Método: custo médio, FIFO ou custo específico.',
+      })
+    else v.valuationMethod = input.valuationMethod
+  }
   if ('shelfLifeDays' in input) {
     const d = input.shelfLifeDays
     if (d === null || d === '') v.shelfLifeDays = null
@@ -411,6 +422,7 @@ const COLUMN: Record<string, string> = {
   trackLots: 'track_lots',
   trackSerials: 'track_serials',
   trackExpiry: 'track_expiry',
+  valuationMethod: 'valuation_method',
   shelfLifeDays: 'shelf_life_days',
   minStock: 'min_stock',
   maxStock: 'max_stock',
@@ -432,6 +444,7 @@ function current(p: any | null) {
     trackLots: p.track_lots,
     trackSerials: p.track_serials,
     trackExpiry: p.track_expiry,
+    valuationMethod: p.valuation_method,
     shelfLifeDays: p.shelf_life_days,
     minStock: p.min_text === null ? null : scaled(p.min_text, 6),
     maxStock: p.max_text === null ? null : scaled(p.max_text, 6),
@@ -688,13 +701,24 @@ export class ProductService {
           hasVariants: before ? Boolean(before.has_variants) : false,
         })
       )
+      if (merged.valuationMethod === 'SPECIFIC' && !bool(merged.trackLots))
+        fail([
+          {
+            path: 'valuationMethod',
+            code: 'SPECIFIC_NEEDS_LOTS',
+            message: 'O custo específico é por lote: active o controlo por lotes.',
+          },
+        ])
       // Lotes e séries (8.8): com movimentos, o rastreio já não muda (o saldo e as séries dependem dele).
       if (before) {
-        const changed = (['trackLots', 'trackSerials'] as const).filter(
+        const changed: string[] = (['trackLots', 'trackSerials'] as const).filter(
           (k) =>
             k in v &&
             bool(v[k]) !== Boolean(before[k === 'trackLots' ? 'track_lots' : 'track_serials'])
         )
+        // Valorização (8.9): o método também fica fixo (o livro e as camadas dependem dele).
+        if ('valuationMethod' in v && v.valuationMethod !== before.valuation_method)
+          changed.push('valuationMethod')
         if (changed.length) {
           const moved = await scope.trx.rawQuery(
             'select 1 from stock_movements where tenant_id = ? and product_id = ? limit 1',
@@ -706,7 +730,9 @@ export class ProductService {
                 path: k,
                 code: 'TRACKING_LOCKED',
                 message:
-                  'O produto já tem movimentos de stock: o rastreio por lote/série não muda.',
+                  k === 'valuationMethod'
+                    ? 'O produto já tem movimentos de stock: o método de valorização não muda.'
+                    : 'O produto já tem movimentos de stock: o rastreio por lote/série não muda.',
               }))
             )
         }

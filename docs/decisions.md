@@ -597,3 +597,32 @@ percurso. **FEFO/FIFO aqui é a ordem física de saída, não o método de valor
 
 Contagens (8.7) contam por lote; diferenças em produtos com séries regularizam-se por documento com as séries
 (`SERIALS_REQUIRED`), porque o ajuste não sabe que unidades faltam ou sobram.
+
+## D-044 Valorização: livro de custo só de acréscimo, médio/FIFO/específico por entidade legal, ajustes de custo e reconciliação (aceite)
+
+O valor do stock vive num **livro de custo** (`stock_valuation_entries`, só de acréscimo) alimentado pelo próprio
+lançamento de stock (`postStock`, na mesma transacção): por **entidade legal**, produto e variante (e lote no custo
+específico), a variação da quantidade valorizada (livre, bloqueado, quarentena, trânsito) gera entradas de valor. Os
+**saldos de custo** (`stock_cost_pools`) e o que resta de cada **camada** (`stock_cost_layers`) derivam do livro por
+gatilho — escritas directas são recusadas — e a reconciliação interna confirma livro = saldos = camadas e quantidade
+valorizada = stock físico. O que entra e sai na mesma entidade (transferência interna, mudança de estado) não mexe no
+valor; entre entidades (intragrupo) o valor que sai da origem entra no destino.
+
+**Métodos** (por produto; fixo depois de haver movimentos): **custo médio ponderado** (saída = parte proporcional do
+saldo); **FIFO contabilístico** (camadas por ordem de entrada — independente do FEFO físico do 8.8); **custo
+específico** por lote (exige lotes; a saída consome as camadas do lote que sai). **Entradas**: custo indicado (documento:
+quantidade conferida × custo unitário), o valor que saiu no mesmo lançamento, o custo do documento original numa
+**devolução** (`returnOfDocumentId`: devolução ao fornecedor sai ao custo da compra, primeiro das camadas dessa compra;
+devolução de cliente entra ao custo a que saiu), o custo actual, ou zero (assinalado na reconciliação). **Estorno**:
+as entradas do original ao contrário (a mesma camada, o mesmo valor), sem recalcular.
+
+**Arredondamento**: aritmética em inteiros — quantidades 6 casas, valores em cêntimos, custo unitário 6 casas,
+meio-para-cima; quem esvazia um saldo ou uma camada leva o valor que lá resta (nada se perde nem sobra). **Sem
+retroeditar**: nada do passado é recalculado; correcções (preço definitivo, custos de aquisição) são **ajustes de custo**
+sobre o stock que ainda existe (no médio ao saldo; no FIFO/específico à camada) — o que já saiu fica como saiu (a
+diferença de custo das vendas é contabilizada no 8.10). O stock anterior ao 8.9 entrou no livro com valor zero.
+
+**Reconciliação com a contabilidade**: cada classe contabilística (do produto ou da categoria) tem a sua conta do razão
+por entidade; à data, o valor do livro por classe compara-se com o saldo lançado da conta (e descendentes). A
+contabilização automática dos movimentos (Posting Engine) é do 8.10. Permissões `inventory.valuation.read|manage` no
+âmbito da entidade legal.

@@ -455,6 +455,14 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Inventário',
       },
       {
+        label: 'Valorização',
+        path: '/inventario/valorizacao',
+        icon: 'coins',
+        anyOf: ['inventory.valuation.read', 'inventory.valuation.manage'],
+        feature: 'inventory',
+        section: 'Inventário',
+      },
+      {
         label: 'Lotes',
         path: '/inventario/lotes',
         icon: 'layers',

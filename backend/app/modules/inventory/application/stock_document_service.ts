@@ -1,3 +1,4 @@
+import { lineValue, moneyText } from '#modules/inventory/domain/valuation'
 import { ApiError, type ErrorDetail } from '#shared/http/api_error'
 import { isUuid } from '#shared/db/sql'
 import { runInTenant, type TenantContext, type TenantScope } from '#modules/tenancy/index'
@@ -300,6 +301,44 @@ async function normalizeLines(
   return out
 }
 
+/**
+ * Devolução (8.9): o documento original — do tipo contrário, da mesma entidade e já confirmado. A devolução sai/entra
+ * ao custo desse documento.
+ */
+async function returnOf(scope: TenantScope, docType: DocType, legalEntityId: string, raw: any) {
+  const id = raw?.returnOfDocumentId
+  if (!id) return null
+  if (raw?.origin !== 'RETURN')
+    fail([
+      {
+        path: 'returnOfDocumentId',
+        code: 'NOT_RETURN',
+        message: 'Só uma devolução indica o documento original.',
+      },
+    ])
+  const r = isUuid(id)
+    ? await scope.trx.rawQuery(
+        `select id, doc_type, legal_entity_id, status from stock_documents where tenant_id = ? and id = ?`,
+        [scope.context.tenantId, id]
+      )
+    : { rows: [] }
+  const o = r.rows[0] as any
+  if (
+    !o ||
+    o.doc_type === docType ||
+    o.legal_entity_id !== legalEntityId ||
+    !['PARTIAL', 'COMPLETED'].includes(o.status)
+  )
+    fail([
+      {
+        path: 'returnOfDocumentId',
+        code: 'NOT_FOUND',
+        message: 'O original é um documento confirmado do tipo contrário, da mesma entidade legal.',
+      },
+    ])
+  return o.id as string
+}
+
 function normalizeHeader(docType: DocType, raw: any) {
   const issues: ErrorDetail[] = []
   const origin = raw?.origin
@@ -370,9 +409,11 @@ async function documentView(scope: TenantScope, id: string) {
   const t = scope.context.tenantId
   const h = await scope.trx.rawQuery(
     `select d.*, d.document_date::text as date_text, w.code as warehouse_code, w.name as warehouse_name,
-        le.code as le_code, uc.full_name as checked_by_name, ux.full_name as created_by_name
+        le.code as le_code, uc.full_name as checked_by_name, ux.full_name as created_by_name,
+        ro.number as return_number
        from stock_documents d
        join warehouses w on w.tenant_id = d.tenant_id and w.id = d.warehouse_id
+       left join stock_documents ro on ro.tenant_id = d.tenant_id and ro.id = d.return_of_document_id
        join legal_entities le on le.tenant_id = d.tenant_id and le.id = d.legal_entity_id
        left join users uc on uc.id = d.checked_by
        left join users ux on ux.id = d.created_by
@@ -425,6 +466,9 @@ async function documentView(scope: TenantScope, id: string) {
     counterparty: (d.counterparty as string) ?? null,
     notes: (d.notes as string) ?? null,
     currency: (d.currency as string) ?? null,
+    returnOf: d.return_of_document_id
+      ? { id: d.return_of_document_id as string, number: (d.return_number as string) ?? null }
+      : null,
     checkedBy: (d.checked_by_name as string) ?? null,
     checkedAt: d.checked_at,
     completedAt: d.completed_at,
@@ -629,10 +673,11 @@ export class StockDocumentService {
       const currency = lines.some((l) => l.unitCost !== null)
         ? (le?.functionalCurrency ?? null)
         : null
+      const original = await returnOf(scope, docType, r.access.legalEntityId, raw)
       const ins = await scope.trx.rawQuery(
         `insert into stock_documents (tenant_id, doc_type, warehouse_id, legal_entity_id, document_date, origin,
-            origin_ref, counterparty, notes, currency, created_by, updated_by)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
+            origin_ref, counterparty, notes, currency, return_of_document_id, created_by, updated_by)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
         [
           context.tenantId,
           docType,
@@ -644,6 +689,7 @@ export class StockDocumentService {
           head.counterparty,
           head.notes,
           currency,
+          original,
           context.userId,
           context.userId,
         ] as never[]
@@ -692,6 +738,7 @@ export class StockDocumentService {
         counterparty: head.counterparty,
         notes: head.notes,
         currency: lines.some((l) => l.unitCost !== null) ? (le?.functionalCurrency ?? null) : null,
+        return_of_document_id: await returnOf(scope, d.doc_type, d.legal_entity_id, raw),
       })
       await audit(scope, {
         action: 'inventory.document.updated',
@@ -843,14 +890,27 @@ export class StockDocumentService {
         number = (await reserveDocumentNumber(scope, seriesId, d.date_text)).formatted
       }
       const sign = d.doc_type === 'RECEIPT' ? '' : '-'
+      // Devolução: os lançamentos (não estornados) do documento original dão o custo.
+      const originals = d.return_of_document_id
+        ? (
+            (
+              await scope.trx.rawQuery(
+                `select posting_id from stock_document_confirmations where tenant_id = ? and document_id = ?
+                    and reversal_posting_id is null`,
+                [context.tenantId, d.return_of_document_id]
+              )
+            ).rows as any[]
+          ).map((x) => x.posting_id as string)
+        : []
       const posted = await postStock(scope, {
+        returnOfPostingIds: originals,
         type: d.doc_type,
         idempotencyKey: `doc-${id}-${key}`,
         sourceType: 'STOCK_DOCUMENT',
         sourceId: id,
         sourceRef: number,
         reason: d.origin,
-        lines: moves.map(({ l, base }) => ({
+        lines: moves.map(({ l, base, checked }) => ({
           warehouseId: d.warehouse_id,
           locationId: l.location_id,
           productId: l.product_id,
@@ -861,6 +921,11 @@ export class StockDocumentService {
           lotCode: l.lot_code ?? null,
           expiryDate: l.expiry_text ?? null,
           serials: l.serials ?? [],
+          // Valor da entrada (8.9): quantidade conferida × custo unitário do documento.
+          value:
+            d.doc_type === 'RECEIPT' && l.unit_cost !== null
+              ? moneyText(lineValue(checked, dec(l.unit_cost)))
+              : null,
         })),
       })
       const seq = (await confirmationCount(scope, id)) + 1

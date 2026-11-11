@@ -114,6 +114,8 @@ export class AuditHistory {
       blocked: 'Bloqueado',
       unblocked: 'Desbloqueado',
       recalled: 'Recolhido',
+      adjusted: 'Custo ajustado',
+      accounts_set: 'Contas configuradas',
     };
     return labels[verb] ?? action;
   }

@@ -1,6 +1,6 @@
 # Relatório — Prompt 08 (inventário)
 
-Estado: **8.1 a 8.8 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.9 a 8.12 seguem, um de cada
+Estado: **8.1 a 8.9 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 8.10 a 8.12 seguem, um de cada
 vez. Decisões a partir de D-036.
 
 ## Inventário AS-IS → TO-BE
@@ -15,6 +15,7 @@ vez. Decisões a partir de D-036.
 | 8.6 Reservas/requisições   | Sem requisições internas      | Pedido por departamento e centro de custo, aprovação que reserva (disponível baixa, físico não), separação, entrega por consumo, libertação e anulação; reservas activas por origem | Feito  |
 | 8.7 Contagens/ajustes      | Sem contagens                 | Plano (zona, categoria, cega), snapshot no início, contagem por partes e artigos encontrados, recontagem com snapshot renovado, diferenças com motivo e justificação, aprovação segregada que lança o ajuste; tudo fixo depois | Feito  |
 | 8.8 Lotes/séries/FEFO      | Lote e séries só nos documentos | Lote como dimensão do saldo, validade no lote, séries por unidade com percurso, saídas FEFO automáticas no motor (bloqueados/expirados não saem), bloqueio/desbloqueio e recolha definitiva, rastreabilidade de onde veio, onde está e para onde foi | Feito  |
+| 8.9 Valorização            | Custo unitário só no documento | Livro de custo só de acréscimo por entidade legal, saldos e camadas derivados, custo médio/FIFO/específico por lote, devoluções ao custo do original, intragrupo ao custo da origem, ajustes de custo sem retroeditar, arredondamento exacto, reconciliação interna e com o razão | Feito  |
 
 ## 8.1 Produtos e serviços
 
@@ -432,9 +433,58 @@ encontrado" pede o lote nos produtos com lotes.
   bloqueado 17 e volta) e quem só consulta não vê as acções; recolha com confirmação; pesquisa de série e percurso;
   lote com ligação no Stock; 390 px sem deslocamento.
 
+## 8.9 Valorização
+
+### Modelo
+
+Migração `0041_create_inventory_valuation`: `products.valuation_method` (`CHECK` específico ⇒ lotes),
+`stock_valuation_entries` (livro, só acréscimo; `CHECK` de origem e sinal), `stock_cost_pools` e `stock_cost_layers`
+(derivados por gatilho; `CHECK` ≥ 0 e "vazio ⇒ valor zero"), `stock_cost_adjustments` (só acréscimo, idempotentes),
+`inventory_valuation_accounts` (classe → conta), `stock_documents.return_of_document_id`; o stock existente entra no
+livro com valor zero.
+
+### Motor e API (`/api/v1/inventory`)
+
+- `postStock`: linhas com `unitCost` (6 casas) ou `value` (2 casas) nas entradas; `returnOfPostingIds` nas devoluções;
+  o motor de valorização corre na mesma transacção (advisory lock por entidade/produto/variante). Documentos passam o
+  valor conferido e o original da devolução.
+- `GET /valuation` (saldos de custo e totais por entidade), `GET /valuation/products/:id?legalEntityId=` (saldos,
+  camadas, livro), `POST /valuation/adjustments`, `GET /valuation/reconciliation?legalEntityId=&date=`,
+  `GET|PUT /valuation/accounts?legalEntityId=`. Contabilidade exporta `accountBalancesAt` e `accountsOfLegalEntity`.
+- Permissões: `inventory.valuation.read`, `inventory.valuation.manage`.
+- Erros: `VALUATION_INCONSISTENT`, `NO_STOCK`, `NEGATIVE_VALUE`, `SPECIFIC_NEEDS_LOTS`, `TRACKING_LOCKED` (método),
+  `NOT_RETURN`.
+
+### Ecrãs
+
+Inventário → Valorização (total por entidade, saldos por produto com método, quantidade, custo unitário e valor),
+Valorização do produto (saldos, camadas, livro de custo com a origem de cada valor, ajuste de custo) e Reconciliação
+(entidade e data; inventário × razão por conta, classes sem conta, entradas sem custo, coerência interna, conta de
+cada classe). Produto: método de valorização. Documento: original da devolução.
+
+### Testes e evidências
+
+- Unitário `inventory_valuation_domain.spec.ts` (3): arredondamento, conversões, custo médio sem perdas (33,33 + 33,34
+  + 33,33), camadas FIFO, fila de valor.
+- Funcional `inventory_valuation.spec.ts` (2): médio (15 a 110; saída 440; o saldo é da entidade, não do armazém;
+  14 saídas unitárias somam exactamente o que entrou; entrada sem custo ao último custo); FIFO (85 = 10×5 + 5×7; camadas;
+  estorno repõe camadas, sem recalcular); específico por lote (FEFO escolhe o lote, sai ao custo dele); a base recusa
+  apagar o livro e escrever saldos/camadas; reconciliação interna sem diferenças. Intragrupo (LE1 6/600, LE2 4/400;
+  recepção interna não mexe no valor); devolução ao fornecedor ao custo da compra (400, não 300 do médio) e de cliente ao
+  custo de saída; ajuste de custo idempotente, valor negativo e camada obrigatória no FIFO recusados, sem stock →
+  `NO_STOCK`; leitura sem gestão → `OUT_OF_SCOPE`; âmbito por entidade (só LE2); reconciliação com um lançamento lançado
+  no razão (inventário 2405,00, razão 2000,00, diferença 405,00; à data anterior saldo 0); auditoria; método fixo com
+  movimentos; específico sem lotes recusado.
+- `isolation_matrix` (valorização, ajuste, reconciliação e contas de outra empresa → 404 — a matriz apanhou e corrigiu
+  dois 200 vazios e um 403), `routes_protection`, regressão de todo o inventário; frontend `valuation-model.spec.ts`.
+- Browser (6 passos, três execuções seguidas, sem erros na consola): compras a 10 e 14, saída de 12 e devolução de 1 ao
+  custo da 2.ª compra → 7 a 14,00 = 98,00 na lista; detalhe com a 1.ª camada esgotada e o livro com "Custo do original
+  (devolução)"; ajuste de +7,00 na camada → 105,00; reconciliação com a conta escolhida e coerência interna; método fixo
+  no produto; 390 px sem deslocamento.
+
 ## Pendências
 
-- 8.9 a 8.12 (valorização, integrações, alertas, QA).
+- 8.10 a 8.12 (integrações, alertas, QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
 - 8.2: o acesso `OPERATE` só passa a ter efeito nas operações de stock (8.4 em diante); mudar a entidade legal de um
@@ -455,3 +505,7 @@ encontrado" pede o lote nos produtos com lotes.
   do mesmo produto em simultâneo podem trocar lotes entre si); stock recebido antes do 8.8 fica "sem lote" e sai por
   último; diferenças de contagem em produtos com séries regularizam-se por documento; sem etiquetas/leitura de código
   de barras de lote; os alertas de validade são do 8.11.
+- 8.9: a contabilização dos movimentos e dos ajustes (Posting Engine) é do 8.10 — até lá a reconciliação mostra a
+  diferença; o stock anterior ao 8.9 está a zero até um ajuste de custo; custo específico por série (sem lote) não
+  existe; sem revalorização a uma data passada (o passado não se recalcula, por desenho); moeda única por entidade
+  (funcional).

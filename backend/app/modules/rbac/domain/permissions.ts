@@ -458,6 +458,18 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Bloquear, desbloquear e recolher lotes (o stock livre do lote passa a bloqueado) quando todos os armazéns com stock do lote estão no âmbito atribuído.',
   },
   {
+    code: 'inventory.valuation.read',
+    module: 'inventory',
+    description:
+      'Consultar o valor do stock (custo médio, camadas, livro de custo) e a reconciliação com a contabilidade das entidades legais do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.valuation.manage',
+    module: 'inventory',
+    description:
+      'Ajustar o custo do stock existente e configurar as contas da reconciliação das entidades legais do âmbito atribuído.',
+  },
+  {
     code: 'inventory.settings',
     module: 'inventory',
     description:

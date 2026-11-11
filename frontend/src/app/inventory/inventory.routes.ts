@@ -9,6 +9,7 @@ const REQUISITION_PERMISSIONS = [
   'inventory.requisitions.fulfil',
 ];
 
+const VALUATION_PERMISSIONS = ['inventory.valuation.read', 'inventory.valuation.manage'];
 const COUNT_PERMISSIONS = ['inventory.counts.manage', 'inventory.counts.approve'];
 
 export const INVENTORY_ROUTES: Routes = [
@@ -216,6 +217,33 @@ export const INVENTORY_ROUTES: Routes = [
         canActivate: [accessGuard],
         data: { permission: 'inventory.read', anyScope: true },
         loadComponent: () => import('./serial-detail').then((m) => m.SerialDetailPage),
+      },
+    ],
+  },
+  {
+    path: 'valorizacao',
+    title: 'Valorização',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: VALUATION_PERMISSIONS },
+        loadComponent: () => import('./valuation').then((m) => m.Valuation),
+      },
+      {
+        path: 'reconciliacao',
+        title: 'Reconciliação',
+        canActivate: [accessGuard],
+        data: { anyOf: VALUATION_PERMISSIONS },
+        loadComponent: () =>
+          import('./valuation-reconciliation').then((m) => m.ValuationReconciliation),
+      },
+      {
+        path: ':legalEntityId/:productId',
+        title: 'Valorização do produto',
+        canActivate: [accessGuard],
+        data: { anyOf: VALUATION_PERMISSIONS },
+        loadComponent: () => import('./valuation-detail').then((m) => m.ValuationDetailPage),
       },
     ],
   },

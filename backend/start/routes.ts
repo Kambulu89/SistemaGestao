@@ -47,6 +47,7 @@ const TransfersController = () => import('#modules/inventory/http/transfers_cont
 const RequisitionsController = () => import('#modules/inventory/http/requisitions_controller')
 const CountsController = () => import('#modules/inventory/http/counts_controller')
 const LotsController = () => import('#modules/inventory/http/lots_controller')
+const ValuationController = () => import('#modules/inventory/http/valuation_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
 router
@@ -916,6 +917,12 @@ router
                 router.post('lots/:id/recall', [LotsController, 'recall'])
                 router.get('serials', [LotsController, 'serials'])
                 router.get('serials/:id', [LotsController, 'serial'])
+                router.get('valuation', [ValuationController, 'index'])
+                router.get('valuation/products/:id', [ValuationController, 'product'])
+                router.post('valuation/adjustments', [ValuationController, 'adjust'])
+                router.get('valuation/reconciliation', [ValuationController, 'reconciliation'])
+                router.get('valuation/accounts', [ValuationController, 'accounts'])
+                router.put('valuation/accounts', [ValuationController, 'setAccounts'])
               })
               .prefix('inventory')
               .use(middleware.entitled({ feature: 'inventory' }))

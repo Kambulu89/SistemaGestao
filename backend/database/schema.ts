@@ -2069,6 +2069,31 @@ export class HrSettingSchema extends BaseModel {
   declare version: number
 }
 
+export class InventoryValuationAccountSchema extends BaseModel {
+  static $columns = ['accountId', 'accountingClass', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = InventoryValuationAccountSchema.$columns
+  @column()
+  declare accountId: string
+  @column()
+  declare accountingClass: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class JobApplicationSchema extends BaseModel {
   static $columns = ['candidateId', 'createdAt', 'createdBy', 'employeeId', 'id', 'requisitionId', 'stage', 'stageReason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = JobApplicationSchema.$columns
@@ -3686,7 +3711,7 @@ export class ProductVariantSchema extends BaseModel {
 }
 
 export class ProductSchema extends BaseModel {
-  static $columns = ['accountingClass', 'barcode', 'baseUomId', 'brandId', 'categoryId', 'createdAt', 'createdBy', 'currency', 'description', 'hasVariants', 'id', 'maxStock', 'minStock', 'name', 'productType', 'purchaseUomId', 'salePrice', 'saleUomId', 'shelfLifeDays', 'sku', 'status', 'tenantId', 'trackExpiry', 'trackLots', 'trackSerials', 'updatedAt', 'updatedBy', 'version'] as const
+  static $columns = ['accountingClass', 'barcode', 'baseUomId', 'brandId', 'categoryId', 'createdAt', 'createdBy', 'currency', 'description', 'hasVariants', 'id', 'maxStock', 'minStock', 'name', 'productType', 'purchaseUomId', 'salePrice', 'saleUomId', 'shelfLifeDays', 'sku', 'status', 'tenantId', 'trackExpiry', 'trackLots', 'trackSerials', 'updatedAt', 'updatedBy', 'valuationMethod', 'version'] as const
   $columns = ProductSchema.$columns
   @column()
   declare accountingClass: string | null
@@ -3742,6 +3767,8 @@ export class ProductSchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare updatedBy: string | null
+  @column()
+  declare valuationMethod: string
   @column()
   declare version: number
 }
@@ -4056,6 +4083,107 @@ export class StockBalanceSchema extends BaseModel {
   declare warehouseId: string
 }
 
+export class StockCostAdjustmentSchema extends BaseModel {
+  static $columns = ['amount', 'createdAt', 'createdBy', 'id', 'idempotencyKey', 'layerId', 'legalEntityId', 'productId', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = StockCostAdjustmentSchema.$columns
+  @column()
+  declare amount: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare layerId: string | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare productId: string
+  @column()
+  declare reason: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class StockCostLayerSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'legalEntityId', 'lotId', 'postingId', 'productId', 'quantityIn', 'receivedAt', 'remainingQuantity', 'remainingValue', 'tenantId', 'updatedAt', 'updatedBy', 'valueIn', 'variantId', 'version'] as const
+  $columns = StockCostLayerSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare lotId: string | null
+  @column()
+  declare postingId: string | null
+  @column()
+  declare productId: string
+  @column()
+  declare quantityIn: string
+  @column.dateTime()
+  declare receivedAt: DateTime
+  @column()
+  declare remainingQuantity: string
+  @column()
+  declare remainingValue: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare valueIn: string
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class StockCostPoolSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'legalEntityId', 'productId', 'quantity', 'tenantId', 'updatedAt', 'updatedBy', 'value', 'variantId', 'version'] as const
+  $columns = StockCostPoolSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare productId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare value: string
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
 export class StockCountEntrySchema extends BaseModel {
   static $columns = ['countId', 'createdAt', 'createdBy', 'id', 'lineId', 'quantity', 'round', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = StockCountEntrySchema.$columns
@@ -4332,7 +4460,7 @@ export class StockDocumentLineSchema extends BaseModel {
 }
 
 export class StockDocumentSchema extends BaseModel {
-  static $columns = ['cancelReason', 'checkedAt', 'checkedBy', 'closeReason', 'closedShort', 'completedAt', 'counterparty', 'createdAt', 'createdBy', 'currency', 'docType', 'documentDate', 'id', 'legalEntityId', 'notes', 'number', 'origin', 'originRef', 'seriesId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  static $columns = ['cancelReason', 'checkedAt', 'checkedBy', 'closeReason', 'closedShort', 'completedAt', 'counterparty', 'createdAt', 'createdBy', 'currency', 'docType', 'documentDate', 'id', 'legalEntityId', 'notes', 'number', 'origin', 'originRef', 'returnOfDocumentId', 'seriesId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
   $columns = StockDocumentSchema.$columns
   @column()
   declare cancelReason: string | null
@@ -4370,6 +4498,8 @@ export class StockDocumentSchema extends BaseModel {
   declare origin: string
   @column()
   declare originRef: string | null
+  @column()
+  declare returnOfDocumentId: string | null
   @column()
   declare seriesId: string | null
   @column()
@@ -4930,6 +5060,49 @@ export class StockTransferSchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class StockValuationEntrySchema extends BaseModel {
+  static $columns = ['adjustmentId', 'createdAt', 'createdBy', 'id', 'layerId', 'legalEntityId', 'lotId', 'method', 'occurredAt', 'postingId', 'productId', 'quantity', 'source', 'tenantId', 'updatedAt', 'updatedBy', 'value', 'variantId', 'version'] as const
+  $columns = StockValuationEntrySchema.$columns
+  @column()
+  declare adjustmentId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare layerId: string | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare lotId: string | null
+  @column()
+  declare method: string
+  @column.dateTime()
+  declare occurredAt: DateTime
+  @column()
+  declare postingId: string | null
+  @column()
+  declare productId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare source: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare value: string
+  @column()
+  declare variantId: string | null
   @column()
   declare version: number
 }

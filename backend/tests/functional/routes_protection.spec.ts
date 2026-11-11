@@ -376,6 +376,18 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
   'GET /api/v1/inventory/serials/:id':
     'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'GET /api/v1/inventory/valuation':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/valuation/products/:id':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'POST /api/v1/inventory/valuation/adjustments':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/valuation/reconciliation':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/valuation/accounts':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'PUT /api/v1/inventory/valuation/accounts':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
   'GET /api/v1/inventory/requisitions':
     'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
   'GET /api/v1/inventory/requisitions/options':

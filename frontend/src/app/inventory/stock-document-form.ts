@@ -213,6 +213,35 @@ const today = () => new Date().toISOString().slice(0, 10);
             }
           </select>
         </app-field>
+        @if (f.origin === 'RETURN') {
+          <app-field
+            label="Documento original"
+            hint="A devolução sai/entra ao custo desse documento."
+            [error]="action.field('returnOfDocumentId')"
+          >
+            <select
+              appControl
+              class="input"
+              name="returnOf"
+              data-testid="df-return-of"
+              [(ngModel)]="f.returnOfDocumentId"
+              [disabled]="!editable()"
+              (focus)="loadOriginals()"
+            >
+              <option value="">— (ao custo actual)</option>
+              @if (d()?.returnOf; as r) {
+                <option [value]="r.id">{{ r.number }}</option>
+              }
+              @for (o of originals(); track o.id) {
+                @if (o.id !== d()?.returnOf?.id) {
+                  <option [value]="o.id">
+                    {{ o.number }} · {{ o.counterparty ?? o.originRef ?? '' }}
+                  </option>
+                }
+              }
+            </select>
+          </app-field>
+        }
         <app-field label="Referência" hint="Ex.: factura do fornecedor, guia, requisição.">
           <input
             appControl
@@ -722,6 +751,7 @@ export class StockDocumentFormPage implements HasUnsavedChanges {
       warehouseId: '',
       documentDate: today(),
       origin: ORIGINS[type][0],
+      returnOfDocumentId: '',
       originRef: '',
       counterparty: '',
       notes: '',
@@ -732,6 +762,27 @@ export class StockDocumentFormPage implements HasUnsavedChanges {
   protected statusLabel(s: StockDocument['status']) {
     return DOC_STATUS[s];
   }
+  /** Documentos confirmados do tipo contrário (originais de uma devolução). */
+  protected readonly originals = signal<
+    { id: string; number: string; counterparty: string | null; originRef: string | null }[]
+  >([]);
+  protected async loadOriginals() {
+    if (this.originals().length) return;
+    const other = this.type() === 'RECEIPT' ? 'ISSUE' : 'RECEIPT';
+    try {
+      const [done, partial] = await Promise.all(
+        ['COMPLETED', 'PARTIAL'].map((status) =>
+          this.api.get<
+            { id: string; number: string; counterparty: string | null; originRef: string | null }[]
+          >('inventory/documents', { docType: other, status, limit: 100 }),
+        ),
+      );
+      this.originals.set([...done, ...partial]);
+    } catch {
+      /* sem acesso: a devolução fica ao custo actual */
+    }
+  }
+
   protected originLabel(o: string) {
     return ORIGIN[o] ?? o;
   }
@@ -836,6 +887,7 @@ export class StockDocumentFormPage implements HasUnsavedChanges {
       warehouseId: x.warehouse.id,
       documentDate: x.documentDate,
       origin: x.origin,
+      returnOfDocumentId: x.returnOf?.id ?? '',
       originRef: x.originRef ?? '',
       counterparty: x.counterparty ?? '',
       notes: x.notes ?? '',
@@ -866,6 +918,7 @@ export class StockDocumentFormPage implements HasUnsavedChanges {
     return {
       documentDate: f.documentDate,
       origin: f.origin,
+      returnOfDocumentId: f.origin === 'RETURN' ? f.returnOfDocumentId || null : null,
       originRef: f.originRef.trim() || null,
       counterparty: f.counterparty.trim() || null,
       notes: f.notes.trim() || null,

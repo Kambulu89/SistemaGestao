@@ -405,7 +405,7 @@ employeeId, from, to)` em `#modules/hr/index`.
 
 ## Inventário (módulo `inventory`, Prompt 08)
 
-8.1 a 8.8 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-043). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+8.1 a 8.9 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-044). Catálogo: `uoms`, `product_categories` (hierarquia, classe
 contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
 `product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
 únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
@@ -436,4 +436,8 @@ Lotes e séries (8.8): `lot_id` é dimensão de movimentos e saldos (físico e t
 cada unidade. O motor resolve lotes e séries em `stock_tracking.ts` (depois dos advisory locks): FEFO nas saídas sem
 lote (bloqueados/recolhidos/expirados não saem do livre), séries indicadas ou as mais antigas, e as entradas do mesmo
 lançamento herdam os lotes/séries que saíram. Bloquear/recolher um lote é um `STATUS_CHANGE` livre → bloqueado.
+Valorização (8.9): `valuation_engine.ts` corre dentro de cada lançamento e escreve o livro de custo
+(`stock_valuation_entries`, só acréscimo) por entidade legal; saldos de custo e camadas derivam do livro por gatilho.
+Médio, FIFO e específico por lote; devoluções ao custo do original; estornos anulam as entradas do original; correcções
+são ajustes de custo. A contabilidade expõe `accountBalancesAt`/`accountsOfLegalEntity` para a reconciliação.
 

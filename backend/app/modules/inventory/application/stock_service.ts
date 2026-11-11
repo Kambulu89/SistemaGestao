@@ -23,6 +23,8 @@ import {
   readableWarehouseIds,
   warehouseAccessFor,
 } from '#modules/inventory/application/warehouse_service'
+import { valuePosting } from '#modules/inventory/application/valuation_engine'
+import { parseScaled } from '#modules/inventory/domain/valuation'
 import {
   applySerials,
   postingSerials,
@@ -53,6 +55,10 @@ export interface PostStockLineInput {
   expiryDate?: string | null
   /** Séries das unidades (produtos com séries); sem elas, as saídas escolhem por ordem de entrada. */
   serials?: string[] | null
+  /** Custo das entradas (8.9), na moeda funcional da entidade: custo unitário da unidade base (até 6 casas) ou o
+   * valor total da linha (até 2 casas). Sem custo, a entrada é valorizada ao custo actual. */
+  unitCost?: string | null
+  value?: string | null
 }
 
 export interface PostStockInput {
@@ -65,6 +71,8 @@ export interface PostStockInput {
   lines: PostStockLineInput[]
   /** Exige acesso de operação ao armazém (por omissão). Os módulos que integram com o inventário decidem. */
   checkAccess?: boolean
+  /** Devolução (8.9): lançamentos do documento original — sai/entra ao custo de então. */
+  returnOfPostingIds?: string[]
 }
 
 const fail = (issues: ErrorDetail[]) => {
@@ -133,6 +141,17 @@ function normalizeLines(raw: unknown): { lines: TrackedLine[]; issues: ErrorDeta
     if (q === null)
       bad('quantity', 'Quantidade inválida (diferente de zero, até 6 casas decimais).')
     issues.push(...trackingInputIssues(l, i))
+    const cost = { unitCost: null as bigint | null, value: null as bigint | null }
+    if (l?.unitCost !== null && l?.unitCost !== undefined && l?.unitCost !== '') {
+      cost.unitCost = parseScaled(l.unitCost, 6)
+      if (cost.unitCost === null) bad('unitCost', 'Custo unitário ≥ 0, até 6 casas.')
+    }
+    if (l?.value !== null && l?.value !== undefined && l?.value !== '') {
+      cost.value = parseScaled(l.value, 2)
+      if (cost.value === null) bad('value', 'Valor ≥ 0, até 2 casas.')
+    }
+    if ((cost.unitCost !== null || cost.value !== null) && q !== null && q < 0n)
+      bad('unitCost', 'O custo das saídas vem da valorização do stock.')
     lines.push({
       warehouseId: l?.warehouseId,
       locationId: l?.locationId ?? null,
@@ -144,6 +163,8 @@ function normalizeLines(raw: unknown): { lines: TrackedLine[]; issues: ErrorDeta
       lotCode: l?.lotCode ? String(l.lotCode).trim() : null,
       expiryDate: l?.expiryDate || null,
       serials: Array.isArray(l?.serials) ? l.serials.map((x: string) => String(x).trim()) : [],
+      unitCost: cost.unitCost,
+      value: cost.value,
     })
   })
   return { lines, issues }
@@ -330,6 +351,7 @@ async function insertPosting(
     sourceRef: string | null
     reason: string | null
     reversalOf: string | null
+    returnOf?: string[]
   },
   lines: PostingLine[]
 ) {
@@ -387,6 +409,15 @@ async function insertPosting(
     values as never[]
   )
   await applySerials(scope, row.id, lines)
+  // Valor (8.9): livro de custo na mesma transacção.
+  await valuePosting(scope, {
+    postingId: row.id,
+    type: head.type,
+    occurredAt: row.occurred_at,
+    lines,
+    reversalOf: head.reversalOf,
+    returnOfPostingIds: head.returnOf,
+  })
   // A base verifica o reservado ≤ livre no fim da transacção; aqui pede-se já, para o erro vir deste pedido.
   try {
     await scope.trx.rawQuery('set constraints stock_balances_reserved immediate')
@@ -456,12 +487,19 @@ export async function postStock(scope: TenantScope, input: PostStockInput) {
     sourceRef: input.sourceRef?.trim().slice(0, 60) || null,
     reason: input.reason?.trim().slice(0, 300) || null,
     reversalOf: null,
+    returnOf: (input.returnOfPostingIds ?? []).filter(isUuid),
   }
   const hash = requestHash({
     type: head.type,
     sourceType: head.sourceType,
     sourceId: head.sourceId,
-    lines: lines.map((l) => ({ ...l, quantity: quantityText(l.quantity) })),
+    returnOf: head.returnOf,
+    lines: lines.map((l) => ({
+      ...l,
+      quantity: quantityText(l.quantity),
+      unitCost: l.unitCost === null || l.unitCost === undefined ? null : String(l.unitCost),
+      value: l.value === null || l.value === undefined ? null : String(l.value),
+    })),
   })
   const before = await existing(scope, head.key)
   if (before) return { posting: await replayView(scope, replay(before, hash)), replayed: true }
