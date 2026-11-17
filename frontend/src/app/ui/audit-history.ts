@@ -122,6 +122,14 @@ export class AuditHistory {
       sale_release: 'Reserva libertada',
       sale_delivery: 'Entrega de venda',
       sale_return: 'Devolução de cliente',
+      contact_added: 'Contacto acrescentado',
+      contact_updated: 'Contacto alterado',
+      bank_account_requested: 'Conta bancária registada',
+      bank_account_approved: 'Conta bancária aprovada',
+      bank_account_rejected: 'Conta bancária recusada',
+      bank_account_deactivated: 'Conta bancária desactivada',
+      document_added: 'Documento entregue',
+      document_deactivated: 'Documento desactivado',
     };
     return labels[verb] ?? action;
   }

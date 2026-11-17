@@ -487,6 +487,36 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Configurar o catálogo: unidades de medida, categorias (com classe contabilística) e marcas.',
   },
+  {
+    code: 'procurement.suppliers.read',
+    module: 'procurement',
+    description:
+      'Consultar fornecedores, documentos, homologações e histórico (dados bancários mascarados).',
+  },
+  {
+    code: 'procurement.suppliers.manage',
+    module: 'procurement',
+    description:
+      'Criar e alterar fornecedores e a ficha do terceiro, contactos, documentos e contas bancárias, e pedir homologação.',
+  },
+  {
+    code: 'procurement.suppliers.approve',
+    module: 'procurement',
+    description:
+      'Homologar, recusar e suspender fornecedores e aprovar contas bancárias (nunca o que a própria pessoa pediu).',
+  },
+  {
+    code: 'procurement.suppliers.bank',
+    module: 'procurement',
+    description:
+      'Ver os dados bancários dos fornecedores por inteiro (sem esta permissão vêm mascarados).',
+  },
+  {
+    code: 'procurement.settings',
+    module: 'procurement',
+    description:
+      'Configurar as compras: tipos de documento exigidos e critérios de homologação de fornecedores.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

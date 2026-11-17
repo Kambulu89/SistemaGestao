@@ -681,3 +681,36 @@ por isso nunca divergem do stock e não precisam de tarefa periódica nem de rec
 Os **valores** só vêm quando o membro tem `inventory.valuation.read` em todas as entidades dos armazéns do relatório
 (senão `null`, sem totais); o inventário valorizado exige essa permissão na entidade. Sem permissões novas.
 
+## D-047 Terceiro reutilizável e fornecedor com homologação, documentos com validade e dados bancários protegidos (aceite)
+
+**Terceiro (business partner).** A identidade de quem a empresa compra ou vende vive num módulo próprio (`partners`):
+código, nome, pessoa colectiva/singular, NIF (único por país, validado só no formato), país, contactos (um principal) e
+morada. Não tem rotas: os papéis de negócio (fornecedor agora, cliente no Prompt 10) usam o contrato de `index.ts` e
+decidem a permissão. Um terceiro tem no máximo um papel de fornecedor; pode ser também cliente sem duplicar a ficha.
+Ao criar um fornecedor com um NIF já registado, a API devolve `TAX_ID_TAKEN` com o terceiro existente e a interface
+oferece reutilizá-lo.
+
+**Fornecedor.** Tipo (bens, serviços, ambos), moeda, prazo e meio de pagamento, prazo de entrega, encomenda mínima,
+incoterm. Estados: rascunho → em aprovação → homologado | recusado; homologado → suspenso; recusado e suspenso voltam
+por um novo pedido. O NIF e o país de um fornecedor homologado ou em aprovação não mudam.
+
+**Homologação.** A empresa configura tipos de documento (obrigatórios ou não) e critérios (obrigatórios ou não). O
+pedido avalia todos os critérios activos (obrigatórios cumpridos; não cumprido exige justificação) e só é aceite com
+cada documento obrigatório activo e válido hoje. Quem pede não decide (`SELF_APPROVAL`, também como restrição na base);
+a decisão volta a verificar os documentos. O pedido guarda a avaliação e os documentos que o sustentavam e fica fixo
+depois de decidido. A **validade da homologação deriva dos documentos**: quando um obrigatório caduca ou é desactivado,
+o estado continua "homologado" (é história) mas `qualification.valid` passa a falso — o contrato `supplierStanding`
+devolve `canOrder` só com as duas coisas, para as ordens do 9.5. Não há tarefa periódica: calcula-se na leitura.
+
+**Documentos.** Número, emissão, validade e o ficheiro (um anexo do próprio fornecedor). O que foi entregue não se
+edita: desactiva-se com motivo e entrega-se outro.
+
+**Dados bancários protegidos.** Uma conta nova entra pendente e só fica activa com a aprovação de outra pessoa com
+`procurement.suppliers.approve` (nunca quem a registou — também na base). O conteúdo nunca se altera (gatilho): para
+mudar, regista-se outra e desactiva-se a antiga. Sem `procurement.suppliers.bank` o IBAN e o número vêm mascarados; a
+auditoria e o histórico só guardam a forma mascarada. A validação do IBAN é a do 5.x (mod 97), sem confirmar a conta.
+
+**Permissões** (âmbito da empresa; fornecedores são dados mestres partilhados pelas entidades): `.read`, `.manage`,
+`.approve`, `.bank` e `procurement.settings`. Histórico só de acréscimo (`supplier_events`) e auditoria de cada acção.
+Funcionalidade contratável `procurement`.
+

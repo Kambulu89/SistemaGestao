@@ -449,3 +449,13 @@ Alertas e relatórios (8.11): `report_service.ts` só lê (saldos, movimentos, l
 validade, rotação e cobertura, movimentos por classe, perdas, consumo por centro de custo e inventário valorizado; as
 regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis; valores só com `inventory.valuation.read`.
 
+## Compras (módulo `procurement`, Prompt 09) e terceiros (módulo `partners`)
+
+9.1 feito (ver `docs/reports/prompt-09.md`, D-047). O terceiro (`business_partners`, contactos) é do módulo `partners`,
+sem rotas: os papéis de negócio usam o seu `index.ts`. O fornecedor (`suppliers`) é o papel de compra de um terceiro,
+com condições comerciais e homologação: critérios e tipos de documento configuráveis, documentos com validade (fixos,
+desactiváveis), pedidos de homologação fixos depois de decididos, dados bancários que só ficam activos com a aprovação
+de outra pessoa e não se reescrevem (gatilhos e `CHECK` de segregação na base), histórico só de acréscimo. A validade
+da homologação deriva dos documentos obrigatórios na leitura; `supplierStanding` é o contrato para os documentos de
+compra. Permissões `procurement.suppliers.read|manage|approve|bank` e `procurement.settings` no âmbito da empresa.
+

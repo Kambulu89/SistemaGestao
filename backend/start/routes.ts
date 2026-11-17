@@ -49,6 +49,7 @@ const CountsController = () => import('#modules/inventory/http/counts_controller
 const LotsController = () => import('#modules/inventory/http/lots_controller')
 const ValuationController = () => import('#modules/inventory/http/valuation_controller')
 const InventoryReportsController = () => import('#modules/inventory/http/reports_controller')
+const SuppliersController = () => import('#modules/procurement/http/suppliers_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
@@ -941,6 +942,44 @@ router
               })
               .prefix('inventory')
               .use(middleware.entitled({ feature: 'inventory' }))
+
+            // Compras (Prompt 09): fornecedores. Permissões verificadas no serviço (ver routes_protection).
+            router
+              .group(() => {
+                router.get('suppliers', [SuppliersController, 'index'])
+                router.get('suppliers/lookup', [SuppliersController, 'lookup'])
+                router.post('suppliers', [SuppliersController, 'store'])
+                router.get('suppliers/:id', [SuppliersController, 'show'])
+                router.patch('suppliers/:id', [SuppliersController, 'update'])
+                router.post('suppliers/:id/contacts', [SuppliersController, 'addContact'])
+                router.patch('suppliers/:id/contacts/:contactId', [
+                  SuppliersController,
+                  'updateContact',
+                ])
+                router.post('suppliers/:id/bank-accounts', [SuppliersController, 'addBankAccount'])
+                router.post('supplier-bank-accounts/:id/:action', [
+                  SuppliersController,
+                  'bankAccountAction',
+                ])
+                router.post('suppliers/:id/documents', [SuppliersController, 'addDocument'])
+                router.post('supplier-documents/:id/deactivate', [
+                  SuppliersController,
+                  'deactivateDocument',
+                ])
+                router.post('suppliers/:id/submit', [SuppliersController, 'submit'])
+                router.post('suppliers/:id/approve', [SuppliersController, 'approve'])
+                router.post('suppliers/:id/reject', [SuppliersController, 'reject'])
+                router.post('suppliers/:id/suspend', [SuppliersController, 'suspend'])
+                router.get('settings/:kind', [SuppliersController, 'settingsIndex'])
+                router
+                  .post('settings/:kind', [SuppliersController, 'settingsStore'])
+                  .use(middleware.can({ permission: 'procurement.settings' }))
+                router
+                  .patch('settings/:kind/:id', [SuppliersController, 'settingsUpdate'])
+                  .use(middleware.can({ permission: 'procurement.settings' }))
+              })
+              .prefix('procurement')
+              .use(middleware.entitled({ feature: 'procurement' }))
 
             // Anexos: o acesso (e a funcionalidade) herda do registo a que pertencem.
             router.get('attachments', [AttachmentsController, 'index'])

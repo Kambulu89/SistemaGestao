@@ -414,6 +414,38 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
   'GET /api/v1/inventory/reports/valued':
     'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/procurement/suppliers':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'GET /api/v1/procurement/suppliers/lookup':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'GET /api/v1/procurement/suppliers/:id':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'PATCH /api/v1/procurement/suppliers/:id':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/contacts':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'PATCH /api/v1/procurement/suppliers/:id/contacts/:contactId':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/bank-accounts':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/supplier-bank-accounts/:id/:action':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/documents':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/supplier-documents/:id/deactivate':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/submit':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/approve':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/reject':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/suspend':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'GET /api/v1/procurement/settings/:kind':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
   'GET /api/v1/inventory/requisitions':
     'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
   'GET /api/v1/inventory/requisitions/options':

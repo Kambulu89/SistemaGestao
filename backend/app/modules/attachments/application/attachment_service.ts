@@ -21,6 +21,7 @@ import {
 } from '#modules/attachments/domain/files'
 import { LocalStorage } from '#modules/attachments/infrastructure/local_storage'
 import { productExists } from '#modules/inventory/index'
+import { supplierExists } from '#modules/procurement/index'
 
 /**
  * Política de acesso por tipo de registo: o anexo herda a autorização (e a funcionalidade contratada) do registo a que
@@ -116,6 +117,20 @@ function policies(): Record<string, SubjectPolicy> {
       const held = (await effectivePermissions(scope)).tenant
       if (!held.has('inventory.read') || !(await productExists(scope, id))) return null
       return { read: true, write: held.has('inventory.products.manage') }
+    },
+  }
+  // Documentos do fornecedor (certidões, alvarás…): ler com qualquer permissão de fornecedores; acrescentar com `.manage`.
+  map.supplier = {
+    feature: 'procurement',
+    access: async (scope, id) => {
+      const held = (await effectivePermissions(scope)).tenant
+      const manage = held.has('procurement.suppliers.manage')
+      const read =
+        manage ||
+        held.has('procurement.suppliers.read') ||
+        held.has('procurement.suppliers.approve')
+      if (!read || !(await supplierExists(scope, id))) return null
+      return { read: true, write: manage }
     },
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {

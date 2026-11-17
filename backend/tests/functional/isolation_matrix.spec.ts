@@ -702,8 +702,55 @@ async function populate(client: any) {
       description: 'Contagem A',
     })
   )
+  const docType = ok(
+    await as(client, s).post('/api/v1/procurement/settings/document-types', {
+      code: 'CERT-A',
+      name: 'Certidão A',
+    })
+  )
+  const criterion = ok(
+    await as(client, s).post('/api/v1/procurement/settings/criteria', {
+      code: 'CRIT-A',
+      name: 'Critério A',
+    })
+  )
+  let supplier = ok(
+    await as(client, s).post('/api/v1/procurement/suppliers', {
+      supplierType: 'GOODS',
+      currency: 'AOA',
+      partner: {
+        code: 'FORN-A',
+        name: 'Fornecedor A',
+        partnerType: 'ORGANIZATION',
+        taxId: '5000099001',
+        countryCode: 'AO',
+      },
+    })
+  )
+  supplier = ok(
+    await as(client, s).post(`/api/v1/procurement/suppliers/${supplier.id}/contacts`, {
+      name: 'Contacto A',
+      email: 'a@forn.ao',
+    })
+  )
+  supplier = ok(
+    await as(client, s).post(`/api/v1/procurement/suppliers/${supplier.id}/bank-accounts`, {
+      holderName: 'Fornecedor A',
+      bankName: 'Banco A',
+      iban: 'AO84000600000123456789012',
+    })
+  )
+  supplier = ok(
+    await as(client, s).post(`/api/v1/procurement/suppliers/${supplier.id}/documents`, {
+      documentTypeId: docType.id,
+      number: 'DOC-A',
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    supplier,
+    supplierDocType: docType,
+    supplierCriterion: criterion,
     stockLot,
     stockSerial,
     stockCount,
@@ -1250,6 +1297,80 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'inventário valorizado da entidade alheia',
         B.get(`/api/v1/inventory/reports/valued?legalEntityId=${a.le.id}`),
+      ],
+      ['GET fornecedor', B.get(`/api/v1/procurement/suppliers/${a.supplier.id}`)],
+      [
+        'alterar fornecedor alheio',
+        B.patch(`/api/v1/procurement/suppliers/${a.supplier.id}`, { ...v, paymentTermsDays: 1 }),
+      ],
+      [
+        'contacto no fornecedor alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/contacts`, {
+          name: 'X',
+          email: 'x@x.ao',
+        }),
+      ],
+      [
+        'alterar contacto alheio',
+        B.patch(
+          `/api/v1/procurement/suppliers/${a.supplier.id}/contacts/${a.supplier.partner.contacts[0].id}`,
+          { ...v, name: 'Outro' }
+        ),
+      ],
+      [
+        'conta bancária no fornecedor alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/bank-accounts`, {
+          holderName: 'X',
+          bankName: 'X',
+          iban: 'AO44004000000987654321098',
+        }),
+      ],
+      [
+        'aprovar conta bancária alheia',
+        B.post(
+          `/api/v1/procurement/supplier-bank-accounts/${a.supplier.bankAccounts[0].id}/approve`,
+          v
+        ),
+      ],
+      [
+        'documento no fornecedor alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/documents`, {
+          documentTypeId: a.supplierDocType.id,
+        }),
+      ],
+      [
+        'desactivar documento alheio',
+        B.post(`/api/v1/procurement/supplier-documents/${a.supplier.documents[0].id}/deactivate`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'pedir homologação alheia',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/submit`, { ...v, items: [] }),
+      ],
+      ['homologar alheio', B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/approve`, v)],
+      [
+        'recusar alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/reject`, { ...v, reason: 'x' }),
+      ],
+      [
+        'suspender alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/suspend`, { ...v, reason: 'x' }),
+      ],
+      [
+        'alterar critério alheio',
+        B.patch(`/api/v1/procurement/settings/criteria/${a.supplierCriterion.id}`, {
+          ...v,
+          name: 'Outro',
+        }),
+      ],
+      [
+        'alterar tipo de documento alheio',
+        B.patch(`/api/v1/procurement/settings/document-types/${a.supplierDocType.id}`, {
+          ...v,
+          name: 'Outro',
+        }),
       ],
       ['GET lote', B.get(`/api/v1/inventory/lots/${a.stockLot.id}`)],
       [
@@ -1946,6 +2067,14 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/inventory/integrations/events')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/accounting-events')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/serials')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/suppliers')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/settings/criteria')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/settings/document-types')).body().data, 0)
+    assert.deepEqual(
+      (await B.get('/api/v1/procurement/suppliers/lookup?countryCode=AO&taxId=5000099001')).body()
+        .data,
+      { partner: null, supplierId: null }
+    )
     assert.lengthOf((await B.get('/api/v1/inventory/reports/replenishment')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/reports/expiry')).body().data, 0)
     assert.lengthOf(
@@ -2076,6 +2205,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/integrations/events',
       '/api/v1/inventory/accounting-events',
       '/api/v1/inventory/reports/replenishment',
+      '/api/v1/procurement/suppliers',
+      `/api/v1/procurement/suppliers/${a.supplier.id}`,
       '/api/v1/inventory/reports/expiry',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',

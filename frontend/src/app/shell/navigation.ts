@@ -546,6 +546,26 @@ export const NAVIGATION: NavGroup[] = [
         feature: 'inventory',
         section: 'Inventário',
       },
+      {
+        label: 'Fornecedores',
+        path: '/compras/fornecedores',
+        icon: 'users',
+        anyOf: [
+          'procurement.suppliers.read',
+          'procurement.suppliers.manage',
+          'procurement.suppliers.approve',
+        ],
+        feature: 'procurement',
+        section: 'Compras',
+      },
+      {
+        label: 'Configuração das compras',
+        path: '/compras/configuracao',
+        icon: 'settings',
+        permission: 'procurement.settings',
+        feature: 'procurement',
+        section: 'Compras',
+      },
     ],
   },
   {
