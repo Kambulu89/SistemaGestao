@@ -574,9 +574,13 @@ di-lo.
   390 px sem deslocamento. A primeira execução apanhou a lista de entidades paginada (corrigido, também na
   reconciliação do 8.9) e as capturas levaram a dois ajustes: a regra da ruptura por armazém e o espaçamento das tabelas.
 
+## 8.12 QA
+
+Ver `docs/reports/prompt-08-qa.md`: rastreabilidade dos testes exigidos, regressão do ciclo completo
+(`inventory_lifecycle.spec.ts`), regressão E2E dos 11 scripts e revisão de segurança.
+
 ## Pendências
 
-- 8.12 (QA).
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
 - 8.2: o acesso `OPERATE` só passa a ter efeito nas operações de stock (8.4 em diante); mudar a entidade legal de um

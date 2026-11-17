@@ -405,7 +405,7 @@ employeeId, from, to)` em `#modules/hr/index`.
 
 ## Inventário (módulo `inventory`, Prompt 08)
 
-8.1 a 8.11 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-046). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+8.1 a 8.12 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-046; QA em `docs/reports/prompt-08-qa.md`). Catálogo: `uoms`, `product_categories` (hierarquia, classe
 contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
 `product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
 únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
