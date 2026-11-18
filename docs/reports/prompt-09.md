@@ -173,6 +173,59 @@ consolidadas, "Pedir cotação" abre o formulário já com a entidade e as linha
   ("10") perdia o zero final (passou a usar `plain`, com teste); o rótulo de auditoria de `rfq.issued` dizia "Entregue"
   (os rótulos passam a aceitar a acção completa).
 
+## 9.4 Comparação e adjudicação
+
+### Modelo
+
+Migração `0046_create_rfq_awards`: `rfq_awards` (pesos com `CHECK` de soma 100, moeda de base e data do câmbio,
+justificação, totais, submissão e decisão — quem decide ≠ quem submeteu por `CHECK`; uma viva por pedido por índice
+único parcial; gatilho: em aprovação só a decisão/anulação, finais imutáveis, sem eliminação), `rfq_award_scores`
+(nota de qualidade por fornecedor), `rfq_award_lines` (oferta escolhida, quantidade e fotografia dos valores; motivo
+obrigatório quando não é a melhor por `CHECK`); notas e linhas só mudam em rascunho (gatilho).
+
+### Backend e API (`/api/v1/procurement`)
+
+- `POST /rfqs/:id/comparison` (mapa sem gravar, com pesos e notas), `POST /rfqs/:id/awards`, `GET|PUT /rfq-awards/:id`,
+  `POST /rfq-awards/:id/{submit|approve|reject|cancel}`; filtro `pendingAward` na lista de pedidos; o pedido mostra as
+  adjudicações e `can.award`.
+- Permissão nova `procurement.rfqs.approve` (entidade legal), que também dá leitura dos pedidos.
+- Erros: `WEIGHTS_SUM`, `QUALITY_REQUIRED`, `NOT_BEST`, `OVER_OFFER`, `OVER_REQUESTED`, `NO_RATE`, `QUOTE_EXPIRED`,
+  `AWARD_EXISTS`, `AWARD_IN_PROGRESS`, `SELF_APPROVAL`, `INVALID_STATE`, versão (409). Todos os erros de validação
+  (pesos, notas, justificação e linhas) vêm juntos.
+
+### Ecrãs
+
+Pedido de cotação → "Comparar e adjudicar" / "Mapa comparativo": pesos com a soma à vista, tabela de fornecedores
+(total convertido, moeda e câmbio, prazos, validade, nota de qualidade), por linha as ofertas ordenadas pela pontuação
+(detalhe por critério, "Melhor"), quantidade a adjudicar por oferta, motivo quando não é a melhor, "Escolher as
+melhores por linha", justificação e erros das linhas com a linha e o fornecedor. Adjudicação: estado, totais na moeda
+de base, critérios, justificação, linhas adjudicadas com câmbio e motivo, totais por fornecedor, submeter, aprovar,
+recusar e anular com motivo, auditoria. Lista de pedidos com o filtro "Adjudicação por aprovar".
+
+### Testes e evidências
+
+- Unitário `procurement_awards_domain.spec.ts` (7): pesos (omissão, soma, inteiros, limites), notas, conversão (incluindo
+  12,35 EUR × 1 012,3456789012), pontuação por linha (90/54,55/50,82 → 80,91; a melhor 94,84; sem câmbio; preço zero),
+  desempate, validação das linhas (oferta alheia, caducada, sem câmbio, acima da oferta e da pedida, duplicada, motivo),
+  segregação.
+- Funcional `procurement_awards.spec.ts` (2): mapa com USD a 900 (900/810 por unidade, totais 10 260,00 e 64 260,00),
+  pontuações e ordem, outros pesos mudam a ordem; outra entidade 404; leitor vê mas não adjudica; `QUALITY_REQUIRED`,
+  justificação, `NOT_BEST`, `OVER_OFFER`, `OVER_REQUESTED`, oferta alheia; rascunho com fotografia (63 500,00 +
+  1 330,00 = 64 830,00; 60 USD → 54 000,00) e totais por fornecedor; `AWARD_EXISTS`; edição com versão; submissão;
+  `SELF_APPROVAL`; a base recusa mudar linhas, pesos e apagar; `AWARD_IN_PROGRESS`; filtro "por aprovar"; recusa com
+  motivo; nova adjudicação aprovada por outra pessoa → pedido adjudicado; auditoria e cronologia. Segundo: EUR sem
+  câmbio → sem pontuação e `NO_RATE`; proposta caducada → `QUOTE_EXPIRED`; anulação liberta o pedido.
+- `isolation_matrix` (mapa, adjudicar, ler e todas as acções sobre uma adjudicação de outra empresa → 404; listas
+  vazias), `routes_protection`, regressão de todo o backend; frontend `rfq-award-model.spec.ts`.
+- Browser (6 passos, três execuções seguidas, sem erros na consola; comprador e aprovador): mapa a partir do pedido,
+  soma dos pesos (90% recusado), notas de qualidade, melhor da linha 1 com 94,84, total do fornecedor em EUR convertido
+  (71 400,00), "escolher as melhores", troca da linha 2 para uma oferta que não é a melhor (erro com linha e fornecedor
+  até indicar o motivo; justificação obrigatória), adjudicação 70 830,00 AOA, submissão, quem submeteu não vê "Aprovar",
+  o aprovador encontra-a em "por aprovar" e aprova, o pedido fica adjudicado; 390 px.
+- Defeitos encontrados e corrigidos: os campos sem `app-field` na tabela usavam `appControl` (erro de injecção); a soma
+  dos pesos não se actualizava ao escrever; o servidor parava na justificação sem validar as linhas (agora todos os
+  erros juntos).
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -187,3 +240,6 @@ consolidadas, "Pedir cotação" abre o formulário já com a entidade e as linha
   aviso automático do fim do prazo (não há agendador); a adjudicação e o mapa comparativo são do 9.4; o pedido não
   consome quantidade da requisição (fica para a ordem de compra, 9.5); com várias séries `RFQ` activas usa-se a
   primeira por código.
+- 9.4: aprovação numa só etapa (sem níveis por valor nem workflows genéricos); nota de qualidade manual até ao 9.11;
+  sem notificação automática ao aprovador (filtro "por aprovar"); a comparação usa o câmbio em vigor na data da
+  abertura (o registado depois para essa data não conta se já houvesse outro).

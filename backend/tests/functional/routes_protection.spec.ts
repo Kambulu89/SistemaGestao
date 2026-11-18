@@ -446,6 +446,22 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
   'GET /api/v1/procurement/settings/:kind':
     'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/rfqs/:id/comparison':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/awards':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/rfq-awards/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/rfq-awards/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/submit':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/approve':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/reject':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/cancel':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/rfqs':
     'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/rfqs/options':

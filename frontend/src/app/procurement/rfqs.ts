@@ -71,6 +71,11 @@ export class Rfqs {
       label: 'Estado',
       options: Object.entries(RFQ_STATUS).map(([value, label]) => ({ value, label })),
     },
+    {
+      key: 'pendingAward',
+      label: 'Adjudicação',
+      options: [{ value: 'true', label: 'Por aprovar' }],
+    },
   ];
   protected readonly columns: Column<RfqRow>[] = [
     {
@@ -100,7 +105,7 @@ export class Rfqs {
   ];
   protected readonly list = new ListState<RfqRow>(this.api, {
     url: 'procurement/rfqs',
-    filterKeys: ['status'],
+    filterKeys: ['status', 'pendingAward'],
     sortFields: [],
     limit: 25,
   });

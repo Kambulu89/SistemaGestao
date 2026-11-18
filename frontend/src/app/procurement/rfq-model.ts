@@ -34,6 +34,7 @@ export interface RfqLine {
 }
 
 export interface QuoteLine {
+  id: string;
   rfqLineId: string;
   lineNo: number;
   alternativeNo: number;
@@ -115,7 +116,16 @@ export interface Rfq {
     quote: boolean;
     open: boolean;
     cancel: boolean;
+    award: boolean;
   };
+  awards: {
+    id: string;
+    status: AwardStatus;
+    totalBase: string;
+    baseCurrency: string;
+    submittedBy: string | null;
+    createdAt: string;
+  }[];
 }
 
 export interface RfqOptions {
@@ -154,6 +164,11 @@ export const RFQ_EVENT: Record<string, string> = {
   QUOTE_WITHDRAWN: 'Proposta retirada',
   OPENED: 'Propostas abertas',
   CANCELLED: 'Anulado',
+  AWARD_DRAFTED: 'Adjudicação preparada',
+  AWARD_SUBMITTED: 'Adjudicação submetida',
+  AWARD_REJECTED: 'Adjudicação recusada',
+  AWARD_CANCELLED: 'Adjudicação anulada',
+  AWARDED: 'Adjudicado',
 };
 
 export function rfqTone(s: RfqStatus): string {
@@ -235,4 +250,184 @@ export function quotePayload(rows: QuoteLineForm[]) {
     taxRate: n(r.taxRate) || '0',
     deliveryDays: r.deliveryDays.trim() === '' ? null : Number(r.deliveryDays),
   }));
+}
+
+// ---------- Comparação e adjudicação (9.4) ----------
+
+export type AwardStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export interface Weights {
+  price: number;
+  delivery: number;
+  quality: number;
+  payment: number;
+}
+export const WEIGHT_LABELS: [keyof Weights, string][] = [
+  ['price', 'Preço'],
+  ['delivery', 'Prazo de entrega'],
+  ['quality', 'Qualidade'],
+  ['payment', 'Prazo de pagamento'],
+];
+export interface OfferScore {
+  price: number;
+  delivery: number;
+  quality: number;
+  payment: number;
+  total: number;
+  best: boolean;
+}
+export interface ComparisonOffer {
+  quoteLineId: string;
+  quoteId: string;
+  supplier: { id: string; code: string };
+  alternativeNo: number;
+  description: string | null;
+  quantity: string;
+  unitPrice: string;
+  taxRate: string;
+  currency: string;
+  unitPriceBase: string | null;
+  totalBase: string | null;
+  deliveryDays: number | null;
+  expired: boolean;
+  score: OfferScore | null;
+}
+export interface Comparison {
+  rfq: { id: string; number: string; title: string; status: RfqStatus };
+  baseCurrency: string;
+  rateDate: string;
+  rates: { currency: string; rate: string | null }[];
+  weights: Weights;
+  quality: Record<string, number>;
+  suppliers: {
+    supplier: { id: string; code: string; name: string };
+    quoteId: string;
+    quoteVersion: number;
+    outdated: boolean;
+    currency: string;
+    rate: string | null;
+    validUntil: string | null;
+    expired: boolean;
+    deliveryDays: number | null;
+    paymentTermsDays: number | null;
+    quality: number | null;
+    linesQuoted: number;
+    totalAmount: string;
+    totalBase: string | null;
+    bestLines: number;
+  }[];
+  lines: {
+    id: string;
+    lineNo: number;
+    description: string;
+    uom: string | null;
+    quantity: string;
+    offers: ComparisonOffer[];
+  }[];
+}
+export interface Award {
+  id: string;
+  version: number;
+  status: AwardStatus;
+  rfq: { id: string; number: string; title: string; status: RfqStatus };
+  weights: Weights;
+  quality: Record<string, number>;
+  baseCurrency: string;
+  rateDate: string;
+  justification: string;
+  totalNetBase: string;
+  totalBase: string;
+  createdBy: string | null;
+  submittedAt: string | null;
+  submittedBy: string | null;
+  decidedAt: string | null;
+  decidedBy: string | null;
+  decisionReason: string | null;
+  cancelReason: string | null;
+  lines: {
+    id: string;
+    rfqLineId: string;
+    lineNo: number;
+    description: string;
+    uom: string | null;
+    quoteId: string;
+    quoteLineId: string;
+    supplier: { id: string; code: string; name: string };
+    alternativeNo: number;
+    offerDescription: string | null;
+    quantity: string;
+    unitPrice: string;
+    currency: string;
+    rate: string;
+    unitPriceBase: string;
+    netBase: string;
+    totalBase: string;
+    score: number;
+    best: boolean;
+    reason: string | null;
+  }[];
+  bySupplier: {
+    supplier: { id: string; code: string; name: string };
+    lines: number;
+    netBase: string;
+    totalBase: string;
+  }[];
+  can: {
+    edit: boolean;
+    submit: boolean;
+    decide: boolean;
+    decideBlockedBy: string | null;
+    cancel: boolean;
+  };
+}
+
+export const AWARD_STATUS: Record<AwardStatus, string> = {
+  DRAFT: 'Em preparação',
+  PENDING_APPROVAL: 'Em aprovação',
+  APPROVED: 'Aprovada',
+  REJECTED: 'Recusada',
+  CANCELLED: 'Anulada',
+};
+export function awardTone(s: AwardStatus): string {
+  if (s === 'APPROVED') return 'bg-success-soft text-success-text';
+  if (s === 'PENDING_APPROVAL') return 'bg-warning-soft text-warning-text';
+  if (s === 'REJECTED') return 'bg-danger-soft text-danger-text';
+  return 'bg-surface-2 text-muted';
+}
+
+export const weightSum = (w: Weights) => w.price + w.delivery + w.quality + w.payment;
+
+/** Escolha por oferta: quantidade a adjudicar (vazia = não) e motivo. */
+export type Picks = Record<string, { quantity: string; reason: string }>;
+
+/** O menor de dois decimais em texto (até 6 casas). */
+function minDecimal(a: string, b: string): string {
+  const x = scaled(a, 6);
+  const y = scaled(b, 6);
+  if (x === null || y === null) return a;
+  return x <= y ? a : b;
+}
+
+/** Sugestão: a melhor oferta de cada linha, com a quantidade pedida (ou a oferecida, se menor). */
+export function suggestBest(c: Comparison): Picks {
+  const out: Picks = {};
+  for (const l of c.lines) {
+    const best = l.offers.find((o) => o.score?.best && !o.expired);
+    if (best)
+      out[best.quoteLineId] = {
+        quantity: plain(minDecimal(l.quantity, best.quantity)),
+        reason: '',
+      };
+  }
+  return out;
+}
+
+/** Linhas para a API: só as ofertas com quantidade indicada. */
+export function picksPayload(picks: Picks) {
+  return Object.entries(picks)
+    .filter(([, p]) => p.quantity.trim() !== '')
+    .map(([quoteLineId, p]) => ({
+      quoteLineId,
+      quantity: p.quantity.trim().replace(',', '.'),
+      reason: p.reason.trim() || null,
+    }));
 }

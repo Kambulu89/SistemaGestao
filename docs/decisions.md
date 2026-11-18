@@ -770,3 +770,30 @@ do prazo ou antes se todos os convidados já responderam ou declinaram (`EARLY_O
 **Revisões.** Um pedido aberto revê-se com motivo (prazo, especificações, condições, quantidade e especificações das
 linhas): a revisão aumenta e as propostas feitas a uma revisão anterior ficam assinaladas como desactualizadas (não são
 apagadas). Permissões `procurement.rfqs.read|manage` no âmbito da entidade legal; tudo auditado.
+
+## D-050 Comparação e adjudicação: moeda normalizada à data da abertura, pontuação ponderada e aprovação segregada (aceite)
+
+**Comparação.** Calculada na hora sobre as propostas em vigor de um pedido com as propostas abertas (fechado ou
+adjudicado). Cada preço é convertido para a moeda funcional da entidade com o câmbio em vigor na **data da abertura**
+(fixa — câmbios registados depois não mudam a comparação). Sem câmbio, a oferta aparece mas não é pontuada nem
+adjudicável (`NO_RATE`). Mapa lado a lado por linha do pedido: cada oferta (principal e alternativas) com preço
+original, preço e total na moeda de base, entrega e pontuação; por fornecedor: total da proposta convertido, prazos,
+validade, linhas cotadas e em quantas é a melhor.
+
+**Pontuação.** Por linha, entre as ofertas pontuáveis, em centésimos inteiros: preço = mais baixo/este; entrega = (mais
+curto+1)/(este+1) (sem prazo, 0); pagamento = (este+1)/(mais longo+1) (mais longo é melhor; sem prazo, 0); qualidade =
+nota dada ao fornecedor (0–100; obrigatória para todos se o critério pesa). Total = Σ peso × pontuação / 100, com pesos
+inteiros (0–100) que **somam 100** (`WEIGHTS_SUM`; por omissão 60/20/20/0). A melhor da linha é a de total mais alto
+(empate: preço mais baixo, depois a principal). A nota de qualidade é manual até à avaliação de fornecedores (9.11).
+
+**Adjudicação.** Por linha e fornecedor: escolhe-se a oferta (principal ou alternativa) e a quantidade (até à oferecida
+e, somada por linha, até à pedida — pode dividir-se uma linha); escolher uma oferta que não é a melhor exige motivo
+(`NOT_BEST`); propostas caducadas não se adjudicam. Justificação obrigatória. Grava a fotografia dos valores (preço,
+câmbio, valores na moeda de base, pontuação) e os totais. Uma só adjudicação viva por pedido (índice único parcial).
+
+**Aprovação.** Rascunho → em aprovação (refaz a validação e fixa a fotografia) → aprovada (o pedido fica adjudicado)
+ou recusada com motivo (pode preparar-se outra); anulável com motivo antes da decisão. Decide quem tem
+`procurement.rfqs.approve` na entidade e **não** submeteu (`SELF_APPROVAL`; `CHECK` na base). Aprovar exige as
+propostas ainda válidas (`QUOTE_EXPIRED`). Depois de submetida, a base recusa mudar cabeçalho, notas e linhas;
+aprovada ou recusada, nada muda. Um pedido com adjudicação em curso não se anula (`AWARD_IN_PROGRESS`). Aprovação
+numa etapa (sem níveis por valor) — as ordens de compra (9.5) consomem as linhas aprovadas.

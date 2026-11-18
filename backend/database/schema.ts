@@ -4286,6 +4286,133 @@ export class RateLimitCounterSchema extends BaseModel {
   declare windowEndsAt: DateTime
 }
 
+export class RfqAwardLineSchema extends BaseModel {
+  static $columns = ['awardId', 'best', 'createdAt', 'createdBy', 'currency', 'id', 'netBase', 'quantity', 'quoteId', 'quoteLineId', 'rate', 'reason', 'rfqLineId', 'score', 'supplierId', 'tenantId', 'totalBase', 'unitPrice', 'unitPriceBase', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = RfqAwardLineSchema.$columns
+  @column()
+  declare awardId: string
+  @column()
+  declare best: boolean
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare netBase: string
+  @column()
+  declare quantity: string
+  @column()
+  declare quoteId: string
+  @column()
+  declare quoteLineId: string
+  @column()
+  declare rate: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare rfqLineId: string
+  @column()
+  declare score: string
+  @column()
+  declare supplierId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalBase: string
+  @column()
+  declare unitPrice: string
+  @column()
+  declare unitPriceBase: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class RfqAwardScoreSchema extends BaseModel {
+  static $columns = ['awardId', 'createdAt', 'createdBy', 'id', 'qualityScore', 'supplierId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = RfqAwardScoreSchema.$columns
+  @column()
+  declare awardId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare qualityScore: number
+  @column()
+  declare supplierId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class RfqAwardSchema extends BaseModel {
+  static $columns = ['baseCurrency', 'cancelReason', 'createdAt', 'createdBy', 'decidedAt', 'decidedBy', 'decisionReason', 'deliveryWeight', 'id', 'justification', 'paymentWeight', 'priceWeight', 'qualityWeight', 'rateDate', 'rfqId', 'status', 'submittedAt', 'submittedBy', 'tenantId', 'totalBase', 'totalNetBase', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = RfqAwardSchema.$columns
+  @column()
+  declare baseCurrency: string
+  @column()
+  declare cancelReason: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.dateTime()
+  declare decidedAt: DateTime | null
+  @column()
+  declare decidedBy: string | null
+  @column()
+  declare decisionReason: string | null
+  @column()
+  declare deliveryWeight: number
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare justification: string
+  @column()
+  declare paymentWeight: number
+  @column()
+  declare priceWeight: number
+  @column()
+  declare qualityWeight: number
+  @column.date()
+  declare rateDate: DateTime
+  @column()
+  declare rfqId: string
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalBase: string
+  @column()
+  declare totalNetBase: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class RfqEventSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'details', 'id', 'kind', 'reason', 'revision', 'rfqId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = RfqEventSchema.$columns

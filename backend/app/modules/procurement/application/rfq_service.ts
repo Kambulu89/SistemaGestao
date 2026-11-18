@@ -42,13 +42,24 @@ interface Scopes {
   read: PermissionScope
   manage: PermissionScope
 }
-async function scopesOf(scope: TenantScope): Promise<Scopes> {
+/** Ler: `.read` ou quem aprova adjudicações (`.approve`) na entidade; gerir: `.manage`. */
+export async function rfqScopes(
+  scope: TenantScope
+): Promise<Scopes & { approve: PermissionScope }> {
+  const read = await permissionScope(scope, 'procurement.rfqs.read')
+  const approve = await permissionScope(scope, 'procurement.rfqs.approve')
   return {
-    read: await permissionScope(scope, 'procurement.rfqs.read'),
+    read: {
+      ...read,
+      tenant: read.tenant || approve.tenant,
+      legalEntityIds: new Set([...read.legalEntityIds, ...approve.legalEntityIds]),
+    },
     manage: await permissionScope(scope, 'procurement.rfqs.manage'),
+    approve,
   }
 }
-const coversLe = (s: PermissionScope, le: string) => s.tenant || s.legalEntityIds.has(le)
+const scopesOf = rfqScopes
+export const coversLe = (s: PermissionScope, le: string) => s.tenant || s.legalEntityIds.has(le)
 const entitiesOf = (s: Scopes) =>
   s.read.tenant || s.manage.tenant
     ? 'ALL'
@@ -90,7 +101,7 @@ const reasonOf = (v: unknown) => {
   return r
 }
 
-async function event(
+export async function rfqEvent(
   scope: TenantScope,
   id: string,
   kind: string,
@@ -379,6 +390,15 @@ async function detail(scope: TenantScope, id: string) {
   ])
   const status = r.status as RfqStatus
   const invs = invitations.rows as any[]
+  const awards = (
+    await scope.trx.rawQuery(
+      `select a.id, a.status, a.total_base, a.base_currency, a.created_at, u.full_name as submitted_name
+         from rfq_awards a left join users u on u.id = a.submitted_by
+        where a.tenant_id = ? and a.rfq_id = ? order by a.created_at desc`,
+      [t, id]
+    )
+  ).rows as any[]
+  const liveAward = awards.some((a) => ['DRAFT', 'PENDING_APPROVAL', 'APPROVED'].includes(a.status))
   const lineNo = new Map((lines.rows as any[]).map((l) => [l.id as string, Number(l.line_no)]))
   return {
     id: r.id as string,
@@ -459,6 +479,7 @@ async function detail(scope: TenantScope, id: string) {
                   a.alternative_no - b.alternative_no
               )
               .map((x) => ({
+                id: x.id as string,
                 rfqLineId: x.rfq_line_id as string,
                 lineNo: lineNo.get(x.rfq_line_id) ?? 0,
                 alternativeNo: Number(x.alternative_no),
@@ -491,14 +512,26 @@ async function detail(scope: TenantScope, id: string) {
         manage && RFQ_CAN.quote.includes(status) && new Date(r.closes_at).getTime() > Date.now(),
       open: manage && status === 'OPEN' && canOpen(new Date(r.closes_at), new Date(), invs),
       cancel: manage && RFQ_CAN.cancel.includes(status),
+      award: manage && status === 'CLOSED' && !liveAward,
     },
+    awards: awards.map((a) => ({
+      id: a.id as string,
+      status: a.status as string,
+      totalBase: money(cents(a.total_base)),
+      baseCurrency: a.base_currency as string,
+      submittedBy: (a.submitted_name as string) ?? null,
+      createdAt: new Date(a.created_at).toISOString(),
+    })),
   }
 }
 
 export type RfqDetail = Awaited<ReturnType<typeof detail>>
 
 export class RfqService {
-  list(context: TenantContext, f: { q?: string; status?: string; limit: number; offset: number }) {
+  list(
+    context: TenantContext,
+    f: { q?: string; status?: string; pendingAward?: boolean; limit: number; offset: number }
+  ) {
     return runInTenant(context, async (scope) => {
       const e = entitiesOf(await scopesOf(scope))
       if (e !== 'ALL' && !e.length) return { items: [], total: 0 }
@@ -512,6 +545,9 @@ export class RfqService {
         where.push('r.status = ?')
         params.push(f.status)
       }
+      if (f.pendingAward)
+        where.push(`exists (select 1 from rfq_awards a where a.tenant_id = r.tenant_id and a.rfq_id = r.id
+          and a.status = 'PENDING_APPROVAL')`)
       if (f.q) {
         const like = `%${f.q.toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`)}%`
         where.push(`(lower(coalesce(r.number, '')) like ? or lower(r.title) like ?)`)
@@ -631,7 +667,7 @@ export class RfqService {
       const id = (r.rows[0] as { id: string }).id
       await writeLines(scope, id, lines)
       const invited = input.supplierIds ? await inviteSuppliers(scope, id, input.supplierIds) : []
-      await event(scope, id, 'CREATED', {
+      await rfqEvent(scope, id, 'CREATED', {
         details: { lines: lines.length, invited: invited.length },
       })
       await audit(scope, {
@@ -667,7 +703,7 @@ export class RfqService {
         sealed: h.values.sealed,
         ...(/^[A-Z]{3}$/.test(cur) ? { currency: cur } : {}),
       })
-      await event(scope, id, 'UPDATED')
+      await rfqEvent(scope, id, 'UPDATED')
       await audit(scope, {
         action: 'rfq.updated',
         entityType: 'rfq',
@@ -685,7 +721,7 @@ export class RfqService {
       const added = await inviteSuppliers(scope, id, input.supplierIds)
       if (added.length) {
         await touch(scope, id, {})
-        await event(scope, id, 'INVITED', {
+        await rfqEvent(scope, id, 'INVITED', {
           revision: Number(r.revision),
           details: { suppliers: added },
         })
@@ -716,7 +752,7 @@ export class RfqService {
         context.tenantId,
         invitationId,
       ])
-      await event(scope, r.id, 'UNINVITED', { details: { supplierId: i.supplier_id } })
+      await rfqEvent(scope, r.id, 'UNINVITED', { details: { supplierId: i.supplier_id } })
       return detail(scope, r.id)
     })
   }
@@ -773,7 +809,7 @@ export class RfqService {
         issued_at: new Date(),
         issued_by: context.userId,
       })
-      await event(scope, id, 'ISSUED', {
+      await rfqEvent(scope, id, 'ISSUED', {
         revision: 0,
         details: { number, invited: inv.rows.length },
       })
@@ -870,7 +906,7 @@ export class RfqService {
       }
       const revision = Number(r.revision) + 1
       await touch(scope, id, { ...set, revision })
-      await event(scope, id, 'AMENDED', {
+      await rfqEvent(scope, id, 'AMENDED', {
         revision,
         reason,
         details: { fields: changes, lines: lineChanges.length },
@@ -908,7 +944,7 @@ export class RfqService {
             version = version + 1 where tenant_id = ? and id = ?`,
         [reason, context.userId, context.tenantId, invitationId]
       )
-      await event(scope, r.id, 'DECLINED', { reason, details: { supplierId: i.supplier_id } })
+      await rfqEvent(scope, r.id, 'DECLINED', { reason, details: { supplierId: i.supplier_id } })
       return detail(scope, r.id)
     })
   }
@@ -1073,7 +1109,7 @@ export class RfqService {
       )
       await touch(scope, id, {})
       const hidden = pricesHidden(r)
-      await event(scope, id, 'QUOTE_RECEIVED', {
+      await rfqEvent(scope, id, 'QUOTE_RECEIVED', {
         revision: Number(r.revision),
         details: {
           supplierId: inv.supplier_id,
@@ -1120,7 +1156,7 @@ export class RfqService {
           where tenant_id = ? and id = ?`,
         [context.userId, context.tenantId, q.invitation_id]
       )
-      await event(scope, r.id, 'QUOTE_WITHDRAWN', {
+      await rfqEvent(scope, r.id, 'QUOTE_WITHDRAWN', {
         reason,
         details: { supplierId: q.supplier_id, quoteVersion: q.quote_version },
       })
@@ -1148,7 +1184,7 @@ export class RfqService {
         `select count(*)::int as n from rfq_quotes where tenant_id = ? and rfq_id = ? and status = 'ACTIVE'`,
         [context.tenantId, id]
       )
-      await event(scope, id, 'OPENED', {
+      await rfqEvent(scope, id, 'OPENED', {
         revision: Number(r.revision),
         details: { quotes: Number((q.rows[0] as any).n) },
       })
@@ -1167,9 +1203,18 @@ export class RfqService {
       const { r } = await authorized(scope, id, 'manage', true)
       versionCheck(r, input.expectedVersion)
       stateCheck(r, 'cancel')
+      const live = await scope.trx.rawQuery(
+        `select 1 from rfq_awards where tenant_id = ? and rfq_id = ? and status in ('DRAFT','PENDING_APPROVAL')`,
+        [context.tenantId, id]
+      )
+      if (live.rows.length)
+        throw ApiError.conflict(
+          'AWARD_IN_PROGRESS',
+          'Há uma adjudicação em preparação ou em aprovação: anule-a primeiro.'
+        )
       const reason = reasonOf(input.reason)
       await touch(scope, id, { status: 'CANCELLED', cancel_reason: reason })
-      await event(scope, id, 'CANCELLED', { reason })
+      await rfqEvent(scope, id, 'CANCELLED', { reason })
       await audit(scope, {
         action: 'rfq.cancelled',
         entityType: 'rfq',

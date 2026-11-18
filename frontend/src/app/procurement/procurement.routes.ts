@@ -15,7 +15,11 @@ const REQUISITION_PERMISSIONS = [
   'procurement.requisitions.process',
 ];
 
-const RFQ_PERMISSIONS = ['procurement.rfqs.read', 'procurement.rfqs.manage'];
+const RFQ_PERMISSIONS = [
+  'procurement.rfqs.read',
+  'procurement.rfqs.manage',
+  'procurement.rfqs.approve',
+];
 
 export const PROCUREMENT_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'fornecedores' },
@@ -123,6 +127,14 @@ export const PROCUREMENT_ROUTES: Routes = [
         loadComponent: () => import('./rfq-detail').then((m) => m.RfqDetail),
       },
       {
+        path: ':id/adjudicacao',
+        title: 'Mapa comparativo',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { anyOf: RFQ_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./rfq-award-form').then((m) => m.RfqAwardForm),
+      },
+      {
         path: ':id/editar',
         title: 'Editar pedido de cotação',
         canActivate: [accessGuard],
@@ -131,6 +143,13 @@ export const PROCUREMENT_ROUTES: Routes = [
         loadComponent: () => import('./rfq-form').then((m) => m.RfqForm),
       },
     ],
+  },
+  {
+    path: 'adjudicacoes/:id',
+    title: 'Adjudicação',
+    canActivate: [accessGuard],
+    data: { anyOf: RFQ_PERMISSIONS, anyScope: true },
+    loadComponent: () => import('./rfq-award-detail').then((m) => m.RfqAwardDetail),
   },
   {
     path: 'configuracao/etapas',

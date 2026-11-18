@@ -584,7 +584,7 @@ export const NAVIGATION: NavGroup[] = [
         label: 'Pedidos de cotação',
         path: '/compras/cotacoes',
         icon: 'file',
-        anyOf: ['procurement.rfqs.read', 'procurement.rfqs.manage'],
+        anyOf: ['procurement.rfqs.read', 'procurement.rfqs.manage', 'procurement.rfqs.approve'],
         feature: 'procurement',
         anyScope: true,
         section: 'Compras',

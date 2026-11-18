@@ -4,15 +4,18 @@ import { ApiError } from '#shared/http/api_error'
 import { created, ok } from '#shared/http/respond'
 import { isUuid } from '#shared/db/sql'
 import { RfqService } from '#modules/procurement/application/rfq_service'
+import { RfqAwardService } from '#modules/procurement/application/rfq_award_service'
 import { RFQ_STATUSES } from '#modules/procurement/domain/rfqs'
 
 /** Pedidos de cotação (9.3): âmbito por entidade verificado no serviço (`procurement.rfqs.read|manage`). */
 const rfqs = new RfqService()
+const awards = new RfqAwardService()
 
 const listQuery = vine.create(
   vine.object({
     q: vine.string().trim().maxLength(100).optional(),
     status: vine.enum(RFQ_STATUSES).optional(),
+    pendingAward: vine.boolean().optional(),
     limit: vine.number().withoutDecimals().min(1).max(200).optional(),
     offset: vine.number().withoutDecimals().min(0).optional(),
   })
@@ -91,5 +94,37 @@ export default class RfqsController {
 
   async cancel(ctx: HttpContext) {
     return ok(ctx, await rfqs.cancel(ctx.tenantContext!, param(ctx), await vbody(ctx)))
+  }
+
+  async compare(ctx: HttpContext) {
+    return ok(ctx, await awards.compare(ctx.tenantContext!, param(ctx), await body(ctx)))
+  }
+
+  async createAward(ctx: HttpContext) {
+    return created(ctx, await awards.create(ctx.tenantContext!, param(ctx), await body(ctx)))
+  }
+
+  async award(ctx: HttpContext) {
+    return ok(ctx, await awards.get(ctx.tenantContext!, param(ctx)))
+  }
+
+  async updateAward(ctx: HttpContext) {
+    return ok(ctx, await awards.update(ctx.tenantContext!, param(ctx), await vbody(ctx)))
+  }
+
+  async submitAward(ctx: HttpContext) {
+    return ok(ctx, await awards.submit(ctx.tenantContext!, param(ctx), await vbody(ctx)))
+  }
+
+  async approveAward(ctx: HttpContext) {
+    return ok(ctx, await awards.decide(ctx.tenantContext!, param(ctx), 'approve', await vbody(ctx)))
+  }
+
+  async rejectAward(ctx: HttpContext) {
+    return ok(ctx, await awards.decide(ctx.tenantContext!, param(ctx), 'reject', await vbody(ctx)))
+  }
+
+  async cancelAward(ctx: HttpContext) {
+    return ok(ctx, await awards.cancel(ctx.tenantContext!, param(ctx), await vbody(ctx)))
   }
 }

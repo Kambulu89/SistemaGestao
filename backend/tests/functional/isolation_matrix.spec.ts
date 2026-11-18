@@ -778,9 +778,19 @@ async function populate(client: any) {
       lines: [{ description: 'Papel A4', quantity: '10' }],
     })
   )
+  // Adjudicação da empresa A inserida directamente (a API exige propostas abertas; aqui só interessa o isolamento).
+  const rfqAward = (
+    await db.connection('owner').rawQuery(
+      `insert into rfq_awards (tenant_id, rfq_id, price_weight, delivery_weight, quality_weight, payment_weight,
+          base_currency, rate_date, justification) values (?, ?, 100, 0, 0, 0, 'AOA', current_date, 'Isolamento')
+       returning id`,
+      [tenant.id, rfq.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
     rfq,
+    rfqAward,
     purchaseRequisition,
     approvalLevel,
     supplier,
@@ -1407,6 +1417,32 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'anular pedido de cotação alheio',
         B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['mapa comparativo alheio', B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/comparison`, {})],
+      [
+        'adjudicar pedido alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/awards`, { justification: 'x', lines: [] }),
+      ],
+      ['GET adjudicação', B.get(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}`)],
+      [
+        'alterar adjudicação alheia',
+        B.put(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'submeter adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/submit`, v),
+      ],
+      [
+        'aprovar adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/approve`, v),
+      ],
+      [
+        'recusar adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/reject`, { ...v, reason: 'x' }),
+      ],
+      [
+        'anular adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/cancel`, { ...v, reason: 'x' }),
       ],
       ['GET fornecedor', B.get(`/api/v1/procurement/suppliers/${a.supplier.id}`)],
       [
@@ -2324,6 +2360,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/procurement/suppliers/${a.supplier.id}`,
       '/api/v1/procurement/rfqs',
       `/api/v1/procurement/rfqs/${a.rfq.id}`,
+      `/api/v1/procurement/rfq-awards/${a.rfqAward.id}`,
+      '/api/v1/procurement/rfqs?pendingAward=true',
       '/api/v1/inventory/reports/expiry',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',

@@ -542,6 +542,12 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Criar, emitir, rever e anular pedidos de cotação, convidar fornecedores homologados, registar propostas e abri-las.',
   },
   {
+    code: 'procurement.rfqs.approve',
+    module: 'procurement',
+    description:
+      'Aprovar ou recusar adjudicações de pedidos de cotação das entidades do âmbito (nunca as que a própria pessoa submeteu).',
+  },
+  {
     code: 'procurement.settings',
     module: 'procurement',
     description:

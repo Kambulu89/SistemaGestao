@@ -16,6 +16,8 @@ import { ToastService } from '../ui/toasts';
 import { money } from '../inventory/valuation-model';
 import { qty } from '../inventory/stock-model';
 import {
+  AWARD_STATUS,
+  awardTone,
   INVITATION_STATUS,
   invitationTone,
   isoToLocal,
@@ -122,6 +124,14 @@ type ReasonKind = 'cancel' | 'decline' | 'withdraw';
                 Abrir propostas
               </button>
             }
+            @if (r.status === 'CLOSED' || r.status === 'AWARDED') {
+              <a
+                [class]="r.can.award ? 'btn-primary' : 'btn-secondary'"
+                data-testid="qd-compare"
+                [routerLink]="['/compras/cotacoes', r.id, 'adjudicacao']"
+                >{{ r.can.award ? 'Comparar e adjudicar' : 'Mapa comparativo' }}</a
+              >
+            }
             @if (r.can.cancel) {
               <button
                 type="button"
@@ -134,6 +144,25 @@ type ReasonKind = 'cancel' | 'decline' | 'withdraw';
             }
           </div>
         </section>
+
+        @if (r.awards.length) {
+          <section class="card" aria-labelledby="qd-awards-title">
+            <h2 id="qd-awards-title" class="mb-2 font-semibold">Adjudicações</h2>
+            <ul class="space-y-1 text-sm" data-testid="qd-awards">
+              @for (w of r.awards; track w.id) {
+                <li class="flex flex-wrap items-center gap-2">
+                  <span class="badge" [class]="awardTone(w.status)">{{
+                    awardLabel(w.status)
+                  }}</span>
+                  <a class="link" [routerLink]="['/compras/adjudicacoes', w.id]">{{
+                    money(w.totalBase, w.baseCurrency)
+                  }}</a>
+                  <span class="text-muted">{{ when(w.createdAt) }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
 
         <section class="card space-y-2 text-sm" aria-labelledby="qd-req-title">
           <h2 id="qd-req-title" class="font-semibold">Pedido</h2>
@@ -647,6 +676,8 @@ export class RfqDetail {
   protected readonly invLabel = (s: Rfq['invitations'][number]['status']) => INVITATION_STATUS[s];
   protected readonly quoteLabel = (s: Rfq['quotes'][number]['status']) => QUOTE_STATUS[s];
   protected readonly event = (k: string) => RFQ_EVENT[k] ?? k;
+  protected readonly awardTone = awardTone;
+  protected readonly awardLabel = (s: Rfq['awards'][number]['status']) => AWARD_STATUS[s];
   protected readonly title = computed(() => {
     const r = this.x();
     return r ? `Pedido de cotação ${r.number ?? '(rascunho)'}` : 'Pedido de cotação';
