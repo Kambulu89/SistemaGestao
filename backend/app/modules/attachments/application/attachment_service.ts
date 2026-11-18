@@ -21,7 +21,7 @@ import {
 } from '#modules/attachments/domain/files'
 import { LocalStorage } from '#modules/attachments/infrastructure/local_storage'
 import { productExists } from '#modules/inventory/index'
-import { rfqAccess, supplierExists } from '#modules/procurement/index'
+import { purchaseOrderAccess, rfqAccess, supplierExists } from '#modules/procurement/index'
 
 /**
  * Política de acesso por tipo de registo: o anexo herda a autorização (e a funcionalidade contratada) do registo a que
@@ -137,6 +137,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.rfq = {
     feature: 'procurement',
     access: (scope, id) => rfqAccess(scope, id),
+  }
+  // Documentos da ordem de compra (confirmação do fornecedor, condições): o âmbito da ordem por entidade.
+  map.purchase_order = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseOrderAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

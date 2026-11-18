@@ -548,6 +548,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Aprovar ou recusar adjudicações de pedidos de cotação das entidades do âmbito (nunca as que a própria pessoa submeteu).',
   },
   {
+    code: 'procurement.orders.read',
+    module: 'procurement',
+    description:
+      'Consultar ordens de compra das entidades do âmbito, linhas, aprovação, revisões e histórico.',
+  },
+  {
+    code: 'procurement.orders.manage',
+    module: 'procurement',
+    description:
+      'Criar e alterar ordens de compra, pedir aprovação, emitir, rever, anular e fechar o que fica por receber.',
+  },
+  {
+    code: 'procurement.orders.approve',
+    module: 'procurement',
+    description:
+      'Decidir as etapas de aprovação das ordens de compra do âmbito (nunca as que a própria pessoa submeteu nem duas etapas da mesma ronda).',
+  },
+  {
     code: 'procurement.settings',
     module: 'procurement',
     description:

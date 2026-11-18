@@ -136,6 +136,8 @@ export class AuditHistory {
       opened: 'Propostas abertas',
       quote_received: 'Proposta registada',
       'rfq.issued': 'Emitido',
+      'purchase_order.issued': 'Emitida',
+      revised: 'Revisão aberta',
     };
     return labels[action] ?? labels[verb] ?? action;
   }

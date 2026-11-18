@@ -462,6 +462,32 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
   'POST /api/v1/procurement/rfq-awards/:id/cancel':
     'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/orders':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/orders/options':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/orders':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/orders/:id':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/orders/:id':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/submit':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/approve':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/reject':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/issue':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/revise':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/cancel':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/close':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/rfqs':
     'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/rfqs/options':

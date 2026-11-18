@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Api, ApiError } from '../core/api';
 import { Breadcrumbs } from '../core/breadcrumbs';
+import { Workspace } from '../core/workspace';
 import { AuditHistory } from '../ui/audit-history';
 import { ConfirmService } from '../ui/confirm';
 import { formatDate, formatDateTime } from '../ui/dates';
@@ -93,6 +94,17 @@ type ReasonKind = 'reject' | 'cancel';
                 (click)="ask('reject')"
               >
                 Recusar
+              </button>
+            }
+            @if (x.status === 'APPROVED' && canOrder()) {
+              <button
+                type="button"
+                class="btn-primary"
+                data-testid="ad-orders"
+                [disabled]="act.busy()"
+                (click)="createOrders()"
+              >
+                Criar ordens de compra
               </button>
             }
             @if (x.can.cancel) {
@@ -225,6 +237,8 @@ export class RfqAwardDetail {
   private readonly toasts = inject(ToastService);
   private readonly confirmSvc = inject(ConfirmService);
   private readonly breadcrumbs = inject(Breadcrumbs);
+  private readonly workspace = inject(Workspace);
+  protected readonly canOrder = computed(() => this.workspace.canAny('procurement.orders.manage'));
   protected readonly a = signal<Award | null>(null);
   protected readonly loadError = signal<ApiError | null>(null);
   protected readonly act = new Action();
@@ -327,6 +341,26 @@ export class RfqAwardDetail {
         }),
       ),
       'Adjudicação aprovada.',
+    );
+  }
+
+  /** Uma ordem em rascunho por fornecedor; se já existirem, o servidor recusa (AWARD_ALREADY_ORDERED). */
+  protected async createOrders() {
+    const x = this.a()!;
+    const r = await this.act.run(() =>
+      this.api.post<{ ids: string[] }>(`procurement/rfq-awards/${x.id}/orders`, {}),
+    );
+    if (!r) {
+      this.toasts.show(this.act.error()?.message ?? 'Não foi possível.', 'error');
+      return;
+    }
+    this.toasts.show(
+      r.ids.length === 1
+        ? 'Ordem de compra criada em rascunho.'
+        : `${r.ids.length} ordens de compra criadas em rascunho.`,
+    );
+    await this.router.navigate(
+      r.ids.length === 1 ? ['/compras/ordens', r.ids[0]] : ['/compras/ordens'],
     );
   }
 

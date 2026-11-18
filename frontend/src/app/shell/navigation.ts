@@ -590,6 +590,19 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Compras',
       },
       {
+        label: 'Ordens de compra',
+        path: '/compras/ordens',
+        icon: 'file',
+        anyOf: [
+          'procurement.orders.read',
+          'procurement.orders.manage',
+          'procurement.orders.approve',
+        ],
+        feature: 'procurement',
+        anyScope: true,
+        section: 'Compras',
+      },
+      {
         label: 'Etapas de aprovação das compras',
         path: '/compras/configuracao/etapas',
         icon: 'approvals',

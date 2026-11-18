@@ -53,6 +53,7 @@ const SuppliersController = () => import('#modules/procurement/http/suppliers_co
 const PurchaseRequisitionsController = () =>
   import('#modules/procurement/http/requisitions_controller')
 const RfqsController = () => import('#modules/procurement/http/rfqs_controller')
+const PurchaseOrdersController = () => import('#modules/procurement/http/orders_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
@@ -1007,6 +1008,19 @@ router
                 router.delete('rfq-invitations/:id', [RfqsController, 'uninvite'])
                 router.post('rfq-invitations/:id/decline', [RfqsController, 'decline'])
                 router.post('rfq-quotes/:id/withdraw', [RfqsController, 'withdraw'])
+                router.get('orders', [PurchaseOrdersController, 'index'])
+                router.get('orders/options', [PurchaseOrdersController, 'options'])
+                router.post('orders', [PurchaseOrdersController, 'store'])
+                router.post('rfq-awards/:id/orders', [PurchaseOrdersController, 'fromAward'])
+                router.get('orders/:id', [PurchaseOrdersController, 'show'])
+                router.put('orders/:id', [PurchaseOrdersController, 'update'])
+                router.post('orders/:id/submit', [PurchaseOrdersController, 'submit'])
+                router.post('orders/:id/approve', [PurchaseOrdersController, 'approve'])
+                router.post('orders/:id/reject', [PurchaseOrdersController, 'reject'])
+                router.post('orders/:id/issue', [PurchaseOrdersController, 'issue'])
+                router.post('orders/:id/revise', [PurchaseOrdersController, 'revise'])
+                router.post('orders/:id/cancel', [PurchaseOrdersController, 'cancel'])
+                router.post('orders/:id/close', [PurchaseOrdersController, 'close'])
                 router.get('approval-levels', [PurchaseRequisitionsController, 'levels'])
                 router
                   .post('approval-levels', [PurchaseRequisitionsController, 'createLevel'])

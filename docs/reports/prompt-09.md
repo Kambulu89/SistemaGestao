@@ -226,6 +226,60 @@ recusar e anular com motivo, auditoria. Lista de pedidos com o filtro "Adjudica�
   dos pesos não se actualizava ao escrever; o servidor parava na justificação sem validar as linhas (agora todos os
   erros juntos).
 
+## 9.5 Ordens de compra
+
+### Modelo
+
+Migração `0047_create_purchase_orders`: `purchase_orders` (três estados com `CHECK`, ronda de aprovação, câmbio e
+total funcional obrigatórios em aprovação, número ↔ revisão emitida ↔ data coerentes, totais conferidos; gatilho:
+anulada final, número/série/entidade/fornecedor/moeda fixos depois de emitida, conteúdo fixo fora do rascunho/recusa,
+sem eliminação), `purchase_order_lines` (valores conferidos, recebido + cancelado ≤ quantidade, afectado ≤ quantidade;
+gatilho: livres em rascunho sem baixar do recebido/facturado, depois só as quantidades de recepção, facturação,
+cancelamento e afectação mudam; linhas com movimento não se apagam), `purchase_order_approvals` (única por ronda e
+etapa), `purchase_order_revisions` e `purchase_order_events` (só acréscimo).
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /orders`, `GET /orders/options`, `GET|PUT /orders/:id`,
+  `POST /orders/:id/{submit|approve|reject|issue|revise|cancel|close}`, `POST /rfq-awards/:id/orders` (uma ordem em
+  rascunho por fornecedor da adjudicação aprovada, com preço, imposto, moeda, prazo e referência da proposta).
+- Lista com filtros dos três estados e "à espera da minha decisão". Anexos `purchase_order`.
+- Erros: `NOT_QUALIFIED`, `WAREHOUSE_REQUIRED`, `OVER_OPEN`, `BELOW_RECEIVED`, `BELOW_INVOICED`, `LINE_HAS_RECEIPTS`,
+  `LINE_HAS_MOVEMENT`, `NO_RATE`, `NO_SERIES`, `SELF_APPROVAL`, `SAME_APPROVER`, `ROLE_REQUIRED`, `AWARD_ALREADY_ORDERED`,
+  `INVALID_STATE`, versão (409).
+
+### Ecrãs
+
+Compras → Ordens de compra (lista com os três estados), Nova/Editar (fornecedor com moeda e prazo por omissão,
+entidade, filial, centro de custo, armazém, datas, condições; linhas da requisição, do catálogo ou livres com preço,
+desconto, imposto e total calculado como no servidor), Ordem (os três estados, total funcional e câmbio, emissão e
+revisão em curso, condições, cadeia de aprovação, linhas com recebido/facturado/em aberto, revisões, anexos,
+cronologia, auditoria; pedir aprovação, aprovar/recusar, emitir, rever, fechar o resto, anular, com erros detalhados
+no próprio ecrã). Nas necessidades consolidadas, "Encomendar"; na adjudicação aprovada, "Criar ordens de compra".
+
+### Testes e evidências
+
+- Unitário `procurement_orders_domain.spec.ts` (4): valores (6 × 1 000 −10% +14% = 6 156,00; 3 × 0,333333 −2,5% +14%;
+  desconto total), estados de recepção e facturação, acções pelos três estados, validação das linhas e afectação.
+- Funcional `procurement_orders.spec.ts` (2): validações e âmbito (fornecedor não homologado, outra entidade, armazém
+  alheio, datas, acima do aberto, desconto); totais 11 000,00 − 600,00 + 756,00 = 11 156,00; `WAREHOUSE_REQUIRED`;
+  recusa com motivo, edição, nova ronda (a etapa volta a decidir-se), aprovação; `NO_SERIES`; número; afectação à
+  requisição (parcialmente encomendada, 6); a base recusa alterar a ordem emitida; revisão com motivo, fotografia,
+  nova aprovação e emissão com o mesmo número, afectação 8; recepção parcial (simulada) impede anular; fecho do resto
+  (5 cancelados devolvidos à requisição); histórico e auditoria. Segundo: da adjudicação aprovada (USD) uma ordem com
+  preço, prazo e referência da proposta, `AWARD_ALREADY_ORDERED`; 13 680 USD × 900 → chefia e direcção;
+  `SAME_APPROVER`, `ROLE_REQUIRED`, "à espera"; emissão encomenda a requisição; anulação devolve e permite refazer.
+- `isolation_matrix` (leitura, todas as acções e ordens de uma adjudicação de outra empresa → 404; listas vazias),
+  `routes_protection`, regressão de todo o backend; frontend `order-model.spec.ts`.
+- Browser (6 passos, três execuções seguidas, sem erros na consola; comprador e aprovador): "Encomendar" a partir das
+  necessidades com a linha da requisição, prazo do fornecedor, desconto e imposto, total 15 260,00 no ecrã; pedir
+  aprovação sem armazém mostra o motivo; com armazém fica em aprovação e quem pede não vê "Aprovar"; o aprovador
+  aprova pelo filtro "à espera"; emissão com número e requisição encomendada; revisão com motivo obrigatório, edição
+  (14 260,00), nova aprovação e "Emitir revisão" com o mesmo número; 390 px.
+- Defeitos encontrados e corrigidos: decisões por revisão faziam uma recusa contar como etapa decidida na nova
+  submissão (passou a ronda); um `PUT` sem moeda repunha a moeda do fornecedor; o erro ao pedir aprovação só aparecia
+  num aviso genérico.
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -243,3 +297,6 @@ recusar e anular com motivo, auditoria. Lista de pedidos com o filtro "Adjudica�
 - 9.4: aprovação numa só etapa (sem níveis por valor nem workflows genéricos); nota de qualidade manual até ao 9.11;
   sem notificação automática ao aprovador (filtro "por aprovar"); a comparação usa o câmbio em vigor na data da
   abertura (o registado depois para essa data não conta se já houvesse outro).
+- 9.5: o contrato do fornecedor entra no 9.6 (sem coluna provisória); sem PDF/envio da ordem ao fornecedor; as linhas
+  retiradas numa revisão devolvem a afectação logo (não só na emissão); notificações aos aprovadores por filtro;
+  recepção e facturação são escritas pelo 9.7/9.8 (aqui simuladas nos testes).

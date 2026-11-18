@@ -504,6 +504,19 @@ export type ScannedRoutes = {
     'rfqs.uninvite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rfqs.decline': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rfqs.withdraw': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.index': { paramsTuple?: []; params?: {} }
+    'purchase_orders.options': { paramsTuple?: []; params?: {} }
+    'purchase_orders.store': { paramsTuple?: []; params?: {} }
+    'purchase_orders.from_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.revise': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.update_level': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -722,6 +735,9 @@ export type ScannedRoutes = {
     'rfqs.options': { paramsTuple?: []; params?: {} }
     'rfqs.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rfqs.award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.index': { paramsTuple?: []; params?: {} }
+    'purchase_orders.options': { paramsTuple?: []; params?: {} }
+    'purchase_orders.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
@@ -924,6 +940,9 @@ export type ScannedRoutes = {
     'rfqs.options': { paramsTuple?: []; params?: {} }
     'rfqs.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rfqs.award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.index': { paramsTuple?: []; params?: {} }
+    'purchase_orders.options': { paramsTuple?: []; params?: {} }
+    'purchase_orders.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
@@ -1167,6 +1186,15 @@ export type ScannedRoutes = {
     'rfqs.cancel_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rfqs.decline': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rfqs.withdraw': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.store': { paramsTuple?: []; params?: {} }
+    'purchase_orders.from_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.revise': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
     'suppliers.settings_store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
@@ -1267,6 +1295,7 @@ export type ScannedRoutes = {
     'purchase_requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rfqs.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rfqs.update_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

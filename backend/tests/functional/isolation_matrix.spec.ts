@@ -787,8 +787,17 @@ async function populate(client: any) {
       [tenant.id, rfq.id]
     )
   ).rows[0] as { id: string }
+  // Ordem de compra da empresa A inserida directamente (o fornecedor A não está homologado; só interessa o isolamento).
+  const purchaseOrder = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_orders (tenant_id, legal_entity_id, supplier_id, currency, order_date)
+       values (?, ?, ?, 'AOA', current_date) returning id`,
+      [tenant.id, le.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    purchaseOrder,
     rfq,
     rfqAward,
     purchaseRequisition,
@@ -1443,6 +1452,37 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'anular adjudicação alheia',
         B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['GET ordem de compra', B.get(`/api/v1/procurement/orders/${a.purchaseOrder.id}`)],
+      [
+        'alterar ordem de compra alheia',
+        B.put(`/api/v1/procurement/orders/${a.purchaseOrder.id}`, { ...v, lines: [] }),
+      ],
+      ['submit ordem alheia', B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/submit`, v)],
+      [
+        'approve ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/approve`, v),
+      ],
+      ['issue ordem alheia', B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/issue`, v)],
+      [
+        'reject ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/reject`, { ...v, reason: 'x' }),
+      ],
+      [
+        'revise ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/revise`, { ...v, reason: 'x' }),
+      ],
+      [
+        'cancel ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      [
+        'close ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/close`, { ...v, reason: 'x' }),
+      ],
+      [
+        'ordens de adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/orders`),
       ],
       ['GET fornecedor', B.get(`/api/v1/procurement/suppliers/${a.supplier.id}`)],
       [
@@ -2361,6 +2401,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/procurement/rfqs',
       `/api/v1/procurement/rfqs/${a.rfq.id}`,
       `/api/v1/procurement/rfq-awards/${a.rfqAward.id}`,
+      '/api/v1/procurement/orders',
+      `/api/v1/procurement/orders/${a.purchaseOrder.id}`,
       '/api/v1/procurement/rfqs?pendingAward=true',
       '/api/v1/inventory/reports/expiry',
       '/api/v1/inventory/stock/movements',

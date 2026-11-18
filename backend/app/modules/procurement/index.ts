@@ -10,3 +10,7 @@ export {
 } from '#modules/procurement/application/requisition_service'
 export { rfqAccess, RfqService } from '#modules/procurement/application/rfq_service'
 export { RfqAwardService } from '#modules/procurement/application/rfq_award_service'
+export {
+  PurchaseOrderService,
+  purchaseOrderAccess,
+} from '#modules/procurement/application/order_service'

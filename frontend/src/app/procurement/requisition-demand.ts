@@ -49,7 +49,7 @@ import { type DemandGroup, PRIORITY } from './requisition-model';
               <th class="px-2 py-1">Necessário a</th>
               <th class="px-2 py-1">Prioridade</th>
               <th class="px-2 py-1">Requisições</th>
-              @if (canQuote()) {
+              @if (canQuote() || canOrder()) {
                 <th class="px-2 py-1"><span class="sr-only">Acções</span></th>
               }
             </tr>
@@ -76,24 +76,38 @@ import { type DemandGroup, PRIORITY } from './requisition-model';
                     >
                   }
                 </td>
-                @if (canQuote()) {
+                @if (canQuote() || canOrder()) {
                   <td class="whitespace-nowrap px-2 py-1">
-                    <a
-                      class="link"
-                      data-testid="dm-quote"
-                      routerLink="/compras/cotacoes/nova"
-                      [queryParams]="{
-                        legalEntityId: g.legalEntity.id,
-                        requisitionLines: lineIds(g),
-                      }"
-                      >Pedir cotação</a
-                    >
+                    @if (canQuote()) {
+                      <a
+                        class="link"
+                        data-testid="dm-quote"
+                        routerLink="/compras/cotacoes/nova"
+                        [queryParams]="{
+                          legalEntityId: g.legalEntity.id,
+                          requisitionLines: lineIds(g),
+                        }"
+                        >Pedir cotação</a
+                      >
+                    }
+                    @if (canOrder()) {
+                      <a
+                        class="link ml-2"
+                        data-testid="dm-order"
+                        routerLink="/compras/ordens/nova"
+                        [queryParams]="{
+                          legalEntityId: g.legalEntity.id,
+                          requisitionLines: lineIds(g),
+                        }"
+                        >Encomendar</a
+                      >
+                    }
                   </td>
                 }
               </tr>
             } @empty {
               <tr>
-                <td [attr.colspan]="canQuote() ? 8 : 7" class="px-2 py-3 text-muted">
+                <td [attr.colspan]="canQuote() || canOrder() ? 8 : 7" class="px-2 py-3 text-muted">
                   {{ loading() ? 'A carregar…' : 'Nada em aberto.' }}
                 </td>
               </tr>
@@ -108,6 +122,7 @@ export class RequisitionDemand {
   private readonly api = inject(Api);
   private readonly workspace = inject(Workspace);
   protected readonly canQuote = computed(() => this.workspace.canAny('procurement.rfqs.manage'));
+  protected readonly canOrder = computed(() => this.workspace.canAny('procurement.orders.manage'));
   protected readonly lineIds = (g: DemandGroup) => g.lines.map((l) => l.lineId).join(',');
   protected readonly rows = signal<DemandGroup[]>([]);
   protected readonly error = signal<ApiError | null>(null);

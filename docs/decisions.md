@@ -797,3 +797,34 @@ ou recusada com motivo (pode preparar-se outra); anulável com motivo antes da d
 propostas ainda válidas (`QUOTE_EXPIRED`). Depois de submetida, a base recusa mudar cabeçalho, notas e linhas;
 aprovada ou recusada, nada muda. Um pedido com adjudicação em curso não se anula (`AWARD_IN_PROGRESS`). Aprovação
 numa etapa (sem níveis por valor) — as ordens de compra (9.5) consomem as linhas aprovadas.
+
+## D-051 Ordens de compra: três estados independentes, aprovação por rondas, emissão numerada e revisões (aceite)
+
+**Cabeçalho e linhas.** Fornecedor homologado (`supplierStanding.canOrder`, verificado ao criar, ao pedir aprovação e
+ao emitir), entidade legal (fixa), filial, centro de custo e armazém de entrega da mesma entidade (o armazém é
+obrigatório quando há produtos armazenáveis — a recepção do 9.7 dá entrada nele), adjudicação de origem, moeda (por
+omissão a do fornecedor), datas, prazo e meio de pagamento, incoterm, condições e morada de entrega, referência do
+fornecedor. Linhas de requisição aprovada da mesma entidade (até ao aberto), do catálogo (não kit) ou livres;
+bruto = quantidade × preço, desconto, líquido, imposto e total exactos ao cêntimo (meio para cima), conferidos por
+`CHECK`. O **contrato** (9.6) ainda não existe: a coluna entra com o 9.6, sem estado provisório.
+
+**Estados independentes.** Aprovação (rascunho → em aprovação → aprovada | recusada, que volta a editar-se; anulada é
+final), recepção (por receber → recebida em parte → recebida, pelas quantidades recebidas + canceladas — escrita pelo
+9.7) e facturação (por facturar → em parte → facturada — pelo 9.8). Emissão à parte: revisão emitida, data e quem.
+
+**Aprovação.** As mesmas etapas das requisições, fixadas pelo total em moeda funcional ao câmbio do dia em que se
+pede (`NO_RATE`); quem pediu não decide, a mesma pessoa não decide duas etapas, a etapa pode exigir perfil. Cada pedido
+de aprovação é uma **ronda** (as decisões ficam por ronda e etapa, únicas e só de acréscimo): uma recusa seguida de
+nova submissão começa as etapas de novo.
+
+**Emissão com numeração segura.** Só aprovada; a primeira emissão reserva o número da série `PURCHASE_ORDER` da
+entidade (filial primeiro, sem buracos, com a ordem bloqueada); as seguintes mantêm-no. Na emissão a quantidade das
+linhas de requisição é afectada pelo contrato `allocateRequisition` (diferença entre o encomendado em vigor e o já
+afectado, idempotente por linha e revisão). Anular (sem recepções nem facturas) devolve tudo; fechar o resto
+(parcialmente recebida) passa o que falta a cancelado e devolve-o às requisições.
+
+**Revisões.** Uma ordem emitida revê-se com motivo: a versão emitida fica guardada (fotografia só de acréscimo), a
+ordem volta a rascunho na revisão seguinte e precisa de nova aprovação e nova emissão; nunca se baixa uma linha do
+recebido ou facturado, nem se muda o produto de uma linha com recepções. A base recusa mudar número, série, entidade,
+fornecedor e moeda depois de emitida, mudar conteúdo fora do rascunho/recusa, apagar ordens e apagar linhas com
+movimento. Permissões `procurement.orders.read|manage|approve` por entidade legal.

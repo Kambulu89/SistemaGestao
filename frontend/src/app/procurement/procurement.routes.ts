@@ -21,6 +21,12 @@ const RFQ_PERMISSIONS = [
   'procurement.rfqs.approve',
 ];
 
+const ORDER_PERMISSIONS = [
+  'procurement.orders.read',
+  'procurement.orders.manage',
+  'procurement.orders.approve',
+];
+
 export const PROCUREMENT_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'fornecedores' },
   {
@@ -141,6 +147,41 @@ export const PROCUREMENT_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'procurement.rfqs.manage', anyScope: true },
         loadComponent: () => import('./rfq-form').then((m) => m.RfqForm),
+      },
+    ],
+  },
+  {
+    path: 'ordens',
+    title: 'Ordens de compra',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: ORDER_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./orders').then((m) => m.PurchaseOrders),
+      },
+      {
+        path: 'nova',
+        title: 'Nova ordem de compra',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.orders.manage', anyScope: true },
+        loadComponent: () => import('./order-form').then((m) => m.PurchaseOrderForm),
+      },
+      {
+        path: ':id',
+        title: 'Ordem de compra',
+        canActivate: [accessGuard],
+        data: { anyOf: ORDER_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./order-detail').then((m) => m.PurchaseOrderDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar ordem de compra',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.orders.manage', anyScope: true },
+        loadComponent: () => import('./order-form').then((m) => m.PurchaseOrderForm),
       },
     ],
   },

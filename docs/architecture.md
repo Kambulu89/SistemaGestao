@@ -451,7 +451,7 @@ regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis;
 
 ## Compras (módulo `procurement`, Prompt 09) e terceiros (módulo `partners`)
 
-9.1 a 9.4 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-050). O terceiro (`business_partners`, contactos) é do módulo `partners`,
+9.1 a 9.5 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-051). O terceiro (`business_partners`, contactos) é do módulo `partners`,
 sem rotas: os papéis de negócio usam o seu `index.ts`. O fornecedor (`suppliers`) é o papel de compra de um terceiro,
 com condições comerciais e homologação: critérios e tipos de documento configuráveis, documentos com validade (fixos,
 desactiváveis), pedidos de homologação fixos depois de decididos, dados bancários que só ficam activos com a aprovação
@@ -469,4 +469,7 @@ com motivo assinalam as propostas desactualizadas; nada consome a requisição a
 Comparação e adjudicação (9.4): mapa calculado na hora com preços na moeda funcional ao câmbio da data da abertura e
 pontuação ponderada (pesos que somam 100); adjudicação por linha e fornecedor com fotografia dos valores, motivo quando
 não é a melhor e justificação, aprovada por outra pessoa (`procurement.rfqs.approve`); fixa na base depois de submetida.
+Ordens de compra (9.5): três estados independentes (aprovação, recepção, facturação); aprovação pelas etapas das
+compras em rondas; emissão que reserva o número uma vez e afecta as requisições (`allocateRequisition`); revisões com
+fotografia da versão emitida, nova aprovação e reemissão; anulação e fecho do resto devolvem às requisições.
 
