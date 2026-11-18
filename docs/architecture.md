@@ -451,11 +451,15 @@ regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis;
 
 ## Compras (módulo `procurement`, Prompt 09) e terceiros (módulo `partners`)
 
-9.1 feito (ver `docs/reports/prompt-09.md`, D-047). O terceiro (`business_partners`, contactos) é do módulo `partners`,
+9.1 e 9.2 feitos (ver `docs/reports/prompt-09.md`, D-047 e D-048). O terceiro (`business_partners`, contactos) é do módulo `partners`,
 sem rotas: os papéis de negócio usam o seu `index.ts`. O fornecedor (`suppliers`) é o papel de compra de um terceiro,
 com condições comerciais e homologação: critérios e tipos de documento configuráveis, documentos com validade (fixos,
 desactiváveis), pedidos de homologação fixos depois de decididos, dados bancários que só ficam activos com a aprovação
 de outra pessoa e não se reescrevem (gatilhos e `CHECK` de segregação na base), histórico só de acréscimo. A validade
 da homologação deriva dos documentos obrigatórios na leitura; `supplierStanding` é o contrato para os documentos de
 compra. Permissões `procurement.suppliers.read|manage|approve|bank` e `procurement.settings` no âmbito da empresa.
+Requisições de compra (9.2): cabeçalho e linhas com totais exactos conferidos pela base; ao pedir aprovação recebem
+número e ficam fixas, com as etapas exigidas pelo valor em moeda funcional (configuráveis); decisões por etapa só de
+acréscimo e segregadas; cotações e ordens consomem quantidade pelo contrato `allocateRequisition` (idempotente);
+necessidades consolidadas para os compradores.
 

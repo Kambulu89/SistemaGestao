@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import { normalizePartner } from '#modules/partners/domain/partners'
 import {
   addDays,
+  isDate,
   normalizeSupplier,
   qualification,
   reviewIssues,
@@ -62,6 +63,9 @@ test.group('Compras | domínio dos fornecedores (9.1)', () => {
       ).valid
     )
     assert.equal(addDays('2026-12-31', 1), '2027-01-01')
+    assert.isTrue(isDate('2028-02-29'))
+    assert.isFalse(isDate('2026-02-30'))
+    assert.isFalse(isDate('2026-13-01'))
   })
 
   test('avaliação dos critérios e validações da ficha', ({ assert }) => {

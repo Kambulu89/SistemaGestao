@@ -4013,6 +4013,262 @@ export class ProvisionSchema extends BaseModel {
   declare version: number
 }
 
+export class PurchaseApprovalLevelSchema extends BaseModel {
+  static $columns = ['approverRoleId', 'code', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'minAmount', 'name', 'sequence', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseApprovalLevelSchema.$columns
+  @column()
+  declare approverRoleId: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string | null
+  @column()
+  declare minAmount: string
+  @column()
+  declare name: string
+  @column()
+  declare sequence: number
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseRequisitionAllocationSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'idempotencyKey', 'lineId', 'quantity', 'sourceId', 'sourceLineId', 'sourceType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseRequisitionAllocationSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare lineId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare sourceId: string
+  @column()
+  declare sourceLineId: string | null
+  @column()
+  declare sourceType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseRequisitionApprovalSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'decidedByMembershipId', 'decidedByUserId', 'decision', 'id', 'levelCode', 'levelId', 'reason', 'requisitionId', 'sequence', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseRequisitionApprovalSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare decidedByMembershipId: string
+  @column()
+  declare decidedByUserId: string
+  @column()
+  declare decision: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare levelCode: string
+  @column()
+  declare levelId: string | null
+  @column()
+  declare reason: string | null
+  @column()
+  declare requisitionId: string
+  @column()
+  declare sequence: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseRequisitionEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'details', 'fromStatus', 'id', 'kind', 'reason', 'requisitionId', 'tenantId', 'toStatus', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseRequisitionEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column()
+  declare fromStatus: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare requisitionId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare toStatus: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseRequisitionLineSchema extends BaseModel {
+  static $columns = ['closedQuantity', 'createdAt', 'createdBy', 'description', 'estimatedUnitPrice', 'id', 'lineNo', 'neededBy', 'netAmount', 'notes', 'orderedQuantity', 'productId', 'quantity', 'requisitionId', 'suggestedSupplierId', 'taxAmount', 'taxRate', 'tenantId', 'totalAmount', 'uomCode', 'uomId', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = PurchaseRequisitionLineSchema.$columns
+  @column()
+  declare closedQuantity: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column()
+  declare estimatedUnitPrice: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column.date()
+  declare neededBy: DateTime | null
+  @column()
+  declare netAmount: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare orderedQuantity: string
+  @column()
+  declare productId: string | null
+  @column()
+  declare quantity: string
+  @column()
+  declare requisitionId: string
+  @column()
+  declare suggestedSupplierId: string | null
+  @column()
+  declare taxAmount: string
+  @column()
+  declare taxRate: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string
+  @column()
+  declare uomCode: string | null
+  @column()
+  declare uomId: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseRequisitionSchema extends BaseModel {
+  static $columns = ['approvedAt', 'branchId', 'budgetReference', 'cancelReason', 'closeReason', 'copiedFromId', 'costCenterId', 'createdAt', 'createdBy', 'currency', 'departmentId', 'exchangeRate', 'id', 'legalEntityId', 'neededBy', 'number', 'priority', 'purpose', 'rejectReason', 'requestedByMembershipId', 'requestedByUserId', 'requiredLevels', 'seriesId', 'status', 'submittedAt', 'tenantId', 'totalAmount', 'totalFunctional', 'totalNet', 'totalTax', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseRequisitionSchema.$columns
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare branchId: string | null
+  @column()
+  declare budgetReference: string | null
+  @column()
+  declare cancelReason: string | null
+  @column()
+  declare closeReason: string | null
+  @column()
+  declare copiedFromId: string | null
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare departmentId: string
+  @column()
+  declare exchangeRate: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column.date()
+  declare neededBy: DateTime
+  @column()
+  declare number: string | null
+  @column()
+  declare priority: string
+  @column()
+  declare purpose: string
+  @column()
+  declare rejectReason: string | null
+  @column()
+  declare requestedByMembershipId: string
+  @column()
+  declare requestedByUserId: string
+  @column()
+  declare requiredLevels: any | null
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string
+  @column()
+  declare totalFunctional: string | null
+  @column()
+  declare totalNet: string
+  @column()
+  declare totalTax: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class RateLimitCounterSchema extends BaseModel {
   static $columns = ['createdAt', 'hits', 'id', 'key', 'updatedAt', 'windowEndsAt'] as const
   $columns = RateLimitCounterSchema.$columns

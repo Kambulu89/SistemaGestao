@@ -4,3 +4,7 @@ export {
   supplierStanding,
   SupplierService,
 } from '#modules/procurement/application/supplier_service'
+export {
+  allocateRequisition,
+  RequisitionService,
+} from '#modules/procurement/application/requisition_service'

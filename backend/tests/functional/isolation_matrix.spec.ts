@@ -746,8 +746,34 @@ async function populate(client: any) {
       number: 'DOC-A',
     })
   )
+  ok(
+    await as(client, s).post('/api/v1/document-series', {
+      legalEntityId: le.id,
+      documentType: 'PURCHASE_REQUISITION',
+      code: 'RCA',
+      prefix: 'RCA-',
+    })
+  )
+  const approvalLevel = ok(
+    await as(client, s).post('/api/v1/procurement/approval-levels', {
+      code: 'NIVEL-A',
+      name: 'Nível A',
+      sequence: 1,
+      minAmount: '0',
+    })
+  )
+  const purchaseRequisition = ok(
+    await as(client, s).post('/api/v1/procurement/requisitions', {
+      departmentId: reqDept.id,
+      neededBy: '2026-12-31',
+      purpose: 'Compra A',
+      lines: [{ description: 'Papel A4', quantity: '10', estimatedUnitPrice: '5' }],
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    purchaseRequisition,
+    approvalLevel,
     supplier,
     supplierDocType: docType,
     supplierCriterion: criterion,
@@ -1297,6 +1323,58 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'inventário valorizado da entidade alheia',
         B.get(`/api/v1/inventory/reports/valued?legalEntityId=${a.le.id}`),
+      ],
+      [
+        'GET requisição de compra',
+        B.get(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}`),
+      ],
+      [
+        'alterar requisição de compra alheia',
+        B.put(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}`, {
+          ...v,
+          departmentId: a.purchaseRequisition.department.id,
+          lines: [],
+        }),
+      ],
+      [
+        'submeter requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/submit`, v),
+      ],
+      [
+        'aprovar requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/approve`, v),
+      ],
+      [
+        'recusar requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/reject`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'anular requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'fechar requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/close`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'copiar requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/copy`),
+      ],
+      [
+        'alterar etapa de aprovação alheia',
+        B.patch(`/api/v1/procurement/approval-levels/${a.approvalLevel.id}`, {
+          ...v,
+          name: 'Outra',
+        }),
       ],
       ['GET fornecedor', B.get(`/api/v1/procurement/suppliers/${a.supplier.id}`)],
       [
@@ -2068,6 +2146,9 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.lengthOf((await B.get('/api/v1/inventory/accounting-events')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/inventory/serials')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/procurement/suppliers')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/requisitions')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/requisitions/demand')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/approval-levels')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/procurement/settings/criteria')).body().data, 0)
     assert.lengthOf((await B.get('/api/v1/procurement/settings/document-types')).body().data, 0)
     assert.deepEqual(
@@ -2206,6 +2287,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/inventory/accounting-events',
       '/api/v1/inventory/reports/replenishment',
       '/api/v1/procurement/suppliers',
+      '/api/v1/procurement/requisitions',
+      `/api/v1/procurement/requisitions/${a.purchaseRequisition.id}`,
       `/api/v1/procurement/suppliers/${a.supplier.id}`,
       '/api/v1/inventory/reports/expiry',
       '/api/v1/inventory/stock/movements',

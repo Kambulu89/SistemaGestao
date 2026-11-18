@@ -1,6 +1,6 @@
 # Relatório — Prompt 09 (compras)
 
-Estado: **9.1 implementado e verificado** no branch `claude/pensive-clarke-5gm075`. Blocos 9.2 a 9.12 seguem, um de cada
+Estado: **9.1 e 9.2 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 9.3 a 9.12 seguem, um de cada
 vez. Decisões a partir de D-047.
 
 ## Inventário AS-IS → TO-BE
@@ -68,9 +68,65 @@ desactivações pedem motivo.
   A primeira passagem apanhou um defeito da interface (o botão "Aprovar" da conta aparecia a quem a registou — o
   servidor recusaria): passou a vir do servidor por conta (`canDecide`).
 
+## 9.2 Requisições de compra
+
+### Modelo
+
+Migração `0044_create_purchase_requisitions`: `purchase_approval_levels` (ordem, mínimo, entidade e perfil
+opcionais), `purchase_requisitions` (totais conferidos pela base; fora do rascunho tem número, total funcional e
+etapas fixadas; fixa fora do rascunho, recusada/anulada imutáveis), `purchase_requisition_lines` (quantidades
+encomendadas + fechadas ≤ quantidade; só estas mudam fora do rascunho), `purchase_requisition_approvals` (uma por
+etapa, só acréscimo), `purchase_requisition_allocations` (idempotentes, só acréscimo), `purchase_requisition_events`.
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /requisitions`, `GET /requisitions/options`, `GET /requisitions/demand`, `GET|PUT /requisitions/:id`,
+  `POST /requisitions/:id/{submit|approve|reject|cancel|close|copy}`, `GET|POST /approval-levels`,
+  `PATCH /approval-levels/:id`.
+- Lista com filtros de estado, prioridade, "pedidas por mim" e "à espera da minha decisão" (a etapa actual é minha).
+- Contrato `allocateRequisition(scope, { lineId, quantity, sourceType, sourceId, idempotencyKey })` para o 9.3/9.5.
+- Permissões: `procurement.requisitions.request|approve` (departamento, filial, entidade; pedir também "só as
+  próprias") e `.process` (entidade, filial); etapas com `procurement.settings`.
+- Erros: `OUT_OF_SCOPE`, `NO_SERIES`, `NO_RATE`, `SELF_APPROVAL`, `SAME_APPROVER`, `ROLE_REQUIRED`, `INVALID_STATE`,
+  `OVER_ALLOCATED`, `OVER_RELEASED`, `IDEMPOTENCY_MISMATCH`, `CODE_TAKEN`.
+
+### Ecrãs
+
+Compras → Requisições de compra (lista com filtros na URL), Nova/Editar (departamento, centro de custo, prioridade,
+necessidade, finalidade, orçamento, moeda; linhas com produto ou descrição livre, quantidade, unidade, preço, imposto,
+entrega e fornecedor sugerido; total por linha e geral calculados como no servidor), Requisição (estado, cadeia de
+aprovação com a etapa actual, motivo quando não pode decidir, acções com confirmação ou motivo, linhas com encomendado e
+em aberto, cronologia, auditoria), Necessidades consolidadas e Etapas de aprovação das compras.
+
+### Testes e evidências
+
+- Unitário `procurement_requisitions_domain.spec.ts` (3): valores ao cêntimo (incluindo 3 × 0,333333 com 6,5%),
+  conversão funcional, etapas exigidas, quem decide a seguinte (solicitante, mesma pessoa, perfil), estados do
+  atendimento, validação das linhas — apanhou que `2026-02-30` passava como data (corrigido também no 9.1).
+- Funcional `procurement_requisitions.spec.ts` (2): validações e âmbito; totais 12 500,50 + 1 400,00 = 13 900,50;
+  edição com versão; `NO_SERIES`; número; a chefia vê-a "à espera"; duas chefias em simultâneo → uma decide (200 +
+  409); em USD sem câmbio → `NO_RATE`, com câmbio 540 000 000,00 AOA → chefia e direcção; `ROLE_REQUIRED`, quem
+  decidiu a etapa 1 não decide a 2, director aprova; recusa com motivo, cópia, anulação; a base recusa alterar linhas,
+  totais e decisões. Atendimento: necessidades consolidadas (15 bombas de duas requisições, 15 500,00, necessidade
+  mais cedo), afectação parcial, repetição, chave reutilizada, acima do aberto, devolução, fecho do resto pelo
+  comprador, devolução numa fechada, âmbito por departamento, sem permissões nada; configuração com código repetido e
+  sem permissão.
+- `isolation_matrix` (leitura e todas as acções sobre uma requisição e uma etapa de outra empresa → 404; listas vazias;
+  cabeçalho forjado recusado), `routes_protection`, regressão de todo o backend; frontend `requisition-model.spec.ts`.
+- Browser (7 passos, três execuções seguidas, sem erros na consola; três utilizadores — solicitante, aprovador,
+  comprador): requisição pela navegação com duas linhas e total 13 900,50 calculado no ecrã, pedido de aprovação com
+  número, quem pede não vê "Aprovar", o aprovador encontra-a em "à espera da minha decisão" e aprova, necessidades
+  consolidadas, fecho do resto, recusa com motivo obrigatório e cópia, 390 px.
+- Defeitos encontrados e corrigidos: anular um rascunho violava a restrição de número (500 → regra ajustada); o trilho
+  de navegação continuava em "Rascunho" depois de a requisição receber número.
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
   automático de documentos a caducar (não há agendador — a validade é calculada na leitura); o NIF valida-se só no
   formato (as regras de cada país não são verificadas); fornecedores são da empresa inteira (sem âmbito por entidade
   legal); categorias de fornecedor e a avaliação (score) são do 9.11.
+- 9.2: o compromisso orçamental (bloquear verba) é do 9.10 — aqui só a referência de orçamento; sem notificação
+  automática aos aprovadores (usam o filtro "à espera da minha decisão"); com várias séries activas para a entidade
+  usa-se a primeira por código; as etapas não usam os workflows genéricos de aprovação; produtos para as linhas vêm de
+  uma lista (até 1000), sem pesquisa incremental.

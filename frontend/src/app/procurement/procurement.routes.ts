@@ -9,6 +9,12 @@ const SUPPLIER_PERMISSIONS = [
   'procurement.suppliers.approve',
 ];
 
+const REQUISITION_PERMISSIONS = [
+  'procurement.requisitions.request',
+  'procurement.requisitions.approve',
+  'procurement.requisitions.process',
+];
+
 export const PROCUREMENT_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'fornecedores' },
   {
@@ -45,6 +51,56 @@ export const PROCUREMENT_ROUTES: Routes = [
         loadComponent: () => import('./supplier-form').then((m) => m.SupplierFormPage),
       },
     ],
+  },
+  {
+    path: 'requisicoes',
+    title: 'Requisições de compra',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: REQUISITION_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./requisitions').then((m) => m.PurchaseRequisitions),
+      },
+      {
+        path: 'necessidades',
+        title: 'Necessidades consolidadas',
+        canActivate: [accessGuard],
+        data: { permission: 'procurement.requisitions.process', anyScope: true },
+        loadComponent: () => import('./requisition-demand').then((m) => m.RequisitionDemand),
+      },
+      {
+        path: 'nova',
+        title: 'Nova requisição',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.requisitions.request', anyScope: true },
+        loadComponent: () => import('./requisition-form').then((m) => m.PurchaseRequisitionForm),
+      },
+      {
+        path: ':id',
+        title: 'Requisição',
+        canActivate: [accessGuard],
+        data: { anyOf: REQUISITION_PERMISSIONS, anyScope: true },
+        loadComponent: () =>
+          import('./requisition-detail').then((m) => m.PurchaseRequisitionDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar requisição',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.requisitions.request', anyScope: true },
+        loadComponent: () => import('./requisition-form').then((m) => m.PurchaseRequisitionForm),
+      },
+    ],
+  },
+  {
+    path: 'configuracao/etapas',
+    title: 'Etapas de aprovação das compras',
+    canActivate: [accessGuard],
+    data: { permission: 'procurement.settings' },
+    loadComponent: () => import('./approval-levels').then((m) => m.ApprovalLevels),
   },
   {
     path: 'configuracao',

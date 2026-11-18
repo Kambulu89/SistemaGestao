@@ -714,3 +714,30 @@ auditoria e o histórico só guardam a forma mascarada. A validação do IBAN é
 `.approve`, `.bank` e `procurement.settings`. Histórico só de acréscimo (`supplier_events`) e auditoria de cada acção.
 Funcionalidade contratável `procurement`.
 
+## D-048 Requisições de compra: aprovação em etapas por valor, segregada, e atendimento parcial por afectações (aceite)
+
+**Cabeçalho e linhas.** O departamento dá a entidade legal, a filial e o centro de custo por omissão; prioridade,
+necessidade, finalidade, referência de orçamento e moeda (por omissão a funcional da entidade). Cada linha é um produto
+do catálogo (activo, não kit; unidade de compra por omissão) ou uma descrição livre, com quantidade (6 casas), preço
+estimado (6 casas), taxa de imposto (0–100, 3 casas), entrega e fornecedor sugerido. Valores exactos em inteiros:
+líquido e imposto arredondados ao cêntimo por linha (meio para cima); o total do cabeçalho é a soma e a base confere-o.
+
+**Estados.** Rascunho (edita-se, substitui as linhas) → em aprovação (recebe o número da série `PURCHASE_REQUISITION`
+da entidade e deixa de se alterar) → aprovada → parcialmente encomendada → encomendada. Recusada e anulada são finais
+(uma recusa pode ser **copiada** para um rascunho novo); uma aprovada com resto pode ser **fechada** pelo comprador. A
+base recusa alterar cabeçalho e linhas fora do rascunho (só as quantidades encomendadas/fechadas mudam).
+
+**Aprovação por valor e âmbito.** A empresa define etapas (ordem, valor mínimo em moeda funcional, opcionalmente só
+para uma entidade e exigindo um perfil). Ao pedir aprovação, o total é convertido pelo câmbio do dia (`NO_RATE` sem
+ele) e ficam **fixadas** as etapas cujo mínimo atinge (sem nenhuma, uma etapa base). Cada etapa é decidida por ordem
+por quem tem `procurement.requisitions.approve` no âmbito do departamento: nunca o solicitante (`SELF_APPROVAL`),
+nunca a mesma pessoa em duas etapas (`SAME_APPROVER`) e, se a etapa o exige, com o perfil (`ROLE_REQUIRED`). A
+decisão fica numa linha só de acréscimo única por etapa: duas decisões simultâneas — só uma entra.
+
+**Atendimento parcial e consolidação.** Cotações e ordens (9.3/9.5) consomem quantidade das linhas pelo contrato
+`allocateRequisition` (positivo consome, negativo devolve; idempotente por chave; nunca acima do aberto nem abaixo do
+encomendado). O estado acompanha. O que volta a uma requisição fechada passa a fechado. As **necessidades
+consolidadas** juntam o aberto das aprovadas por entidade, produto, variante, unidade e moeda (descrições livres à
+parte), com a necessidade mais cedo, a prioridade mais alta e as origens — para `procurement.requisitions.process`
+(entidade/filial). Orçamento (compromisso) é do 9.10: aqui só a referência.
+

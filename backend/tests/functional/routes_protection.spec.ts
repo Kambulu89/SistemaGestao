@@ -446,6 +446,32 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
   'GET /api/v1/procurement/settings/:kind':
     'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'GET /api/v1/procurement/requisitions':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'GET /api/v1/procurement/requisitions/options':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'GET /api/v1/procurement/requisitions/demand':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'GET /api/v1/procurement/requisitions/:id':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'PUT /api/v1/procurement/requisitions/:id':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/submit':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/approve':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/reject':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/cancel':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/close':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/copy':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'GET /api/v1/procurement/approval-levels':
+    'leitura com qualquer permissão de compras, verificada no serviço',
   'GET /api/v1/inventory/requisitions':
     'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
   'GET /api/v1/inventory/requisitions/options':

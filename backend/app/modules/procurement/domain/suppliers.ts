@@ -243,5 +243,11 @@ export function reviewIssues(
 }
 
 export function isDate(v: unknown): v is string {
-  return typeof v === 'string' && DATE.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`))
+  // 2026-02-30 não passa: o `Date` rolaria para Março.
+  return (
+    typeof v === 'string' &&
+    DATE.test(v) &&
+    !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) &&
+    new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v
+  )
 }

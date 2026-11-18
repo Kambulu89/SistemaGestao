@@ -130,6 +130,8 @@ export class AuditHistory {
       bank_account_deactivated: 'Conta bancária desactivada',
       document_added: 'Documento entregue',
       document_deactivated: 'Documento desactivado',
+      step_approved: 'Etapa aprovada',
+      copied: 'Copiada',
     };
     return labels[verb] ?? action;
   }

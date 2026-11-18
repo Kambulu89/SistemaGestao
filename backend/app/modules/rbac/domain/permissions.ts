@@ -512,6 +512,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Ver os dados bancários dos fornecedores por inteiro (sem esta permissão vêm mascarados).',
   },
   {
+    code: 'procurement.requisitions.request',
+    module: 'procurement',
+    description:
+      'Criar requisições de compra para os departamentos do âmbito (ou só as próprias), pedir aprovação, anular e copiar.',
+  },
+  {
+    code: 'procurement.requisitions.approve',
+    module: 'procurement',
+    description:
+      'Decidir as etapas de aprovação das requisições do âmbito (nunca as próprias nem duas etapas da mesma requisição).',
+  },
+  {
+    code: 'procurement.requisitions.process',
+    module: 'procurement',
+    description:
+      'Tratar requisições aprovadas da entidade ou filial: necessidades consolidadas e fecho do que fica por encomendar.',
+  },
+  {
     code: 'procurement.settings',
     module: 'procurement',
     description:
