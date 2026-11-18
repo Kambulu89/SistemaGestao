@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Api, ApiError } from '../core/api';
+import { Workspace } from '../core/workspace';
 import { formatDate } from '../ui/dates';
 import { ErrorState } from '../ui/states';
 import { PageHeader } from '../ui/page-header';
@@ -48,6 +49,9 @@ import { type DemandGroup, PRIORITY } from './requisition-model';
               <th class="px-2 py-1">Necessário a</th>
               <th class="px-2 py-1">Prioridade</th>
               <th class="px-2 py-1">Requisições</th>
+              @if (canQuote()) {
+                <th class="px-2 py-1"><span class="sr-only">Acções</span></th>
+              }
             </tr>
           </thead>
           <tbody>
@@ -72,10 +76,24 @@ import { type DemandGroup, PRIORITY } from './requisition-model';
                     >
                   }
                 </td>
+                @if (canQuote()) {
+                  <td class="whitespace-nowrap px-2 py-1">
+                    <a
+                      class="link"
+                      data-testid="dm-quote"
+                      routerLink="/compras/cotacoes/nova"
+                      [queryParams]="{
+                        legalEntityId: g.legalEntity.id,
+                        requisitionLines: lineIds(g),
+                      }"
+                      >Pedir cotação</a
+                    >
+                  </td>
+                }
               </tr>
             } @empty {
               <tr>
-                <td colspan="7" class="px-2 py-3 text-muted">
+                <td [attr.colspan]="canQuote() ? 8 : 7" class="px-2 py-3 text-muted">
                   {{ loading() ? 'A carregar…' : 'Nada em aberto.' }}
                 </td>
               </tr>
@@ -88,6 +106,9 @@ import { type DemandGroup, PRIORITY } from './requisition-model';
 })
 export class RequisitionDemand {
   private readonly api = inject(Api);
+  private readonly workspace = inject(Workspace);
+  protected readonly canQuote = computed(() => this.workspace.canAny('procurement.rfqs.manage'));
+  protected readonly lineIds = (g: DemandGroup) => g.lines.map((l) => l.lineId).join(',');
   protected readonly rows = signal<DemandGroup[]>([]);
   protected readonly error = signal<ApiError | null>(null);
   protected readonly loading = signal(true);

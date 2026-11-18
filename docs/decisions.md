@@ -741,3 +741,32 @@ consolidadas** juntam o aberto das aprovadas por entidade, produto, variante, un
 parte), com a necessidade mais cedo, a prioridade mais alta e as origens — para `procurement.requisitions.process`
 (entidade/filial). Orçamento (compromisso) é do 9.10: aqui só a referência.
 
+
+## D-049 Pedidos de cotação: emissão numerada, envelope fechado, versões de proposta e revisões com motivo (aceite)
+
+**Pedido.** Por entidade legal: título, especificações, prazo de resposta (data e hora), condições de entrega e
+pagamento, moeda (por omissão a funcional) e envelope fechado (por omissão). Linhas de uma requisição aprovada da mesma
+entidade com quantidade em aberto (traz produto, unidade, quantidade em aberto e necessidade; a quantidade pode
+ajustar-se), do catálogo ou livres. O pedido **não consome** a requisição: a afectação (`allocateRequisition`) é feita
+pela ordem de compra (9.5), para que várias cotações do mesmo artigo não bloqueiem quantidade.
+
+**Estados.** Rascunho (edita-se; convidar e retirar convidados) → aberto (emitido: número da série `RFQ` da entidade,
+`NO_SERIES` sem ela; prazo futuro; ≥ 1 linha e ≥ 1 convidado homologado com documentos em dia) → fechado (propostas
+abertas) → adjudicado (9.4). Anulável com motivo até à adjudicação. A base recusa mudar número, entidade, moeda e
+envelope depois do rascunho, alterar um anulado/adjudicado, apagar pedidos, e mudar linhas emitidas excepto
+quantidade e especificações.
+
+**Convidados e propostas.** Só fornecedores homologados (`supplierStanding.canOrder`, `NOT_QUALIFIED`). As propostas
+são registadas pelo comprador (o portal do fornecedor é de um prompt posterior): moeda, validade, prazos de entrega e
+pagamento, referência, anexo do pedido e linhas com oferta principal e até nove alternativas descritas (quantidade,
+preço e imposto exactos; totais só das principais, ao cêntimo como nas requisições). Uma nova proposta do mesmo
+fornecedor é uma **nova versão**; a anterior fica "substituída" e imutável (gatilho: só o estado muda, a partir de
+"em vigor"; linhas só de acréscimo). Retirar e declinar exigem motivo. Depois do prazo: `QUOTE_LATE`.
+
+**Confidencialidade.** Com envelope fechado e o pedido aberto, a API não devolve valores a ninguém (nem a quem
+registou); a auditoria e a cronologia guardam só fornecedor e versão. A abertura (fecho do pedido) é possível depois
+do prazo ou antes se todos os convidados já responderam ou declinaram (`EARLY_OPENING`), e fica registada (quem, quando).
+
+**Revisões.** Um pedido aberto revê-se com motivo (prazo, especificações, condições, quantidade e especificações das
+linhas): a revisão aumenta e as propostas feitas a uma revisão anterior ficam assinaladas como desactualizadas (não são
+apagadas). Permissões `procurement.rfqs.read|manage` no âmbito da entidade legal; tudo auditado.

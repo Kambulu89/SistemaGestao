@@ -770,8 +770,17 @@ async function populate(client: any) {
       lines: [{ description: 'Papel A4', quantity: '10', estimatedUnitPrice: '5' }],
     })
   )
+  const rfq = ok(
+    await as(client, s).post('/api/v1/procurement/rfqs', {
+      legalEntityId: le.id,
+      title: 'Cotação A',
+      closesAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+      lines: [{ description: 'Papel A4', quantity: '10' }],
+    })
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    rfq,
     purchaseRequisition,
     approvalLevel,
     supplier,
@@ -1375,6 +1384,29 @@ test.group('isolamento | matriz entre empresas', (group) => {
           ...v,
           name: 'Outra',
         }),
+      ],
+      ['GET pedido de cotação', B.get(`/api/v1/procurement/rfqs/${a.rfq.id}`)],
+      [
+        'alterar pedido de cotação alheio',
+        B.put(`/api/v1/procurement/rfqs/${a.rfq.id}`, { ...v, title: 'Outro', lines: [] }),
+      ],
+      [
+        'convidar para pedido de cotação alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/invitations`, { supplierIds: [] }),
+      ],
+      ['emitir pedido de cotação alheio', B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/issue`, v)],
+      [
+        'rever pedido de cotação alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/amend`, { ...v, reason: 'x' }),
+      ],
+      [
+        'registar proposta em pedido alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/quotes`, { supplierId: a.supplier.id }),
+      ],
+      ['abrir propostas de pedido alheio', B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/open`, v)],
+      [
+        'anular pedido de cotação alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/cancel`, { ...v, reason: 'x' }),
       ],
       ['GET fornecedor', B.get(`/api/v1/procurement/suppliers/${a.supplier.id}`)],
       [
@@ -2290,6 +2322,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/procurement/requisitions',
       `/api/v1/procurement/requisitions/${a.purchaseRequisition.id}`,
       `/api/v1/procurement/suppliers/${a.supplier.id}`,
+      '/api/v1/procurement/rfqs',
+      `/api/v1/procurement/rfqs/${a.rfq.id}`,
       '/api/v1/inventory/reports/expiry',
       '/api/v1/inventory/stock/movements',
       '/api/v1/hr/me',

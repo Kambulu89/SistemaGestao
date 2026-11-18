@@ -4286,6 +4286,254 @@ export class RateLimitCounterSchema extends BaseModel {
   declare windowEndsAt: DateTime
 }
 
+export class RfqEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'details', 'id', 'kind', 'reason', 'revision', 'rfqId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = RfqEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare revision: number | null
+  @column()
+  declare rfqId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class RfqInvitationSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'declineReason', 'id', 'rfqId', 'status', 'supplierId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = RfqInvitationSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare declineReason: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare rfqId: string
+  @column()
+  declare status: string
+  @column()
+  declare supplierId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class RfqLineSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'description', 'id', 'lineNo', 'neededBy', 'productId', 'quantity', 'requisitionLineId', 'rfqId', 'specifications', 'tenantId', 'uomCode', 'uomId', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = RfqLineSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column.date()
+  declare neededBy: DateTime | null
+  @column()
+  declare productId: string | null
+  @column()
+  declare quantity: string
+  @column()
+  declare requisitionLineId: string | null
+  @column()
+  declare rfqId: string
+  @column()
+  declare specifications: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare uomCode: string | null
+  @column()
+  declare uomId: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class RfqQuoteLineSchema extends BaseModel {
+  static $columns = ['alternativeNo', 'createdAt', 'createdBy', 'deliveryDays', 'description', 'id', 'netAmount', 'notes', 'quantity', 'quoteId', 'rfqLineId', 'taxAmount', 'taxRate', 'tenantId', 'totalAmount', 'unitPrice', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = RfqQuoteLineSchema.$columns
+  @column()
+  declare alternativeNo: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare deliveryDays: number | null
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare netAmount: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare quantity: string
+  @column()
+  declare quoteId: string
+  @column()
+  declare rfqLineId: string
+  @column()
+  declare taxAmount: string
+  @column()
+  declare taxRate: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string
+  @column()
+  declare unitPrice: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class RfqQuoteSchema extends BaseModel {
+  static $columns = ['attachmentId', 'createdAt', 'createdBy', 'currency', 'deliveryDays', 'id', 'invitationId', 'notes', 'paymentTermsDays', 'quoteVersion', 'receivedBy', 'rfqId', 'rfqRevision', 'status', 'supplierId', 'supplierReference', 'tenantId', 'totalAmount', 'totalNet', 'totalTax', 'updatedAt', 'updatedBy', 'validUntil', 'version', 'withdrawReason'] as const
+  $columns = RfqQuoteSchema.$columns
+  @column()
+  declare attachmentId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare deliveryDays: number | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invitationId: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare paymentTermsDays: number | null
+  @column()
+  declare quoteVersion: number
+  @column()
+  declare receivedBy: string
+  @column()
+  declare rfqId: string
+  @column()
+  declare rfqRevision: number
+  @column()
+  declare status: string
+  @column()
+  declare supplierId: string
+  @column()
+  declare supplierReference: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string
+  @column()
+  declare totalNet: string
+  @column()
+  declare totalTax: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validUntil: DateTime
+  @column()
+  declare version: number
+  @column()
+  declare withdrawReason: string | null
+}
+
+export class RfqSchema extends BaseModel {
+  static $columns = ['cancelReason', 'closesAt', 'createdAt', 'createdBy', 'currency', 'deliveryTerms', 'id', 'issuedAt', 'issuedBy', 'legalEntityId', 'number', 'openedAt', 'openedBy', 'paymentTerms', 'revision', 'sealed', 'seriesId', 'specifications', 'status', 'tenantId', 'title', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = RfqSchema.$columns
+  @column()
+  declare cancelReason: string | null
+  @column.dateTime()
+  declare closesAt: DateTime
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare deliveryTerms: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.dateTime()
+  declare issuedAt: DateTime | null
+  @column()
+  declare issuedBy: string | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare number: string | null
+  @column.dateTime()
+  declare openedAt: DateTime | null
+  @column()
+  declare openedBy: string | null
+  @column()
+  declare paymentTerms: string | null
+  @column()
+  declare revision: number
+  @column()
+  declare sealed: boolean
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare specifications: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class RolePermissionSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'id', 'permissionCode', 'roleId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = RolePermissionSchema.$columns

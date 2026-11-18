@@ -8,3 +8,4 @@ export {
   allocateRequisition,
   RequisitionService,
 } from '#modules/procurement/application/requisition_service'
+export { rfqAccess, RfqService } from '#modules/procurement/application/rfq_service'

@@ -530,6 +530,18 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Tratar requisições aprovadas da entidade ou filial: necessidades consolidadas e fecho do que fica por encomendar.',
   },
   {
+    code: 'procurement.rfqs.read',
+    module: 'procurement',
+    description:
+      'Consultar pedidos de cotação das entidades do âmbito, convidados, histórico e propostas (valores só depois da abertura).',
+  },
+  {
+    code: 'procurement.rfqs.manage',
+    module: 'procurement',
+    description:
+      'Criar, emitir, rever e anular pedidos de cotação, convidar fornecedores homologados, registar propostas e abri-las.',
+  },
+  {
     code: 'procurement.settings',
     module: 'procurement',
     description:

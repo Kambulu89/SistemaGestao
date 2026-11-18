@@ -15,6 +15,8 @@ const REQUISITION_PERMISSIONS = [
   'procurement.requisitions.process',
 ];
 
+const RFQ_PERMISSIONS = ['procurement.rfqs.read', 'procurement.rfqs.manage'];
+
 export const PROCUREMENT_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'fornecedores' },
   {
@@ -92,6 +94,41 @@ export const PROCUREMENT_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'procurement.requisitions.request', anyScope: true },
         loadComponent: () => import('./requisition-form').then((m) => m.PurchaseRequisitionForm),
+      },
+    ],
+  },
+  {
+    path: 'cotacoes',
+    title: 'Pedidos de cotação',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: RFQ_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./rfqs').then((m) => m.Rfqs),
+      },
+      {
+        path: 'nova',
+        title: 'Novo pedido de cotação',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.rfqs.manage', anyScope: true },
+        loadComponent: () => import('./rfq-form').then((m) => m.RfqForm),
+      },
+      {
+        path: ':id',
+        title: 'Pedido de cotação',
+        canActivate: [accessGuard],
+        data: { anyOf: RFQ_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./rfq-detail').then((m) => m.RfqDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar pedido de cotação',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.rfqs.manage', anyScope: true },
+        loadComponent: () => import('./rfq-form').then((m) => m.RfqForm),
       },
     ],
   },

@@ -451,7 +451,7 @@ regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis;
 
 ## Compras (módulo `procurement`, Prompt 09) e terceiros (módulo `partners`)
 
-9.1 e 9.2 feitos (ver `docs/reports/prompt-09.md`, D-047 e D-048). O terceiro (`business_partners`, contactos) é do módulo `partners`,
+9.1, 9.2 e 9.3 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-049). O terceiro (`business_partners`, contactos) é do módulo `partners`,
 sem rotas: os papéis de negócio usam o seu `index.ts`. O fornecedor (`suppliers`) é o papel de compra de um terceiro,
 com condições comerciais e homologação: critérios e tipos de documento configuráveis, documentos com validade (fixos,
 desactiváveis), pedidos de homologação fixos depois de decididos, dados bancários que só ficam activos com a aprovação
@@ -462,4 +462,8 @@ Requisições de compra (9.2): cabeçalho e linhas com totais exactos conferidos
 número e ficam fixas, com as etapas exigidas pelo valor em moeda funcional (configuráveis); decisões por etapa só de
 acréscimo e segregadas; cotações e ordens consomem quantidade pelo contrato `allocateRequisition` (idempotente);
 necessidades consolidadas para os compradores.
+Pedidos de cotação (9.3): emitidos com número para fornecedores homologados, com prazo; propostas registadas pelo
+comprador em versões (a anterior fica substituída e imutável) com alternativas; envelope fechado — a API, a auditoria e a
+cronologia não mostram valores até à abertura (depois do prazo, ou antes com todos os convidados respondidos); revisões
+com motivo assinalam as propostas desactualizadas; nada consome a requisição antes da ordem de compra.
 

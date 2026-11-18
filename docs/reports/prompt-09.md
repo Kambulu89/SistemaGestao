@@ -120,6 +120,59 @@ em aberto, cronologia, auditoria), Necessidades consolidadas e Etapas de aprova�
 - Defeitos encontrados e corrigidos: anular um rascunho violava a restrição de número (500 → regra ajustada); o trilho
   de navegação continuava em "Rascunho" depois de a requisição receber número.
 
+## 9.3 Pedidos de cotação
+
+### Modelo
+
+Migração `0045_create_rfqs`: `rfqs` (estado, número e emissão coerentes por `CHECK`; fixos depois do rascunho:
+número, entidade, moeda, envelope; anulado/adjudicado imutável; sem eliminação), `rfq_lines` (livres no rascunho,
+depois só quantidade/especificações), `rfq_invitations` (uma por fornecedor; recusa com motivo), `rfq_quotes` (versão
+por fornecedor, revisão do pedido a que responde, uma só em vigor por fornecedor — índice único parcial; imutáveis
+salvo o estado), `rfq_quote_lines` (principal e alternativas 0–9, só acréscimo), `rfq_events` (só acréscimo).
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /rfqs`, `GET /rfqs/options`, `GET|PUT /rfqs/:id`, `POST /rfqs/:id/{invitations|issue|amend|quotes|open|cancel}`,
+  `DELETE /rfq-invitations/:id`, `POST /rfq-invitations/:id/decline`, `POST /rfq-quotes/:id/withdraw`.
+- Anexos do pedido (`subjectType` `rfq`) com o mesmo âmbito; a proposta pode referir um anexo do pedido.
+- Permissões `procurement.rfqs.read|manage` (entidade legal). Erros: `OUT_OF_SCOPE`, `NOT_QUALIFIED`, `NO_SERIES`,
+  `PAST`, `NOT_INVITED`, `DECLINED`, `QUOTE_LATE`, `EARLY_OPENING`, `NO_MAIN_OFFER`, `INVALID_STATE`, versão (409).
+
+### Ecrãs
+
+Compras → Pedidos de cotação (lista com estado, prazo, convidados e propostas), Novo/Editar (entidade, título, prazo
+com hora, condições, especificações, envelope; linhas da requisição, do catálogo ou livres; convidados homologados),
+Pedido (estado, prazo e revisão; emitir, registar proposta com alternativas e total calculado como no servidor, rever
+com motivo, registar recusa, retirar proposta, abrir propostas, anular; convidar mais; propostas por fornecedor com
+versões — no envelope fechado só "chegou", sem valores; anexos; cronologia; auditoria). Nas necessidades
+consolidadas, "Pedir cotação" abre o formulário já com a entidade e as linhas da requisição.
+
+### Testes e evidências
+
+- Unitário `procurement_rfqs_domain.spec.ts` (5): envelope, regra de abertura, fases, totais exactos só das principais
+  (3 × 0,333333 + 14%; 1,5 × 100,01 + 7%), validações das linhas (linha alheia, alternativa sem descrição, quantidade,
+  preço, taxa, prazo, duplicados, alternativa 10).
+- Funcional `procurement_rfqs.spec.ts` (2): validações, âmbito por entidade (outra entidade 404/`OUT_OF_SCOPE`, leitor
+  sem gestão); linha da requisição traz produto, unidade, 10 em aberto e número; convite a não homologado recusado;
+  retirar convidado no rascunho; `NO_SERIES`; versão antiga 409; número; emitido não se edita nem se retira convidado;
+  a base recusa mudar número, moeda, descrição de linha e apagar; proposta de não convidado, alternativa sem descrição,
+  linha alheia, validade passada, leitor; envelope sem valores (API, leitor, auditoria, cronologia); versão 2 substitui a
+  1 (imutável na base); `EARLY_OPENING`; revisão com motivo → revisão 1, proposta desactualizada; recusa com motivo,
+  proposta de quem declinou recusada; abertura → 15 005,00 + 2 100,70 = 42 105,70 com a alternativa à parte; fechado
+  sem propostas nem revisões; anulação com motivo; cronologia completa; a requisição não foi consumida; acções
+  auditadas. Segundo: envelope aberto mostra logo os valores; retirar proposta (motivo, repetida recusada); prazo
+  passado → `QUOTE_LATE` e abertura sem todos; emissão com prazo passado recusada; filtro por estado.
+- `isolation_matrix` (leitura e todas as acções sobre um pedido de outra empresa → 404; listas vazias; cabeçalho
+  forjado recusado), `routes_protection`, regressão de todo o backend; frontend `rfq-model.spec.ts`.
+- Browser (8 passos, três execuções seguidas, sem erros na consola; comprador, homologador e leitor): das necessidades
+  consolidadas "Pedir cotação" abre o formulário com a linha da requisição (10 em aberto); dois convidados; emissão com
+  número; proposta com alternativa e total 17 100,00 calculado no ecrã; envelope fechado — nem o comprador nem o leitor
+  vêem valores e o leitor não vê acções; revisão com motivo obrigatório → quantidade 12 e proposta "feita à revisão 0";
+  recusa do segundo fornecedor; abertura antes do prazo → 17 100,00 AOA visível para ambos; lista e cronologia; 390 px.
+- Defeitos encontrados e corrigidos: ao converter quantidades da API para o formulário, um valor sem casas decimais
+  ("10") perdia o zero final (passou a usar `plain`, com teste); o rótulo de auditoria de `rfq.issued` dizia "Entregue"
+  (os rótulos passam a aceitar a acção completa).
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -130,3 +183,7 @@ em aberto, cronologia, auditoria), Necessidades consolidadas e Etapas de aprova�
   automática aos aprovadores (usam o filtro "à espera da minha decisão"); com várias séries activas para a entidade
   usa-se a primeira por código; as etapas não usam os workflows genéricos de aprovação; produtos para as linhas vêm de
   uma lista (até 1000), sem pesquisa incremental.
+- 9.3: as propostas são registadas pelo comprador (sem portal do fornecedor nem envio de convites por e-mail); sem
+  aviso automático do fim do prazo (não há agendador); a adjudicação e o mapa comparativo são do 9.4; o pedido não
+  consome quantidade da requisição (fica para a ordem de compra, 9.5); com várias séries `RFQ` activas usa-se a
+  primeira por código.

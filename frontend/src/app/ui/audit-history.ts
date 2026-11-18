@@ -132,8 +132,12 @@ export class AuditHistory {
       document_deactivated: 'Documento desactivado',
       step_approved: 'Etapa aprovada',
       copied: 'Copiada',
+      amended: 'Revisto',
+      opened: 'Propostas abertas',
+      quote_received: 'Proposta registada',
+      'rfq.issued': 'Emitido',
     };
-    return labels[verb] ?? action;
+    return labels[action] ?? labels[verb] ?? action;
   }
 
   protected changes(e: AuditEvent) {

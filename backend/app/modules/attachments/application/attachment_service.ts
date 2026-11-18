@@ -21,7 +21,7 @@ import {
 } from '#modules/attachments/domain/files'
 import { LocalStorage } from '#modules/attachments/infrastructure/local_storage'
 import { productExists } from '#modules/inventory/index'
-import { supplierExists } from '#modules/procurement/index'
+import { rfqAccess, supplierExists } from '#modules/procurement/index'
 
 /**
  * Política de acesso por tipo de registo: o anexo herda a autorização (e a funcionalidade contratada) do registo a que
@@ -132,6 +132,11 @@ function policies(): Record<string, SubjectPolicy> {
       if (!read || !(await supplierExists(scope, id))) return null
       return { read: true, write: manage }
     },
+  }
+  // Documentos do pedido de cotação (especificações, propostas digitalizadas): o âmbito do pedido por entidade.
+  map.rfq = {
+    feature: 'procurement',
+    access: (scope, id) => rfqAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

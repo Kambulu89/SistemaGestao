@@ -581,6 +581,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Compras',
       },
       {
+        label: 'Pedidos de cotação',
+        path: '/compras/cotacoes',
+        icon: 'file',
+        anyOf: ['procurement.rfqs.read', 'procurement.rfqs.manage'],
+        feature: 'procurement',
+        anyScope: true,
+        section: 'Compras',
+      },
+      {
         label: 'Etapas de aprovação das compras',
         path: '/compras/configuracao/etapas',
         icon: 'approvals',

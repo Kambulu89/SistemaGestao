@@ -446,6 +446,34 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
   'GET /api/v1/procurement/settings/:kind':
     'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'GET /api/v1/procurement/rfqs':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/rfqs/options':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/rfqs/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/rfqs/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/invitations':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/issue':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/amend':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/quotes':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/open':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/cancel':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'DELETE /api/v1/procurement/rfq-invitations/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-invitations/:id/decline':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-quotes/:id/withdraw':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/requisitions':
     'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
   'GET /api/v1/procurement/requisitions/options':
