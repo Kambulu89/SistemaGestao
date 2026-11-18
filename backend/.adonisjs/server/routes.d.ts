@@ -517,6 +517,17 @@ export type ScannedRoutes = {
     'purchase_orders.revise': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_orders.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_orders.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.index': { paramsTuple?: []; params?: {} }
+    'contracts.options': { paramsTuple?: []; params?: {} }
+    'contracts.store': { paramsTuple?: []; params?: {} }
+    'contracts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.propose': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.transition': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'contracts.amendment': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.update_level': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -738,6 +749,9 @@ export type ScannedRoutes = {
     'purchase_orders.index': { paramsTuple?: []; params?: {} }
     'purchase_orders.options': { paramsTuple?: []; params?: {} }
     'purchase_orders.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.index': { paramsTuple?: []; params?: {} }
+    'contracts.options': { paramsTuple?: []; params?: {} }
+    'contracts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
@@ -943,6 +957,9 @@ export type ScannedRoutes = {
     'purchase_orders.index': { paramsTuple?: []; params?: {} }
     'purchase_orders.options': { paramsTuple?: []; params?: {} }
     'purchase_orders.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.index': { paramsTuple?: []; params?: {} }
+    'contracts.options': { paramsTuple?: []; params?: {} }
+    'contracts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
@@ -1195,6 +1212,13 @@ export type ScannedRoutes = {
     'purchase_orders.revise': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_orders.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_orders.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.store': { paramsTuple?: []; params?: {} }
+    'contracts.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.propose': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.transition': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'contracts.amendment': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
     'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
     'suppliers.settings_store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
@@ -1296,6 +1320,7 @@ export type ScannedRoutes = {
     'rfqs.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'rfqs.update_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

@@ -603,6 +603,19 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Compras',
       },
       {
+        label: 'Contratos de fornecedor',
+        path: '/compras/contratos',
+        icon: 'file',
+        anyOf: [
+          'procurement.contracts.read',
+          'procurement.contracts.manage',
+          'procurement.contracts.approve',
+        ],
+        feature: 'procurement',
+        anyScope: true,
+        section: 'Compras',
+      },
+      {
         label: 'Etapas de aprovação das compras',
         path: '/compras/configuracao/etapas',
         icon: 'approvals',

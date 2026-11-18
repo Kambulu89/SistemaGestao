@@ -27,6 +27,12 @@ const ORDER_PERMISSIONS = [
   'procurement.orders.approve',
 ];
 
+const CONTRACT_PERMISSIONS = [
+  'procurement.contracts.read',
+  'procurement.contracts.manage',
+  'procurement.contracts.approve',
+];
+
 export const PROCUREMENT_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'fornecedores' },
   {
@@ -182,6 +188,49 @@ export const PROCUREMENT_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'procurement.orders.manage', anyScope: true },
         loadComponent: () => import('./order-form').then((m) => m.PurchaseOrderForm),
+      },
+    ],
+  },
+  {
+    path: 'contratos',
+    title: 'Contratos de fornecedor',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: CONTRACT_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./contracts').then((m) => m.Contracts),
+      },
+      {
+        path: 'novo',
+        title: 'Novo contrato',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.contracts.manage', anyScope: true },
+        loadComponent: () => import('./contract-form').then((m) => m.ContractForm),
+      },
+      {
+        path: ':id',
+        title: 'Contrato',
+        canActivate: [accessGuard],
+        data: { anyOf: CONTRACT_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./contract-detail').then((m) => m.ContractDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar contrato',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.contracts.manage', anyScope: true },
+        loadComponent: () => import('./contract-form').then((m) => m.ContractForm),
+      },
+      {
+        path: ':id/adenda',
+        title: 'Adenda ao contrato',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.contracts.manage', anyScope: true, mode: 'amend' },
+        loadComponent: () => import('./contract-form').then((m) => m.ContractForm),
       },
     ],
   },

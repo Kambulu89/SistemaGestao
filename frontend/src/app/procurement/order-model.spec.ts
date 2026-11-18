@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   approvalTone,
+  contractPrice,
+  contractsFor,
   emptyOrderLine,
   orderGrandTotal,
   orderLinePayload,
@@ -47,5 +49,35 @@ describe('ordens de compra (9.5)', () => {
     expect(approvalTone('APPROVED')).toContain('success');
     expect(progressTone('PARTIALLY_RECEIVED')).toContain('warning');
     expect(progressTone('NOT_INVOICED')).toContain('muted');
+  });
+
+  it('contratos que servem a ordem e preço acordado', () => {
+    const c = {
+      id: 'c1',
+      number: 'CT-1',
+      title: 'T',
+      legalEntityId: 'le',
+      supplierId: 's',
+      currency: 'AOA',
+      startDate: '2026-01-01',
+      endDate: '2026-12-31',
+      remaining: '100.00',
+      prices: [
+        { productId: 'p', variantId: null, unitPrice: '950.000000' },
+        { productId: 'q', variantId: 'v', unitPrice: '1.000000' },
+      ],
+    };
+    expect(contractsFor([c], { legalEntityId: 'le', supplierId: 's', currency: '' })).toHaveLength(
+      1,
+    );
+    expect(
+      contractsFor([c], { legalEntityId: 'le', supplierId: 's', currency: 'usd' }),
+    ).toHaveLength(0);
+    expect(
+      contractsFor([c], { legalEntityId: 'le', supplierId: 'x', currency: 'AOA' }),
+    ).toHaveLength(0);
+    expect(contractPrice(c, 'p')).toBe('950.000000');
+    expect(contractPrice(c, 'q')).toBeNull();
+    expect(contractPrice(undefined, 'p')).toBeNull();
   });
 });

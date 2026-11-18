@@ -21,7 +21,12 @@ import {
 } from '#modules/attachments/domain/files'
 import { LocalStorage } from '#modules/attachments/infrastructure/local_storage'
 import { productExists } from '#modules/inventory/index'
-import { purchaseOrderAccess, rfqAccess, supplierExists } from '#modules/procurement/index'
+import {
+  purchaseContractAccess,
+  purchaseOrderAccess,
+  rfqAccess,
+  supplierExists,
+} from '#modules/procurement/index'
 
 /**
  * Política de acesso por tipo de registo: o anexo herda a autorização (e a funcionalidade contratada) do registo a que
@@ -142,6 +147,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.purchase_order = {
     feature: 'procurement',
     access: (scope, id) => purchaseOrderAccess(scope, id),
+  }
+  // Documentos do contrato (contrato assinado, adendas): o âmbito do contrato por entidade.
+  map.purchase_contract = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseContractAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

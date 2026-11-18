@@ -828,3 +828,31 @@ ordem volta a rascunho na revisão seguinte e precisa de nova aprovação e nova
 recebido ou facturado, nem se muda o produto de uma linha com recepções. A base recusa mudar número, série, entidade,
 fornecedor e moeda depois de emitida, mudar conteúdo fora do rascunho/recusa, apagar ordens e apagar linhas com
 movimento. Permissões `procurement.orders.read|manage|approve` por entidade legal.
+
+## D-052 Contratos de fornecedor: aprovação segregada, adendas aplicadas só depois de aprovadas e consumo controlado (aceite)
+
+**Contrato.** Fornecedor homologado, entidade legal, objecto, vigência (início e fim), valor máximo **líquido** (sem
+impostos) na moeda do contrato, prazo de pagamento, renovação (automática prevista ou não, período em meses, dias de
+aviso), tabela de preços (produto/variante uma vez, ou descrição; preço unitário líquido) e níveis de serviço
+(prazo de entrega, taxa de satisfação, conformidade, tempo de resposta ou outro descrito; objectivo e penalização). A
+medição dos SLA é da avaliação de fornecedores (9.11).
+
+**Estados.** Rascunho → em aprovação → activo (número da série `PURCHASE_CONTRACT` dado na aprovação; decide quem tem
+`procurement.contracts.approve` na entidade e não submeteu, também por `CHECK`); recusado volta a editar-se; activo ↔
+suspenso (motivo); terminado (motivo) e anulado (antes de aprovado) finais. O estado efectivo deriva das datas: "por
+iniciar" e "caducado" (sem agendador); "a renovar" quando o fim cai dentro do aviso.
+
+**Adendas e renovações.** Depois de aprovado, o contrato só muda por adenda: propõe-se o cabeçalho inteiro e, se
+mudarem, a nova tabela de preços e os novos SLA, com motivo e data de efeito; uma pendente de cada vez (índice único
+parcial); outra pessoa aprova e só então se aplica, guardando o anterior na adenda. A renovação é uma adenda que
+estende o fim (por omissão, fim + meses de renovação). O máximo nunca baixa do consumido (`BELOW_CONSUMED`). A base
+recusa alterar o contrato, os preços e os SLA fora do rascunho excepto quando a transacção aplica uma adenda aprovada
+(`app.contract_amendment` com o id do contrato), e recusa mudar número/entidade/fornecedor/moeda depois de numerado.
+
+**Consumo controlado.** Uma ordem de compra pode referir um contrato (fixo depois de emitida): mesma entidade,
+fornecedor e moeda, data da ordem dentro da vigência, contrato activo; o preço de um produto da tabela não pode passar
+o do contrato (`PRICE_ABOVE_CONTRACT`). Ao pedir aprovação verifica-se o saldo; na **emissão**, com o contrato
+bloqueado, consome-se a diferença entre o valor líquido em vigor da ordem (líquido × (quantidade − cancelada) /
+quantidade) e o já consumido por ela, nunca acima do máximo (`CONTRACT_EXCEEDED`; também `CHECK` na base) e só com o
+contrato efectivamente activo. Fechar o resto e anular devolvem; um contrato terminado aceita devoluções mas não
+consumo novo. Os movimentos são idempotentes por chave e só de acréscimo.

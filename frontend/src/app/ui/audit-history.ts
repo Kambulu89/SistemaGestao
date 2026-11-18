@@ -137,6 +137,12 @@ export class AuditHistory {
       quote_received: 'Proposta registada',
       'rfq.issued': 'Emitido',
       'purchase_order.issued': 'Emitida',
+      terminated: 'Terminado',
+      amendment_proposed: 'Adenda proposta',
+      'purchase_contract.amended': 'Adenda aplicada',
+      renewed: 'Renovado',
+      amendment_rejected: 'Adenda recusada',
+      amendment_cancelled: 'Adenda anulada',
       revised: 'Revisão aberta',
     };
     return labels[action] ?? labels[verb] ?? action;

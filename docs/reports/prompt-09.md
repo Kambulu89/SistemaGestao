@@ -280,6 +280,58 @@ no próprio ecrã). Nas necessidades consolidadas, "Encomendar"; na adjudicaçã
   submissão (passou a ronda); um `PUT` sem moeda repunha a moeda do fornecedor; o erro ao pedir aprovação só aparecia
   num aviso genérico.
 
+## 9.6 Contratos de fornecedor
+
+### Modelo
+
+Migração `0048_create_purchase_contracts`: `purchase_contracts` (estados e motivos por `CHECK`, vigência, máximo e
+consumido ≤ máximo, aprovação por outra pessoa; gatilho: conteúdo fixo fora do rascunho salvo ao aplicar uma adenda,
+número/entidade/fornecedor/moeda fixos, terminado só aceita devoluções, sem eliminação), `purchase_contract_prices`
+(produto/variante uma vez), `purchase_contract_slas`, `purchase_contract_amendments` (uma pendente por contrato;
+decididas imutáveis; quem decide ≠ quem propôs), `purchase_contract_consumptions` (idempotentes, só acréscimo),
+`purchase_contract_events`; `purchase_orders.contract_id` (fixo depois de emitida, também no gatilho das ordens).
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /contracts`, `GET /contracts/options`, `GET|PUT /contracts/:id`,
+  `POST /contracts/:id/{submit|approve|reject|suspend|reactivate|terminate|cancel|amendments}`,
+  `POST /contract-amendments/:id/{approve|reject|cancel}`; filtros por estado (incluindo caducado) e "a renovar".
+- Ordens de compra: `contractId` no cabeçalho, contratos e preços nas opções, contrato na ficha; consumo na emissão,
+  devolução no fecho do resto e na anulação (`consumeContract`).
+- Permissões `procurement.contracts.read|manage|approve` (entidade legal). Anexos `purchase_contract`.
+- Erros: `BEFORE_START`, `NOT_QUALIFIED`, `NO_SERIES`, `SELF_APPROVAL`, `AMENDMENT_PENDING`, `BELOW_CONSUMED`,
+  `NOT_EXTENDED`, `NOTHING`, `CONTRACT_NOT_ACTIVE`, `CONTRACT_OUT_OF_TERM`, `CONTRACT_OTHER_SUPPLIER|ENTITY|CURRENCY`,
+  `PRICE_ABOVE_CONTRACT`, `CONTRACT_EXCEEDED`, `INVALID_STATE`, versão (409).
+
+### Ecrãs
+
+Compras → Contratos de fornecedor (lista com estado efectivo e "a renovar"), Novo/Editar (entidade, fornecedor, objecto,
+vigência, máximo, pagamento, renovação, tabela de preços e SLA), Contrato (estado, barra consumido/disponível/máximo,
+condições, preços, SLA, adendas e renovações com aprovar/recusar/anular, ordens que o consomem, anexos, cronologia,
+auditoria), Adenda e Renovar (o mesmo formulário, com motivo e data de efeito; fim pré-preenchido na renovação). Na
+ordem de compra, a escolha do contrato (filtrado por entidade, fornecedor e moeda) sugere o preço acordado.
+
+### Testes e evidências
+
+- Unitário `procurement_contracts_domain.spec.ts` (5): estado efectivo e "a renovar", meses com fim de mês e anos
+  bissextos, valor em vigor proporcional, validações de cabeçalho, preços e SLA, encaixe da ordem.
+- Funcional `procurement_contracts.spec.ts` (2): validações e âmbito; recusa, edição, `NO_SERIES`, aprovação numerada;
+  "a renovar"; a base recusa alterar directamente; adenda (máximo e preços) pendente única, decidida por outra pessoa,
+  com o anterior guardado; renovação recusada, `NOT_EXTENDED`, aprovada (+12 meses); suspensão e reactivação.
+  Segundo: encaixe (fornecedor, moeda, vigência, preço); consumo de 6 000,00 (líquido); `CONTRACT_EXCEEDED` ao pedir
+  aprovação e na emissão (a ordem aprovada antes não emite quando outra esgota o saldo); `CHECK` acima do máximo; fecho
+  do resto devolve 4 000,00; terminação recusa ordens novas mas aceita a devolução da anulação; contrato da ordem
+  emitida fixo; caducado no filtro e recusado.
+- Regressão encontrada e corrigida no 9.5: um `PUT` de ordem sem o produto numa linha existente apagava o produto
+  (agora mantém o que não vem; verificado no teste das ordens).
+- `isolation_matrix` (contrato e adenda de outra empresa: leitura e todas as acções → 404; listas vazias),
+  `routes_protection`, regressão de todo o backend; frontend `contract-model.spec.ts` e `order-model.spec.ts`.
+- Browser (6 passos, três execuções seguidas, sem erros na consola; comprador e aprovador): contrato pela navegação
+  com preço e SLA, pedido de aprovação (quem pede não aprova), aprovação com número e "a renovar"; ordem com o contrato
+  (preço 1 000 sugerido, 1 100 recusado com a mensagem do contrato), aprovação e emissão; o contrato mostra 6 000,00
+  consumidos e 4 000,00 disponíveis e a ordem; renovação com motivo obrigatório (fim +12 meses pré-preenchido),
+  aprovada por outra pessoa, novo fim e sem alerta; 390 px.
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -300,3 +352,6 @@ no próprio ecrã). Nas necessidades consolidadas, "Encomendar"; na adjudicaçã
 - 9.5: o contrato do fornecedor entra no 9.6 (sem coluna provisória); sem PDF/envio da ordem ao fornecedor; as linhas
   retiradas numa revisão devolvem a afectação logo (não só na emissão); notificações aos aprovadores por filtro;
   recepção e facturação são escritas pelo 9.7/9.8 (aqui simuladas nos testes).
+- 9.6: a renovação automática não corre sozinha (sem agendador): o alerta "a renovar" e a proposta de renovação são
+  manuais; "caducado" é calculado na leitura; os SLA são medidos no 9.11; o máximo é líquido e na moeda do contrato
+  (sem limites por quantidade ou por artigo); a aprovação do contrato é numa etapa.

@@ -4046,6 +4046,246 @@ export class PurchaseApprovalLevelSchema extends BaseModel {
   declare version: number
 }
 
+export class PurchaseContractAmendmentSchema extends BaseModel {
+  static $columns = ['amendmentNo', 'contractId', 'createdAt', 'createdBy', 'decidedAt', 'decidedBy', 'decisionReason', 'effectiveDate', 'id', 'kind', 'previous', 'proposed', 'reason', 'requestedBy', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseContractAmendmentSchema.$columns
+  @column()
+  declare amendmentNo: number
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.dateTime()
+  declare decidedAt: DateTime | null
+  @column()
+  declare decidedBy: string | null
+  @column()
+  declare decisionReason: string | null
+  @column.date()
+  declare effectiveDate: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare previous: any | null
+  @column()
+  declare proposed: any
+  @column()
+  declare reason: string
+  @column()
+  declare requestedBy: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseContractConsumptionSchema extends BaseModel {
+  static $columns = ['amount', 'contractId', 'createdAt', 'createdBy', 'id', 'idempotencyKey', 'orderId', 'orderRevision', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseContractConsumptionSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare orderId: string
+  @column()
+  declare orderRevision: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseContractEventSchema extends BaseModel {
+  static $columns = ['contractId', 'createdAt', 'createdBy', 'details', 'id', 'kind', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseContractEventSchema.$columns
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseContractPriceSchema extends BaseModel {
+  static $columns = ['contractId', 'createdAt', 'createdBy', 'description', 'id', 'lineNo', 'notes', 'productId', 'tenantId', 'unitPrice', 'uomCode', 'uomId', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = PurchaseContractPriceSchema.$columns
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare notes: string | null
+  @column()
+  declare productId: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare unitPrice: string
+  @column()
+  declare uomCode: string | null
+  @column()
+  declare uomId: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseContractSlaSchema extends BaseModel {
+  static $columns = ['contractId', 'createdAt', 'createdBy', 'description', 'id', 'lineNo', 'metric', 'penalty', 'target', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseContractSlaSchema.$columns
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare metric: string
+  @column()
+  declare penalty: string | null
+  @column()
+  declare target: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseContractSchema extends BaseModel {
+  static $columns = ['amendmentCount', 'approvedAt', 'approvedBy', 'autoRenew', 'cancelReason', 'consumedAmount', 'createdAt', 'createdBy', 'currency', 'endDate', 'id', 'legalEntityId', 'maxAmount', 'notes', 'number', 'object', 'paymentTermsDays', 'rejectReason', 'renewalMonths', 'renewalNoticeDays', 'seriesId', 'startDate', 'status', 'submittedAt', 'submittedBy', 'supplierId', 'suspendReason', 'tenantId', 'terminatedAt', 'terminationReason', 'title', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseContractSchema.$columns
+  @column()
+  declare amendmentCount: number
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare autoRenew: boolean
+  @column()
+  declare cancelReason: string | null
+  @column()
+  declare consumedAmount: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column.date()
+  declare endDate: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare maxAmount: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column()
+  declare object: string
+  @column()
+  declare paymentTermsDays: number | null
+  @column()
+  declare rejectReason: string | null
+  @column()
+  declare renewalMonths: number | null
+  @column()
+  declare renewalNoticeDays: number
+  @column()
+  declare seriesId: string | null
+  @column.date()
+  declare startDate: DateTime
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare supplierId: string
+  @column()
+  declare suspendReason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime()
+  declare terminatedAt: DateTime | null
+  @column()
+  declare terminationReason: string | null
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class PurchaseOrderApprovalSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'decidedByMembershipId', 'decidedByUserId', 'decision', 'id', 'levelCode', 'levelId', 'orderId', 'reason', 'revision', 'round', 'sequence', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = PurchaseOrderApprovalSchema.$columns
@@ -4211,7 +4451,7 @@ export class PurchaseOrderRevisionSchema extends BaseModel {
 }
 
 export class PurchaseOrderSchema extends BaseModel {
-  static $columns = ['approvalRound', 'approvalStatus', 'approvedAt', 'awardId', 'branchId', 'cancelReason', 'closeReason', 'closedAt', 'costCenterId', 'createdAt', 'createdBy', 'currency', 'deliveryAddress', 'deliveryTerms', 'exchangeRate', 'expectedDate', 'id', 'incoterm', 'invoiceStatus', 'issuedAt', 'issuedBy', 'issuedRevision', 'legalEntityId', 'notes', 'number', 'orderDate', 'paymentMethod', 'paymentTermsDays', 'rateDate', 'receiptStatus', 'rejectReason', 'requiredLevels', 'revision', 'seriesId', 'submittedAt', 'submittedBy', 'submittedByMembershipId', 'supplierId', 'supplierReference', 'tenantId', 'totalAmount', 'totalDiscount', 'totalFunctional', 'totalGross', 'totalNet', 'totalTax', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  static $columns = ['approvalRound', 'approvalStatus', 'approvedAt', 'awardId', 'branchId', 'cancelReason', 'closeReason', 'closedAt', 'contractId', 'costCenterId', 'createdAt', 'createdBy', 'currency', 'deliveryAddress', 'deliveryTerms', 'exchangeRate', 'expectedDate', 'id', 'incoterm', 'invoiceStatus', 'issuedAt', 'issuedBy', 'issuedRevision', 'legalEntityId', 'notes', 'number', 'orderDate', 'paymentMethod', 'paymentTermsDays', 'rateDate', 'receiptStatus', 'rejectReason', 'requiredLevels', 'revision', 'seriesId', 'submittedAt', 'submittedBy', 'submittedByMembershipId', 'supplierId', 'supplierReference', 'tenantId', 'totalAmount', 'totalDiscount', 'totalFunctional', 'totalGross', 'totalNet', 'totalTax', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
   $columns = PurchaseOrderSchema.$columns
   @column()
   declare approvalRound: number
@@ -4229,6 +4469,8 @@ export class PurchaseOrderSchema extends BaseModel {
   declare closeReason: string | null
   @column.dateTime()
   declare closedAt: DateTime | null
+  @column()
+  declare contractId: string | null
   @column()
   declare costCenterId: string | null
   @column.dateTime({ autoCreate: true })

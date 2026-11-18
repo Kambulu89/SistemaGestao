@@ -218,6 +218,14 @@ type ReasonKind = 'reject' | 'revise' | 'cancel' | 'close';
           @if (o.supplierReference) {
             <p><span class="text-muted">Ref. do fornecedor:</span> {{ o.supplierReference }}</p>
           }
+          @if (o.contract) {
+            <p data-testid="od-contract">
+              <span class="text-muted">Contrato:</span>
+              <a class="link" [routerLink]="['/compras/contratos', o.contract.id]"
+                >{{ o.contract.number }} — {{ o.contract.title }}</a
+              >
+            </p>
+          }
           @if (o.award) {
             <p>
               <span class="text-muted">Adjudicação:</span>

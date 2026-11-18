@@ -68,6 +68,7 @@ export interface Order {
   costCenter: { id: string; code: string; name: string } | null;
   warehouse: { id: string; code: string; name: string } | null;
   award: { id: string; rfqId: string; rfqNumber: string } | null;
+  contract: { id: string; number: string; title: string } | null;
   currency: string;
   exchangeRate: string | null;
   rateDate: string | null;
@@ -146,6 +147,41 @@ export interface OrderOptions {
   warehouses: { id: string; code: string; name: string; legalEntityId: string }[];
   uoms: { id: string; code: string; name: string }[];
   products: { id: string; sku: string; name: string; productType: string; uomId: string }[];
+  contracts: OrderContractOption[];
+}
+
+export interface OrderContractOption {
+  id: string;
+  number: string;
+  title: string;
+  legalEntityId: string;
+  supplierId: string;
+  currency: string;
+  startDate: string;
+  endDate: string;
+  remaining: string;
+  prices: { productId: string; variantId: string | null; unitPrice: string }[];
+}
+
+/** Contratos que servem a ordem: mesma entidade e fornecedor e, se já houver moeda, a mesma. */
+export function contractsFor(
+  all: OrderContractOption[],
+  o: { legalEntityId: string; supplierId: string; currency: string },
+) {
+  return all.filter(
+    (c) =>
+      c.legalEntityId === o.legalEntityId &&
+      c.supplierId === o.supplierId &&
+      (!o.currency || c.currency === o.currency.toUpperCase()),
+  );
+}
+
+/** Preço do contrato para o produto (sem variante), ou `null`. */
+export function contractPrice(
+  c: OrderContractOption | undefined,
+  productId: string,
+): string | null {
+  return c?.prices.find((p) => p.productId === productId && !p.variantId)?.unitPrice ?? null;
 }
 
 export const APPROVAL_STATUS: Record<ApprovalStatus, string> = {

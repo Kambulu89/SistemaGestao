@@ -340,6 +340,8 @@ test.group('Compras | ordens de compra (9.5)', (group) => {
       200
     )
     assert.equal(po.warehouse.code, 'ARM-A')
+    // Um PUT sem o produto não o apaga da linha existente.
+    assert.equal(po.lines[0].product.sku, 'BOMBA')
     assert.equal(po.lines[0].requisition.number, o.req.number)
     // Pedir aprovação: uma etapa (valor abaixo da direcção); quem gere não decide.
     po = ok(await B.post(`${O}/${po.id}/submit`, { expectedVersion: po.version }), 200)

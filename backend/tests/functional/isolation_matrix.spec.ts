@@ -795,8 +795,26 @@ async function populate(client: any) {
       [tenant.id, le.id, supplier.id]
     )
   ).rows[0] as { id: string }
+  // Contrato e adenda da empresa A inseridos directamente (só interessa o isolamento).
+  const purchaseContract = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_contracts (tenant_id, legal_entity_id, supplier_id, title, object, currency, start_date,
+          end_date, max_amount) values (?, ?, ?, 'Contrato A', 'Objecto A', 'AOA', current_date, current_date + 30, 1000)
+       returning id`,
+      [tenant.id, le.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
+  const contractAmendment = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_contract_amendments (tenant_id, contract_id, amendment_no, kind, reason, effective_date,
+          proposed, requested_by) values (?, ?, 1, 'CHANGE', 'Isolamento', current_date, '{}', ?) returning id`,
+      [tenant.id, purchaseContract.id, admin.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    purchaseContract,
+    contractAmendment,
     purchaseOrder,
     rfq,
     rfqAward,
@@ -1483,6 +1501,79 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'ordens de adjudicação alheia',
         B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/orders`),
+      ],
+      ['GET contrato', B.get(`/api/v1/procurement/contracts/${a.purchaseContract.id}`)],
+      [
+        'alterar contrato alheio',
+        B.put(`/api/v1/procurement/contracts/${a.purchaseContract.id}`, { ...v, title: 'Outro' }),
+      ],
+      [
+        'submit contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/submit`, v),
+      ],
+      [
+        'approve contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/approve`, v),
+      ],
+      [
+        'reactivate contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/reactivate`, v),
+      ],
+      [
+        'reject contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/reject`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'suspend contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/suspend`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'terminate contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/terminate`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'cancel contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'adenda a contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/amendments`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'approve adenda alheia',
+        B.post(`/api/v1/procurement/contract-amendments/${a.contractAmendment.id}/approve`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'reject adenda alheia',
+        B.post(`/api/v1/procurement/contract-amendments/${a.contractAmendment.id}/reject`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'cancel adenda alheia',
+        B.post(`/api/v1/procurement/contract-amendments/${a.contractAmendment.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
       ],
       ['GET fornecedor', B.get(`/api/v1/procurement/suppliers/${a.supplier.id}`)],
       [
@@ -2402,6 +2493,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/procurement/rfqs/${a.rfq.id}`,
       `/api/v1/procurement/rfq-awards/${a.rfqAward.id}`,
       '/api/v1/procurement/orders',
+      '/api/v1/procurement/contracts',
+      `/api/v1/procurement/contracts/${a.purchaseContract.id}`,
       `/api/v1/procurement/orders/${a.purchaseOrder.id}`,
       '/api/v1/procurement/rfqs?pendingAward=true',
       '/api/v1/inventory/reports/expiry',

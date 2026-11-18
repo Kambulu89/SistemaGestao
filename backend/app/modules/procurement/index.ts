@@ -14,3 +14,7 @@ export {
   PurchaseOrderService,
   purchaseOrderAccess,
 } from '#modules/procurement/application/order_service'
+export {
+  ContractService,
+  purchaseContractAccess,
+} from '#modules/procurement/application/contract_service'

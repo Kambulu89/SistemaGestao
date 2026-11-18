@@ -566,6 +566,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Decidir as etapas de aprovação das ordens de compra do âmbito (nunca as que a própria pessoa submeteu nem duas etapas da mesma ronda).',
   },
   {
+    code: 'procurement.contracts.read',
+    module: 'procurement',
+    description:
+      'Consultar contratos de fornecedor das entidades do âmbito, preços, SLA, adendas e consumo.',
+  },
+  {
+    code: 'procurement.contracts.manage',
+    module: 'procurement',
+    description:
+      'Criar contratos, pedir aprovação, propor adendas e renovações, suspender, reactivar, terminar e anular.',
+  },
+  {
+    code: 'procurement.contracts.approve',
+    module: 'procurement',
+    description:
+      'Aprovar ou recusar contratos e adendas das entidades do âmbito (nunca os que a própria pessoa submeteu ou propôs).',
+  },
+  {
     code: 'procurement.settings',
     module: 'procurement',
     description:

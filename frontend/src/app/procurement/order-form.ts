@@ -14,6 +14,8 @@ import { qty } from '../inventory/stock-model';
 import type { DemandGroup } from './requisition-model';
 import { plain } from './rfq-model';
 import {
+  contractPrice,
+  contractsFor,
   emptyOrderLine,
   type Order,
   orderGrandTotal,
@@ -88,6 +90,28 @@ import {
             <option value="">Escolher…</option>
             @for (s of opts()?.suppliers ?? []; track s.id) {
               <option [value]="s.id">{{ s.code }} — {{ s.name }}</option>
+            }
+          </select>
+        </app-field>
+        <app-field
+          label="Contrato"
+          hint="Opcional: as ordens consomem o máximo do contrato e respeitam a tabela de preços."
+          [error]="action.field('contractId')"
+        >
+          <select
+            appControl
+            class="input"
+            name="contract"
+            data-testid="of-contract"
+            [disabled]="!!order()?.number"
+            [(ngModel)]="f.contractId"
+            (ngModelChange)="contractChanged()"
+          >
+            <option value="">Sem contrato</option>
+            @for (c of contracts(); track c.id) {
+              <option [value]="c.id">
+                {{ c.number }} — {{ c.title }} (disponível {{ c.remaining }} {{ c.currency }})
+              </option>
             }
           </select>
         </app-field>
@@ -438,6 +462,7 @@ export class PurchaseOrderForm implements HasUnsavedChanges {
     return {
       legalEntityId: '',
       supplierId: '',
+      contractId: '',
       branchId: '',
       costCenterId: '',
       warehouseId: '',
@@ -507,6 +532,25 @@ export class PurchaseOrderForm implements HasUnsavedChanges {
     if (!p) return;
     l.description = p.name;
     l.uomId = p.uomId;
+    const price = contractPrice(this.contract(), p.id);
+    if (price !== null) l.unitPrice = plain(price);
+  }
+
+  protected contracts() {
+    return contractsFor(this.opts()?.contracts ?? [], this.f);
+  }
+  protected contract() {
+    return this.opts()?.contracts.find((c) => c.id === this.f.contractId);
+  }
+  /** Ao escolher o contrato: a moeda do contrato e o preço acordado nas linhas de produtos da tabela. */
+  protected contractChanged() {
+    const c = this.contract();
+    if (!c) return;
+    this.f.currency = c.currency;
+    for (const l of this.f.lines) {
+      const price = l.productId ? contractPrice(c, l.productId) : null;
+      if (price !== null && !l.unitPrice) l.unitPrice = plain(price);
+    }
   }
 
   protected total(l: OrderLineForm) {
@@ -553,6 +597,7 @@ export class PurchaseOrderForm implements HasUnsavedChanges {
       this.f = {
         legalEntityId: o.legalEntity.id,
         supplierId: o.supplier.id,
+        contractId: o.contract?.id ?? '',
         branchId: o.branch?.id ?? '',
         costCenterId: o.costCenter?.id ?? '',
         warehouseId: o.warehouse?.id ?? '',
@@ -596,6 +641,7 @@ export class PurchaseOrderForm implements HasUnsavedChanges {
     const body = {
       legalEntityId: this.f.legalEntityId,
       supplierId: this.f.supplierId,
+      contractId: t(this.f.contractId),
       branchId: t(this.f.branchId),
       costCenterId: t(this.f.costCenterId),
       warehouseId: t(this.f.warehouseId),

@@ -8,6 +8,12 @@ import { rateOn, reserveDocumentNumber } from '#modules/settings/index'
 import { supplierStanding } from '#modules/procurement/application/supplier_service'
 import { allocateRequisition } from '#modules/procurement/application/requisition_service'
 import {
+  consumeContract,
+  consumedByOrder,
+  contractForOrder,
+} from '#modules/procurement/application/contract_service'
+import { committedValue } from '#modules/procurement/domain/contracts'
+import {
   isDate,
   type Level,
   money,
@@ -346,12 +352,62 @@ async function header(
     delivery_address: str('deliveryAddress', 500),
     supplier_reference: str('supplierReference', 60),
     notes: str('notes', 4000),
+    // Contrato: fixo depois da primeira emissão; validado em `contractOf`.
+    contract_id: (current?.number
+      ? current.contract_id
+      : isUuid(input.contractId)
+        ? input.contractId
+        : null) as string | null,
   }
+  if (input.contractId && !isUuid(input.contractId) && !current?.number)
+    issues.push({ path: 'contractId', code: 'INVALID', message: 'Identificador inválido.' })
   return { issues, values }
 }
 
+/** O contrato da ordem (se houver): encaixe com a entidade, fornecedor, moeda e data; devolve os preços. */
+async function contractOf(scope: TenantScope, v: Record<string, any>) {
+  if (!v.contract_id) return null
+  return contractForOrder(scope, v.contract_id, {
+    legalEntityId: v.legal_entity_id,
+    supplierId: v.supplier_id,
+    currency: v.currency,
+    orderDate: isoDate(v.order_date)!,
+  })
+}
+
+/** Valor líquido em vigor da ordem (o que consome do contrato). */
+async function orderCommitted(scope: TenantScope, id: string) {
+  return committedValue(
+    (await linesOfOrder(scope, id)).map((l) => ({
+      quantity: q6(l.quantity),
+      cancelled: q6(l.cancelled_quantity),
+      net: c2(l.net_amount),
+    }))
+  )
+}
+
+/** Acerta o consumo do contrato da ordem com o valor em vigor (emissão, fecho do resto, anulação). */
+async function syncContract(scope: TenantScope, o: any, key: string, target?: bigint) {
+  if (!o.contract_id) return
+  const want = target ?? (await orderCommitted(scope, o.id))
+  const delta = want - (await consumedByOrder(scope, o.contract_id, o.id))
+  await consumeContract(scope, {
+    contractId: o.contract_id,
+    orderId: o.id,
+    orderRevision: Number(o.revision),
+    amount: delta,
+    key: `po:${o.id}:${key}`,
+  })
+}
+
 /** Linhas: catálogo ou descrição livre, requisição aprovada da mesma entidade; existentes por id, sem baixar do recebido. */
-async function linesOf(scope: TenantScope, leId: string, raw: unknown, existing: any[]) {
+async function linesOf(
+  scope: TenantScope,
+  leId: string,
+  raw: unknown,
+  existing: any[],
+  contractPrices?: Map<string, bigint> | null
+) {
   const t = scope.context.tenantId
   const { lines, issues } = normalizeOrderLines(raw)
   const byId = new Map(existing.map((l) => [l.id as string, l]))
@@ -362,6 +418,14 @@ async function linesOf(scope: TenantScope, leId: string, raw: unknown, existing:
     const cur = l.id ? byId.get(l.id) : undefined
     if (l.id && !cur) at('id', 'NOT_FOUND', 'Linha que não é desta ordem.')
     let { productId, variantId, uomId, description } = l
+    // Linha existente: o que não vem no pedido mantém-se (um PUT parcial não apaga o produto da linha).
+    const src = (Array.isArray(raw) ? raw[i] : null) ?? {}
+    if (cur) {
+      if (!('productId' in src)) productId = cur.product_id
+      if (!('variantId' in src)) variantId = cur.variant_id
+      if (!('uomId' in src)) uomId = cur.uom_id
+      if (!('description' in src)) description = cur.description
+    }
     let requisitionLineId = cur ? cur.requisition_line_id : l.requisitionLineId
     if (requisitionLineId && !cur) {
       const x = (
@@ -421,6 +485,16 @@ async function linesOf(scope: TenantScope, leId: string, raw: unknown, existing:
         description ||= p.name
         uomId ||= p.purchase_uom_id ?? p.base_uom_id
       }
+      // Com contrato: o preço não passa o da tabela do contrato para este produto (ou variante).
+      const cp =
+        contractPrices?.get(`${productId}|${variantId ?? ''}`) ??
+        contractPrices?.get(`${productId}|`)
+      if (cp !== undefined && l.unitPrice > cp)
+        at(
+          'unitPrice',
+          'PRICE_ABOVE_CONTRACT',
+          `O contrato fixa ${scaledText(cp, 6)} para este produto.`
+        )
     }
     if (description.length < 3)
       at('description', 'REQUIRED', 'Produto do catálogo ou descrição (3 a 300 caracteres).')
@@ -556,7 +630,7 @@ async function detail(scope: TenantScope, id: string) {
   const info = (
     await scope.trx.rawQuery(
       `select le.code as le_code, bp.code as sup_code, bp.name as sup_name, b.code as branch_code, cc.code as cc_code,
-          cc.name as cc_name, w.code as wh_code, w.name as wh_name, rq.number as rfq_number, rq.id as rfq_id,
+          cc.name as cc_name, w.code as wh_code, w.name as wh_name, rq.number as rfq_number, rq.id as rfq_id, pc.number as contract_number, pc.title as contract_title,
           us.full_name as submitted_name, ui.full_name as issued_name
          from purchase_orders o
          join legal_entities le on le.tenant_id = o.tenant_id and le.id = o.legal_entity_id
@@ -566,6 +640,7 @@ async function detail(scope: TenantScope, id: string) {
          left join cost_centers cc on cc.tenant_id = o.tenant_id and cc.id = o.cost_center_id
          left join warehouses w on w.tenant_id = o.tenant_id and w.id = o.warehouse_id
          left join rfq_awards a on a.tenant_id = o.tenant_id and a.id = o.award_id
+         left join purchase_contracts pc on pc.tenant_id = o.tenant_id and pc.id = o.contract_id
          left join rfqs rq on rq.tenant_id = a.tenant_id and rq.id = a.rfq_id
          left join users us on us.id = o.submitted_by
          left join users ui on ui.id = o.issued_by
@@ -658,6 +733,13 @@ async function detail(scope: TenantScope, id: string) {
           id: o.award_id as string,
           rfqId: info.rfq_id as string,
           rfqNumber: info.rfq_number as string,
+        }
+      : null,
+    contract: o.contract_id
+      ? {
+          id: o.contract_id as string,
+          number: info.contract_number as string,
+          title: info.contract_title as string,
         }
       : null,
     currency: o.currency as string,
@@ -967,6 +1049,45 @@ export class PurchaseOrderService {
             `select id, code, name, legal_entity_id from warehouses where tenant_id = ? and status = 'ACTIVE' order by code`
           )
         ),
+        // Contratos activos e em vigor hoje, com a tabela de preços (para sugerir o preço no formulário).
+        contracts: await (async () => {
+          const rows = (
+            await scope.trx.rawQuery(
+              `select id, number, title, legal_entity_id, supplier_id, currency, start_date, end_date,
+                  (max_amount - consumed_amount)::text as remaining
+                 from purchase_contracts where tenant_id = ? and status = 'ACTIVE'
+                  and current_date between start_date and end_date order by number`,
+              [t]
+            )
+          ).rows as any[]
+          const prices = (
+            await scope.trx.rawQuery(
+              `select contract_id, product_id, variant_id, unit_price::text as unit_price from purchase_contract_prices
+                where tenant_id = ? and contract_id = any(?::uuid[]) and product_id is not null`,
+              [t, rows.map((r) => r.id)] as never[]
+            )
+          ).rows as any[]
+          return rows
+            .filter((r) => leIds.has(r.legal_entity_id))
+            .map((r) => ({
+              id: r.id as string,
+              number: r.number as string,
+              title: r.title as string,
+              legalEntityId: r.legal_entity_id as string,
+              supplierId: r.supplier_id as string,
+              currency: r.currency as string,
+              startDate: isoDate(r.start_date)!,
+              endDate: isoDate(r.end_date)!,
+              remaining: money(c2(r.remaining)),
+              prices: prices
+                .filter((p) => p.contract_id === r.id)
+                .map((p) => ({
+                  productId: p.product_id as string,
+                  variantId: (p.variant_id as string) ?? null,
+                  unitPrice: scaledText(q6(p.unit_price), 6),
+                })),
+            }))
+        })(),
         uoms: await q(
           `select id, code, name from uoms where tenant_id = ? and status = 'ACTIVE' order by code`
         ),
@@ -993,7 +1114,14 @@ export class PurchaseOrderService {
         throw ApiError.forbidden('OUT_OF_SCOPE', 'Não gere ordens de compra.')
       const h = await header(scope, s, input, null)
       fail(h.issues)
-      const lines = await linesOf(scope, h.values.legal_entity_id, input.lines, [])
+      const contract = await contractOf(scope, h.values)
+      const lines = await linesOf(
+        scope,
+        h.values.legal_entity_id,
+        input.lines,
+        [],
+        contract?.prices
+      )
       const ins = await scope.trx.rawQuery(
         `insert into purchase_orders (tenant_id, ${Object.keys(h.values).join(', ')}, created_by, updated_by)
          values (?, ${Object.keys(h.values)
@@ -1025,7 +1153,8 @@ export class PurchaseOrderService {
       const h = await header(scope, s, input, o)
       fail(h.issues)
       const existing = await linesOfOrder(scope, id, true)
-      const lines = await linesOf(scope, o.legal_entity_id, input.lines, existing)
+      const contract = await contractOf(scope, { ...h.values, legal_entity_id: o.legal_entity_id })
+      const lines = await linesOf(scope, o.legal_entity_id, input.lines, existing, contract?.prices)
       const values: Record<string, unknown> = { ...h.values }
       delete values.legal_entity_id
       await setOrder(scope, id, { ...values, approval_status: 'DRAFT', reject_reason: null })
@@ -1055,6 +1184,19 @@ export class PurchaseOrderService {
       if (!(await linesOfOrder(scope, id)).length)
         fail([{ path: 'lines', code: 'REQUIRED', message: 'A ordem não tem linhas.' }])
       await warehouseRule(scope, o)
+      // Com contrato: ainda serve (estado, vigência) e tem saldo para o valor em vigor (garantido de vez na emissão).
+      const contract = await contractOf(scope, o)
+      if (contract) {
+        const need =
+          (await orderCommitted(scope, id)) - (await consumedByOrder(scope, contract.id, id))
+        if (need > contract.remaining)
+          throw new ApiError(
+            409,
+            'CONTRACT_EXCEEDED',
+            `O contrato ${contract.number} só tem ${money(contract.remaining)} ${o.currency} disponíveis.`,
+            [{ path: 'contractId', code: 'CONTRACT_EXCEEDED', message: money(contract.remaining) }]
+          )
+      }
       const le = (await legalEntityFacts(scope, o.legal_entity_id))!
       let rate = 10n ** 10n
       if (o.currency !== le.functionalCurrency) {
@@ -1224,6 +1366,7 @@ export class PurchaseOrderService {
         number = (await reserveDocumentNumber(scope, series.id, today())).formatted
       }
       await syncAllocations(scope, o, `r${o.revision}`)
+      await syncContract(scope, o, `r${o.revision}`)
       const first = !o.number
       await setOrder(scope, id, {
         series_id: seriesId,
@@ -1307,6 +1450,7 @@ export class PurchaseOrderService {
         )
       const reason = reasonOf(input.reason)
       await releaseAll(scope, o)
+      await syncContract(scope, o, 'cancel', 0n)
       await setOrder(scope, id, { approval_status: 'CANCELLED', cancel_reason: reason })
       await event(scope, id, 'CANCELLED', { revision: Number(o.revision), reason })
       await audit(scope, {
@@ -1341,6 +1485,7 @@ export class PurchaseOrderService {
           )
       }
       await syncAllocations(scope, o, 'close')
+      await syncContract(scope, o, 'close')
       await setOrder(scope, id, {
         closed_at: new Date(),
         close_reason: reason,
