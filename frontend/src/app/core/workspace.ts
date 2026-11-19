@@ -29,6 +29,8 @@ export class Workspace {
   readonly tenantId = signal<string | null>(readStored());
   readonly context = signal<TenantContextView | null>(null);
   readonly permissions = signal<ReadonlySet<string>>(new Set());
+  /** Permissões só com âmbito parcial (entidade, filial, departamento ou próprio). */
+  readonly scopedPermissions = signal<ReadonlySet<string>>(new Set());
   readonly features = computed(() => new Set((this.context()?.features ?? []).map((f) => f.code)));
   /**
    * Âmbito de trabalho escolhido na barra superior (entidade legal e filial), guardado por empresa. É só um filtro por
@@ -73,6 +75,11 @@ export class Workspace {
     return this.permissions().has(permission);
   }
 
+  /** Tem a permissão nalgum âmbito (empresa ou parcial): para mostrar módulos cujo âmbito a API filtra (ex.: RH). */
+  canAny(permission: string) {
+    return this.permissions().has(permission) || this.scopedPermissions().has(permission);
+  }
+
   has(feature: string) {
     return this.features().has(feature);
   }
@@ -84,10 +91,11 @@ export class Workspace {
     try {
       const [context, permissions] = await Promise.all([
         this.api.get<TenantContextView>('context'),
-        this.api.get<{ tenant: string[] }>('me/permissions'),
+        this.api.get<{ tenant: string[]; own?: string[] }>('me/permissions'),
       ]);
       this.context.set(context);
       this.permissions.set(new Set(permissions.tenant));
+      this.scopedPermissions.set(new Set(permissions.own ?? []));
       store(tenantId);
       const scope = parseScope(readKey(`sg.scope.${tenantId}`));
       this.legalEntityId.set(scope.legalEntityId);
@@ -114,6 +122,7 @@ export class Workspace {
   private clearTenantState() {
     this.context.set(null);
     this.permissions.set(new Set());
+    this.scopedPermissions.set(new Set());
     this.legalEntityId.set(null);
     this.branchId.set(null);
     this.cache = new Map();

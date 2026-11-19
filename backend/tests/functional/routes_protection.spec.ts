@@ -73,6 +73,637 @@ const SELF_AUTHORIZED: Record<string, string> = {
   'POST /api/v1/me/notifications/read-all': 'só as do destinatário',
   'POST /api/v1/me/notifications/:id/read': 'só as do destinatário (404 nas outras)',
   'GET /api/v1/me/tasks': 'tarefas do próprio',
+  'GET /api/v1/hr/employees':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'POST /api/v1/hr/employees':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'GET /api/v1/hr/employees/:id':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'PATCH /api/v1/hr/employees/:id':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'POST /api/v1/hr/employees/:id/status':
+    'âmbito RBAC de hr.* (empresa, entidade, filial, departamento, próprio) verificado no serviço',
+  'GET /api/v1/hr/requisitions':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'GET /api/v1/hr/requisitions/:id':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'PATCH /api/v1/hr/requisitions/:id':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions/:id/submit':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions/:id/decision':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions/:id/close':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/requisitions/:id/cancel':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'GET /api/v1/hr/candidates':
+    'candidatos de vagas visíveis ou registados pelo próprio (hr.recruitment.*) verificado no serviço',
+  'POST /api/v1/hr/candidates': 'hr.recruitment.manage em algum âmbito verificado no serviço',
+  'GET /api/v1/hr/candidates/:id':
+    'candidatos de vagas visíveis ou registados pelo próprio (hr.recruitment.*) verificado no serviço',
+  'PATCH /api/v1/hr/candidates/:id':
+    'quem registou ou gere uma vaga do candidato (hr.recruitment.manage) verificado no serviço',
+  'GET /api/v1/hr/applications':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/applications':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'GET /api/v1/hr/applications/:id':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/applications/:id/stage':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/applications/:id/interviews':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/applications/:id/evaluations':
+    'entrevistador da entrevista ou hr.recruitment.manage no âmbito da vaga, verificado no serviço',
+  'POST /api/v1/hr/applications/:id/offers':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'GET /api/v1/hr/interviews/mine': 'só as entrevistas atribuídas ao próprio membro',
+  'PATCH /api/v1/hr/interviews/:id':
+    'hr.recruitment.manage no âmbito da vaga, ou o entrevistador a marcar a sua como realizada',
+  'PATCH /api/v1/hr/offers/:id':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/submit':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/decision':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/response':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/cancel':
+    'âmbito RBAC de hr.recruitment.* sobre a colocação da vaga verificado no serviço',
+  'POST /api/v1/hr/offers/:id/hire':
+    'hr.recruitment.manage no âmbito da vaga e hr.manage na colocação do novo colaborador, verificados no serviço',
+  'GET /api/v1/hr/employees/:id/onboarding':
+    'âmbito RBAC de hr.read/hr.manage do colaborador verificado no serviço; o responsável conclui a sua tarefa',
+  'POST /api/v1/hr/employees/:id/onboarding':
+    'âmbito RBAC de hr.read/hr.manage do colaborador verificado no serviço; o responsável conclui a sua tarefa',
+  'PATCH /api/v1/hr/onboarding-tasks/:id':
+    'âmbito RBAC de hr.read/hr.manage do colaborador verificado no serviço; o responsável conclui a sua tarefa',
+  'GET /api/v1/hr/employees/:id/contracts':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/employees/:id/contracts':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'GET /api/v1/hr/contracts/:id':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'PATCH /api/v1/hr/contracts/:id':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/activate':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/suspend':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/resume':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/terminate':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/cancel':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'POST /api/v1/hr/contracts/:id/amendments':
+    'âmbito RBAC de hr.contracts.read/manage sobre a colocação do colaborador verificado no serviço',
+  'GET /api/v1/hr/employees/:id/assignments':
+    'âmbito RBAC de hr.read/hr.manage sobre a colocação (antiga e nova) verificado no serviço',
+  'POST /api/v1/hr/employees/:id/assignments':
+    'âmbito RBAC de hr.read/hr.manage sobre a colocação (antiga e nova) verificado no serviço',
+  'GET /api/v1/hr/leave/types':
+    'catálogo de tipos de ausência, necessário a quem pede (sem dados pessoais)',
+  'GET /api/v1/hr/leave/me': 'só a ficha ligada à conta do próprio membro',
+  'POST /api/v1/hr/leave/accruals':
+    'hr.leave.manage no âmbito; só gera direitos dos colaboradores cobertos',
+  'GET /api/v1/hr/employees/:id/leave':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/employees/:id/leave/adjustments':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'GET /api/v1/hr/leave/requests':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/leave/requests':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/leave/requests/preview':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'GET /api/v1/hr/leave/requests/:id':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/leave/requests/:id/decision':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'POST /api/v1/hr/leave/requests/:id/cancel':
+    'próprio, chefia directa ou hr.leave.* no âmbito do colaborador, verificado no serviço',
+  'GET /api/v1/hr/pay-components':
+    'catálogo sem valores; exige uma permissão hr.compensation.* em qualquer âmbito (verificado no serviço)',
+  'GET /api/v1/hr/payroll/runs/:id/payments':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (pagamentos com hr.payroll.pay)',
+  'POST /api/v1/hr/payroll/obligations/:id/payments':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (pagamentos com hr.payroll.pay)',
+  'POST /api/v1/hr/payroll/runs/:id/accounting':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (pagamentos com hr.payroll.pay)',
+  'GET /api/v1/hr/payslips':
+    'recibos do próprio colaborador (membership da sessão); sem permissão: só devolve os recibos ligados a quem pede',
+  'GET /api/v1/hr/payslips/:id':
+    'recibo em PDF: hr.payroll.* na entidade legal do lote ou o próprio colaborador, verificado no serviço',
+  'GET /api/v1/hr/training/competencies':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/training/courses':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/training/sessions':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/sessions':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/training/sessions/:id':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/sessions/:id/enrollments':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/sessions/:id/complete':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/sessions/:id/cancel':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/training/enrollments/:id/result':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/training/costs':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/employees/:id/training':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/employees/:id/competencies':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'POST /api/v1/hr/employees/:id/certificates':
+    'âmbito RBAC de hr.training.* sobre a colocação do colaborador (ou qualquer hr.training.* para sessões e catálogo) verificado no serviço',
+  'GET /api/v1/hr/discipline/cases':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'GET /api/v1/hr/discipline/cases/:id':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'POST /api/v1/hr/employees/:id/discipline/cases':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'POST /api/v1/hr/discipline/cases/:id/events':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'POST /api/v1/hr/discipline/cases/:id/review':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'POST /api/v1/hr/discipline/cases/:id/close':
+    'acesso restrito: âmbito RBAC de hr.discipline.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço',
+  'GET /api/v1/hr/terminations':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'GET /api/v1/hr/terminations/:id':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/employees/:id/terminations':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'PATCH /api/v1/hr/terminations/:id':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/lines':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'PATCH /api/v1/hr/terminations/:id/lines/:lineId':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'DELETE /api/v1/hr/terminations/:id/lines/:lineId':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/submit':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/decision':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/cancel':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/settlement':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/complete':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'POST /api/v1/hr/terminations/:id/tasks':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'PATCH /api/v1/hr/termination-tasks/:id':
+    'âmbito RBAC de hr.terminations.* sobre a colocação do colaborador, nunca o próprio, verificado no serviço (aprovação segregada; a liquidação exige também hr.payroll.manage)',
+  'GET /api/v1/hr/me':
+    'só a ficha ligada à conta do actor (e a equipa de que é chefia), resolvida no servidor; sem dados de outros fora disso',
+  'PATCH /api/v1/hr/me':
+    'só a ficha ligada à conta do actor (e a equipa de que é chefia), resolvida no servidor; sem dados de outros fora disso',
+  'GET /api/v1/hr/team':
+    'só a ficha ligada à conta do actor (e a equipa de que é chefia), resolvida no servidor; sem dados de outros fora disso',
+  'GET /api/v1/hr/reports/headcount':
+    'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
+  'GET /api/v1/hr/reports/turnover':
+    'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
+  'GET /api/v1/hr/reports/leave':
+    'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
+  'GET /api/v1/hr/reports/payroll':
+    'âmbito RBAC de hr.reports.read (ou hr.payroll.read por entidade legal na folha) verificado no serviço; só agregados',
+  'GET /api/v1/inventory/stock/balances':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/stock/movements':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/stock/postings/:id':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/stock/reconciliation':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'POST /api/v1/inventory/stock/status-changes':
+    'âmbito RBAC de inventory.read / inventory.stock.manage sobre o armazém (entidade legal ou filial) e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/documents':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'GET /api/v1/inventory/documents/:id':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'PUT /api/v1/inventory/documents/:id':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/check':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/reopen':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/confirm':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/close':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/documents/:id/cancel':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/document-confirmations/:id/reverse':
+    'âmbito RBAC de inventory.documents.manage / inventory.documents.confirm sobre o armazém (entidade legal ou filial), acesso de operação e consulta pelo acesso aos armazéns, verificados no serviço',
+  'GET /api/v1/inventory/transfers':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'GET /api/v1/inventory/transfers/destinations':
+    'destinos de transferência: armazéns activos abertos ou visíveis ao membro, filtrados no serviço',
+  'GET /api/v1/inventory/transfers/:id':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'PUT /api/v1/inventory/transfers/:id':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/submit':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/approve':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/accept':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/reject':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/pick':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/dispatch':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/receive':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/close':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'POST /api/v1/inventory/transfers/:id/cancel':
+    'âmbito RBAC de inventory.transfers.manage / inventory.transfers.approve no armazém de origem ou de destino de cada passo, acesso de operação e consulta pelo acesso a um dos armazéns, verificados no serviço',
+  'GET /api/v1/inventory/counts':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'GET /api/v1/inventory/counts/options':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'GET /api/v1/inventory/counts/:id':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'PUT /api/v1/inventory/counts/:id':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/start':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/count':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/lines':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/submit':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/justify':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/recount':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/approve':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'POST /api/v1/inventory/counts/:id/cancel':
+    'âmbito RBAC de inventory.counts.manage (com acesso de operação) / inventory.counts.approve sobre o armazém (entidade legal ou filial), verificados no serviço',
+  'GET /api/v1/inventory/lots':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'GET /api/v1/inventory/lots/:id':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'POST /api/v1/inventory/lots/:id/block':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'POST /api/v1/inventory/lots/:id/unblock':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'POST /api/v1/inventory/lots/:id/recall':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'GET /api/v1/inventory/serials':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'GET /api/v1/inventory/serials/:id':
+    'consulta com inventory.read (saldos e movimentos só dos armazéns consultáveis) e gestão com inventory.lots.manage no âmbito de todos os armazéns do lote, verificados no serviço',
+  'GET /api/v1/inventory/valuation':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/valuation/products/:id':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'POST /api/v1/inventory/valuation/adjustments':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/valuation/reconciliation':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/valuation/accounts':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'PUT /api/v1/inventory/valuation/accounts':
+    'âmbito RBAC de inventory.valuation.read / inventory.valuation.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/integrations/events':
+    'âmbito RBAC de inventory.integrations.post sobre o armazém (entidade legal ou filial) e registo pelos armazéns consultáveis, verificados no serviço',
+  'GET /api/v1/inventory/integrations/sales-orders':
+    'âmbito RBAC de inventory.integrations.post sobre o armazém (entidade legal ou filial) e registo pelos armazéns consultáveis, verificados no serviço',
+  'POST /api/v1/inventory/integrations/:kind':
+    'âmbito RBAC de inventory.integrations.post sobre o armazém (entidade legal ou filial) e registo pelos armazéns consultáveis, verificados no serviço',
+  'GET /api/v1/inventory/accounting-events':
+    'âmbito RBAC de inventory.valuation.read / inventory.accounting.manage sobre a entidade legal, verificado no serviço',
+  'POST /api/v1/inventory/accounting-events/retry':
+    'âmbito RBAC de inventory.valuation.read / inventory.accounting.manage sobre a entidade legal, verificado no serviço',
+  'GET /api/v1/inventory/reports/alerts':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/replenishment':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/expiry':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/turnover':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/movements':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/losses':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/consumption':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/inventory/reports/valued':
+    'armazéns que o membro pode consultar (a regra dos saldos) e valores só com inventory.valuation.read na entidade legal, verificados no serviço',
+  'GET /api/v1/procurement/suppliers':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'GET /api/v1/procurement/suppliers/lookup':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'GET /api/v1/procurement/suppliers/:id':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'PATCH /api/v1/procurement/suppliers/:id':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/contacts':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'PATCH /api/v1/procurement/suppliers/:id/contacts/:contactId':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/bank-accounts':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/supplier-bank-accounts/:id/:action':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/documents':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/supplier-documents/:id/deactivate':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/submit':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/approve':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/reject':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/suppliers/:id/suspend':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'GET /api/v1/procurement/settings/:kind':
+    'permissões de fornecedores (read/manage/approve/bank) no âmbito da empresa, verificadas no serviço',
+  'POST /api/v1/procurement/rfqs/:id/comparison':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/awards':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/rfq-awards/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/rfq-awards/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/submit':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/approve':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/reject':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/cancel':
+    'âmbito RBAC de procurement.rfqs.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/orders':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/orders/options':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-awards/:id/orders':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/orders/:id':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/orders/:id':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/submit':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/approve':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/reject':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/issue':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/revise':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/cancel':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/orders/:id/close':
+    'âmbito RBAC de procurement.orders.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/contracts':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/contracts/options':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/contracts':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/contracts/:id':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/contracts/:id':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/contracts/:id/submit':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/contracts/:id/approve':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/contracts/:id/reject':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/contracts/:id/amendments':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/contracts/:id/:action':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/contract-amendments/:id/:action':
+    'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/receipts':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/receipts/expected':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/receipts/orders/:id':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/receipts':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/receipts/:id':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/receipts/:id':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/receipts/:id/confirm':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/receipts/:id/cancel':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/receipts/:id/reverse':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/invoices':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/invoices/orders/:id':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/invoices/:id':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/invoices/:id':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/validate':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/approve':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/reject':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/refuse':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/cancel':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/tolerances':
+    'tolerâncias da conferência da empresa: só valores de configuração, sem dados de documentos; alterar exige procurement.settings',
+  'GET /api/v1/procurement/rfqs':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/rfqs/options':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/rfqs/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/rfqs/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/invitations':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/issue':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/amend':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/quotes':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/open':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfqs/:id/cancel':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'DELETE /api/v1/procurement/rfq-invitations/:id':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-invitations/:id/decline':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/rfq-quotes/:id/withdraw':
+    'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/requisitions':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'GET /api/v1/procurement/requisitions/options':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'GET /api/v1/procurement/requisitions/demand':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'GET /api/v1/procurement/requisitions/:id':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'PUT /api/v1/procurement/requisitions/:id':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/submit':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/approve':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/reject':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/cancel':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/close':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'POST /api/v1/procurement/requisitions/:id/copy':
+    'âmbito RBAC de procurement.requisitions.request/approve (departamento, filial, entidade) e .process (entidade, filial), verificado no serviço',
+  'GET /api/v1/procurement/approval-levels':
+    'leitura com qualquer permissão de compras, verificada no serviço',
+  'GET /api/v1/inventory/requisitions':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'GET /api/v1/inventory/requisitions/options':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'GET /api/v1/inventory/requisitions/:id':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'PUT /api/v1/inventory/requisitions/:id':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/submit':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/approve':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/reject':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/pick':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/issue':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/release':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'POST /api/v1/inventory/requisitions/:id/cancel':
+    'âmbito RBAC de inventory.requisitions.request / .approve sobre o departamento (ou só as próprias) e de inventory.requisitions.fulfil sobre o armazém com acesso de operação, verificados no serviço',
+  'GET /api/v1/inventory/reservations':
+    'reservas activas derivadas dos movimentos, limitadas aos armazéns que o membro pode consultar, filtradas no serviço',
+  'GET /api/v1/inventory/warehouses':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/warehouses/candidates':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/inventory/warehouses/:id':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'POST /api/v1/inventory/warehouses':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'PATCH /api/v1/inventory/warehouses/:id':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'POST /api/v1/inventory/warehouses/:id/locations':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'PATCH /api/v1/inventory/warehouse-locations/:id':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'PUT /api/v1/inventory/warehouses/:id/access':
+    'âmbito RBAC de inventory.read / inventory.warehouses.manage sobre a entidade legal ou filial do armazém e lista de acesso dos restritos, verificados no serviço',
+  'GET /api/v1/hr/payroll/periods':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'GET /api/v1/hr/payroll/runs':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'GET /api/v1/hr/payroll/runs/:id':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'GET /api/v1/hr/payroll/runs/:id/results/:resultId':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'PUT /api/v1/hr/payroll/runs/:id/inputs':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/exclusions':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/calculate':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/submit':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/decision':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/close':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'POST /api/v1/hr/payroll/runs/:id/cancel':
+    'âmbito RBAC de hr.payroll.* sobre a entidade legal do lote verificado no serviço (segregação na aprovação)',
+  'GET /api/v1/hr/employees/:id/loans':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/employees/:id/loans':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'GET /api/v1/hr/loans':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'GET /api/v1/hr/loans/:id':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'PATCH /api/v1/hr/loans/:id':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/loans/:id/submit':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/loans/:id/decision':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/loans/:id/cancel':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/loans/:id/installments/:installmentId/payment':
+    'âmbito RBAC de hr.loans.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'GET /api/v1/hr/employees/:id/compensation':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/employees/:id/compensation/proposals':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'GET /api/v1/hr/compensation/proposals':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'GET /api/v1/hr/compensation/proposals/:id':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'PATCH /api/v1/hr/compensation/proposals/:id':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/compensation/proposals/:id/submit':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/compensation/proposals/:id/decision':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
+  'POST /api/v1/hr/compensation/proposals/:id/cancel':
+    'âmbito RBAC de hr.compensation.* sobre a colocação do colaborador verificado no serviço (segregação na decisão)',
   'GET /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'PUT /api/v1/me/preferences/:key': 'preferências de interface do próprio membro',
   'GET /api/v1/dashboard': 'cada secção exige a permissão e a funcionalidade do módulo dono',

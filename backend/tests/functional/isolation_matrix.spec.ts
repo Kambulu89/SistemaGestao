@@ -9,6 +9,8 @@ import {
   tenantWithAdmin,
   type Session,
 } from '#tests/support/fixtures'
+import { runInTenant } from '#modules/tenancy/index'
+import { postStock } from '#modules/inventory/index'
 
 const PDF = Buffer.from('%PDF-1.4\n%%EOF\n')
 
@@ -300,8 +302,583 @@ async function populate(client: any) {
       title: 'Tarefa A',
     })
   )[0]
+  const employee = ok(
+    await as(client, s).post('/api/v1/hr/employees', {
+      code: 'COL-A',
+      fullName: 'Colaborador A',
+      legalEntityId: le.id,
+      branchId: branch.id,
+      hireDate: '2026-01-05',
+      taxId: '004567890LA041',
+    })
+  )
+  // Recrutamento (7.2): vaga aberta (aprovada por outro membro), candidato, candidatura, proposta e onboarding.
+  const hrDept = ok(
+    await as(client, s).post('/api/v1/organization/departments', {
+      code: 'DPA',
+      name: 'Departamento A',
+      legalEntityId: le.id,
+    })
+  )
+  const hrPosition = ok(
+    await as(client, s).post('/api/v1/organization/positions', {
+      code: 'POA',
+      name: 'Cargo A',
+      departmentId: hrDept.id,
+    })
+  )
+  const hrApprove = await createRole(client, s, 'aprova_rh_a', ['hr.recruitment.approve'])
+  ok(
+    await as(client, s).post(`/api/v1/members/${approver.memberId}/roles`, {
+      roleId: hrApprove.id,
+      scopeType: 'TENANT',
+    }),
+    200
+  )
+  const reqDraft = ok(
+    await as(client, s).post('/api/v1/hr/requisitions', {
+      code: 'VAGA-A',
+      title: 'Vaga A',
+      legalEntityId: le.id,
+      departmentId: hrDept.id,
+      positionId: hrPosition.id,
+      quantity: 1,
+      currency: 'AOA',
+      salaryMin: '100000',
+      salaryMax: '200000',
+    })
+  )
+  const reqSub = ok(
+    await as(client, s).post(`/api/v1/hr/requisitions/${reqDraft.id}/submit`, {
+      expectedVersion: reqDraft.version,
+    }),
+    200
+  )
+  const requisition = ok(
+    await as(client, approver.session).post(`/api/v1/hr/requisitions/${reqDraft.id}/decision`, {
+      decision: 'APPROVE',
+      expectedVersion: reqSub.version,
+    }),
+    200
+  )
+  const candidate = ok(
+    await as(client, s).post('/api/v1/hr/candidates', {
+      fullName: 'Candidato A',
+      email: 'cand.a@exemplo.ao',
+    })
+  )
+  const application = ok(
+    await as(client, s).post('/api/v1/hr/applications', {
+      requisitionId: requisition.id,
+      candidateId: candidate.id,
+    })
+  )
+  const screening = ok(
+    await as(client, s).post(`/api/v1/hr/applications/${application.id}/stage`, {
+      stage: 'SCREENING',
+      expectedVersion: application.version,
+    }),
+    200
+  )
+  const interview = ok(
+    await as(client, s).post(`/api/v1/hr/applications/${application.id}/interviews`, {
+      scheduledAt: '2030-01-10T10:00:00Z',
+      mode: 'ONSITE',
+      interviewerMembershipId: approver.memberId,
+    })
+  )
+  const offer = ok(
+    await as(client, s).post(`/api/v1/hr/applications/${application.id}/offers`, {
+      salary: '150000',
+      startDate: '2030-02-01',
+    })
+  )
+  const onboardingTask = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/onboarding`, {
+      category: 'DOCUMENTS',
+      title: 'Entregar documentos',
+    })
+  )
+  void screening
+  const leavePolicy = ok(
+    await as(client, s).post('/api/v1/hr/leave/policies', {
+      code: 'FERIAS-A',
+      name: 'Férias A',
+      calendarId: calendar.id,
+      annualDays: '22',
+      firstYearRule: 'FULL',
+      legalReference: 'Política de teste',
+      validFrom: '2025-01-01',
+    })
+  )
+  const leaveType = ok(
+    await as(client, s).post('/api/v1/hr/leave/types', {
+      code: 'FER-A',
+      name: 'Férias A',
+      category: 'VACATION',
+      paid: true,
+      deductsBalance: false,
+      counting: 'CALENDAR_DAYS',
+    })
+  )
+  const payComponent = ok(
+    await as(client, s).post('/api/v1/hr/pay-components', {
+      code: 'SUB-A',
+      name: 'Subsídio A',
+      kind: 'EARNING',
+      category: 'ALLOWANCE',
+      calculation: 'FIXED',
+    })
+  )
+  const compProposal = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/compensation/proposals`, {
+      effectiveDate: '2026-02-01',
+      reason: 'Proposta A',
+      lines: [{ componentId: payComponent.id, action: 'SET', amount: '1000' }],
+    })
+  )
+  const ruleSet = ok(
+    await as(client, s).post('/api/v1/hr/payroll/rule-sets', {
+      code: 'REGRAS-A',
+      name: 'Regras A',
+      currency: 'AOA',
+      validFrom: '2026-01-01',
+      inssEmployeeRate: '1',
+      inssEmployerRate: '1',
+      baseIrtSubject: true,
+      baseInssSubject: true,
+      irtBaseDeductsInss: false,
+      dayBasis: 'FIXED_30',
+      legalReference: 'Valores de teste',
+      brackets: [{ lower: '0', upper: null, fixedAmount: '0', rate: '0', excessOver: '0' }],
+    })
+  )
+  const payrollRun = ok(
+    await as(client, s).post('/api/v1/hr/payroll/runs', {
+      legalEntityId: employee.legalEntityId,
+      period: '2026-03',
+      kind: 'EXTRA',
+    })
+  )
+  const competency = ok(
+    await as(client, s).post('/api/v1/hr/training/competencies', {
+      code: 'COMP-A',
+      name: 'Competência A',
+    })
+  )
+  const course = ok(
+    await as(client, s).post('/api/v1/hr/training/courses', {
+      code: 'CUR-A',
+      name: 'Curso A',
+      mode: 'INTERNAL',
+      durationHours: '8',
+    })
+  )
+  const trainingSession = ok(
+    await as(client, s).post('/api/v1/hr/training/sessions', {
+      courseId: course.id,
+      startsOn: '2026-03-01',
+      endsOn: '2026-03-02',
+    })
+  )
+  const certificate = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/certificates`, {
+      name: 'Certificado A',
+      issuer: 'Entidade A',
+      issuedOn: '2026-01-10',
+    })
+  )
+  const disciplinaryCase = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/discipline/cases`, {
+      category: 'OTHER',
+      occurredOn: '2026-01-10',
+      summary: 'Processo A',
+      description: 'Descrição dos factos do processo A.',
+    })
+  )
+  const loan = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/loans`, {
+      kind: 'ADVANCE',
+      currency: 'AOA',
+      principal: '1000',
+      installmentsCount: 1,
+      firstPeriod: '2030-01',
+      reason: 'Adiantamento A',
+    })
+  )
+  const leaveRequest = ok(
+    await as(client, s).post('/api/v1/hr/leave/requests', {
+      employeeId: employee.id,
+      leaveTypeId: leaveType.id,
+      startDate: '2026-02-02',
+      endDate: '2026-02-03',
+    })
+  )
+  const contract = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${employee.id}/contracts`, {
+      code: 'CT-A',
+      contractType: 'PERMANENT',
+      startDate: '2026-01-05',
+      weeklyHours: '40',
+      currency: 'AOA',
+      baseSalary: '200000',
+    })
+  )
+  const leaver = ok(
+    await as(client, s).post('/api/v1/hr/employees', {
+      code: 'COL-A2',
+      fullName: 'Colaborador A2',
+      legalEntityId: le.id,
+      hireDate: '2026-01-05',
+    })
+  )
+  const leaverContract = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${leaver.id}/contracts`, {
+      code: 'CT-A2',
+      contractType: 'PERMANENT',
+      startDate: '2026-01-05',
+      weeklyHours: '40',
+      currency: 'AOA',
+      baseSalary: '200000',
+    })
+  )
+  ok(
+    await as(client, s).post(`/api/v1/hr/contracts/${leaverContract.id}/activate`, {
+      expectedVersion: leaverContract.version,
+    }),
+    200
+  )
+  const termination = ok(
+    await as(client, s).post(`/api/v1/hr/employees/${leaver.id}/terminations`, {
+      reason: 'RESIGNATION',
+      details: 'Denúncia do contrato pelo colaborador A2.',
+      lastWorkingDay: '2026-12-31',
+      indemnityApplicable: false,
+    })
+  )
+  const uom = ok(
+    await as(client, s).post('/api/v1/inventory/settings/uoms', {
+      code: 'UNA',
+      name: 'Unidade A',
+      category: 'UNIT',
+    })
+  )
+  const productCategory = ok(
+    await as(client, s).post('/api/v1/inventory/settings/categories', {
+      code: 'CATA',
+      name: 'Categoria A',
+    })
+  )
+  const brand = ok(
+    await as(client, s).post('/api/v1/inventory/settings/brands', {
+      code: 'MARCA',
+      name: 'Marca A',
+    })
+  )
+  const product = ok(
+    await as(client, s).post('/api/v1/inventory/products', {
+      sku: 'SKU-A',
+      barcode: 'INT-A-001',
+      name: 'Produto A',
+      productType: 'STOCKABLE',
+      baseUomId: uom.id,
+    })
+  )
+  const withVariant = ok(
+    await as(client, s).post(`/api/v1/inventory/products/${product.id}/variants`, {
+      sku: 'SKU-A-V',
+      attributes: { Cor: 'Azul' },
+    })
+  )
+  const variant = withVariant.variants[0]
+  const warehouse = ok(
+    await as(client, s).post('/api/v1/inventory/warehouses', {
+      code: 'ARM-A',
+      name: 'Armazém A',
+      legalEntityId: le.id,
+      warehouseType: 'MAIN',
+    })
+  )
+  const withLocation = ok(
+    await as(client, s).post(`/api/v1/inventory/warehouses/${warehouse.id}/locations`, {
+      code: 'ZA',
+    })
+  )
+  const location = withLocation.locations[0]
+  const ctxA = (await as(client, s).get('/api/v1/context')).body().data
+  const stock = await runInTenant(
+    { tenantId: tenant.id, userId: admin.id, membershipId: ctxA.membershipId, requestId: 'matriz' },
+    (scope) =>
+      postStock(scope, {
+        type: 'RECEIPT',
+        idempotencyKey: 'matriz-stock-1',
+        sourceType: 'TEST',
+        lines: [
+          {
+            warehouseId: warehouse.id,
+            productId: product.id,
+            variantId: variant.id,
+            bucket: 'UNRESTRICTED',
+            quantity: '3',
+          },
+        ],
+      })
+  )
+  const stockPosting = stock.posting
+  // Lote e série (8.8).
+  const lotted = ok(
+    await as(client, s).post('/api/v1/inventory/products', {
+      sku: 'LOTE-A',
+      name: 'Produto com lote A',
+      productType: 'STOCKABLE',
+      baseUomId: uom.id,
+      trackLots: true,
+      trackSerials: true,
+    })
+  )
+  await runInTenant(
+    { tenantId: tenant.id, userId: admin.id, membershipId: ctxA.membershipId, requestId: 'matriz' },
+    (scope) =>
+      postStock(scope, {
+        type: 'RECEIPT',
+        idempotencyKey: 'matriz-lote-1',
+        sourceType: 'TEST',
+        lines: [
+          {
+            warehouseId: warehouse.id,
+            productId: lotted.id,
+            bucket: 'UNRESTRICTED',
+            quantity: '1',
+            lotCode: 'LA-1',
+            serials: ['SN-A-1'],
+          },
+        ],
+      })
+  )
+  const stockLot = (await as(client, s).get(`/api/v1/inventory/lots?productId=${lotted.id}`)).body()
+    .data[0]
+  const stockSerial = (await as(client, s).get('/api/v1/inventory/serials?q=SN-A-1')).body().data[0]
+  const warehouse2 = ok(
+    await as(client, s).post('/api/v1/inventory/warehouses', {
+      code: 'ARM-A2',
+      name: 'Armazém A2',
+      legalEntityId: le.id,
+      warehouseType: 'STORE',
+    })
+  )
+  const reqDept = ok(
+    await as(client, s).post('/api/v1/organization/departments', {
+      code: 'DREQ',
+      name: 'Departamento requisitante',
+      legalEntityId: le.id,
+    })
+  )
+  const stockRequisition = ok(
+    await as(client, s).post('/api/v1/inventory/requisitions', {
+      warehouseId: warehouse.id,
+      departmentId: reqDept.id,
+      purpose: 'Consumo interno A',
+      lines: [{ productId: product.id, variantId: variant.id, quantity: '1' }],
+    })
+  )
+  const stockTransfer = ok(
+    await as(client, s).post('/api/v1/inventory/transfers', {
+      sourceWarehouseId: warehouse.id,
+      destWarehouseId: warehouse2.id,
+      lines: [{ productId: product.id, variantId: variant.id, quantity: '1' }],
+    })
+  )
+  const stockDocument = ok(
+    await as(client, s).post('/api/v1/inventory/documents', {
+      docType: 'RECEIPT',
+      warehouseId: warehouse.id,
+      origin: 'PURCHASE',
+      lines: [{ productId: product.id, variantId: variant.id, uomId: uom.id, quantity: '2' }],
+    })
+  )
+  const stockCount = ok(
+    await as(client, s).post('/api/v1/inventory/counts', {
+      warehouseId: warehouse.id,
+      description: 'Contagem A',
+    })
+  )
+  const docType = ok(
+    await as(client, s).post('/api/v1/procurement/settings/document-types', {
+      code: 'CERT-A',
+      name: 'Certidão A',
+    })
+  )
+  const criterion = ok(
+    await as(client, s).post('/api/v1/procurement/settings/criteria', {
+      code: 'CRIT-A',
+      name: 'Critério A',
+    })
+  )
+  let supplier = ok(
+    await as(client, s).post('/api/v1/procurement/suppliers', {
+      supplierType: 'GOODS',
+      currency: 'AOA',
+      partner: {
+        code: 'FORN-A',
+        name: 'Fornecedor A',
+        partnerType: 'ORGANIZATION',
+        taxId: '5000099001',
+        countryCode: 'AO',
+      },
+    })
+  )
+  supplier = ok(
+    await as(client, s).post(`/api/v1/procurement/suppliers/${supplier.id}/contacts`, {
+      name: 'Contacto A',
+      email: 'a@forn.ao',
+    })
+  )
+  supplier = ok(
+    await as(client, s).post(`/api/v1/procurement/suppliers/${supplier.id}/bank-accounts`, {
+      holderName: 'Fornecedor A',
+      bankName: 'Banco A',
+      iban: 'AO84000600000123456789012',
+    })
+  )
+  supplier = ok(
+    await as(client, s).post(`/api/v1/procurement/suppliers/${supplier.id}/documents`, {
+      documentTypeId: docType.id,
+      number: 'DOC-A',
+    })
+  )
+  ok(
+    await as(client, s).post('/api/v1/document-series', {
+      legalEntityId: le.id,
+      documentType: 'PURCHASE_REQUISITION',
+      code: 'RCA',
+      prefix: 'RCA-',
+    })
+  )
+  const approvalLevel = ok(
+    await as(client, s).post('/api/v1/procurement/approval-levels', {
+      code: 'NIVEL-A',
+      name: 'Nível A',
+      sequence: 1,
+      minAmount: '0',
+    })
+  )
+  const purchaseRequisition = ok(
+    await as(client, s).post('/api/v1/procurement/requisitions', {
+      departmentId: reqDept.id,
+      neededBy: '2026-12-31',
+      purpose: 'Compra A',
+      lines: [{ description: 'Papel A4', quantity: '10', estimatedUnitPrice: '5' }],
+    })
+  )
+  const rfq = ok(
+    await as(client, s).post('/api/v1/procurement/rfqs', {
+      legalEntityId: le.id,
+      title: 'Cotação A',
+      closesAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+      lines: [{ description: 'Papel A4', quantity: '10' }],
+    })
+  )
+  // Adjudicação da empresa A inserida directamente (a API exige propostas abertas; aqui só interessa o isolamento).
+  const rfqAward = (
+    await db.connection('owner').rawQuery(
+      `insert into rfq_awards (tenant_id, rfq_id, price_weight, delivery_weight, quality_weight, payment_weight,
+          base_currency, rate_date, justification) values (?, ?, 100, 0, 0, 0, 'AOA', current_date, 'Isolamento')
+       returning id`,
+      [tenant.id, rfq.id]
+    )
+  ).rows[0] as { id: string }
+  // Ordem de compra da empresa A inserida directamente (o fornecedor A não está homologado; só interessa o isolamento).
+  const purchaseOrder = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_orders (tenant_id, legal_entity_id, supplier_id, currency, order_date)
+       values (?, ?, ?, 'AOA', current_date) returning id`,
+      [tenant.id, le.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
+  // Contrato e adenda da empresa A inseridos directamente (só interessa o isolamento).
+  const purchaseContract = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_contracts (tenant_id, legal_entity_id, supplier_id, title, object, currency, start_date,
+          end_date, max_amount) values (?, ?, ?, 'Contrato A', 'Objecto A', 'AOA', current_date, current_date + 30, 1000)
+       returning id`,
+      [tenant.id, le.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
+  const contractAmendment = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_contract_amendments (tenant_id, contract_id, amendment_no, kind, reason, effective_date,
+          proposed, requested_by) values (?, ?, 1, 'CHANGE', 'Isolamento', current_date, '{}', ?) returning id`,
+      [tenant.id, purchaseContract.id, admin.id]
+    )
+  ).rows[0] as { id: string }
+  // Recepção da empresa A inserida directamente (só interessa o isolamento).
+  const purchaseReceipt = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_receipts (tenant_id, legal_entity_id, order_id, supplier_id, receipt_date)
+       values (?, ?, ?, ?, current_date) returning id`,
+      [tenant.id, le.id, purchaseOrder.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
+  // Factura da empresa A inserida directamente (só interessa o isolamento).
+  const purchaseInvoice = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_invoices (tenant_id, legal_entity_id, supplier_id, order_id, invoice_number, invoice_number_key,
+          invoice_date, due_date, currency, declared_total) values (?, ?, ?, ?, 'FA-1', 'FA-1', current_date, current_date,
+          'AOA', 0) returning id`,
+      [tenant.id, le.id, supplier.id, purchaseOrder.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    purchaseInvoice,
+    purchaseReceipt,
+    purchaseContract,
+    contractAmendment,
+    purchaseOrder,
+    rfq,
+    rfqAward,
+    purchaseRequisition,
+    approvalLevel,
+    supplier,
+    supplierDocType: docType,
+    supplierCriterion: criterion,
+    stockLot,
+    stockSerial,
+    stockCount,
+    stockRequisition,
+    stockTransfer,
+    stockDocument,
+    stockPosting,
+    warehouse,
+    location,
+    uom,
+    productCategory,
+    brand,
+    product,
+    variant,
+    leaver,
+    termination,
+    employee,
+    requisition,
+    candidate,
+    application,
+    interview,
+    offer,
+    onboardingTask,
+    contract,
+    leavePolicy,
+    leaveType,
+    leaveRequest,
+    payComponent,
+    compProposal,
+    loan,
+    competency,
+    course,
+    trainingSession,
+    certificate,
+    disciplinaryCase,
+    ruleSet,
+    payrollRun,
     closeTask,
     stmtTemplate,
     stmtNote,
@@ -363,6 +940,1056 @@ test.group('isolamento | matriz entre empresas', (group) => {
       ['PATCH perfil', B.patch(`/api/v1/roles/${a.role.id}`, { ...v, name: 'x' })],
       ['DELETE perfil', B.delete(`/api/v1/roles/${a.role.id}`)],
       ['GET membro', B.get(`/api/v1/members/${a.member}`)],
+      ['GET colaborador', B.get(`/api/v1/hr/employees/${a.employee.id}`)],
+      [
+        'PATCH colaborador',
+        B.patch(`/api/v1/hr/employees/${a.employee.id}`, { ...v, fullName: 'xx' }),
+      ],
+      [
+        'suspender colaborador',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/status`, { ...v, status: 'SUSPENDED' }),
+      ],
+      ['GET vaga', B.get(`/api/v1/hr/requisitions/${a.requisition.id}`)],
+      ['PATCH vaga', B.patch(`/api/v1/hr/requisitions/${a.requisition.id}`, { ...v, title: 'xx' })],
+      ['submeter vaga', B.post(`/api/v1/hr/requisitions/${a.requisition.id}/submit`, v)],
+      [
+        'decidir vaga',
+        B.post(`/api/v1/hr/requisitions/${a.requisition.id}/decision`, {
+          ...v,
+          decision: 'APPROVE',
+        }),
+      ],
+      ['fechar vaga', B.post(`/api/v1/hr/requisitions/${a.requisition.id}/close`, v)],
+      ['cancelar vaga', B.post(`/api/v1/hr/requisitions/${a.requisition.id}/cancel`, v)],
+      ['GET candidato', B.get(`/api/v1/hr/candidates/${a.candidate.id}`)],
+      ['PATCH candidato', B.patch(`/api/v1/hr/candidates/${a.candidate.id}`, { ...v, notes: 'x' })],
+      ['GET candidatura', B.get(`/api/v1/hr/applications/${a.application.id}`)],
+      [
+        'etapa da candidatura',
+        B.post(`/api/v1/hr/applications/${a.application.id}/stage`, {
+          ...v,
+          stage: 'REJECTED',
+          reason: 'x',
+        }),
+      ],
+      [
+        'marcar entrevista',
+        B.post(`/api/v1/hr/applications/${a.application.id}/interviews`, {
+          scheduledAt: '2030-01-11T10:00:00Z',
+          mode: 'PHONE',
+          interviewerMembershipId: a.member,
+        }),
+      ],
+      [
+        'PATCH entrevista',
+        B.patch(`/api/v1/hr/interviews/${a.interview.id}`, { ...v, status: 'DONE' }),
+      ],
+      [
+        'avaliar candidatura',
+        B.post(`/api/v1/hr/applications/${a.application.id}/evaluations`, {
+          score: 3,
+          recommendation: 'HOLD',
+        }),
+      ],
+      [
+        'nova proposta',
+        B.post(`/api/v1/hr/applications/${a.application.id}/offers`, {
+          salary: '150000',
+          startDate: '2030-02-01',
+        }),
+      ],
+      ['PATCH proposta', B.patch(`/api/v1/hr/offers/${a.offer.id}`, { ...v, salary: '160000' })],
+      ['submeter proposta', B.post(`/api/v1/hr/offers/${a.offer.id}/submit`, v)],
+      [
+        'decidir proposta',
+        B.post(`/api/v1/hr/offers/${a.offer.id}/decision`, { ...v, decision: 'APPROVE' }),
+      ],
+      [
+        'responder proposta',
+        B.post(`/api/v1/hr/offers/${a.offer.id}/response`, { ...v, accepted: true }),
+      ],
+      ['cancelar proposta', B.post(`/api/v1/hr/offers/${a.offer.id}/cancel`, v)],
+      ['contratar', B.post(`/api/v1/hr/offers/${a.offer.id}/hire`, { ...v, code: 'X1' })],
+      ['GET contratos', B.get(`/api/v1/hr/employees/${a.employee.id}/contracts`)],
+      [
+        'novo contrato',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/contracts`, {
+          code: 'X',
+          contractType: 'PERMANENT',
+          startDate: '2026-02-01',
+          weeklyHours: '40',
+          currency: 'AOA',
+          baseSalary: '1',
+        }),
+      ],
+      ['GET contrato', B.get(`/api/v1/hr/contracts/${a.contract.id}`)],
+      ['PATCH contrato', B.patch(`/api/v1/hr/contracts/${a.contract.id}`, { ...v, notes: 'x' })],
+      ['activar contrato', B.post(`/api/v1/hr/contracts/${a.contract.id}/activate`, v)],
+      ['cancelar contrato', B.post(`/api/v1/hr/contracts/${a.contract.id}/cancel`, v)],
+      [
+        'terminar contrato',
+        B.post(`/api/v1/hr/contracts/${a.contract.id}/terminate`, {
+          ...v,
+          date: '2026-03-01',
+          reason: 'x',
+        }),
+      ],
+      [
+        'adenda',
+        B.post(`/api/v1/hr/contracts/${a.contract.id}/amendments`, {
+          ...v,
+          kind: 'CHANGE',
+          effectiveDate: '2026-03-01',
+          baseSalary: '1',
+          reason: 'xxx',
+        }),
+      ],
+      ['GET política de férias', B.get(`/api/v1/hr/leave/policies/${a.leavePolicy.id}`)],
+      [
+        'PATCH política de férias',
+        B.patch(`/api/v1/hr/leave/policies/${a.leavePolicy.id}`, { ...v, name: 'xxxx' }),
+      ],
+      ['publicar política', B.post(`/api/v1/hr/leave/policies/${a.leavePolicy.id}/publish`, v)],
+      [
+        'PATCH tipo de ausência',
+        B.patch(`/api/v1/hr/leave/types/${a.leaveType.id}`, { ...v, name: 'xx' }),
+      ],
+      ['GET pedido de ausência', B.get(`/api/v1/hr/leave/requests/${a.leaveRequest.id}`)],
+      [
+        'decidir ausência',
+        B.post(`/api/v1/hr/leave/requests/${a.leaveRequest.id}/decision`, {
+          ...v,
+          decision: 'APPROVE',
+        }),
+      ],
+      ['cancelar ausência', B.post(`/api/v1/hr/leave/requests/${a.leaveRequest.id}/cancel`, v)],
+      ['GET saldo de férias', B.get(`/api/v1/hr/employees/${a.employee.id}/leave`)],
+      [
+        'ajustar saldo',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/leave/adjustments`, {
+          year: 2026,
+          days: '1',
+          reason: 'xxx',
+        }),
+      ],
+      [
+        'pedir ausência para colaborador de A',
+        B.post('/api/v1/hr/leave/requests', {
+          employeeId: a.employee.id,
+          leaveTypeId: a.leaveType.id,
+          startDate: '2026-03-02',
+          endDate: '2026-03-03',
+        }),
+      ],
+      [
+        'pré-visualizar ausência de A',
+        B.post('/api/v1/hr/leave/requests/preview', {
+          employeeId: a.employee.id,
+          leaveTypeId: a.leaveType.id,
+          startDate: '2026-03-02',
+          endDate: '2026-03-03',
+        }),
+      ],
+      ['GET componente', B.get(`/api/v1/hr/pay-components/${a.payComponent.id}`)],
+      [
+        'PATCH componente',
+        B.patch(`/api/v1/hr/pay-components/${a.payComponent.id}`, { ...v, name: 'xx' }),
+      ],
+      [
+        'incidência de componente',
+        B.post(`/api/v1/hr/pay-components/${a.payComponent.id}/incidences`, {
+          validFrom: '2026-01-01',
+          irtSubject: true,
+          inssSubject: true,
+          legalReference: 'xxxxx',
+        }),
+      ],
+      ['GET remuneração', B.get(`/api/v1/hr/employees/${a.employee.id}/compensation`)],
+      [
+        'nova proposta de compensação',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/compensation/proposals`, {
+          effectiveDate: '2026-03-01',
+          reason: 'xxx',
+          lines: [{ componentId: a.payComponent.id, action: 'SET', amount: '1' }],
+        }),
+      ],
+      ['GET proposta', B.get(`/api/v1/hr/compensation/proposals/${a.compProposal.id}`)],
+      [
+        'PATCH proposta',
+        B.patch(`/api/v1/hr/compensation/proposals/${a.compProposal.id}`, { ...v, reason: 'xxx' }),
+      ],
+      [
+        'submeter proposta',
+        B.post(`/api/v1/hr/compensation/proposals/${a.compProposal.id}/submit`, v),
+      ],
+      [
+        'decidir proposta',
+        B.post(`/api/v1/hr/compensation/proposals/${a.compProposal.id}/decision`, {
+          ...v,
+          decision: 'APPROVE',
+        }),
+      ],
+      [
+        'cancelar proposta',
+        B.post(`/api/v1/hr/compensation/proposals/${a.compProposal.id}/cancel`, v),
+      ],
+      ['GET empréstimos do colaborador', B.get(`/api/v1/hr/employees/${a.employee.id}/loans`)],
+      [
+        'novo empréstimo',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/loans`, {
+          kind: 'ADVANCE',
+          currency: 'AOA',
+          principal: '1',
+          installmentsCount: 1,
+          firstPeriod: '2030-01',
+          reason: 'xxx',
+        }),
+      ],
+      ['GET empréstimo', B.get(`/api/v1/hr/loans/${a.loan.id}`)],
+      ['PATCH empréstimo', B.patch(`/api/v1/hr/loans/${a.loan.id}`, { ...v, reason: 'xxx' })],
+      ['submeter empréstimo', B.post(`/api/v1/hr/loans/${a.loan.id}/submit`, v)],
+      [
+        'decidir empréstimo',
+        B.post(`/api/v1/hr/loans/${a.loan.id}/decision`, { ...v, decision: 'APPROVE' }),
+      ],
+      ['cancelar empréstimo', B.post(`/api/v1/hr/loans/${a.loan.id}/cancel`, v)],
+      [
+        'pagar prestação',
+        B.post(`/api/v1/hr/loans/${a.loan.id}/installments/${a.loan.id}/payment`, {
+          ...v,
+          reference: 'X',
+          paidOn: '2026-01-01',
+        }),
+      ],
+      ['GET regras de processamento', B.get(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}`)],
+      [
+        'PATCH regras',
+        B.patch(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}`, { ...v, name: 'xxx' }),
+      ],
+      ['publicar regras', B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/publish`, v)],
+      ['verificar casos', B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/verify`)],
+      [
+        'simular regras',
+        B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/simulate`, { baseSalary: '1' }),
+      ],
+      [
+        'confirmar regras',
+        B.post(`/api/v1/hr/payroll/rule-sets/${a.ruleSet.id}/confirm`, { ...v, note: 'xxxxxx' }),
+      ],
+      ['GET lote', B.get(`/api/v1/hr/payroll/runs/${a.payrollRun.id}`)],
+      ['GET pagamentos do lote', B.get(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/payments`)],
+      [
+        'pagar obrigação',
+        B.post(`/api/v1/hr/payroll/obligations/${a.payrollRun.id}/payments`, {
+          ...v,
+          amount: '1',
+          paidOn: '2026-01-01',
+          reference: 'X',
+        }),
+      ],
+      ['contabilizar lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/accounting`)],
+      ['GET recibo PDF', B.get(`/api/v1/hr/payslips/${a.payrollRun.id}`)],
+      [
+        'GET recibo',
+        B.get(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/results/${a.payrollRun.id}`),
+      ],
+      [
+        'valor variável',
+        B.put(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/inputs`, {
+          ...v,
+          employeeId: a.employee.id,
+          componentId: a.payComponent.id,
+          amount: '1',
+        }),
+      ],
+      [
+        'excluir do lote',
+        B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/exclusions`, {
+          ...v,
+          employeeId: a.employee.id,
+          excluded: true,
+        }),
+      ],
+      ['calcular lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/calculate`, v)],
+      ['submeter lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/submit`, v)],
+      [
+        'decidir lote',
+        B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/decision`, {
+          ...v,
+          decision: 'APPROVE',
+        }),
+      ],
+      ['fechar lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/close`, v)],
+      ['cancelar lote', B.post(`/api/v1/hr/payroll/runs/${a.payrollRun.id}/cancel`, v)],
+      [
+        'meses de outra empresa',
+        B.get(`/api/v1/hr/payroll/periods?legalEntityId=${a.employee.legalEntityId}`),
+      ],
+      [
+        'PATCH competência',
+        B.patch(`/api/v1/hr/training/competencies/${a.competency.id}`, { name: 'xxx' }),
+      ],
+      ['PATCH curso', B.patch(`/api/v1/hr/training/courses/${a.course.id}`, { name: 'xxx' })],
+      ['GET sessão de formação', B.get(`/api/v1/hr/training/sessions/${a.trainingSession.id}`)],
+      [
+        'inscrever na sessão',
+        B.post(`/api/v1/hr/training/sessions/${a.trainingSession.id}/enrollments`, {
+          ...v,
+          employeeIds: [a.employee.id],
+        }),
+      ],
+      [
+        'concluir sessão',
+        B.post(`/api/v1/hr/training/sessions/${a.trainingSession.id}/complete`, v),
+      ],
+      ['cancelar sessão', B.post(`/api/v1/hr/training/sessions/${a.trainingSession.id}/cancel`, v)],
+      [
+        'resultado de inscrição',
+        B.post(`/api/v1/hr/training/enrollments/${a.trainingSession.id}/result`, {
+          ...v,
+          status: 'PASSED',
+        }),
+      ],
+      ['GET formação do colaborador', B.get(`/api/v1/hr/employees/${a.employee.id}/training`)],
+      [
+        'avaliar competência',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/competencies`, {
+          competencyId: a.competency.id,
+          level: 1,
+          acquiredOn: '2026-01-01',
+        }),
+      ],
+      [
+        'certificado noutra empresa',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/certificates`, {
+          name: 'X',
+          issuer: 'Y',
+          issuedOn: '2026-01-01',
+        }),
+      ],
+      ['GET processo disciplinar', B.get(`/api/v1/hr/discipline/cases/${a.disciplinaryCase.id}`)],
+      [
+        'abrir processo',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/discipline/cases`, {
+          category: 'OTHER',
+          occurredOn: '2026-01-01',
+          summary: 'xxx',
+          description: 'xxxxxxxxxxxx',
+        }),
+      ],
+      [
+        'registo no processo',
+        B.post(`/api/v1/hr/discipline/cases/${a.disciplinaryCase.id}/events`, {
+          ...v,
+          kind: 'NOTE',
+          occurredOn: '2026-01-11',
+          text: 'xxx',
+        }),
+      ],
+      [
+        'instruir processo',
+        B.post(`/api/v1/hr/discipline/cases/${a.disciplinaryCase.id}/review`, v),
+      ],
+      [
+        'encerrar processo',
+        B.post(`/api/v1/hr/discipline/cases/${a.disciplinaryCase.id}/close`, {
+          ...v,
+          outcome: 'NO_ACTION',
+          decidedOn: '2026-01-11',
+          outcomeDetails: 'xxx',
+        }),
+      ],
+      [
+        'anexos do certificado',
+        B.get(`/api/v1/attachments?subjectType=employee_certificate&subjectId=${a.certificate.id}`),
+      ],
+      [
+        'anexos do processo',
+        B.get(
+          `/api/v1/attachments?subjectType=disciplinary_case&subjectId=${a.disciplinaryCase.id}`
+        ),
+      ],
+      ['GET documento de stock', B.get(`/api/v1/inventory/documents/${a.stockDocument.id}`)],
+      [
+        'PUT documento de stock',
+        B.put(`/api/v1/inventory/documents/${a.stockDocument.id}`, {
+          ...v,
+          origin: 'OTHER',
+          lines: [],
+        }),
+      ],
+      [
+        'conferir documento alheio',
+        B.post(`/api/v1/inventory/documents/${a.stockDocument.id}/check`, { ...v, lines: [] }),
+      ],
+      [
+        'confirmar documento alheio',
+        B.post(`/api/v1/inventory/documents/${a.stockDocument.id}/confirm`, {
+          ...v,
+          idempotencyKey: 'matriz-b-confirm',
+        }),
+      ],
+      [
+        'anular documento alheio',
+        B.post(`/api/v1/inventory/documents/${a.stockDocument.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      [
+        'GET valorização de produto alheio',
+        B.get(`/api/v1/inventory/valuation/products/${a.product.id}?legalEntityId=${a.le.id}`),
+      ],
+      [
+        'ajustar custo alheio',
+        B.post('/api/v1/inventory/valuation/adjustments', {
+          legalEntityId: a.le.id,
+          productId: a.product.id,
+          amount: '10',
+          reason: 'x',
+          idempotencyKey: 'matriz-ajuste-1',
+        }),
+      ],
+      [
+        'reconciliação de entidade alheia',
+        B.get(`/api/v1/inventory/valuation/reconciliation?legalEntityId=${a.le.id}`),
+      ],
+      [
+        'contas de valorização alheias',
+        B.get(`/api/v1/inventory/valuation/accounts?legalEntityId=${a.le.id}`),
+      ],
+      [
+        'integrar recepção no armazém alheio',
+        B.post('/api/v1/inventory/integrations/purchase-receipts', {
+          idempotencyKey: 'matriz-int-1',
+          warehouseId: a.warehouse.id,
+          orderRef: 'PO-X',
+          documentRef: 'R-X',
+          lines: [{ productId: a.product.id, quantity: '1', unitCost: '1' }],
+        }),
+      ],
+      [
+        'estado de encomenda no armazém alheio',
+        B.get(
+          `/api/v1/inventory/integrations/sales-orders?warehouseId=${a.warehouse.id}&orderRef=X`
+        ),
+      ],
+      [
+        'reposição no armazém alheio',
+        B.get(`/api/v1/inventory/reports/replenishment?warehouseId=${a.warehouse.id}`),
+      ],
+      [
+        'validades no armazém alheio',
+        B.get(`/api/v1/inventory/reports/expiry?warehouseId=${a.warehouse.id}`),
+      ],
+      [
+        'movimentos do armazém alheio',
+        B.get(
+          `/api/v1/inventory/reports/movements?warehouseId=${a.warehouse.id}&from=2026-01-01&to=2026-12-31`
+        ),
+      ],
+      [
+        'inventário valorizado da entidade alheia',
+        B.get(`/api/v1/inventory/reports/valued?legalEntityId=${a.le.id}`),
+      ],
+      [
+        'GET requisição de compra',
+        B.get(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}`),
+      ],
+      [
+        'alterar requisição de compra alheia',
+        B.put(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}`, {
+          ...v,
+          departmentId: a.purchaseRequisition.department.id,
+          lines: [],
+        }),
+      ],
+      [
+        'submeter requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/submit`, v),
+      ],
+      [
+        'aprovar requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/approve`, v),
+      ],
+      [
+        'recusar requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/reject`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'anular requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'fechar requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/close`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'copiar requisição alheia',
+        B.post(`/api/v1/procurement/requisitions/${a.purchaseRequisition.id}/copy`),
+      ],
+      [
+        'alterar etapa de aprovação alheia',
+        B.patch(`/api/v1/procurement/approval-levels/${a.approvalLevel.id}`, {
+          ...v,
+          name: 'Outra',
+        }),
+      ],
+      ['GET pedido de cotação', B.get(`/api/v1/procurement/rfqs/${a.rfq.id}`)],
+      [
+        'alterar pedido de cotação alheio',
+        B.put(`/api/v1/procurement/rfqs/${a.rfq.id}`, { ...v, title: 'Outro', lines: [] }),
+      ],
+      [
+        'convidar para pedido de cotação alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/invitations`, { supplierIds: [] }),
+      ],
+      ['emitir pedido de cotação alheio', B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/issue`, v)],
+      [
+        'rever pedido de cotação alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/amend`, { ...v, reason: 'x' }),
+      ],
+      [
+        'registar proposta em pedido alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/quotes`, { supplierId: a.supplier.id }),
+      ],
+      ['abrir propostas de pedido alheio', B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/open`, v)],
+      [
+        'anular pedido de cotação alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['mapa comparativo alheio', B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/comparison`, {})],
+      [
+        'adjudicar pedido alheio',
+        B.post(`/api/v1/procurement/rfqs/${a.rfq.id}/awards`, { justification: 'x', lines: [] }),
+      ],
+      ['GET adjudicação', B.get(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}`)],
+      [
+        'alterar adjudicação alheia',
+        B.put(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'submeter adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/submit`, v),
+      ],
+      [
+        'aprovar adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/approve`, v),
+      ],
+      [
+        'recusar adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/reject`, { ...v, reason: 'x' }),
+      ],
+      [
+        'anular adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['GET ordem de compra', B.get(`/api/v1/procurement/orders/${a.purchaseOrder.id}`)],
+      [
+        'alterar ordem de compra alheia',
+        B.put(`/api/v1/procurement/orders/${a.purchaseOrder.id}`, { ...v, lines: [] }),
+      ],
+      ['submit ordem alheia', B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/submit`, v)],
+      [
+        'approve ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/approve`, v),
+      ],
+      ['issue ordem alheia', B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/issue`, v)],
+      [
+        'reject ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/reject`, { ...v, reason: 'x' }),
+      ],
+      [
+        'revise ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/revise`, { ...v, reason: 'x' }),
+      ],
+      [
+        'cancel ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      [
+        'close ordem alheia',
+        B.post(`/api/v1/procurement/orders/${a.purchaseOrder.id}/close`, { ...v, reason: 'x' }),
+      ],
+      [
+        'ordens de adjudicação alheia',
+        B.post(`/api/v1/procurement/rfq-awards/${a.rfqAward.id}/orders`),
+      ],
+      ['GET contrato', B.get(`/api/v1/procurement/contracts/${a.purchaseContract.id}`)],
+      [
+        'alterar contrato alheio',
+        B.put(`/api/v1/procurement/contracts/${a.purchaseContract.id}`, { ...v, title: 'Outro' }),
+      ],
+      [
+        'submit contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/submit`, v),
+      ],
+      [
+        'approve contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/approve`, v),
+      ],
+      [
+        'reactivate contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/reactivate`, v),
+      ],
+      [
+        'reject contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/reject`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'suspend contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/suspend`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'terminate contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/terminate`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'cancel contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'adenda a contrato alheio',
+        B.post(`/api/v1/procurement/contracts/${a.purchaseContract.id}/amendments`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'approve adenda alheia',
+        B.post(`/api/v1/procurement/contract-amendments/${a.contractAmendment.id}/approve`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'reject adenda alheia',
+        B.post(`/api/v1/procurement/contract-amendments/${a.contractAmendment.id}/reject`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'cancel adenda alheia',
+        B.post(`/api/v1/procurement/contract-amendments/${a.contractAmendment.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      ['GET recepção', B.get(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}`)],
+      [
+        'ordem alheia por receber',
+        B.get(`/api/v1/procurement/receipts/orders/${a.purchaseOrder.id}`),
+      ],
+      [
+        'recepção de ordem alheia',
+        B.post('/api/v1/procurement/receipts', { orderId: a.purchaseOrder.id, lines: [] }),
+      ],
+      [
+        'alterar recepção alheia',
+        B.put(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'confirmar recepção alheia',
+        B.post(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}/confirm`, v),
+      ],
+      [
+        'anular recepção alheia',
+        B.post(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'estornar recepção alheia',
+        B.post(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}/reverse`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      ['GET factura de fornecedor', B.get(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}`)],
+      [
+        'ordem alheia por facturar',
+        B.get(`/api/v1/procurement/invoices/orders/${a.purchaseOrder.id}`),
+      ],
+      [
+        'factura de ordem alheia',
+        B.post('/api/v1/procurement/invoices', {
+          orderId: a.purchaseOrder.id,
+          invoiceNumber: 'X',
+          lines: [],
+        }),
+      ],
+      [
+        'alterar factura alheia',
+        B.put(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'validar factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/validate`, v),
+      ],
+      [
+        'approve factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/approve`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'reject factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/reject`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'refuse factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/refuse`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'cancel factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      ['GET fornecedor', B.get(`/api/v1/procurement/suppliers/${a.supplier.id}`)],
+      [
+        'alterar fornecedor alheio',
+        B.patch(`/api/v1/procurement/suppliers/${a.supplier.id}`, { ...v, paymentTermsDays: 1 }),
+      ],
+      [
+        'contacto no fornecedor alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/contacts`, {
+          name: 'X',
+          email: 'x@x.ao',
+        }),
+      ],
+      [
+        'alterar contacto alheio',
+        B.patch(
+          `/api/v1/procurement/suppliers/${a.supplier.id}/contacts/${a.supplier.partner.contacts[0].id}`,
+          { ...v, name: 'Outro' }
+        ),
+      ],
+      [
+        'conta bancária no fornecedor alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/bank-accounts`, {
+          holderName: 'X',
+          bankName: 'X',
+          iban: 'AO44004000000987654321098',
+        }),
+      ],
+      [
+        'aprovar conta bancária alheia',
+        B.post(
+          `/api/v1/procurement/supplier-bank-accounts/${a.supplier.bankAccounts[0].id}/approve`,
+          v
+        ),
+      ],
+      [
+        'documento no fornecedor alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/documents`, {
+          documentTypeId: a.supplierDocType.id,
+        }),
+      ],
+      [
+        'desactivar documento alheio',
+        B.post(`/api/v1/procurement/supplier-documents/${a.supplier.documents[0].id}/deactivate`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'pedir homologação alheia',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/submit`, { ...v, items: [] }),
+      ],
+      ['homologar alheio', B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/approve`, v)],
+      [
+        'recusar alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/reject`, { ...v, reason: 'x' }),
+      ],
+      [
+        'suspender alheio',
+        B.post(`/api/v1/procurement/suppliers/${a.supplier.id}/suspend`, { ...v, reason: 'x' }),
+      ],
+      [
+        'alterar critério alheio',
+        B.patch(`/api/v1/procurement/settings/criteria/${a.supplierCriterion.id}`, {
+          ...v,
+          name: 'Outro',
+        }),
+      ],
+      [
+        'alterar tipo de documento alheio',
+        B.patch(`/api/v1/procurement/settings/document-types/${a.supplierDocType.id}`, {
+          ...v,
+          name: 'Outro',
+        }),
+      ],
+      ['GET lote', B.get(`/api/v1/inventory/lots/${a.stockLot.id}`)],
+      [
+        'bloquear lote alheio',
+        B.post(`/api/v1/inventory/lots/${a.stockLot.id}/block`, { ...v, reason: 'x' }),
+      ],
+      [
+        'desbloquear lote alheio',
+        B.post(`/api/v1/inventory/lots/${a.stockLot.id}/unblock`, { ...v, reason: 'x' }),
+      ],
+      [
+        'recolher lote alheio',
+        B.post(`/api/v1/inventory/lots/${a.stockLot.id}/recall`, { ...v, reason: 'x' }),
+      ],
+      ['GET série', B.get(`/api/v1/inventory/serials/${a.stockSerial.id}`)],
+      ['GET contagem', B.get(`/api/v1/inventory/counts/${a.stockCount.id}`)],
+      [
+        'PUT contagem',
+        B.put(`/api/v1/inventory/counts/${a.stockCount.id}`, { ...v, description: 'x' }),
+      ],
+      ['iniciar contagem alheia', B.post(`/api/v1/inventory/counts/${a.stockCount.id}/start`, v)],
+      [
+        'contar contagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/count`, { ...v, lines: [] }),
+      ],
+      [
+        'acrescentar linha a contagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/lines`, {
+          ...v,
+          productId: a.product.id,
+        }),
+      ],
+      ['submeter contagem alheia', B.post(`/api/v1/inventory/counts/${a.stockCount.id}/submit`, v)],
+      [
+        'justificar contagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/justify`, { ...v, lines: [] }),
+      ],
+      [
+        'pedir recontagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/recount`, {
+          ...v,
+          reason: 'x',
+          lineIds: [],
+        }),
+      ],
+      ['aprovar contagem alheia', B.post(`/api/v1/inventory/counts/${a.stockCount.id}/approve`, v)],
+      [
+        'anular contagem alheia',
+        B.post(`/api/v1/inventory/counts/${a.stockCount.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['GET requisição', B.get(`/api/v1/inventory/requisitions/${a.stockRequisition.id}`)],
+      [
+        'PUT requisição',
+        B.put(`/api/v1/inventory/requisitions/${a.stockRequisition.id}`, {
+          ...v,
+          purpose: 'x',
+          lines: [],
+        }),
+      ],
+      [
+        'submeter requisição alheia',
+        B.post(`/api/v1/inventory/requisitions/${a.stockRequisition.id}/submit`, v),
+      ],
+      [
+        'aprovar requisição alheia',
+        B.post(`/api/v1/inventory/requisitions/${a.stockRequisition.id}/approve`, v),
+      ],
+      [
+        'anular requisição alheia',
+        B.post(`/api/v1/inventory/requisitions/${a.stockRequisition.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      ['GET transferência', B.get(`/api/v1/inventory/transfers/${a.stockTransfer.id}`)],
+      [
+        'PUT transferência',
+        B.put(`/api/v1/inventory/transfers/${a.stockTransfer.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'submeter transferência alheia',
+        B.post(`/api/v1/inventory/transfers/${a.stockTransfer.id}/submit`, v),
+      ],
+      [
+        'aprovar transferência alheia',
+        B.post(`/api/v1/inventory/transfers/${a.stockTransfer.id}/approve`, v),
+      ],
+      [
+        'anular transferência alheia',
+        B.post(`/api/v1/inventory/transfers/${a.stockTransfer.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      [
+        'lançamento de stock alheio',
+        B.get(`/api/v1/inventory/stock/postings/${a.stockPosting.id}`),
+      ],
+      [
+        'mudança de estado em armazém alheio',
+        B.post('/api/v1/inventory/stock/status-changes', {
+          warehouseId: a.warehouse.id,
+          productId: a.product.id,
+          variantId: a.variant.id,
+          from: 'UNRESTRICTED',
+          to: 'BLOCKED',
+          quantity: '1',
+          reason: 'x',
+          idempotencyKey: 'matriz-b-status',
+        }),
+      ],
+      ['GET armazém', B.get(`/api/v1/inventory/warehouses/${a.warehouse.id}`)],
+      [
+        'PATCH armazém',
+        B.patch(`/api/v1/inventory/warehouses/${a.warehouse.id}`, { ...v, name: 'xxx' }),
+      ],
+      [
+        'localização em armazém alheio',
+        B.post(`/api/v1/inventory/warehouses/${a.warehouse.id}/locations`, { code: 'ZB' }),
+      ],
+      [
+        'PATCH localização',
+        B.patch(`/api/v1/inventory/warehouse-locations/${a.location.id}`, { ...v, name: 'x' }),
+      ],
+      [
+        'acesso a armazém alheio',
+        B.put(`/api/v1/inventory/warehouses/${a.warehouse.id}/access`, {
+          membershipId: a.warehouse.id,
+          level: 'VIEW',
+        }),
+      ],
+      ['GET produto', B.get(`/api/v1/inventory/products/${a.product.id}`)],
+      [
+        'PATCH produto',
+        B.patch(`/api/v1/inventory/products/${a.product.id}`, { ...v, name: 'xx' }),
+      ],
+      ['procura por SKU alheio', B.get('/api/v1/inventory/products/lookup?code=SKU-A')],
+      ['procura por código alheio', B.get('/api/v1/inventory/products/lookup?code=INT-A-001')],
+      [
+        'variante em produto alheio',
+        B.post(`/api/v1/inventory/products/${a.product.id}/variants`, {
+          sku: 'SKU-B-V',
+          attributes: { Cor: 'Verde' },
+        }),
+      ],
+      [
+        'PATCH variante',
+        B.patch(`/api/v1/inventory/product-variants/${a.variant.id}`, { ...v, status: 'INACTIVE' }),
+      ],
+      [
+        'PATCH unidade',
+        B.patch(`/api/v1/inventory/settings/uoms/${a.uom.id}`, { ...v, name: 'x' }),
+      ],
+      [
+        'PATCH categoria de produto',
+        B.patch(`/api/v1/inventory/settings/categories/${a.productCategory.id}`, {
+          ...v,
+          name: 'x',
+        }),
+      ],
+      [
+        'PATCH marca',
+        B.patch(`/api/v1/inventory/settings/brands/${a.brand.id}`, { ...v, name: 'x' }),
+      ],
+      [
+        'anexos do produto',
+        B.get(`/api/v1/attachments?subjectType=product&subjectId=${a.product.id}`),
+      ],
+      ['GET cessação', B.get(`/api/v1/hr/terminations/${a.termination.id}`)],
+      [
+        'abrir cessação',
+        B.post(`/api/v1/hr/employees/${a.leaver.id}/terminations`, {
+          reason: 'RESIGNATION',
+          details: 'xxxx',
+          lastWorkingDay: '2026-12-31',
+          indemnityApplicable: false,
+        }),
+      ],
+      [
+        'PATCH cessação',
+        B.patch(`/api/v1/hr/terminations/${a.termination.id}`, { ...v, details: 'xxxx' }),
+      ],
+      [
+        'linha da liquidação',
+        B.post(`/api/v1/hr/terminations/${a.termination.id}/lines`, {
+          ...v,
+          kind: 'OTHER_EARNING',
+          componentId: a.payComponent.id,
+          description: 'xxx',
+          amount: '1',
+          basis: 'xxx',
+        }),
+      ],
+      ['submeter cessação', B.post(`/api/v1/hr/terminations/${a.termination.id}/submit`, v)],
+      [
+        'decidir cessação',
+        B.post(`/api/v1/hr/terminations/${a.termination.id}/decision`, { ...v, approve: true }),
+      ],
+      [
+        'cancelar cessação',
+        B.post(`/api/v1/hr/terminations/${a.termination.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      ['liquidação final', B.post(`/api/v1/hr/terminations/${a.termination.id}/settlement`, v)],
+      ['concluir cessação', B.post(`/api/v1/hr/terminations/${a.termination.id}/complete`, v)],
+      [
+        'tarefa da cessação',
+        B.post(`/api/v1/hr/terminations/${a.termination.id}/tasks`, {
+          ...v,
+          category: 'OTHER',
+          title: 'xxxx',
+        }),
+      ],
+      [
+        'estado da tarefa',
+        B.patch(`/api/v1/hr/termination-tasks/${a.termination.tasks[0].id}`, {
+          ...v,
+          status: 'DONE',
+        }),
+      ],
+      [
+        'anexos da cessação',
+        B.get(`/api/v1/attachments?subjectType=employee_termination&subjectId=${a.termination.id}`),
+      ],
+      ['GET carreira', B.get(`/api/v1/hr/employees/${a.employee.id}/assignments`)],
+      [
+        'movimento',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/assignments`, {
+          ...v,
+          kind: 'CHANGE',
+          effectiveDate: '2026-03-01',
+          managerId: null,
+          reason: 'xxx',
+        }),
+      ],
+      ['GET onboarding', B.get(`/api/v1/hr/employees/${a.employee.id}/onboarding`)],
+      [
+        'nova tarefa de onboarding',
+        B.post(`/api/v1/hr/employees/${a.employee.id}/onboarding`, {
+          category: 'OTHER',
+          title: 'xx',
+        }),
+      ],
+      [
+        'PATCH tarefa de onboarding',
+        B.patch(`/api/v1/hr/onboarding-tasks/${a.onboardingTask.id}`, { ...v, status: 'DONE' }),
+      ],
       ['GET dimensão', B.get(`/api/v1/accounting/dimensions/${a.dimension.id}`)],
       [
         'PATCH dimensão',
@@ -607,6 +2234,12 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.deepEqual(wrong, [])
 
     // Referências a ids de A em escritas de B: recusadas (nunca ligam linhas de empresas diferentes).
+    const crossRun = await B.post('/api/v1/hr/payroll/runs', {
+      legalEntityId: a.employee.legalEntityId,
+      period: '2026-04',
+      kind: 'EXTRA',
+    })
+    crossRun.assertStatus(422)
     const crossRef = await B.post('/api/v1/organization/branches', {
       code: 'BRX',
       name: 'Filial cruzada',
@@ -614,6 +2247,7 @@ test.group('isolamento | matriz entre empresas', (group) => {
     })
     assert.include([404, 422], crossRef.status())
     ;(await upload(client, b, 'legal_entity', a.le.id)).assertStatus(404)
+    ;(await upload(client, b, 'employee', a.employee.id)).assertStatus(404)
     const wfCross = await B.post('/api/v1/approvals/workflows', {
       code: 'WFX',
       name: 'Workflow cruzado',
@@ -759,6 +2393,119 @@ test.group('isolamento | matriz entre empresas', (group) => {
       nature: 'ASSET',
     })
     crossAccount.assertStatus(422)
+    // Um colaborador de B não se liga à estrutura de A.
+    const crossEmployee = await B.post('/api/v1/hr/employees', {
+      code: 'COL-X',
+      fullName: 'Cruzado',
+      legalEntityId: a.le.id,
+      hireDate: '2026-01-05',
+    })
+    assert.include([403, 404, 422], crossEmployee.status())
+    const crossManager = await B.post('/api/v1/hr/employees', {
+      code: 'COL-Y',
+      fullName: 'Cruzado',
+      legalEntityId: leB.id,
+      managerId: a.employee.id,
+      hireDate: '2026-01-05',
+    })
+    crossManager.assertStatus(422)
+    // Candidatura de B com a vaga ou o candidato de A: recusada (inexistentes para B).
+    const crossApplication = await B.post('/api/v1/hr/applications', {
+      requisitionId: a.requisition.id,
+      candidateId: a.candidate.id,
+    })
+    assert.equal(crossApplication.status(), 422)
+    // As listas de B não trazem nada de A.
+    for (const url of [
+      '/api/v1/hr/requisitions',
+      '/api/v1/hr/candidates',
+      '/api/v1/hr/applications',
+    ])
+      assert.lengthOf((await B.get(url)).body().data, 0, url)
+    assert.lengthOf((await B.get('/api/v1/hr/interviews/mine')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/loans')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/payroll/runs')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/payslips')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/training/sessions')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/training/courses')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/discipline/cases')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/hr/terminations')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/products')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/warehouses')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/stock/balances')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/documents')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/transfers')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/requisitions')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/reservations')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/counts')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/lots')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/valuation')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/integrations/events')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/accounting-events')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/serials')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/suppliers')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/requisitions')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/requisitions/demand')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/approval-levels')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/settings/criteria')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/procurement/settings/document-types')).body().data, 0)
+    assert.deepEqual(
+      (await B.get('/api/v1/procurement/suppliers/lookup?countryCode=AO&taxId=5000099001')).body()
+        .data,
+      { partner: null, supplierId: null }
+    )
+    assert.lengthOf((await B.get('/api/v1/inventory/reports/replenishment')).body().data, 0)
+    assert.lengthOf((await B.get('/api/v1/inventory/reports/expiry')).body().data, 0)
+    assert.lengthOf(
+      (await B.get('/api/v1/inventory/reports/movements?from=2026-01-01&to=2026-12-31')).body().data
+        .rows,
+      0
+    )
+    assert.notInclude(
+      JSON.stringify((await B.get('/api/v1/inventory/counts/options')).body().data),
+      a.warehouse.id
+    )
+    assert.notInclude(
+      JSON.stringify((await B.get('/api/v1/inventory/requisitions/options')).body().data),
+      a.warehouse.id
+    )
+    assert.notInclude(
+      JSON.stringify((await B.get('/api/v1/inventory/transfers/destinations')).body().data),
+      a.warehouse.id
+    )
+    assert.lengthOf((await B.get('/api/v1/inventory/stock/movements')).body().data, 0)
+    assert.lengthOf(
+      (await B.get(`/api/v1/inventory/stock/balances?warehouseId=${a.warehouse.id}`)).body().data,
+      0
+    )
+    assert.equal(
+      (await B.get(`/api/v1/inventory/stock/reconciliation?warehouseId=${a.warehouse.id}`)).body()
+        .data.checked,
+      0
+    )
+    assert.lengthOf((await B.get('/api/v1/inventory/settings/uoms')).body().data, 0)
+    const hc = (await B.get('/api/v1/hr/reports/headcount')).body().data
+    assert.notInclude(JSON.stringify(hc), a.le.id)
+    assert.notInclude(
+      JSON.stringify((await B.get('/api/v1/hr/reports/leave?year=2026')).body().data),
+      'Colaborador A'
+    )
+    assert.equal(
+      (await B.get(`/api/v1/hr/reports/payroll?year=2026&legalEntityId=${a.le.id}`)).status(),
+      404
+    )
+    assert.lengthOf((await B.get('/api/v1/hr/payroll/rule-sets')).body().data, 0)
+    for (const url of [
+      '/api/v1/hr/leave/requests',
+      '/api/v1/hr/leave/types',
+      '/api/v1/hr/leave/policies',
+    ])
+      assert.lengthOf((await B.get(url)).body().data, 0, url)
+    // Gerar direitos em B não toca colaboradores de A.
+    const accrual = (
+      await B.post('/api/v1/hr/leave/accruals', { year: 2026, employeeIds: [a.employee.id] })
+    ).body().data
+    assert.equal(accrual.created + accrual.adjusted + accrual.unchanged + accrual.skipped.length, 0)
     // Eventos de B com a entidade legal de A não usam as regras de A.
     const crossEvent = await B.post('/api/v1/accounting/posting-events', {
       legalEntityId: a.le.id,
@@ -804,6 +2551,63 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/bank-accounts/${a.bank.id}`,
       '/api/v1/accounting/entries',
       `/api/v1/accounting/charts/${a.chart.id}`,
+      '/api/v1/hr/employees',
+      `/api/v1/hr/employees/${a.employee.id}`,
+      '/api/v1/hr/requisitions',
+      `/api/v1/hr/applications/${a.application.id}`,
+      '/api/v1/hr/candidates',
+      '/api/v1/hr/settings',
+      `/api/v1/hr/contracts/${a.contract.id}`,
+      `/api/v1/hr/employees/${a.employee.id}/assignments`,
+      '/api/v1/hr/leave/requests',
+      `/api/v1/hr/employees/${a.employee.id}/leave`,
+      `/api/v1/hr/employees/${a.employee.id}/compensation`,
+      '/api/v1/hr/compensation/proposals',
+      '/api/v1/hr/loans',
+      '/api/v1/hr/payroll/runs',
+      '/api/v1/hr/payroll/rule-sets',
+      '/api/v1/hr/training/sessions',
+      '/api/v1/hr/discipline/cases',
+      '/api/v1/hr/terminations',
+      '/api/v1/inventory/products',
+      '/api/v1/inventory/settings/categories',
+      '/api/v1/inventory/warehouses',
+      '/api/v1/inventory/stock/balances',
+      '/api/v1/inventory/documents',
+      '/api/v1/inventory/transfers',
+      '/api/v1/inventory/requisitions',
+      '/api/v1/inventory/reservations',
+      '/api/v1/inventory/counts',
+      '/api/v1/inventory/lots',
+      '/api/v1/inventory/serials',
+      '/api/v1/inventory/valuation',
+      '/api/v1/inventory/integrations/events',
+      '/api/v1/inventory/accounting-events',
+      '/api/v1/inventory/reports/replenishment',
+      '/api/v1/procurement/suppliers',
+      '/api/v1/procurement/requisitions',
+      `/api/v1/procurement/requisitions/${a.purchaseRequisition.id}`,
+      `/api/v1/procurement/suppliers/${a.supplier.id}`,
+      '/api/v1/procurement/rfqs',
+      `/api/v1/procurement/rfqs/${a.rfq.id}`,
+      `/api/v1/procurement/rfq-awards/${a.rfqAward.id}`,
+      '/api/v1/procurement/orders',
+      '/api/v1/procurement/contracts',
+      '/api/v1/procurement/receipts',
+      '/api/v1/procurement/invoices',
+      `/api/v1/procurement/invoices/${a.purchaseInvoice.id}`,
+      '/api/v1/procurement/receipts/expected',
+      `/api/v1/procurement/receipts/${a.purchaseReceipt.id}`,
+      `/api/v1/procurement/contracts/${a.purchaseContract.id}`,
+      `/api/v1/procurement/orders/${a.purchaseOrder.id}`,
+      '/api/v1/procurement/rfqs?pendingAward=true',
+      '/api/v1/inventory/reports/expiry',
+      '/api/v1/inventory/stock/movements',
+      '/api/v1/hr/me',
+      '/api/v1/hr/team',
+      '/api/v1/hr/reports/headcount',
+      '/api/v1/hr/reports/payroll?year=2026',
+      `/api/v1/hr/employees/${a.employee.id}/loans`,
     ]) {
       const r = await spoof.get(url)
       assert.equal(r.status(), 403, url)

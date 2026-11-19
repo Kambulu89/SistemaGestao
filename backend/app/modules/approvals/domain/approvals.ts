@@ -3,10 +3,17 @@ import { isUuid } from '#shared/db/sql'
 
 /**
  * Assuntos que podem ser aprovados: `manual` (pedido avulso, sem registo associado) e os registos de módulos que
- * submetem aprovações (`bank_account`: alteração de dados bancários institucionais). Cada módulo regista o efeito
+ * submetem aprovações (`bank_account`: alteração de dados bancários institucionais; `job_requisition` e `job_offer`:
+ * vagas e propostas do recrutamento; `compensation_proposal`: alterações de compensação). Cada módulo regista o efeito
  * da conclusão no próprio módulo (`registerSubjectHandler`).
  */
-export const SUBJECT_TYPES = ['manual', 'bank_account'] as const
+export const SUBJECT_TYPES = [
+  'manual',
+  'bank_account',
+  'job_requisition',
+  'job_offer',
+  'compensation_proposal',
+] as const
 export type SubjectType = (typeof SUBJECT_TYPES)[number]
 
 export type WorkflowStatus = 'DRAFT' | 'ACTIVE' | 'RETIRED'

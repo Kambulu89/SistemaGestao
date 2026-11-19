@@ -180,6 +180,29 @@ export const routes: Routes = [
             loadComponent: () => import('./admin/audit').then((m) => m.Audit),
           },
           {
+            path: 'inventario',
+            title: 'Inventário',
+            canActivate: [accessGuard],
+            data: { feature: 'inventory' },
+            loadChildren: () =>
+              import('./inventory/inventory.routes').then((m) => m.INVENTORY_ROUTES),
+          },
+          {
+            path: 'compras',
+            title: 'Compras',
+            canActivate: [accessGuard],
+            data: { feature: 'procurement' },
+            loadChildren: () =>
+              import('./procurement/procurement.routes').then((m) => m.PROCUREMENT_ROUTES),
+          },
+          {
+            path: 'rh',
+            title: 'Recursos humanos',
+            canActivate: [accessGuard],
+            data: { feature: 'hr' },
+            loadChildren: () => import('./hr/hr.routes').then((m) => m.HR_ROUTES),
+          },
+          {
             path: 'contabilidade',
             title: 'Contabilidade',
             ...page('accounting.read', 'accounting'),

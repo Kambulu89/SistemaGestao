@@ -145,7 +145,7 @@ export class CommandPalette {
   private readonly pages = computed(() =>
     flatNavigation(
       visibleNavigation(
-        (p) => this.workspace.can(p),
+        (p, any) => (any ? this.workspace.canAny(p) : this.workspace.can(p)),
         (f) => this.workspace.has(f),
         this.workspace.context() !== null,
         this.session.user()?.isPlatformAdmin === true,

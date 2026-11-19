@@ -26,8 +26,8 @@ export interface Column<T = Record<string, unknown>> {
   sortable?: boolean;
   /** Texto da célula (por omissão `row[key]`). */
   value?: (row: T) => unknown;
-  /** Liga a célula ao detalhe. */
-  link?: (row: T) => string | unknown[];
+  /** Liga a célula ao detalhe (sem ligação nas linhas em que devolve `null`). */
+  link?: (row: T) => string | unknown[] | null;
   align?: 'start' | 'end';
   /** Esconde a coluna em ecrãs pequenos. */
   hideOnMobile?: boolean;
@@ -151,7 +151,7 @@ export class CellDef {
                     >
                       @if (cellTemplate(c.key); as tpl) {
                         <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row }" />
-                      } @else if (c.link) {
+                      } @else if (c.link && c.link(row)) {
                         <a class="btn-link" [routerLink]="$any(c.link(row))">{{
                           display(c, row)
                         }}</a>

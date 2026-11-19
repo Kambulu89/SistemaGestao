@@ -168,6 +168,456 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     module: 'accounting',
     description: 'Contabilizar aquisições, depreciações e abates de activos fixos (e anulá-los).',
   },
+  {
+    code: 'hr.read',
+    module: 'hr',
+    description: 'Ver colaboradores (dados profissionais) no âmbito atribuído.',
+  },
+  {
+    code: 'hr.manage',
+    module: 'hr',
+    description:
+      'Criar e alterar fichas de colaboradores, suspender e reactivar, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.sensitive',
+    module: 'hr',
+    description:
+      'Ver e alterar dados pessoais (documentos, NIF, segurança social, morada, banco) e anexos dos colaboradores no âmbito atribuído.',
+  },
+  {
+    code: 'hr.recruitment.read',
+    module: 'hr',
+    description:
+      'Ver vagas, candidatos, candidaturas, entrevistas e propostas no âmbito atribuído.',
+  },
+  {
+    code: 'hr.recruitment.manage',
+    module: 'hr',
+    description:
+      'Criar vagas e candidatos, gerir candidaturas, entrevistas e propostas, e contratar, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.recruitment.approve',
+    module: 'hr',
+    description:
+      'Aprovar vagas (remuneração autorizada) e propostas no âmbito atribuído, sem ser quem as preparou.',
+  },
+  {
+    code: 'hr.contracts.read',
+    module: 'hr',
+    description:
+      'Ver contratos de trabalho (condições, remuneração, adendas e histórico) no âmbito atribuído.',
+  },
+  {
+    code: 'hr.contracts.manage',
+    module: 'hr',
+    description:
+      'Criar, activar, suspender, terminar e alterar por adenda ou renovação contratos de trabalho no âmbito atribuído.',
+  },
+  {
+    code: 'hr.leave.read',
+    module: 'hr',
+    description:
+      'Ver pedidos de ausência e saldos de férias dos colaboradores no âmbito atribuído.',
+  },
+  {
+    code: 'hr.leave.request',
+    module: 'hr',
+    description: 'Pedir férias e ausências para si próprio (self-service).',
+  },
+  {
+    code: 'hr.leave.approve',
+    module: 'hr',
+    description: 'Aprovar ou recusar pedidos de ausência no âmbito atribuído (nunca os próprios).',
+  },
+  {
+    code: 'hr.leave.manage',
+    module: 'hr',
+    description:
+      'Registar ausências por conta dos colaboradores, gerar direitos de férias, ajustar saldos e cancelar ausências aprovadas, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.leave.settings',
+    module: 'hr',
+    description:
+      'Configurar tipos de ausência e políticas de férias (versionadas, com fonte legal).',
+  },
+  {
+    code: 'hr.compensation.read',
+    module: 'hr',
+    description:
+      'Ver a remuneração dos colaboradores (componentes, histórico e propostas) no âmbito atribuído.',
+  },
+  {
+    code: 'hr.compensation.manage',
+    module: 'hr',
+    description: 'Preparar e submeter propostas de compensação no âmbito atribuído.',
+  },
+  {
+    code: 'hr.compensation.approve',
+    module: 'hr',
+    description:
+      'Aprovar propostas de compensação no âmbito atribuído, nunca as que preparou nem a sua própria remuneração.',
+  },
+  {
+    code: 'hr.compensation.settings',
+    module: 'hr',
+    description:
+      'Configurar componentes de remuneração e a incidência de IRT e INSS por vigência (com fonte legal).',
+  },
+  {
+    code: 'hr.loans.read',
+    module: 'hr',
+    description:
+      'Ver adiantamentos e empréstimos dos colaboradores (plano de prestações e saldo) no âmbito atribuído.',
+  },
+  {
+    code: 'hr.loans.manage',
+    module: 'hr',
+    description:
+      'Preparar, submeter e cancelar pedidos de adiantamento ou empréstimo e registar pagamentos directos de prestações, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.loans.approve',
+    module: 'hr',
+    description:
+      'Aprovar adiantamentos e empréstimos no âmbito atribuído, nunca os que preparou nem os seus.',
+  },
+  {
+    code: 'hr.payroll.read',
+    module: 'hr',
+    description:
+      'Ver processamentos salariais (lotes, recibos calculados e erros) da empresa ou das entidades legais atribuídas.',
+  },
+  {
+    code: 'hr.payroll.manage',
+    module: 'hr',
+    description:
+      'Preparar, calcular (simular), submeter, fechar e cancelar processamentos salariais da empresa ou das entidades legais atribuídas.',
+  },
+  {
+    code: 'hr.payroll.approve',
+    module: 'hr',
+    description:
+      'Aprovar processamentos salariais da empresa ou das entidades legais atribuídas, nunca os que preparou ou calculou nem um lote com o próprio recibo.',
+  },
+  {
+    code: 'hr.payroll.pay',
+    module: 'hr',
+    description:
+      'Registar pagamentos dos salários e das obrigações (IRT, INSS, descontos) de lotes fechados, da empresa ou das entidades legais atribuídas.',
+  },
+  {
+    code: 'hr.payroll.settings',
+    module: 'hr',
+    description:
+      'Configurar as regras de processamento (taxas de INSS, tabela de IRT, incidência do salário base) por vigência e com fonte.',
+  },
+  {
+    code: 'hr.training.read',
+    module: 'hr',
+    description:
+      'Ver sessões de formação e a formação, competências e certificados dos colaboradores no âmbito atribuído (o próprio com OWN).',
+  },
+  {
+    code: 'hr.training.manage',
+    module: 'hr',
+    description:
+      'Planear sessões de formação, inscrever, registar resultados, concluir e registar competências e certificados, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.training.settings',
+    module: 'hr',
+    description: 'Configurar o catálogo de formação: competências e cursos.',
+  },
+  {
+    code: 'hr.discipline.read',
+    module: 'hr',
+    description:
+      'Consultar processos disciplinares no âmbito atribuído (acesso restrito e auditado; nunca os próprios).',
+  },
+  {
+    code: 'hr.discipline.manage',
+    module: 'hr',
+    description:
+      'Abrir e instruir processos disciplinares e registar a decisão, no âmbito atribuído (nunca os próprios).',
+  },
+  {
+    code: 'hr.terminations.read',
+    module: 'hr',
+    description:
+      'Consultar processos de cessação, liquidação final e checklist de saída no âmbito atribuído (nunca o próprio).',
+  },
+  {
+    code: 'hr.terminations.manage',
+    module: 'hr',
+    description:
+      'Preparar cessações (motivo, aviso, indemnização com base legal, liquidação final), gerar o lote da liquidação e tratar a checklist de saída, no âmbito atribuído.',
+  },
+  {
+    code: 'hr.terminations.approve',
+    module: 'hr',
+    description:
+      'Aprovar ou devolver cessações no âmbito atribuído (nunca as que preparou ou submeteu); a aprovação termina o contrato.',
+  },
+  {
+    code: 'hr.reports.read',
+    module: 'hr',
+    description:
+      'Ver relatórios de RH (efectivos, rotatividade, férias) no âmbito atribuído; a folha salarial exige hr.payroll.read.',
+  },
+  {
+    code: 'hr.settings',
+    module: 'hr',
+    description:
+      'Configurar os recursos humanos (workflows de aprovação e limites de adiantamentos e empréstimos, com fonte).',
+  },
+  {
+    code: 'inventory.read',
+    module: 'inventory',
+    description:
+      'Consultar o catálogo do inventário: produtos, variantes, unidades, categorias e marcas.',
+  },
+  {
+    code: 'inventory.products.manage',
+    module: 'inventory',
+    description:
+      'Criar e alterar produtos e serviços, variantes, conversões de unidades, kits e imagens do produto.',
+  },
+  {
+    code: 'inventory.warehouses.manage',
+    module: 'inventory',
+    description:
+      'Criar e alterar armazéns, localizações e a lista de acesso, no âmbito atribuído (entidade legal ou filial).',
+  },
+  {
+    code: 'inventory.stock.manage',
+    module: 'inventory',
+    description:
+      'Mudar o estado do stock (livre, bloqueado, quarentena) nos armazéns do âmbito atribuído (entidade legal ou filial).',
+  },
+  {
+    code: 'inventory.documents.manage',
+    module: 'inventory',
+    description:
+      'Criar, editar, conferir, reabrir e anular documentos de entrada e saída de stock no âmbito atribuído.',
+  },
+  {
+    code: 'inventory.documents.confirm',
+    module: 'inventory',
+    description:
+      'Confirmar documentos de entrada e saída (movimenta o stock), fechar saldos e estornar confirmações no âmbito atribuído.',
+  },
+  {
+    code: 'inventory.transfers.manage',
+    module: 'inventory',
+    description:
+      'Pedir, separar e expedir transferências (no armazém de origem) e recebê-las (no de destino), no âmbito atribuído.',
+  },
+  {
+    code: 'inventory.transfers.approve',
+    module: 'inventory',
+    description:
+      'Aprovar ou rejeitar transferências (origem), aceitar as intragrupo e fechar perdas em trânsito (destino), no âmbito atribuído.',
+  },
+  {
+    code: 'inventory.requisitions.request',
+    module: 'inventory',
+    description:
+      'Criar e submeter requisições internas de stock para os departamentos do âmbito atribuído (ou só as próprias).',
+  },
+  {
+    code: 'inventory.requisitions.approve',
+    module: 'inventory',
+    description:
+      'Aprovar (reserva o stock) ou rejeitar requisições internas dos departamentos do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.requisitions.fulfil',
+    module: 'inventory',
+    description:
+      'Separar, entregar (consumo) e libertar requisições internas nos armazéns do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.counts.manage',
+    module: 'inventory',
+    description:
+      'Planear, iniciar e registar contagens físicas, acrescentar artigos encontrados e submeter para revisão nos armazéns do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.counts.approve',
+    module: 'inventory',
+    description:
+      'Rever contagens (ver o sistema nas cegas), justificar diferenças, pedir recontagem e aprovar o ajuste de stock nos armazéns do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.lots.manage',
+    module: 'inventory',
+    description:
+      'Bloquear, desbloquear e recolher lotes (o stock livre do lote passa a bloqueado) quando todos os armazéns com stock do lote estão no âmbito atribuído.',
+  },
+  {
+    code: 'inventory.valuation.read',
+    module: 'inventory',
+    description:
+      'Consultar o valor do stock (custo médio, camadas, livro de custo) e a reconciliação com a contabilidade das entidades legais do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.valuation.manage',
+    module: 'inventory',
+    description:
+      'Ajustar o custo do stock existente e configurar as contas da reconciliação das entidades legais do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.integrations.post',
+    module: 'inventory',
+    description:
+      'Integrar operações de Compras e Vendas (recepções de compra, reservas, entregas e devoluções de venda) nos armazéns do âmbito atribuído, pela API.',
+  },
+  {
+    code: 'inventory.accounting.manage',
+    module: 'inventory',
+    description:
+      'Ver e voltar a enviar ao motor de contabilização os eventos contabilísticos do inventário das entidades legais do âmbito atribuído.',
+  },
+  {
+    code: 'inventory.settings',
+    module: 'inventory',
+    description:
+      'Configurar o catálogo: unidades de medida, categorias (com classe contabilística) e marcas.',
+  },
+  {
+    code: 'procurement.suppliers.read',
+    module: 'procurement',
+    description:
+      'Consultar fornecedores, documentos, homologações e histórico (dados bancários mascarados).',
+  },
+  {
+    code: 'procurement.suppliers.manage',
+    module: 'procurement',
+    description:
+      'Criar e alterar fornecedores e a ficha do terceiro, contactos, documentos e contas bancárias, e pedir homologação.',
+  },
+  {
+    code: 'procurement.suppliers.approve',
+    module: 'procurement',
+    description:
+      'Homologar, recusar e suspender fornecedores e aprovar contas bancárias (nunca o que a própria pessoa pediu).',
+  },
+  {
+    code: 'procurement.suppliers.bank',
+    module: 'procurement',
+    description:
+      'Ver os dados bancários dos fornecedores por inteiro (sem esta permissão vêm mascarados).',
+  },
+  {
+    code: 'procurement.requisitions.request',
+    module: 'procurement',
+    description:
+      'Criar requisições de compra para os departamentos do âmbito (ou só as próprias), pedir aprovação, anular e copiar.',
+  },
+  {
+    code: 'procurement.requisitions.approve',
+    module: 'procurement',
+    description:
+      'Decidir as etapas de aprovação das requisições do âmbito (nunca as próprias nem duas etapas da mesma requisição).',
+  },
+  {
+    code: 'procurement.requisitions.process',
+    module: 'procurement',
+    description:
+      'Tratar requisições aprovadas da entidade ou filial: necessidades consolidadas e fecho do que fica por encomendar.',
+  },
+  {
+    code: 'procurement.rfqs.read',
+    module: 'procurement',
+    description:
+      'Consultar pedidos de cotação das entidades do âmbito, convidados, histórico e propostas (valores só depois da abertura).',
+  },
+  {
+    code: 'procurement.rfqs.manage',
+    module: 'procurement',
+    description:
+      'Criar, emitir, rever e anular pedidos de cotação, convidar fornecedores homologados, registar propostas e abri-las.',
+  },
+  {
+    code: 'procurement.rfqs.approve',
+    module: 'procurement',
+    description:
+      'Aprovar ou recusar adjudicações de pedidos de cotação das entidades do âmbito (nunca as que a própria pessoa submeteu).',
+  },
+  {
+    code: 'procurement.orders.read',
+    module: 'procurement',
+    description:
+      'Consultar ordens de compra das entidades do âmbito, linhas, aprovação, revisões e histórico.',
+  },
+  {
+    code: 'procurement.orders.manage',
+    module: 'procurement',
+    description:
+      'Criar e alterar ordens de compra, pedir aprovação, emitir, rever, anular e fechar o que fica por receber.',
+  },
+  {
+    code: 'procurement.orders.approve',
+    module: 'procurement',
+    description:
+      'Decidir as etapas de aprovação das ordens de compra do âmbito (nunca as que a própria pessoa submeteu nem duas etapas da mesma ronda).',
+  },
+  {
+    code: 'procurement.contracts.read',
+    module: 'procurement',
+    description:
+      'Consultar contratos de fornecedor das entidades do âmbito, preços, SLA, adendas e consumo.',
+  },
+  {
+    code: 'procurement.contracts.manage',
+    module: 'procurement',
+    description:
+      'Criar contratos, pedir aprovação, propor adendas e renovações, suspender, reactivar, terminar e anular.',
+  },
+  {
+    code: 'procurement.contracts.approve',
+    module: 'procurement',
+    description:
+      'Aprovar ou recusar contratos e adendas das entidades do âmbito (nunca os que a própria pessoa submeteu ou propôs).',
+  },
+  {
+    code: 'procurement.receipts.read',
+    module: 'procurement',
+    description: 'Consultar recepções de compra e entregas previstas das entidades do âmbito.',
+  },
+  {
+    code: 'procurement.receipts.manage',
+    module: 'procurement',
+    description:
+      'Registar e confirmar recepções (entrada no inventário e aceitação de serviços), anular rascunhos e estornar.',
+  },
+  {
+    code: 'procurement.invoices.read',
+    module: 'procurement',
+    description:
+      'Consultar facturas de fornecedor das entidades do âmbito, conferência e divergências.',
+  },
+  {
+    code: 'procurement.invoices.manage',
+    module: 'procurement',
+    description:
+      'Registar facturas de fornecedor, pedir a validação (conferência a três), devolver ao fornecedor e anular.',
+  },
+  {
+    code: 'procurement.invoices.approve',
+    module: 'procurement',
+    description:
+      'Autorizar ou recusar as excepções da conferência das facturas do âmbito (nunca as que a própria pessoa pediu).',
+  },
+  {
+    code: 'procurement.settings',
+    module: 'procurement',
+    description:
+      'Configurar as compras: tipos de documento exigidos, critérios de homologação, etapas de aprovação e tolerâncias da conferência de facturas.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

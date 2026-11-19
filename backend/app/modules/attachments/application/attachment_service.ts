@@ -7,12 +7,28 @@ import { audit } from '#modules/audit/index'
 import { canViewRequest } from '#modules/approvals/index'
 import { ORGANIZATION_ENTITY_TYPES, organizationRecordExists } from '#modules/organization/index'
 import {
+  certificateAccess,
+  disciplinaryCaseAccess,
+  terminationAccess,
+  employeeAccess,
+  leaveRequestAccess,
+} from '#modules/hr/index'
+import {
   extensionOf,
   FILE_TYPES,
   MAX_FILE_BYTES,
   safeFileName,
 } from '#modules/attachments/domain/files'
 import { LocalStorage } from '#modules/attachments/infrastructure/local_storage'
+import { productExists } from '#modules/inventory/index'
+import {
+  purchaseContractAccess,
+  purchaseInvoiceAccess,
+  purchaseOrderAccess,
+  purchaseReceiptAccess,
+  rfqAccess,
+  supplierExists,
+} from '#modules/procurement/index'
 
 /**
  * Política de acesso por tipo de registo: o anexo herda a autorização (e a funcionalidade contratada) do registo a que
@@ -75,6 +91,79 @@ function policies(): Record<string, SubjectPolicy> {
       if (!entry) return null
       return { read: true, write: held.has('accounting.create') && entry.status !== 'POSTED' }
     },
+  }
+  // Documentos do colaborador (BI, contrato, certificados): dados pessoais, seguem `hr.sensitive` no âmbito.
+  map.employee = {
+    feature: 'hr',
+    access: (scope, id) => employeeAccess(scope, id, 'sensitive'),
+  }
+  // Justificativos de ausências (ex.: atestado médico): os confidenciais só para o próprio e `hr.sensitive`.
+  map.leave_request = {
+    feature: 'hr',
+    access: (scope, id) => leaveRequestAccess(scope, id),
+  }
+  // Certificados de formação: o mesmo acesso da formação do colaborador.
+  map.employee_certificate = {
+    feature: 'hr',
+    access: (scope, id) => certificateAccess(scope, id),
+  }
+  // Documentos de processos disciplinares (acesso restrito; encerrado, só leitura).
+  map.disciplinary_case = {
+    feature: 'hr',
+    access: (scope, id) => disciplinaryCaseAccess(scope, id),
+  }
+  // Documentos da cessação (carta de denúncia, acordo, declarações): o mesmo acesso do processo.
+  map.employee_termination = {
+    feature: 'hr',
+    access: (scope, id) => terminationAccess(scope, id),
+  }
+  // Imagens e fichas técnicas do produto: ler com `inventory.read`, acrescentar com `inventory.products.manage`.
+  map.product = {
+    feature: 'inventory',
+    access: async (scope, id) => {
+      const held = (await effectivePermissions(scope)).tenant
+      if (!held.has('inventory.read') || !(await productExists(scope, id))) return null
+      return { read: true, write: held.has('inventory.products.manage') }
+    },
+  }
+  // Documentos do fornecedor (certidões, alvarás…): ler com qualquer permissão de fornecedores; acrescentar com `.manage`.
+  map.supplier = {
+    feature: 'procurement',
+    access: async (scope, id) => {
+      const held = (await effectivePermissions(scope)).tenant
+      const manage = held.has('procurement.suppliers.manage')
+      const read =
+        manage ||
+        held.has('procurement.suppliers.read') ||
+        held.has('procurement.suppliers.approve')
+      if (!read || !(await supplierExists(scope, id))) return null
+      return { read: true, write: manage }
+    },
+  }
+  // Documentos do pedido de cotação (especificações, propostas digitalizadas): o âmbito do pedido por entidade.
+  map.rfq = {
+    feature: 'procurement',
+    access: (scope, id) => rfqAccess(scope, id),
+  }
+  // Documentos da ordem de compra (confirmação do fornecedor, condições): o âmbito da ordem por entidade.
+  map.purchase_order = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseOrderAccess(scope, id),
+  }
+  // Documentos do contrato (contrato assinado, adendas): o âmbito do contrato por entidade.
+  map.purchase_contract = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseContractAccess(scope, id),
+  }
+  // Documentos da recepção (guia do fornecedor, fotografias da conferência): o âmbito da recepção por entidade.
+  map.purchase_receipt = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseReceiptAccess(scope, id),
+  }
+  // Factura do fornecedor (o PDF/digitalização): o âmbito da factura por entidade.
+  map.purchase_invoice = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseInvoiceAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

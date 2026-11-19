@@ -197,6 +197,364 @@ export type ScannedRoutes = {
     'approvals.delegations': { paramsTuple?: []; params?: {} }
     'approvals.create_delegation': { paramsTuple?: []; params?: {} }
     'approvals.revoke_delegation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'employees.index': { paramsTuple?: []; params?: {} }
+    'employees.store': { paramsTuple?: []; params?: {} }
+    'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'employees.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'employees.set_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.types': { paramsTuple?: []; params?: {} }
+    'leave.create_type': { paramsTuple?: []; params?: {} }
+    'leave.update_type': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.policies': { paramsTuple?: []; params?: {} }
+    'leave.create_policy': { paramsTuple?: []; params?: {} }
+    'leave.policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.update_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.publish_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.accrue': { paramsTuple?: []; params?: {} }
+    'leave.mine': { paramsTuple?: []; params?: {} }
+    'leave.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.adjust': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.requests': { paramsTuple?: []; params?: {} }
+    'leave.create_request': { paramsTuple?: []; params?: {} }
+    'leave.preview': { paramsTuple?: []; params?: {} }
+    'leave.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.components': { paramsTuple?: []; params?: {} }
+    'compensation.create_component': { paramsTuple?: []; params?: {} }
+    'compensation.component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.update_component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.add_incidence': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.create_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.proposals': { paramsTuple?: []; params?: {} }
+    'compensation.proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.update_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.for_employee': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.index': { paramsTuple?: []; params?: {} }
+    'loans.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.pay': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'installmentId': ParamValue} }
+    'payroll.rule_sets': { paramsTuple?: []; params?: {} }
+    'payroll.create_rule_set': { paramsTuple?: []; params?: {} }
+    'payroll.rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.update_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.publish_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.verify_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.simulate_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.confirm_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.delete_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.periods': { paramsTuple?: []; params?: {} }
+    'payroll.index': { paramsTuple?: []; params?: {} }
+    'payroll.store': { paramsTuple?: []; params?: {} }
+    'payroll.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.result': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'resultId': ParamValue} }
+    'payroll.set_input': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.set_excluded': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.calculate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.payments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.pay': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.my_payslips': { paramsTuple?: []; params?: {} }
+    'payroll.payslip': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.create_competency': { paramsTuple?: []; params?: {} }
+    'training.update_competency': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.create_course': { paramsTuple?: []; params?: {} }
+    'training.update_course': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.competencies': { paramsTuple?: []; params?: {} }
+    'training.courses': { paramsTuple?: []; params?: {} }
+    'training.sessions': { paramsTuple?: []; params?: {} }
+    'training.create_session': { paramsTuple?: []; params?: {} }
+    'training.session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.enroll': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.complete': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cancel_session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.result': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.costs': { paramsTuple?: []; params?: {} }
+    'training.employee_training': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.assess': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.add_certificate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cases': { paramsTuple?: []; params?: {} }
+    'training.case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.open_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.case_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.review_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.close_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'portal.me': { paramsTuple?: []; params?: {} }
+    'portal.update_me': { paramsTuple?: []; params?: {} }
+    'portal.team': { paramsTuple?: []; params?: {} }
+    'portal.headcount': { paramsTuple?: []; params?: {} }
+    'portal.turnover': { paramsTuple?: []; params?: {} }
+    'portal.leave': { paramsTuple?: []; params?: {} }
+    'portal.payroll': { paramsTuple?: []; params?: {} }
+    'terminations.index': { paramsTuple?: []; params?: {} }
+    'terminations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.add_line': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.update_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
+    'terminations.remove_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
+    'terminations.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.settlement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.complete': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.add_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.set_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.update_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.resume': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.terminate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.amend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.onboarding': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.settings': { paramsTuple?: []; params?: {} }
+    'recruitment.update_settings': { paramsTuple?: []; params?: {} }
+    'recruitment.requisitions': { paramsTuple?: []; params?: {} }
+    'recruitment.create_requisition': { paramsTuple?: []; params?: {} }
+    'recruitment.requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.submit_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.decide_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.close_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.cancel_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.candidates': { paramsTuple?: []; params?: {} }
+    'recruitment.create_candidate': { paramsTuple?: []; params?: {} }
+    'recruitment.candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.applications': { paramsTuple?: []; params?: {} }
+    'recruitment.create_application': { paramsTuple?: []; params?: {} }
+    'recruitment.application': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.change_stage': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.schedule_interview': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.evaluate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.my_interviews': { paramsTuple?: []; params?: {} }
+    'recruitment.update_interview': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.submit_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.decide_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.respond_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.cancel_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.hire': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.index': { paramsTuple?: []; params?: {} }
+    'catalog.lookup': { paramsTuple?: []; params?: {} }
+    'catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.store': { paramsTuple?: []; params?: {} }
+    'catalog.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.store_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.update_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_list': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'catalog.settings_create': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'catalog.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'warehouses.index': { paramsTuple?: []; params?: {} }
+    'warehouses.candidates': { paramsTuple?: []; params?: {} }
+    'warehouses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.store': { paramsTuple?: []; params?: {} }
+    'warehouses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.add_locations': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.update_location': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.set_access': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock.balances': { paramsTuple?: []; params?: {} }
+    'stock.movements': { paramsTuple?: []; params?: {} }
+    'stock.posting': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock.reconciliation': { paramsTuple?: []; params?: {} }
+    'stock.change_status': { paramsTuple?: []; params?: {} }
+    'stock_documents.index': { paramsTuple?: []; params?: {} }
+    'stock_documents.store': { paramsTuple?: []; params?: {} }
+    'stock_documents.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.check': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.reopen': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.index': { paramsTuple?: []; params?: {} }
+    'transfers.store': { paramsTuple?: []; params?: {} }
+    'transfers.destinations': { paramsTuple?: []; params?: {} }
+    'transfers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.accept': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.pick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.dispatch': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.receive': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.index': { paramsTuple?: []; params?: {} }
+    'requisitions.options': { paramsTuple?: []; params?: {} }
+    'requisitions.store': { paramsTuple?: []; params?: {} }
+    'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.pick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.release': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reservations': { paramsTuple?: []; params?: {} }
+    'counts.index': { paramsTuple?: []; params?: {} }
+    'counts.options': { paramsTuple?: []; params?: {} }
+    'counts.store': { paramsTuple?: []; params?: {} }
+    'counts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.start': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.count': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.add_line': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.justify': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.recount': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.index': { paramsTuple?: []; params?: {} }
+    'lots.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.block': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.unblock': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.recall': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.serials': { paramsTuple?: []; params?: {} }
+    'lots.serial': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.index': { paramsTuple?: []; params?: {} }
+    'valuation.product': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.adjust': { paramsTuple?: []; params?: {} }
+    'valuation.reconciliation': { paramsTuple?: []; params?: {} }
+    'valuation.accounts': { paramsTuple?: []; params?: {} }
+    'valuation.set_accounts': { paramsTuple?: []; params?: {} }
+    'integrations.index': { paramsTuple?: []; params?: {} }
+    'integrations.order': { paramsTuple?: []; params?: {} }
+    'integrations.post': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'integrations.accounting_events': { paramsTuple?: []; params?: {} }
+    'integrations.retry': { paramsTuple?: []; params?: {} }
+    'inventory_reports.alerts': { paramsTuple?: []; params?: {} }
+    'inventory_reports.replenishment': { paramsTuple?: []; params?: {} }
+    'inventory_reports.expiry': { paramsTuple?: []; params?: {} }
+    'inventory_reports.turnover': { paramsTuple?: []; params?: {} }
+    'inventory_reports.movements': { paramsTuple?: []; params?: {} }
+    'inventory_reports.losses': { paramsTuple?: []; params?: {} }
+    'inventory_reports.consumption': { paramsTuple?: []; params?: {} }
+    'inventory_reports.valued': { paramsTuple?: []; params?: {} }
+    'suppliers.index': { paramsTuple?: []; params?: {} }
+    'suppliers.lookup': { paramsTuple?: []; params?: {} }
+    'suppliers.store': { paramsTuple?: []; params?: {} }
+    'suppliers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.add_contact': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.update_contact': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'contactId': ParamValue} }
+    'suppliers.add_bank_account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.bank_account_action': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'suppliers.add_document': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.deactivate_document': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.index': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.options': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.demand': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.store': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.copy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.index': { paramsTuple?: []; params?: {} }
+    'rfqs.options': { paramsTuple?: []; params?: {} }
+    'rfqs.store': { paramsTuple?: []; params?: {} }
+    'rfqs.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.invite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.amend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.quote': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.open': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.compare': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.create_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.update_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.submit_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.approve_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.reject_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.cancel_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.uninvite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.decline': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.withdraw': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.index': { paramsTuple?: []; params?: {} }
+    'purchase_orders.options': { paramsTuple?: []; params?: {} }
+    'purchase_orders.store': { paramsTuple?: []; params?: {} }
+    'purchase_orders.from_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.revise': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.index': { paramsTuple?: []; params?: {} }
+    'contracts.options': { paramsTuple?: []; params?: {} }
+    'contracts.store': { paramsTuple?: []; params?: {} }
+    'contracts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.propose': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.transition': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'contracts.amendment': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'receipts.index': { paramsTuple?: []; params?: {} }
+    'receipts.expected': { paramsTuple?: []; params?: {} }
+    'receipts.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.store': { paramsTuple?: []; params?: {} }
+    'receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.index': { paramsTuple?: []; params?: {} }
+    'invoices.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.store': { paramsTuple?: []; params?: {} }
+    'invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.validate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.refuse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.tolerances': { paramsTuple?: []; params?: {} }
+    'invoices.set_tolerances': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.update_level': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'suppliers.settings_store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'suppliers.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -302,6 +660,129 @@ export type ScannedRoutes = {
     'approvals.requests': { paramsTuple?: []; params?: {} }
     'approvals.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.delegations': { paramsTuple?: []; params?: {} }
+    'employees.index': { paramsTuple?: []; params?: {} }
+    'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.types': { paramsTuple?: []; params?: {} }
+    'leave.policies': { paramsTuple?: []; params?: {} }
+    'leave.policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.mine': { paramsTuple?: []; params?: {} }
+    'leave.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.requests': { paramsTuple?: []; params?: {} }
+    'leave.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.components': { paramsTuple?: []; params?: {} }
+    'compensation.component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.proposals': { paramsTuple?: []; params?: {} }
+    'compensation.proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.for_employee': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.index': { paramsTuple?: []; params?: {} }
+    'loans.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.rule_sets': { paramsTuple?: []; params?: {} }
+    'payroll.rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.periods': { paramsTuple?: []; params?: {} }
+    'payroll.index': { paramsTuple?: []; params?: {} }
+    'payroll.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.result': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'resultId': ParamValue} }
+    'payroll.payments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.my_payslips': { paramsTuple?: []; params?: {} }
+    'payroll.payslip': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.competencies': { paramsTuple?: []; params?: {} }
+    'training.courses': { paramsTuple?: []; params?: {} }
+    'training.sessions': { paramsTuple?: []; params?: {} }
+    'training.session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.costs': { paramsTuple?: []; params?: {} }
+    'training.employee_training': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cases': { paramsTuple?: []; params?: {} }
+    'training.case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'portal.me': { paramsTuple?: []; params?: {} }
+    'portal.team': { paramsTuple?: []; params?: {} }
+    'portal.headcount': { paramsTuple?: []; params?: {} }
+    'portal.turnover': { paramsTuple?: []; params?: {} }
+    'portal.leave': { paramsTuple?: []; params?: {} }
+    'portal.payroll': { paramsTuple?: []; params?: {} }
+    'terminations.index': { paramsTuple?: []; params?: {} }
+    'terminations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.onboarding': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.settings': { paramsTuple?: []; params?: {} }
+    'recruitment.requisitions': { paramsTuple?: []; params?: {} }
+    'recruitment.requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.candidates': { paramsTuple?: []; params?: {} }
+    'recruitment.candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.applications': { paramsTuple?: []; params?: {} }
+    'recruitment.application': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.my_interviews': { paramsTuple?: []; params?: {} }
+    'catalog.index': { paramsTuple?: []; params?: {} }
+    'catalog.lookup': { paramsTuple?: []; params?: {} }
+    'catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_list': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'warehouses.index': { paramsTuple?: []; params?: {} }
+    'warehouses.candidates': { paramsTuple?: []; params?: {} }
+    'warehouses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock.balances': { paramsTuple?: []; params?: {} }
+    'stock.movements': { paramsTuple?: []; params?: {} }
+    'stock.posting': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock.reconciliation': { paramsTuple?: []; params?: {} }
+    'stock_documents.index': { paramsTuple?: []; params?: {} }
+    'stock_documents.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.index': { paramsTuple?: []; params?: {} }
+    'transfers.destinations': { paramsTuple?: []; params?: {} }
+    'transfers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.index': { paramsTuple?: []; params?: {} }
+    'requisitions.options': { paramsTuple?: []; params?: {} }
+    'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reservations': { paramsTuple?: []; params?: {} }
+    'counts.index': { paramsTuple?: []; params?: {} }
+    'counts.options': { paramsTuple?: []; params?: {} }
+    'counts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.index': { paramsTuple?: []; params?: {} }
+    'lots.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.serials': { paramsTuple?: []; params?: {} }
+    'lots.serial': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.index': { paramsTuple?: []; params?: {} }
+    'valuation.product': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.reconciliation': { paramsTuple?: []; params?: {} }
+    'valuation.accounts': { paramsTuple?: []; params?: {} }
+    'integrations.index': { paramsTuple?: []; params?: {} }
+    'integrations.order': { paramsTuple?: []; params?: {} }
+    'integrations.accounting_events': { paramsTuple?: []; params?: {} }
+    'inventory_reports.alerts': { paramsTuple?: []; params?: {} }
+    'inventory_reports.replenishment': { paramsTuple?: []; params?: {} }
+    'inventory_reports.expiry': { paramsTuple?: []; params?: {} }
+    'inventory_reports.turnover': { paramsTuple?: []; params?: {} }
+    'inventory_reports.movements': { paramsTuple?: []; params?: {} }
+    'inventory_reports.losses': { paramsTuple?: []; params?: {} }
+    'inventory_reports.consumption': { paramsTuple?: []; params?: {} }
+    'inventory_reports.valued': { paramsTuple?: []; params?: {} }
+    'suppliers.index': { paramsTuple?: []; params?: {} }
+    'suppliers.lookup': { paramsTuple?: []; params?: {} }
+    'suppliers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.index': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.options': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.demand': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.index': { paramsTuple?: []; params?: {} }
+    'rfqs.options': { paramsTuple?: []; params?: {} }
+    'rfqs.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.index': { paramsTuple?: []; params?: {} }
+    'purchase_orders.options': { paramsTuple?: []; params?: {} }
+    'purchase_orders.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.index': { paramsTuple?: []; params?: {} }
+    'contracts.options': { paramsTuple?: []; params?: {} }
+    'contracts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.index': { paramsTuple?: []; params?: {} }
+    'receipts.expected': { paramsTuple?: []; params?: {} }
+    'receipts.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.index': { paramsTuple?: []; params?: {} }
+    'invoices.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.tolerances': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
+    'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -395,6 +876,129 @@ export type ScannedRoutes = {
     'approvals.requests': { paramsTuple?: []; params?: {} }
     'approvals.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.delegations': { paramsTuple?: []; params?: {} }
+    'employees.index': { paramsTuple?: []; params?: {} }
+    'employees.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.types': { paramsTuple?: []; params?: {} }
+    'leave.policies': { paramsTuple?: []; params?: {} }
+    'leave.policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.mine': { paramsTuple?: []; params?: {} }
+    'leave.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.requests': { paramsTuple?: []; params?: {} }
+    'leave.request': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.components': { paramsTuple?: []; params?: {} }
+    'compensation.component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.summary': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.proposals': { paramsTuple?: []; params?: {} }
+    'compensation.proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.for_employee': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.index': { paramsTuple?: []; params?: {} }
+    'loans.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.rule_sets': { paramsTuple?: []; params?: {} }
+    'payroll.rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.periods': { paramsTuple?: []; params?: {} }
+    'payroll.index': { paramsTuple?: []; params?: {} }
+    'payroll.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.result': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'resultId': ParamValue} }
+    'payroll.payments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.my_payslips': { paramsTuple?: []; params?: {} }
+    'payroll.payslip': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.competencies': { paramsTuple?: []; params?: {} }
+    'training.courses': { paramsTuple?: []; params?: {} }
+    'training.sessions': { paramsTuple?: []; params?: {} }
+    'training.session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.costs': { paramsTuple?: []; params?: {} }
+    'training.employee_training': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cases': { paramsTuple?: []; params?: {} }
+    'training.case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'portal.me': { paramsTuple?: []; params?: {} }
+    'portal.team': { paramsTuple?: []; params?: {} }
+    'portal.headcount': { paramsTuple?: []; params?: {} }
+    'portal.turnover': { paramsTuple?: []; params?: {} }
+    'portal.leave': { paramsTuple?: []; params?: {} }
+    'portal.payroll': { paramsTuple?: []; params?: {} }
+    'terminations.index': { paramsTuple?: []; params?: {} }
+    'terminations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contracts': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.assignments': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.onboarding': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.settings': { paramsTuple?: []; params?: {} }
+    'recruitment.requisitions': { paramsTuple?: []; params?: {} }
+    'recruitment.requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.candidates': { paramsTuple?: []; params?: {} }
+    'recruitment.candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.applications': { paramsTuple?: []; params?: {} }
+    'recruitment.application': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.my_interviews': { paramsTuple?: []; params?: {} }
+    'catalog.index': { paramsTuple?: []; params?: {} }
+    'catalog.lookup': { paramsTuple?: []; params?: {} }
+    'catalog.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_list': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'warehouses.index': { paramsTuple?: []; params?: {} }
+    'warehouses.candidates': { paramsTuple?: []; params?: {} }
+    'warehouses.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock.balances': { paramsTuple?: []; params?: {} }
+    'stock.movements': { paramsTuple?: []; params?: {} }
+    'stock.posting': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock.reconciliation': { paramsTuple?: []; params?: {} }
+    'stock_documents.index': { paramsTuple?: []; params?: {} }
+    'stock_documents.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.index': { paramsTuple?: []; params?: {} }
+    'transfers.destinations': { paramsTuple?: []; params?: {} }
+    'transfers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.index': { paramsTuple?: []; params?: {} }
+    'requisitions.options': { paramsTuple?: []; params?: {} }
+    'requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reservations': { paramsTuple?: []; params?: {} }
+    'counts.index': { paramsTuple?: []; params?: {} }
+    'counts.options': { paramsTuple?: []; params?: {} }
+    'counts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.index': { paramsTuple?: []; params?: {} }
+    'lots.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.serials': { paramsTuple?: []; params?: {} }
+    'lots.serial': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.index': { paramsTuple?: []; params?: {} }
+    'valuation.product': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.reconciliation': { paramsTuple?: []; params?: {} }
+    'valuation.accounts': { paramsTuple?: []; params?: {} }
+    'integrations.index': { paramsTuple?: []; params?: {} }
+    'integrations.order': { paramsTuple?: []; params?: {} }
+    'integrations.accounting_events': { paramsTuple?: []; params?: {} }
+    'inventory_reports.alerts': { paramsTuple?: []; params?: {} }
+    'inventory_reports.replenishment': { paramsTuple?: []; params?: {} }
+    'inventory_reports.expiry': { paramsTuple?: []; params?: {} }
+    'inventory_reports.turnover': { paramsTuple?: []; params?: {} }
+    'inventory_reports.movements': { paramsTuple?: []; params?: {} }
+    'inventory_reports.losses': { paramsTuple?: []; params?: {} }
+    'inventory_reports.consumption': { paramsTuple?: []; params?: {} }
+    'inventory_reports.valued': { paramsTuple?: []; params?: {} }
+    'suppliers.index': { paramsTuple?: []; params?: {} }
+    'suppliers.lookup': { paramsTuple?: []; params?: {} }
+    'suppliers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.index': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.options': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.demand': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.index': { paramsTuple?: []; params?: {} }
+    'rfqs.options': { paramsTuple?: []; params?: {} }
+    'rfqs.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.index': { paramsTuple?: []; params?: {} }
+    'purchase_orders.options': { paramsTuple?: []; params?: {} }
+    'purchase_orders.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.index': { paramsTuple?: []; params?: {} }
+    'contracts.options': { paramsTuple?: []; params?: {} }
+    'contracts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.index': { paramsTuple?: []; params?: {} }
+    'receipts.expected': { paramsTuple?: []; params?: {} }
+    'receipts.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.index': { paramsTuple?: []; params?: {} }
+    'invoices.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.tolerances': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
+    'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -476,6 +1080,194 @@ export type ScannedRoutes = {
     'approvals.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.create_delegation': { paramsTuple?: []; params?: {} }
     'approvals.revoke_delegation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'employees.store': { paramsTuple?: []; params?: {} }
+    'employees.set_status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.create_type': { paramsTuple?: []; params?: {} }
+    'leave.create_policy': { paramsTuple?: []; params?: {} }
+    'leave.publish_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.accrue': { paramsTuple?: []; params?: {} }
+    'leave.adjust': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.create_request': { paramsTuple?: []; params?: {} }
+    'leave.preview': { paramsTuple?: []; params?: {} }
+    'leave.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.create_component': { paramsTuple?: []; params?: {} }
+    'compensation.add_incidence': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.create_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.pay': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'installmentId': ParamValue} }
+    'payroll.create_rule_set': { paramsTuple?: []; params?: {} }
+    'payroll.publish_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.verify_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.simulate_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.confirm_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.store': { paramsTuple?: []; params?: {} }
+    'payroll.set_excluded': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.calculate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.pay': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.create_competency': { paramsTuple?: []; params?: {} }
+    'training.create_course': { paramsTuple?: []; params?: {} }
+    'training.create_session': { paramsTuple?: []; params?: {} }
+    'training.enroll': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.complete': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.cancel_session': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.result': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.assess': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.add_certificate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.open_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.case_event': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.review_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.close_case': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.add_line': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.decide': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.settlement': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.complete': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.add_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.create_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.move': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.resume': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.terminate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.amend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_requisition': { paramsTuple?: []; params?: {} }
+    'recruitment.submit_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.decide_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.close_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.cancel_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_candidate': { paramsTuple?: []; params?: {} }
+    'recruitment.create_application': { paramsTuple?: []; params?: {} }
+    'recruitment.change_stage': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.schedule_interview': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.evaluate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.create_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.submit_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.decide_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.respond_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.cancel_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.hire': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.store': { paramsTuple?: []; params?: {} }
+    'catalog.store_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_create': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'warehouses.store': { paramsTuple?: []; params?: {} }
+    'warehouses.add_locations': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock.change_status': { paramsTuple?: []; params?: {} }
+    'stock_documents.store': { paramsTuple?: []; params?: {} }
+    'stock_documents.check': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.reopen': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.store': { paramsTuple?: []; params?: {} }
+    'transfers.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.accept': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.pick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.dispatch': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.receive': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.store': { paramsTuple?: []; params?: {} }
+    'requisitions.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.pick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.release': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.store': { paramsTuple?: []; params?: {} }
+    'counts.start': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.count': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.add_line': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.justify': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.recount': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.block': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.unblock': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'lots.recall': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.adjust': { paramsTuple?: []; params?: {} }
+    'integrations.post': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'integrations.retry': { paramsTuple?: []; params?: {} }
+    'suppliers.store': { paramsTuple?: []; params?: {} }
+    'suppliers.add_contact': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.add_bank_account': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.bank_account_action': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'suppliers.add_document': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.deactivate_document': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.store': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.copy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.store': { paramsTuple?: []; params?: {} }
+    'rfqs.invite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.amend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.quote': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.open': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.compare': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.create_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.submit_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.approve_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.reject_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.cancel_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.decline': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.withdraw': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.store': { paramsTuple?: []; params?: {} }
+    'purchase_orders.from_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.revise': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.store': { paramsTuple?: []; params?: {} }
+    'contracts.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.propose': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.transition': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'contracts.amendment': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'receipts.store': { paramsTuple?: []; params?: {} }
+    'receipts.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.store': { paramsTuple?: []; params?: {} }
+    'invoices.validate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.approve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.refuse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
+    'suppliers.settings_store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -497,6 +1289,9 @@ export type ScannedRoutes = {
     'adjustments.undo_reconciliation': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fixed_assets.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.delete_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.delete_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.remove_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
+    'rfqs.uninvite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.remove_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
@@ -524,6 +1319,34 @@ export type ScannedRoutes = {
     'fixed_assets.update_class': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fixed_assets.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'approvals.update_workflow': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'employees.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.update_type': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'leave.update_policy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.update_component': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'compensation.update_proposal': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'loans.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'payroll.update_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.update_competency': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'training.update_course': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'portal.update_me': { paramsTuple?: []; params?: {} }
+    'terminations.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'terminations.update_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
+    'terminations.set_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'career.update_contract': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_onboarding_task': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_requisition': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_candidate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_interview': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_offer': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.update_variant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'catalog.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'warehouses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'warehouses.update_location': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.update_contact': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'contactId': ParamValue} }
+    'purchase_requisitions.update_level': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'suppliers.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
@@ -532,6 +1355,22 @@ export type ScannedRoutes = {
     'settings.update_settings': { paramsTuple?: []; params?: {} }
     'accounting.set_allocations': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineNo': ParamValue} }
     'preferences.update': { paramsTuple: [ParamValue]; params: {'key': ParamValue} }
+    'payroll.set_input': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recruitment.update_settings': { paramsTuple?: []; params?: {} }
+    'warehouses.set_access': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'stock_documents.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'transfers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'counts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'valuation.set_accounts': { paramsTuple?: []; params?: {} }
+    'purchase_requisitions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'rfqs.update_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'purchase_orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'contracts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'invoices.set_tolerances': { paramsTuple?: []; params?: {} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

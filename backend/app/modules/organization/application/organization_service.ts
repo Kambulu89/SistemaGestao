@@ -578,3 +578,40 @@ export async function costCentersByCode(
     ])
   )
 }
+
+/**
+ * Factos das referências organizacionais de um registo de outro módulo (ex.: colaborador): entidade legal de cada uma,
+ * estado e, no departamento, a filial. Só ids existentes na empresa aparecem no resultado.
+ */
+export async function orgReferenceFacts(
+  scope: TenantScope,
+  refs: {
+    branchId?: string | null
+    departmentId?: string | null
+    positionId?: string | null
+    costCenterId?: string | null
+  }
+) {
+  const t = scope.context.tenantId
+  const one = async <T>(sql: string, id: string | null | undefined) =>
+    id ? (((await scope.trx.rawQuery(sql, [t, id])).rows[0] as T | undefined) ?? null) : null
+  return {
+    branch: await one<{ legalEntityId: string; status: string }>(
+      `select legal_entity_id as "legalEntityId", status from branches where tenant_id = ? and id = ?`,
+      refs.branchId
+    ),
+    department: await one<{ legalEntityId: string; branchId: string | null; status: string }>(
+      `select legal_entity_id as "legalEntityId", branch_id as "branchId", status
+         from departments where tenant_id = ? and id = ?`,
+      refs.departmentId
+    ),
+    position: await one<{ departmentId: string | null; status: string }>(
+      `select department_id as "departmentId", status from positions where tenant_id = ? and id = ?`,
+      refs.positionId
+    ),
+    costCenter: await one<{ legalEntityId: string; status: string }>(
+      `select legal_entity_id as "legalEntityId", status from cost_centers where tenant_id = ? and id = ?`,
+      refs.costCenterId
+    ),
+  }
+}

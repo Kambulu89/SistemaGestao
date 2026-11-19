@@ -10,18 +10,19 @@ serviços técnicos) e `http/` (controllers e middleware, só transporte). Cada 
 `index.ts`; os outros importam **só** daí (`tests/unit/architecture.spec.ts` falha caso contrário). `app/shared/` é código
 técnico partilhado e não depende de módulos.
 
-| Módulo                                                        | Responsabilidade                                                                          |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `health`                                                      | `GET /api/v1/health`                                                                      |
-| `identity`                                                    | Utilizador global, sessão em cookie, CSRF, convites, recuperação, sessões                 |
-| `tenancy`, `members`                                          | Tenant, contexto, `runInTenant`, memberships e convites                                   |
-| `rbac`                                                        | Perfis, permissões e atribuições com âmbito                                               |
-| `organization`                                                | Entidades legais, filiais, departamentos, cargos, centros de custo, dependências, árvores |
-| `settings`                                                    | Perfil e configurações da empresa, câmbios, séries, calendários, contas bancárias         |
-| `subscription`, `platform`                                    | Funcionalidades, planos, subscrições, limites; administração da plataforma                |
-| `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas               |
-| `dashboard`                                                   | Painel e pesquisa global                                                                  |
-| `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                     |
+| Módulo                                                        | Responsabilidade                                                                            |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `health`                                                      | `GET /api/v1/health`                                                                        |
+| `identity`                                                    | Utilizador global, sessão em cookie, CSRF, convites, recuperação, sessões                   |
+| `tenancy`, `members`                                          | Tenant, contexto, `runInTenant`, memberships e convites                                     |
+| `rbac`                                                        | Perfis, permissões e atribuições com âmbito                                                 |
+| `organization`                                                | Entidades legais, filiais, departamentos, cargos, centros de custo, dependências, árvores   |
+| `settings`                                                    | Perfil e configurações da empresa, câmbios, séries, calendários, contas bancárias           |
+| `subscription`, `platform`                                    | Funcionalidades, planos, subscrições, limites; administração da plataforma                  |
+| `audit`, `approvals`, `attachments`, `notifications`, `tasks` | Auditoria, aprovações e delegações, anexos, notificações, centro de tarefas                 |
+| `dashboard`                                                   | Painel e pesquisa global                                                                    |
+| `preferences`                                                 | Preferências de interface do membro (favoritos, disposição do painel)                       |
+| `hr`                                                          | Colaboradores, recrutamento, contratos, ausências, compensação e empréstimos; âmbitos de RH |
 
 ## Multi-tenancy
 
@@ -323,3 +324,163 @@ Blocos 6.1 a 6.8 e 6.10 feitos; 6.9 (SAF-T) bloqueado até haver a especificaç�
   isolamento.
 - Listas com ordenação no servidor: só campos declarados (organização: os da especificação e as datas; membros:
   `fullName`, `email`, `status`, `joinedAt`); outro campo dá 422. Os nomes de colunas nunca vêm do pedido.
+
+## Recursos humanos (módulo `hr`, Prompt 07)
+
+Prompt 07 concluído, 7.1 a 7.13 (ver `docs/reports/prompt-07.md` e `prompt-07-qa.md`, D-024 a D-035).
+
+- **Colaborador** (`employees`): código único, nome, contactos profissionais, entidade legal, filial, departamento,
+  cargo, superior, centro de custo, membership opcional, admissão e estado (`ACTIVE`/`SUSPENDED`/`TERMINATED`). Dados
+  pessoais em colunas próprias: nascimento, nacionalidade, documento e validade, NIF, INSS, contactos e morada pessoais,
+  emergência, formação e banco (IBAN validado e normalizado). NIF, INSS e membership únicos por empresa (índices
+  parciais); nascimento antes da admissão; não pode ser o próprio superior; ciclos recusados (CTE recursiva).
+- **Âmbito**: `hr.read`, `hr.manage`, `hr.sensitive` com âmbito empresa, entidade legal, filial, departamento (com
+  subárvore) ou o próprio; verificado em `EmployeeService` (`scopeClause`/`covers`). Fora do âmbito → 404; gerir sem
+  âmbito → 403 `OUT_OF_SCOPE`; dados pessoais sem permissão → 403 `SENSITIVE_FORBIDDEN`.
+- **Concorrência**: `expectedVersion` obrigatório em alterações (409 `VERSION_CONFLICT`).
+- **Auditoria**: `hr.employee.created|updated|status_changed`, com os campos pessoais como `[RESERVADO]`.
+- **Anexos**: tipo `employee` (funcionalidade `hr`), só com acesso aos dados pessoais do colaborador.
+- Funcionalidade `hr` (plano); sem ela as rotas dão 403 `NOT_ENTITLED`.
+- **Recrutamento** (7.2): `job_requisitions` (vaga com cargo, requisitos, quantidade, prazo e remuneração autorizada em
+  `numeric`; DRAFT → PENDING_APPROVAL → OPEN → FILLED/CLOSED/CANCELLED), `candidates` (contactos mínimos, email único
+  sem maiúsculas), `job_applications` (uma por vaga e candidato; etapas APPLIED → SCREENING → INTERVIEW → OFFER → HIRED,
+  ou REJECTED/WITHDRAWN), `job_interviews`, `job_evaluations` (só de acréscimo, uma por avaliador e entrevista),
+  `job_offers` (salário dentro da remuneração autorizada; uma em curso por candidatura) e `onboarding_tasks`.
+- **Aprovações do recrutamento**: `hr_settings` aponta para workflows publicados (`job_requisition`, `job_offer`); sem
+  workflow, decisão directa com `hr.recruitment.approve` no âmbito e segregação (403 `SEGREGATION`); com workflow, a
+  decisão directa dá 409 `USE_APPROVAL_WORKFLOW` e o efeito chega por `onRequisitionDecided`/`onOfferDecided`
+  (registados em `start/module_hooks.ts`).
+- **Contratação** (`POST /hr/offers/:id/hire`): numa transacção, com a vaga bloqueada, cria o colaborador
+  (`EmployeeService.createIn`, mesmas regras de 7.1), a checklist de onboarding e marca a vaga FILLED ao atingir a
+  quantidade; repetir dá 409.
+- **Validação**: os controllers do RH validam só o corpo JSON (`{ data: ctx.request.body() }`), para que parâmetros,
+  cabeçalhos e cookies nunca cheguem aos serviços nem à auditoria.
+- **Contratos** (7.3): `employment_contracts` (tipo, início/termo, período experimental, horas semanais e remuneração em
+  `numeric`, DRAFT → ACTIVE ⇄ SUSPENDED → ENDED, ou CANCELLED em rascunho; um em vigor por colaborador),
+  `employment_contract_amendments` (CHANGE/RENEWAL só de acréscimo, com data de efeito sem retroactividade),
+  `employment_contract_events`. Condições numa data: `contractTermsAt(scope, employeeId, date)` em `#modules/hr/index`.
+  Permissões `hr.contracts.read|manage` no âmbito do colaborador; remuneração como `[RESERVADO]` na auditoria.
+- **Carreira** (7.3): `employment_assignments` com vigência `[valid_from, valid_to]`, um período em aberto por colaborador;
+  `POST /hr/employees/:id/assignments` (TRANSFER/PROMOTION/CHANGE, data até hoje, versão da ficha) fecha o período na
+  véspera, abre o novo e actualiza a ficha; a criação do colaborador abre o período HIRE e os colaboradores anteriores
+  ganham-no no primeiro movimento. A ficha recusa mudanças de colocação (`USE_MOVEMENT`).
+- **Férias e ausências** (7.4): `leave_types` (categoria, remunerada, desconta saldo, dias úteis/calendário, justificativo,
+  confidencial), `leave_policies` (código + versão, fonte legal, calendário, dias anuais, regra do primeiro ano,
+  arredondamento, transporte; publicada não muda), `leave_ledger` (conta-corrente só de acréscimo; índices parciais
+  únicos para direito/transporte/expiração por ano e gozo/reversão por pedido) e `leave_requests`. Ver: o próprio, a
+  chefia directa ou `hr.leave.read`; pedir: o próprio com `hr.leave.request` ou `hr.leave.manage`; decidir: chefia ou
+  `hr.leave.approve`, nunca o próprio nem quem registou; configurar: `hr.leave.settings`. Contagem com
+  `workingDaysBetween` (calendários das configurações). Para assiduidade e salários: `approvedAbsences(scope,
+employeeId, from, to)` em `#modules/hr/index`.
+- **Compensação** (7.5): `pay_components` (categoria, natureza, cálculo fixo / % do base / variável),
+  `pay_component_incidences` (IRT/INSS e parte isenta por data de início, com fonte; só de acréscimo),
+  `compensation_proposals` + `_lines` (SET/REMOVE) e `employee_pay_items` (vigência; um período em aberto por
+  componente). Permissões `hr.compensation.read|manage|approve|settings`; workflow opcional em `hr_settings`
+  (`compensation_proposal`). Para o processamento: `compensationAt(scope, employeeId, date)` em `#modules/hr/index` (base
+  do contrato + componentes com incidência resolvida; percentagens já em montante).
+- **Adiantamentos e empréstimos** (7.6): `employee_loans` e `employee_loan_installments` (plano criado na aprovação;
+  cada prestação liquida-se uma vez, com referência e data). Limites opcionais em `hr_settings` com fonte obrigatória.
+  Permissões `hr.loans.read|manage|approve`. Para o processamento: `dueLoanInstallments` e `recordLoanDeduction`
+  (idempotente pela referência) em `#modules/hr/index`.
+- **Processamento salarial** (7.7): cálculo puro em `hr/domain/payroll.ts` (cêntimos); regras versionadas
+  `payroll_rule_sets`/`payroll_irt_brackets` (fonte obrigatória, imutáveis publicadas); `payroll_periods` e
+  `payroll_runs` por entidade legal (regular, extra, retroactivo); `payroll_results`/`_lines` com instantâneo e hash do
+  lote (aprovar/fechar recusam dados mudados); triggers impedem alterar resultados submetidos/fechados. Permissões
+  `hr.payroll.read|manage|approve|settings` (âmbito empresa ou entidade legal).
+- **IRT/INSS** (7.8): regras com validade, `payroll_rule_test_cases` (casos oficiais com fonte) e confirmação das normas
+  vigentes; confirmar e publicar exigem os casos a passar ao cêntimo; simulador sem gravação.
+- **Recibos e pagamento** (7.9): `payroll_obligations` criadas no fecho, `payroll_obligation_payments` (só de
+  acréscimo; `hr.payroll.pay`), `payroll_postings` (eventos `PAYROLL/*` do motor de contabilização, uma vez cada).
+  Recibos PDF por `app/shared/pdf/simple_pdf.ts`, só para o próprio ou quem processa. Contrato para Finanças:
+  `payrollObligations` em `#modules/hr/index`.
+- **Formação e processos** (7.10): catálogo (`competencies`, `training_courses`), sessões e inscrições (fixas depois de
+  concluídas), `employee_competencies` (só de acréscimo) e `employee_certificates`; `disciplinary_cases`/`_events` com
+  permissões próprias `hr.discipline.*`, nunca sobre o próprio, consulta auditada e cronologia só de acréscimo.
+- **Cessação** (7.11): `employee_terminations` com aprovação segregada que termina contrato, colocação, estado e saldo
+  de férias numa transacção; `termination_settlement_lines` (com componente; pagas por um lote EXTRA que não se altera)
+  e `termination_tasks` (acesso e empréstimos verificados); sem valores legais no código.
+- **Portais e relatórios** (7.12): `/hr/me` (a própria ficha; só contactos editáveis), `/hr/team` (pela hierarquia
+  `manager_id`, sem salários nem dados pessoais) e `/hr/reports/*` (`hr.reports.read` no âmbito; folha com
+  `hr.payroll.read` por entidade legal, só lotes fechados); contas puras em `hr/domain/reports.ts`.
+
+## Inventário (módulo `inventory`, Prompt 08)
+
+8.1 a 8.12 feitos (ver `docs/reports/prompt-08.md`, D-036 a D-046; QA em `docs/reports/prompt-08-qa.md`). Catálogo: `uoms`, `product_categories` (hierarquia, classe
+contabilística), `brands`, `products` (armazenável/serviço/kit; serviços e kits sem dados de stock por `CHECK`),
+`product_variants`, `product_uom_conversions` (por produto, 6 casas) e `product_kit_components`. SKU e código de barras
+únicos entre produtos e variantes. Permissões `inventory.read|products.manage|settings` nas rotas; funcionalidade
+`inventory`. O Inventário será o dono único dos movimentos físicos (Compras e Vendas pedem operações por contrato).
+Armazéns (8.2): `warehouses` (entidade legal e código fixos, filial da mesma entidade, modo aberto/restrito),
+`warehouse_locations` (zona → corredor → estante → posição; caminho único e imutável por gatilho, nada se apaga) e
+`warehouse_access` (`VIEW`/`OPERATE`). Ver/gerir = `inventory.read`/`inventory.warehouses.manage` no âmbito da
+entidade ou filial; restritos só com a lista. Os outros blocos usam `warehouseAccessFor(scope, id)` de `index.ts`.
+Stock (8.3): `stock_postings` + `stock_movements` só de acréscimo; `stock_balances` derivado por gatilho (escrita
+directa recusada; baldes ≥ 0; reservado ≤ livre por armazém no fim da transacção). **Todo o stock entra pelo contrato
+`postStock`/`reverseStockPosting`** (idempotência por chave, advisory locks por armazém/produto/variante, auditoria);
+nenhum módulo escreve nestas tabelas.
+Entradas/saídas (8.4): `stock_documents` + linhas (factor de conversão congelado) + confirmações (só acréscimo, cada
+uma com o seu lançamento e estorno). Rascunho → conferido → confirmado (parcial/total); o stock só muda na confirmação,
+por `postStock`; número reservado na primeira confirmação pela série `STOCK_RECEIPT`/`STOCK_ISSUE` da entidade legal.
+Transferências (8.5): aprovação reserva na origem, expedição põe em trânsito no destino, recepção parcial/total ou
+perda; eventos só de acréscimo, cada um com o seu lançamento. Intragrupo (entidades diferentes): aceitação do destino e
+referência comercial; lançamentos `INTERCOMPANY_TRANSFER`. Autorização por passo no armazém respectivo; `postStock`
+com `checkAccess: false` deixa a autorização ao módulo que chama.
+Requisições internas (8.6): departamento + centro de custo, aprovação reserva (`RESERVATION`), entrega consome
+(`ISSUE` livre + reservado), libertação/anulação (`RELEASE`); origem `INTERNAL_REQUISITION`. Reservas activas derivadas
+dos movimentos por origem. Rotas/navegação aceitam `anyOf` (basta uma das permissões).
+Contagens (8.7): snapshot do físico no início, contagem cega (sistema só para quem aprova), recontagem renova o
+snapshot da linha, diferenças com motivo e justificação; a aprovação (quem contou não aprova) lança `ADJUSTMENT`
+(origem `STOCK_COUNT`) = contado − snapshot sobre o saldo actual. Registos e lançamentos só de acréscimo; contagem
+fixa depois de aprovada/anulada (gatilhos).
+Lotes e séries (8.8): `lot_id` é dimensão de movimentos e saldos (físico e trânsito); `stock_serials` guarda onde está
+cada unidade. O motor resolve lotes e séries em `stock_tracking.ts` (depois dos advisory locks): FEFO nas saídas sem
+lote (bloqueados/recolhidos/expirados não saem do livre), séries indicadas ou as mais antigas, e as entradas do mesmo
+lançamento herdam os lotes/séries que saíram. Bloquear/recolher um lote é um `STATUS_CHANGE` livre → bloqueado.
+Valorização (8.9): `valuation_engine.ts` corre dentro de cada lançamento e escreve o livro de custo
+(`stock_valuation_entries`, só acréscimo) por entidade legal; saldos de custo e camadas derivam do livro por gatilho.
+Médio, FIFO e específico por lote; devoluções ao custo do original; estornos anulam as entradas do original; correcções
+são ajustes de custo. A contabilidade expõe `accountBalancesAt`/`accountsOfLegalEntity` para a reconciliação.
+Integrações (8.10): cada lançamento com valor e cada ajuste de custo cria um evento em `inventory_accounting_events`
+(por entidade e sentido, montantes por classe) e envia-o ao Posting Engine (`INVENTORY`) num savepoint — sem regra fica
+`FAILED` e repete-se depois, sem bloquear o stock. Compras/Vendas usam os contratos de `inventory/index.ts`
+(`receivePurchase`, `reserveForSale`, `releaseSaleReservation`, `deliverSale`, `returnFromSale`) ou a API
+`/inventory/integrations/*`, idempotentes por chave e hash (`inventory_integration_events`, só acréscimo).
+Alertas e relatórios (8.11): `report_service.ts` só lê (saldos, movimentos, livro de custo) — reposição/ruptura,
+validade, rotação e cobertura, movimentos por classe, perdas, consumo por centro de custo e inventário valorizado; as
+regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis; valores só com `inventory.valuation.read`.
+
+## Compras (módulo `procurement`, Prompt 09) e terceiros (módulo `partners`)
+
+9.1 a 9.8 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-054). O terceiro (`business_partners`, contactos) é do módulo `partners`,
+sem rotas: os papéis de negócio usam o seu `index.ts`. O fornecedor (`suppliers`) é o papel de compra de um terceiro,
+com condições comerciais e homologação: critérios e tipos de documento configuráveis, documentos com validade (fixos,
+desactiváveis), pedidos de homologação fixos depois de decididos, dados bancários que só ficam activos com a aprovação
+de outra pessoa e não se reescrevem (gatilhos e `CHECK` de segregação na base), histórico só de acréscimo. A validade
+da homologação deriva dos documentos obrigatórios na leitura; `supplierStanding` é o contrato para os documentos de
+compra. Permissões `procurement.suppliers.read|manage|approve|bank` e `procurement.settings` no âmbito da empresa.
+Requisições de compra (9.2): cabeçalho e linhas com totais exactos conferidos pela base; ao pedir aprovação recebem
+número e ficam fixas, com as etapas exigidas pelo valor em moeda funcional (configuráveis); decisões por etapa só de
+acréscimo e segregadas; cotações e ordens consomem quantidade pelo contrato `allocateRequisition` (idempotente);
+necessidades consolidadas para os compradores.
+Pedidos de cotação (9.3): emitidos com número para fornecedores homologados, com prazo; propostas registadas pelo
+comprador em versões (a anterior fica substituída e imutável) com alternativas; envelope fechado — a API, a auditoria e a
+cronologia não mostram valores até à abertura (depois do prazo, ou antes com todos os convidados respondidos); revisões
+com motivo assinalam as propostas desactualizadas; nada consome a requisição antes da ordem de compra.
+Comparação e adjudicação (9.4): mapa calculado na hora com preços na moeda funcional ao câmbio da data da abertura e
+pontuação ponderada (pesos que somam 100); adjudicação por linha e fornecedor com fotografia dos valores, motivo quando
+não é a melhor e justificação, aprovada por outra pessoa (`procurement.rfqs.approve`); fixa na base depois de submetida.
+Ordens de compra (9.5): três estados independentes (aprovação, recepção, facturação); aprovação pelas etapas das
+compras em rondas; emissão que reserva o número uma vez e afecta as requisições (`allocateRequisition`); revisões com
+fotografia da versão emitida, nova aprovação e reemissão; anulação e fecho do resto devolvem às requisições.
+Contratos de fornecedor (9.6): aprovação segregada numerada; depois de aprovado só muda por adenda aprovada por outra
+pessoa (a base só o deixa mudar dentro da transacção que aplica a adenda); renovação como adenda; as ordens com
+contrato respeitam a tabela de preços e consomem o máximo líquido na emissão (`consumeContract`, idempotente, com o
+contrato bloqueado), devolvendo no fecho do resto e na anulação.
+Recepções (9.7): conferência por linha (aceite, recusada com motivo, lote/validade/séries); a confirmação, com a ordem
+bloqueada, faz uma única entrada no Inventário (`receivePurchase`, idempotente pela recepção) na unidade base e ao custo
+líquido em moeda funcional; serviços só aceites; corrige-se por estorno (`reverseStockPosting`), nunca editando.
+Facturas de fornecedor (9.8): número externo único por fornecedor (sem anuladas); conferência a três por linha da
+ordem (quantidade contra o recebido, preço líquido, imposto, encargos, total) com tolerâncias da empresa; divergências
+exigem excepção autorizada por outra pessoa, com a conferência repetida na decisão; validar fixa o câmbio da data da
+factura, numera e soma a quantidade facturada à ordem; validada é imutável (correcção por nota de crédito no 9.9).
+

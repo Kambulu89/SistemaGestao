@@ -17,6 +17,15 @@ import type { Step, Workflow } from './types';
 
 type StepDraft = Omit<Step, 'sequence'>;
 
+/** Tipos de assunto aprovados por workflow (os mesmos da API). */
+export const SUBJECT_TYPE_LABELS: Record<string, string> = {
+  manual: 'Pedido avulso',
+  bank_account: 'Conta bancária da empresa',
+  job_requisition: 'Vaga (requisição de pessoal)',
+  job_offer: 'Proposta de contratação',
+  compensation_proposal: 'Proposta de compensação',
+};
+
 const emptyStep = (): StepDraft => ({
   name: '',
   approverType: 'ROLE',
@@ -65,6 +74,24 @@ const emptyStep = (): StepDraft => ({
               [disabled]="!editable()"
               [(ngModel)]="name"
             />
+          </div>
+          <div class="md:col-span-3">
+            <label class="label" for="subjectType">Tipo de assunto *</label>
+            <select
+              id="subjectType"
+              name="subjectType"
+              class="input"
+              [disabled]="!editable()"
+              [(ngModel)]="subjectType"
+            >
+              @for (t of subjectTypes; track t[0]) {
+                <option [ngValue]="t[0]">{{ t[1] }}</option>
+              }
+            </select>
+            <p class="mt-1 text-xs text-muted">
+              Pedidos avulsos ou registos de um módulo que os submete a aprovação (configurado nesse
+              módulo).
+            </p>
           </div>
           <div class="md:col-span-3">
             <label class="label" for="description">Descrição</label>
@@ -246,6 +273,8 @@ export class WorkflowForm implements HasUnsavedChanges {
   protected code = '';
   protected name = '';
   protected description = '';
+  protected subjectType = 'manual';
+  protected readonly subjectTypes = Object.entries(SUBJECT_TYPE_LABELS);
   private readonly confirm = inject(ConfirmService);
   private readonly toasts = inject(ToastService);
   private readonly breadcrumbs = inject(Breadcrumbs);
@@ -260,6 +289,7 @@ export class WorkflowForm implements HasUnsavedChanges {
       code: this.code,
       name: this.name,
       description: this.description,
+      subjectType: this.subjectType,
       steps: this.steps(),
     });
   }
@@ -309,6 +339,7 @@ export class WorkflowForm implements HasUnsavedChanges {
     this.code = w.code;
     this.name = w.name;
     this.description = w.description ?? '';
+    this.subjectType = w.subjectType;
     this.steps.set(
       w.steps.map((s) => ({
         name: s.name,
@@ -344,7 +375,7 @@ export class WorkflowForm implements HasUnsavedChanges {
     return {
       name: this.name.trim(),
       description: this.description.trim() || null,
-      subjectType: 'manual',
+      subjectType: this.subjectType,
       steps: this.steps().map((s) => ({
         name: s.name.trim(),
         approverType: s.approverType,

@@ -1,0 +1,534 @@
+# Relatório — Prompt 07 (recursos humanos)
+
+Estado: **Prompt 07 concluído (7.1 a 7.13)** no branch `claude/pensive-clarke-5gm075`. QA e regressão em
+`docs/reports/prompt-07-qa.md`. Decisões D-024 a D-035.
+
+Nada aqui alega conformidade com a legislação laboral ou fiscal angolana: taxas de IRT e INSS não estão no código e
+terão de ser configuradas pela empresa e confirmadas na legislação em vigor quando chegarem os blocos de processamento.
+
+## Matriz AS-IS / TO-BE
+
+| Bloco                         | AS-IS (fim do Prompt 06)                                        | TO-BE                                                                                                                                                                                                                                                                                                 | Estado |
+| ----------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 7.1 Colaborador               | Estrutura organizacional e memberships; nenhuma ficha de pessoa | Ficha 360 (identificação, organização, dados pessoais, morada, emergência, formação, banco, anexos), âmbitos de RH (empresa/entidade/filial/departamento/próprio), visibilidade por campo, auditoria reservada                                                                                        | Feito  |
+| 7.2 Recrutamento/onboarding   | Nada                                                            | Vaga com remuneração autorizada aprovada (directa ou workflow), candidatos, candidaturas por etapas, entrevistas, avaliações, proposta aprovada e respondida, contratação que cria o colaborador e a checklist (documentos, conta, acessos, equipamentos)                                             | Feito  |
+| 7.3 Contratos/carreira        | Colocação só na ficha, sem histórico; sem contratos             | Contrato (tipo, datas, experiência, jornada, remuneração, estado) com adendas e renovações datadas, suspensão, retoma e termo com histórico; condições numa data; histórico de cargos, transferências e promoções com vigência                                                                        | Feito  |
+| 7.4 Férias/ausências          | Calendários e feriados (Prompt 05); nada de férias              | Tipos de ausência, política versionada com fonte legal, conta-corrente de dias (direito proporcional, transporte, expiração, ajustes, gozo, reversão), pedidos com contagem pelo calendário, sobreposição e saldo, aprovação da chefia, confidencialidade médica, ausências para assiduidade/salários | Feito  |
+| 7.5 Compensação/benefícios    | Salário base no contrato (7.3)                                  | Catálogo de componentes (subsídios, prémios, horas extra, abonos, descontos), incidência IRT/INSS por vigência com fonte, propostas com aprovação (directa ou workflow), componentes do colaborador com vigência e histórico imutável, remuneração numa data para o processamento                     | Feito  |
+| 7.6 Adiantamentos/empréstimos | Nada                                                            | Pedido com plano exacto ao cêntimo criado na aprovação, saldo derivado, limites configuráveis com fonte (prestação máxima em % do base somando empréstimos activos, número de prestações), contrato em cada mês, aprovação segregada, pagamento directo, desconto idempotente para o processamento    | Feito  |
+| 7.7 Processamento salarial    | Nada                                                            | Regras versionadas com fonte (INSS, tabela de IRT, incidência do base, base do IRT, base de dias); lotes regular/extra/retroactivo por entidade legal; cálculo exacto com erros por colaborador; instantâneo e hash; aprovação segregada; fecho imutável com descontos de empréstimos                 | Feito  |
+| 7.8 IRT/INSS                  | Regras versionadas com fonte (7.7)                              | Validade explícita, casos de teste oficiais com fonte que têm de passar, confirmação das normas vigentes por uma pessoa, simulador; nada pré-carregado no código                                                                                                                                      | Feito  |
+| 7.9 Recibos e pagamento       | Contabilidade com motor de eventos (6.3); sem Finanças          | Obrigações do fecho (líquido, IRT, INSS, descontos), pagamentos parciais só de acréscimo (fechado ≠ pago), eventos PAYROLL únicos para a contabilidade, recibos PDF privados (o próprio ou quem processa), "Os meus recibos", contrato de obrigações para Finanças                                    | Feito  |
+| 7.10 Formação/processos       | Nada                                                            | Catálogo (competências, cursos), sessões com capacidade e custo, resultados, conclusão com competências e certificados, custos por curso/departamento; processos disciplinares com permissões próprias, cronologia só de acréscimo, defesa antes da sanção, leitura auditada                          | Feito  |
+| 7.11 Cessação                 | Contrato com terminar (7.3), férias (7.4), lotes EXTRA (7.7)    | Processo com motivo, aviso com fonte, indemnização só se aplicável com base legal, liquidação em linhas com componente, aprovação segregada com efeitos (contrato, colocação, estado, férias), lote EXTRA da liquidação, checklist de saída verificada | Feito  |
+| 7.12 Portais e relatórios     | Endpoints próprios de férias e recibos                          | O meu espaço (ficha, contratos, férias, recibos, formação, empréstimos; só contactos editáveis), a minha equipa (hierarquia, ausências mascaradas, alertas, pedidos a decidir), relatórios de efectivos, rotatividade, férias e folha/IRT/INSS/custos com CSV | Feito  |
+
+## Modelo
+
+- Migração `0022_create_hr_employees`: tabela `employees` (tenant, RLS) com referências à estrutura (entidade legal,
+  filial, departamento, cargo, centro de custo), superior (auto-referência), membership opcional; dados pessoais em
+  colunas próprias. Únicos: código, NIF, INSS e membership (parciais). Checks: estado, não ser o próprio superior,
+  nascimento antes da admissão.
+- Colaborador ≠ utilizador: a membership é opcional e serve só para self-service futuro.
+
+## Endpoints (todos com `auth`, `tenant` e a funcionalidade `hr`; âmbito verificado no serviço)
+
+- `GET /hr/employees` (`hr.read`, filtrado pelo âmbito; pesquisa, estado, entidade, filial, departamento, cargo,
+  superior; ordenação por código, nome, admissão, estado; nunca dados pessoais)
+- `POST /hr/employees` (`hr.manage` no âmbito da colocação; dados pessoais exigem `hr.sensitive`)
+- `GET /hr/employees/:id` (`hr.read`; dados pessoais só com `hr.sensitive` no âmbito; `access` e `directReports`)
+- `PATCH /hr/employees/:id` (`hr.manage` na colocação antiga e na nova; `expectedVersion`)
+- `POST /hr/employees/:id/status` (`hr.manage`; activo ↔ suspenso, motivo opcional; cessação fica para 7.11)
+- Anexos: `entityType=employee` nas rotas de anexos existentes, com acesso aos dados pessoais.
+
+Erros: `OUT_OF_SCOPE`, `SENSITIVE_FORBIDDEN`, `OTHER_LEGAL_ENTITY`, `OTHER_BRANCH`, `INACTIVE`, `CYCLE` (superior),
+`CODE_TAKEN`, `TAX_ID_TAKEN`, `SOCIAL_SECURITY_TAKEN`, `MEMBERSHIP_TAKEN`, `USE_STATUS_ACTION`, `INVALID_TRANSITION`,
+`VERSION_CONFLICT`; validação por campo (`INVALID_IBAN`, `FUTURE_DATE`, …).
+
+### 7.2 Recrutamento e onboarding
+
+- Migração `0023_create_hr_recruitment`: `hr_settings`, `job_requisitions`, `candidates`, `job_applications`,
+  `job_interviews`, `job_evaluations`, `job_offers`, `onboarding_tasks` (todas de tenant, com RLS e FKs compostas).
+- `GET|PUT /hr/settings` (`hr.settings`): workflows de aprovação das vagas e propostas.
+- `GET|POST /hr/requisitions`, `GET|PATCH /hr/requisitions/:id`, `POST …/submit`, `…/decision`, `…/close`, `…/cancel`.
+- `GET|POST /hr/candidates`, `GET|PATCH /hr/candidates/:id`.
+- `GET|POST /hr/applications`, `GET /hr/applications/:id`, `POST …/stage`, `…/interviews`, `…/evaluations`, `…/offers`.
+- `GET /hr/interviews/mine`, `PATCH /hr/interviews/:id`.
+- `PATCH /hr/offers/:id`, `POST …/submit`, `…/decision`, `…/response`, `…/cancel`, `…/hire`.
+- `GET|POST /hr/employees/:id/onboarding`, `PATCH /hr/onboarding-tasks/:id`.
+- Permissões novas: `hr.recruitment.read`, `hr.recruitment.manage`, `hr.recruitment.approve`, `hr.settings`. Tipos de
+  assunto de aprovação novos: `job_requisition`, `job_offer`.
+- Erros: `OUT_OF_SCOPE`, `SEGREGATION`, `USE_APPROVAL_WORKFLOW`, `INVALID_STATE`, `REQUISITION_NOT_OPEN`,
+  `REQUISITION_FILLED`, `OUT_OF_RANGE`, `OFFER_IN_PROGRESS`, `OFFER_EXPIRED`, `PENDING_HIRE`, `ALREADY_APPLIED`,
+  `ALREADY_EVALUATED`, `EMAIL_TAKEN`, `CODE_TAKEN`, `VERSION_CONFLICT`.
+
+### 7.3 Contratos e carreira
+
+- Migração `0024_create_hr_contracts`: `employment_contracts`, `employment_contract_amendments`,
+  `employment_contract_events`, `employment_assignments`.
+- `GET|POST /hr/employees/:id/contracts`, `GET|PATCH /hr/contracts/:id` (PATCH só em rascunho),
+  `POST /hr/contracts/:id/activate|suspend|resume|terminate|cancel`, `POST /hr/contracts/:id/amendments`.
+- `GET|POST /hr/employees/:id/assignments` (histórico e movimentos).
+- Permissões novas: `hr.contracts.read`, `hr.contracts.manage`.
+- Erros: `CONTRACT_OPEN`, `CONTRACT_OVERLAP`, `INVALID_STATE`, `NOT_RETROACTIVE`, `NOT_EXTENDED`, `NOT_FIXED_TERM`,
+  `PERMANENT`, `BEFORE_HIRE`, `BEFORE_SUSPENSION`, `USE_MOVEMENT`, `USE_NEW_CONTRACT`, `FUTURE_DATE`,
+  `NOT_AFTER_CURRENT`, `NO_CHANGE`, `POSITION_REQUIRED`, `CODE_TAKEN`.
+
+### 7.4 Férias e ausências
+
+- Migração `0025_create_hr_leave`: `leave_types`, `leave_policies`, `leave_requests`, `leave_ledger`.
+- `GET /hr/leave/types` (todos os membros com RH), `POST|PATCH /hr/leave/types[/:id]`, `GET|POST /hr/leave/policies`,
+  `GET|PATCH /hr/leave/policies/:id`, `POST /hr/leave/policies/:id/publish` (`hr.leave.settings`).
+- `POST /hr/leave/accruals`, `GET /hr/leave/me`, `GET /hr/employees/:id/leave`, `POST /hr/employees/:id/leave/adjustments`.
+- `GET|POST /hr/leave/requests`, `POST /hr/leave/requests/preview`, `GET /hr/leave/requests/:id`,
+  `POST /hr/leave/requests/:id/decision|cancel`; anexos com `subjectType=leave_request`.
+- Permissões novas: `hr.leave.read`, `hr.leave.request`, `hr.leave.approve`, `hr.leave.manage`, `hr.leave.settings`.
+- Erros: `OVERLAP`, `CROSS_YEAR`, `ZERO_DAYS`, `INSUFFICIENT_BALANCE`, `TOO_MANY_DAYS`, `NO_POLICY`, `SEGREGATION`,
+  `POLICY_CONFLICT`, `NOT_AFTER_PREVIOUS`, `IN_USE`, `NOT_LINKED`, `INVALID_STATE`, `OUT_OF_SCOPE`.
+
+### 7.5 Compensação e benefícios
+
+- Migração `0026_create_hr_compensation`: `pay_components`, `pay_component_incidences`, `compensation_proposals`,
+  `compensation_proposal_lines`, `employee_pay_items`; `hr_settings.compensation_workflow_id`.
+- `GET /hr/pay-components` (qualquer `hr.compensation.*`), `POST|PATCH /hr/pay-components[/:id]`,
+  `GET /hr/pay-components/:id`, `POST /hr/pay-components/:id/incidences` (`hr.compensation.settings`).
+- `GET /hr/employees/:id/compensation?date=`, `POST /hr/employees/:id/compensation/proposals`,
+  `GET /hr/compensation/proposals`, `GET|PATCH /hr/compensation/proposals/:id`, `POST …/submit|decision|cancel`.
+- Permissões novas: `hr.compensation.read`, `hr.compensation.manage`, `hr.compensation.approve`,
+  `hr.compensation.settings`; tipo de assunto `compensation_proposal`.
+- Erros: `NO_CONTRACT`, `NOT_AFTER_CURRENT`, `NOTHING_TO_REMOVE`, `VARIABLE_COMPONENT`, `INVALID_AMOUNT`,
+  `INVALID_PERCENT`, `STALE_PROPOSAL`, `SEGREGATION`, `USE_APPROVAL_WORKFLOW`, `NOT_AFTER_PREVIOUS`, `INCONSISTENT`,
+  `IN_USE`, `CODE_TAKEN`.
+
+### 7.6 Adiantamentos e empréstimos
+
+- Migração `0027_create_hr_loans`: `employee_loans` (código, tipo, moeda, capital, prestações, primeiro mês, motivo,
+  estado, decisão), `employee_loan_installments` (mês, valor, estado, referência e data de liquidação; a base exige
+  referência e data em toda a prestação liquidada); `hr_settings.loan_max_installment_percent`,
+  `loan_max_installments`, `loan_policy_reference` (fonte obrigatória quando há limite).
+- `GET|POST /hr/employees/:id/loans`, `GET /hr/loans` (filtros estado, tipo, `toApprove`), `GET|PATCH /hr/loans/:id`,
+  `POST /hr/loans/:id/submit|decision|cancel`, `POST /hr/loans/:id/installments/:installmentId/payment`.
+- Permissões novas: `hr.loans.read`, `hr.loans.manage`, `hr.loans.approve`.
+- Para o processamento (7.7), em `#modules/hr/index`: `dueLoanInstallments(scope, employeeId, period)` (prestações do
+  mês e em atraso) e `recordLoanDeduction(scope, installmentId, reference, date)` (idempotente pela referência).
+- Erros: `ADVANCE_SINGLE`, `TOO_SMALL`, `IMMUTABLE`, `NOT_RETROACTIVE`, `TOO_MANY_INSTALLMENTS`, `NO_CONTRACT`,
+  `LOAN_BEYOND_CONTRACT`, `CURRENCY_MISMATCH`, `LIMIT_EXCEEDED`, `STALE_LOAN`, `SEGREGATION`, `ALREADY_SETTLED`, `FUTURE`.
+
+### 7.7 Processamento salarial
+
+- Migração `0028_create_hr_payroll`: `payroll_rule_sets` + `payroll_irt_brackets` (publicadas ⇒ imutáveis),
+  `payroll_periods`, `payroll_runs` (um regular activo por mês; retroactivo aponta para o mês fechado),
+  `payroll_run_inputs`, `payroll_results` + `payroll_result_lines` (instantâneo em JSON; imutáveis a partir da
+  submissão, por trigger).
+- `GET|POST /hr/payroll/rule-sets`, `GET|PATCH|DELETE /hr/payroll/rule-sets/:id`, `POST …/publish`
+  (`hr.payroll.settings`); `GET /hr/payroll/periods`, `GET|POST /hr/payroll/runs`, `GET /hr/payroll/runs/:id`,
+  `GET …/results/:resultId`, `PUT …/inputs`, `POST …/exclusions|calculate|submit|decision|close|cancel`.
+- Permissões novas: `hr.payroll.read`, `hr.payroll.manage`, `hr.payroll.approve`, `hr.payroll.settings`.
+- Erros: `NO_RULE_SET`, `MISSING_INCIDENCE`, `IRT_OUT_OF_TABLE`, `NEGATIVE_NET`, `NO_PAYABLE_DAYS`, `NO_CONTRACT`,
+  `RUN_HAS_ERRORS`, `STALE_RUN`, `REGULAR_EXISTS`, `PERIOD_CLOSED`, `NOT_CLOSED`, `NOT_VARIABLE`, `OTHER_LEGAL_ENTITY`,
+  `SEGREGATION`, `VERSION_EXISTS`, `GAP`, `OPEN_LAST`.
+- Para os blocos seguintes: `ruleSetAt(scope, currency, date)` em `#modules/hr/index`; os lotes fechados são a fonte dos
+  recibos (7.9) e dos lançamentos (7.9).
+
+### 7.8 IRT/INSS
+
+- Migração `0029_create_hr_payroll_rule_validation`: `payroll_rule_sets.valid_to`, `confirmed_by|at`,
+  `confirmation_note` (confirmação exigida às publicadas daqui em diante); `payroll_rule_test_cases` (imutáveis com a
+  versão publicada, por trigger).
+- `POST /hr/payroll/rule-sets/:id/verify|simulate|confirm` (`hr.payroll.settings`); criar/alterar aceitam `validTo` e
+  `testCases`; publicar exige casos a passar e confirmação.
+- Erros: `NO_TEST_CASES`, `CASES_FAILING` (por caso, com o esperado e o calculado), `NOT_CONFIRMED`, `RANGE`.
+
+### 7.9 Recibos, pagamento e contabilização
+
+- Migração `0030_create_hr_payroll_payments`: `payroll_obligations` (por lote, tipo e moeda; pago ≤ valor),
+  `payroll_obligation_payments` (só de acréscimo), `payroll_postings` (um evento de contabilidade por lote/moeda e por
+  pagamento).
+- `GET /hr/payroll/runs/:id/payments`, `POST /hr/payroll/obligations/:id/payments` (`hr.payroll.pay`),
+  `POST /hr/payroll/runs/:id/accounting` (`hr.payroll.manage`), `GET /hr/payslips` (os do próprio),
+  `GET /hr/payslips/:id` (PDF: o próprio ou quem processa).
+- Permissão nova: `hr.payroll.pay`. Contrato para Finanças: `payrollObligations(scope, filtros)`.
+- Eventos para a contabilidade: `PAYROLL/SALARIES` e `PAYROLL/NET_PAY_PAID|IRT_PAID|INSS_PAID|DEDUCTIONS_PAID`.
+- Erros: `OVERPAYMENT`, `FUTURE`, `CURRENCY_MISMATCH`, `NO_RULE` (da contabilidade), `NEGATIVE_AMOUNTS`, `NOT_CLOSED`.
+- `app/shared/pdf/simple_pdf.ts`: gerador de PDF 1.4 sem dependências (Helvetica/WinAnsi, texto e linhas).
+
+### 7.10 Formação e processos laborais
+
+- Migração `0031_create_hr_training_discipline`: `competencies`, `training_courses` (+ `training_course_competencies`),
+  `training_sessions`, `training_enrollments` (fixas depois de concluída a sessão), `employee_competencies` (só de
+  acréscimo), `employee_certificates`, `disciplinary_cases` (encerrado ⇒ fixo) e `disciplinary_events` (só de acréscimo).
+- Formação: `GET|POST|PATCH /hr/training/competencies|courses` (escrita com `hr.training.settings`),
+  `GET|POST /hr/training/sessions`, `GET /hr/training/sessions/:id`, `POST …/enrollments|complete|cancel`,
+  `POST /hr/training/enrollments/:id/result`, `GET /hr/training/costs?year=`, `GET /hr/employees/:id/training`,
+  `POST /hr/employees/:id/competencies|certificates`.
+- Processos: `GET /hr/discipline/cases`, `GET /hr/discipline/cases/:id` (auditado), `POST /hr/employees/:id/discipline/cases`,
+  `POST /hr/discipline/cases/:id/events|review|close`.
+- Permissões novas: `hr.training.read|manage|settings`, `hr.discipline.read|manage`. Anexos: `employee_certificate` e
+  `disciplinary_case`.
+- Erros: `CAPACITY`, `NOT_STARTED`, `ASSESSED`, `NOT_ASSESSED`, `NO_RESULT`, `NO_CERTIFICATE`, `DUPLICATE`, `SELF_CASE`,
+  `DEFENCE_REQUIRED`, `TERMINATED`.
+
+### 7.11 Cessação
+
+- Migração `0032_create_hr_terminations`: `employee_terminations` (um em curso/concluído por colaborador; aprovado ⇒ só
+  lote e conclusão mudam; concluído/cancelado ⇒ fixo), `termination_settlement_lines` (só em rascunho) e
+  `termination_tasks` (fixas depois de concluído).
+- API: `GET /hr/terminations`, `GET /hr/terminations/:id` (com factos, impedimentos e acessos),
+  `POST /hr/employees/:id/terminations`, `PATCH /hr/terminations/:id`, `POST|PATCH|DELETE /hr/terminations/:id/lines[/:lineId]`,
+  `POST /hr/terminations/:id/submit|decision|cancel|settlement|complete|tasks`, `PATCH /hr/termination-tasks/:id`.
+- Permissões novas: `hr.terminations.read|manage|approve`. Anexos: `employee_termination`.
+- Processamento: lotes de liquidação não aceitam entradas nem exclusões (`SETTLEMENT_RUN`); um EXTRA num mês posterior
+  à cessação usa as condições do último contrato terminado.
+- Erros: `TERMINATION_EXISTS`, `NO_OPEN_CONTRACT`, `SELF_TERMINATION`, `SEGREGATION`, `INDEMNITY_MISSING`,
+  `INDEMNITY_NOT_APPLICABLE`, `INDEMNITY_LINES`, `KIND_MISMATCH`, `AMOUNT_MISMATCH`, `CASE_NOT_DECIDED`, `LEAVE_OPEN`,
+  `LOAN_REQUEST_OPEN`, `PROCESSED_AFTER`, `TASKS_PENDING`, `SETTLEMENT_OPEN`, `ACCESS_ACTIVE`, `LOANS_OUTSTANDING`.
+
+### 7.12 Portais e relatórios
+
+- Sem migração. API: `GET|PATCH /hr/me`, `GET /hr/team`, `GET /hr/reports/headcount?date=`,
+  `GET /hr/reports/turnover|leave|payroll?year=` (todos com `legalEntityId` opcional).
+- Permissão nova: `hr.reports.read`. Domínio puro `hr/domain/reports.ts` (em funções, colocação e contrato numa data,
+  efectivos, rotatividade, percentagem exacta).
+- Erros: `NOT_LINKED`, `NOT_SELF_EDITABLE`, `OUT_OF_SCOPE`.
+
+## Ecrãs
+
+Novo domínio "Pessoas e Talento" → Colaboradores (visível com `hr.read` em qualquer âmbito):
+
+- Lista (EntityListPage): pesquisa, filtros de estado e departamento na URL, colunas configuráveis, exportação CSV,
+  entidade legal da barra superior aplicada.
+- Novo colaborador (EntityFormPage) com secções; as secções de dados pessoais só aparecem a quem os pode escrever.
+- Ficha (PageDetail + barra de acções fixa): edição só do que mudou, suspender/reactivar com confirmação, resumo,
+  anexos (só com acesso a dados pessoais) e histórico de auditoria. Sem acesso aos dados pessoais, um cartão
+  "Dados reservados" substitui essas secções; sem `hr.manage`, a ficha é só de leitura.
+- Sem rascunhos no browser (dados pessoais).
+
+Recrutamento (7.2), no mesmo domínio:
+
+- Vagas: lista com filtros na URL; formulário (remuneração em texto decimal); detalhe com pedir aprovação, aprovar ou
+  recusar com motivo (só a quem pode e não pediu), ligação ao pedido quando há workflow, fechar e cancelar, e as
+  candidaturas da vaga com "Adicionar candidato" (existente ou novo).
+- Candidatos: lista e ficha com as candidaturas visíveis.
+- Candidatura: mudar de etapa (recusar exige motivo), marcar entrevistas, avaliar, preparar proposta (aviso imediato fora
+  do intervalo autorizado), pedir aprovação, aprovar/recusar, registar a resposta do candidato e contratar com a
+  checklist sugerida e editável.
+- As minhas entrevistas: o entrevistador marca como realizada e avalia.
+- Ficha do colaborador: cartão de onboarding com progresso; tarefas por estado.
+- Configuração de RH: workflows das vagas e propostas. O editor de workflows ganhou o tipo de assunto.
+
+Compensação (7.5):
+
+- Ficha do colaborador: cartão Compensação com a remuneração numa data (base do contrato, componentes, incidência),
+  propostas e histórico com vigência; "Nova proposta" com linhas (definir/remover; montante ou percentagem).
+- Proposta: pedir aprovação, aprovar e aplicar (outra pessoa) ou recusar com motivo, cancelar.
+- Compensação (lista): propostas no âmbito, vista "A aprovar por mim".
+- Componentes de remuneração: catálogo e versões da incidência de IRT/INSS com fonte. Configuração de RH: workflow das
+  propostas de compensação.
+
+Formação e processos (7.10):
+
+- Formação (lista de sessões, nova sessão com custo e capacidade); sessão (inscrever por lista de colaboradores,
+  resultado/horas/nota por participante, concluir com confirmação, cancelar; resumo com custo por participante e
+  competências do curso); catálogo (competências e cursos com níveis); ficha do colaborador: cartão "Formação e
+  competências" (nível actual, certificados com validade e documentos, inscrições, avaliar competência, registar
+  certificado).
+- Processos disciplinares (lista restrita); processo (aviso de confidencialidade, factos, cronologia, documentos,
+  registar, passar a instrução, decidir e encerrar com aviso de defesa em falta); ficha: cartão "Processos
+  disciplinares" só para quem tem acesso.
+
+Cessação (7.11):
+
+- Ficha do colaborador: cartão "Cessação" (processo e "Iniciar cessação" com os campos de aviso e indemnização; sem
+  valores pré-preenchidos).
+- Cessações (lista no âmbito); cessação: próximo passo, impedimentos, dados, liquidação final (linhas com quantidade ×
+  valor unitário calculado sem `float`, totais), apoio ao cálculo (antiguidade, aviso, férias, sugestão proporcional,
+  processamentos pendentes, empréstimos, subordinados), checklist com progresso, documentos, editar/submeter/aprovar/
+  devolver/cancelar/gerar lote/concluir.
+
+Portais e relatórios (7.12):
+
+- O meu espaço (/rh/eu): indicadores (férias disponíveis, pedidos pendentes, recibos, certificados), os meus dados
+  com "Actualizar contactos", contrato em vigor, as minhas ausências com "Pedir ausência", últimos recibos com PDF,
+  histórico de contratos, certificados e empréstimos.
+- A minha equipa (/rh/equipa): indicadores, pessoas (com quem chefia abaixo), presença hoje, próxima ausência,
+  alertas, pedidos pendentes com "Decidir" só nos que pode decidir, ausências até 30 dias.
+- Relatórios de RH (/rh/relatorios): separadores Efectivos, Rotatividade, Férias e Folha salarial (este com
+  `hr.payroll.read`), com gráficos de barras (no máximo 8, resto em "Outros"), tabelas, exportação CSV e impressão;
+  a entidade legal da barra superior filtra.
+
+Recibos e pagamento (7.9):
+
+- Lote fechado: secção "Pagamento e contabilidade" com o estado (por pagar, parcial, pago), as obrigações com o que
+  falta, "Registar pagamento" (montante, data, referência, conta bancária) e "Contabilizar" com o estado dos
+  lançamentos; botão PDF em cada recibo.
+- Os meus recibos (todos os membros): recibos de lotes fechados do próprio, pago/por pagar, descarga em PDF.
+
+Regras de IRT e INSS (7.8):
+
+- Cada versão mostra a vigência, a fonte, quem confirmou e quando, o que falta para publicar, a tabela e os casos de
+  teste com o resultado (passa/falha com esperado e calculado). Acções: simular, verificar casos, editar, confirmar
+  normas (nota e declaração obrigatórias), publicar, apagar rascunho. O editor ganhou a data de fim e os casos de teste.
+
+Processamento salarial (7.7):
+
+- Processamento salarial (lista): lotes no âmbito, filtros de estado e tipo; "Novo processamento" (entidade legal, tipo,
+  mês e, no retroactivo, o mês a rectificar).
+- Lote: próximo passo em texto, indicadores (colaboradores, com erros, líquido, custo), recibos por colaborador com os
+  erros, valores variáveis, excluir/incluir, calcular (simulação), pedir aprovação, aprovar ou recusar (outra pessoa),
+  fechar com confirmação; recibo em painel lateral com as linhas, bases e regras usadas.
+- Regras de processamento: versões por moeda e data com fonte, tabela de IRT em escalões, publicar e apagar rascunhos.
+
+Adiantamentos e empréstimos (7.6):
+
+- Ficha do colaborador: cartão com o valor em dívida e os pedidos; "Novo pedido" com prestação prevista.
+- Pedido: plano de prestações (previsto até à aprovação), progresso liquidado/em dívida, avisos do que impediria hoje a
+  submissão, pedir aprovação, aprovar ou recusar (outra pessoa), cancelar antes da aprovação, registar pagamento directo.
+- Adiantamentos e empréstimos (lista): pedidos no âmbito, filtros de estado e tipo, vista "A aprovar por mim".
+- Configuração de RH: limites (percentagem do base, número de prestações) com fonte obrigatória.
+
+Férias e ausências (7.4):
+
+- Férias e ausências (todos os membros da empresa com RH): saldo do próprio no subtítulo, vistas "A aprovar por mim" e
+  "Os meus pedidos", estado na URL; "Pedir ausência" com contagem de dias e saldo antes de enviar; "Gerar direitos do
+  ano" (quem gere).
+- Pedido: aprovar/recusar (com motivo), cancelar, justificativo; tipos confidenciais mostram à chefia só as datas.
+- Ficha do colaborador: cartão Férias com direito, gozados, pendentes, disponível, política e conta-corrente; ajustes.
+- Configuração: políticas (nova, nova versão, publicar) e tipos de ausência.
+
+Contratos e carreira (7.3), na ficha do colaborador:
+
+- Organização só de leitura depois de criada ("muda-se por movimento de carreira").
+- Carreira: linha do tempo com vigência e "Registar movimento" (transferência, promoção, alteração; data e motivo).
+- Contratos: lista com estado e aviso de termo ultrapassado; "Novo contrato" (rascunho) abre a página do contrato.
+- Contrato: condições iniciais (editáveis só em rascunho), activar, nova adenda, renovar (só a termo certo), suspender,
+  retomar e terminar com data e motivo; condições em vigor hoje, adendas, eventos do contrato e auditoria.
+
+## Testes e evidências
+
+- Backend funcional `hr_employees.spec.ts`: ficha (criação, coerência com a estrutura, unicidade, versão, ciclos,
+  estado); âmbitos (chefia por departamento com subdepartamentos, RH por entidade, próprio, dados pessoais); anexos.
+- Backend unitário `hr_domain.spec.ts`: normalização e erros por campo, auditoria reservada, âmbitos.
+- `isolation_matrix` (colaborador e anexos de outra empresa → 404), `routes_protection` (5 rotas justificadas),
+  esquema e arquitectura.
+- Frontend: `hr/model.spec.ts` (payload de criação/edição, nunca campos sensíveis sem acesso) e navegação.
+- Browser (Playwright, 5 passos): activar `hr` na empresa; criar com IBAN inválido recusado junto do campo e depois
+  normalizado; alterar e suspender; filtro de estado na URL sem dados pessoais na tabela; leitor sem `hr.sensitive`
+  vê a ficha só de leitura com dados reservados. Sem erros na consola.
+
+Testes do 7.2:
+
+- Backend funcional `hr_recruitment.spec.ts` (4 testes): fluxo completo vaga → contratação com checklist e auditoria sem
+  contactos do candidato; workflow de aprovação de vaga e proposta (recusa e aprovação) e cancelamento da proposta ao
+  recusar a candidatura; âmbitos (recrutador por departamento, aprovador por entidade, contratar exige `hr.manage`);
+  concorrência (duas contratações do último posto: 201 e 409, um só colaborador).
+- Backend unitário `hr_recruitment_domain.spec.ts` (4 testes): montantes exactos, normalização da vaga, etapas, datas.
+- `isolation_matrix` (vaga, candidato, candidatura, entrevista, proposta, onboarding e listas de outra empresa → 404 ou
+  vazias), `routes_protection` (30 rotas justificadas).
+- Frontend `hr/recruitment-model.spec.ts` (6 testes) e navegação.
+- Browser (Playwright, 8 passos, dois utilizadores): criar vaga com intervalo inválido recusado; quem pede não vê
+  "Aprovar"; o aprovador aprova; candidato novo; triagem; entrevista atribuída ao aprovador, que a marca realizada e
+  avalia em "As minhas entrevistas"; proposta fora do intervalo assinalada, aprovada pelo outro utilizador e aceite;
+  contratação abre a ficha com 4 tarefas de onboarding e cargo da vaga; a vaga fica preenchida; 390 px sem deslocamento
+  horizontal. Sem erros na consola.
+
+Testes do 7.3:
+
+- Backend funcional `hr_career.spec.ts` (3 testes): ciclo do contrato (validações, activação, um em vigor, adendas sem
+  retroactividade, renovação que estende, suspensão/retoma/termo, sem sobreposição, remuneração fora da auditoria);
+  âmbitos (`hr.read` não vê contratos, leitura sem gestão, outro departamento, o próprio com OWN); carreira (período de
+  admissão, ficha recusa colocação, datas futuras e anteriores, promoção exige cargo, transferência, ciclos de superior,
+  colaborador anterior ao 7.3).
+- Backend unitário `hr_contracts_domain.spec.ts` (3 testes): condições numa data, regras entre campos, véspera e termo.
+- `isolation_matrix` (contratos, adendas, carreira de outra empresa → 404), `routes_protection` (12 rotas).
+- Frontend `hr/contracts-model.spec.ts` (3 testes).
+- Browser (5 passos): colocação bloqueada na ficha; promoção com histórico e ficha actualizada; contrato a termo criado,
+  activado, adenda salarial reflectida nas condições de hoje, renovação inválida recusada junto do campo e válida;
+  suspensão sem motivo recusada, retoma, termo e 6 eventos; 390 px sem deslocamento horizontal. Sem erros na consola.
+
+Testes do 7.4:
+
+- Backend funcional `hr_leave.spec.ts` (3 testes): política versionada (fonte obrigatória, imutável, nova versão fecha a
+  anterior, conflito de âmbito), tipos; direito proporcional (22 × 9/12 = 16,5), idempotência, transporte 5 e expiração
+  1,5; contagem com feriado (4 dias), sobreposição, ano cruzado, zero dias, saldo insuficiente; chefia aprova, o próprio
+  e quem registou não; cancelamento de aprovado com reversão; ajustes; self-service (`/leave/me`); confidencialidade
+  (chefia não vê tipo, motivo nem anexo; auditoria sem tipo nem motivo; leitor de outro departamento não vê).
+- Backend unitário `hr_leave_domain.spec.ts` (4 testes): meses de serviço, direito com arredondamentos, transporte,
+  dias e regras do pedido.
+- `isolation_matrix` (políticas, tipos, pedidos, saldos, ajustes e geração de direitos de outra empresa),
+  `routes_protection` (11 rotas justificadas; tipos e políticas com `can()`).
+- Frontend `hr/leave-model.spec.ts` (3 testes) e navegação.
+- Browser (7 passos, dois utilizadores): política criada e publicada pela interface (fonte obrigatória), tipo de
+  ausência; direitos gerados (20,17 para admissão a 05/01); pedido de 5 dias com contagem e saldo antes de enviar; quem
+  registou não aprova; a chefia aprova em "A aprovar por mim" e o saldo passa a 15,17 com o gozo na conta-corrente;
+  doença confidencial decidida pela chefia sem tipo, motivo nem anexos (o admin vê); 390 px sem deslocamento. Sem erros
+  na consola.
+
+Testes do 7.5:
+
+- Backend funcional `hr_compensation.spec.ts` (3 testes): catálogo (coerência, código, uso em propostas), incidência
+  versionada com fonte e só de acréscimo; propostas (validação de linhas, sem contrato, segregação, recusa com motivo,
+  aplicação com vigência, 10% de 200 000 = 20 000, não retroactiva, remoção, histórico, proposta desactualizada,
+  ninguém aprova a própria remuneração, auditoria sem valores); âmbitos e workflow.
+- Backend unitário `hr_compensation_domain.spec.ts` (3 testes): percentagens e arredondamento, linhas, natureza.
+- `isolation_matrix` (componentes, incidências, remuneração e propostas de outra empresa), `routes_protection`.
+- Frontend `hr/compensation-model.spec.ts` (4 testes) e navegação.
+- Browser (5 passos, dois utilizadores): componente e incidência com fonte pela interface (fonte obrigatória); proposta
+  na ficha com percentagem inválida assinalada junto da linha; quem preparou não aprova; o aprovador aprova em "A
+  aprovar por mim"; remuneração a 01/03 com base 200 000, prémio 20 000, subsídio 25 000 e incidências (e nada a 15/01);
+  390 px sem deslocamento. Sem erros na consola.
+
+Testes do 7.6:
+
+- Backend funcional `hr_loans.spec.ts` (4 testes): validação, códigos, plano exacto (100 000 em 3 = 33 333,33 ×2 +
+  33 333,34), não retroactivo, rascunho editável e tipo imutável, sem contrato, além do fim do contrato a termo, moeda;
+  limites com fonte (30% de 200 000 = 60 000 por mês somando o empréstimo activo, máximo de prestações, pedido
+  desactualizado na aprovação); segregação, plano na aprovação, desconto idempotente e em atraso, nunca duas vezes,
+  pagamento directo, liquidação automática, restrição na base de dados, auditoria sem montantes; âmbitos e o próprio.
+- Backend unitário `hr_loans_domain.spec.ts` (4 testes): meses, plano, desconto máximo, textos.
+- `isolation_matrix` (empréstimos e prestações de outra empresa), `routes_protection`.
+- Frontend `hr/loans-model.spec.ts` (3 testes) e navegação.
+- Browser (7 passos, dois utilizadores): limites com fonte obrigatória pela interface; pedido de 300 000 em 3 avisado no
+  rascunho e recusado ao submeter, cancelado; 150 000 em 3 submetido; quem preparou não aprova; o aprovador aprova em
+  "A aprovar por mim" e nascem 3 prestações por descontar (sem "Pagar" para quem só aprova); pagamento directo da
+  primeira com saldo 100 000 e progresso; 390 px sem deslocamento. Sem erros na consola. O E2E encontrou mensagens com
+  montantes por formatar e a tabela apertada em telemóvel; ambos corrigidos.
+
+Testes do 7.7:
+
+- Backend funcional `hr_payroll.spec.ts` (5 testes): regras (validação, publicação, imutabilidade na base, versão
+  duplicada, permissão); regular com horas extra e empréstimo (210 000 bruto, INSS 6 300, IRT 10 740, líquido 182 960,
+  patronal 16 800 com valores de teste), erro sem regras, exclusão, simulação repetível com o mesmo hash, sem efeitos até
+  ao fecho, segregação, recusa e nova submissão, fecho com desconto da prestação pela referência do lote, mês fechado,
+  lote imutável, auditoria sem montantes; dados alterados ⇒ `STALE_RUN`; mês incompleto (27/31), retroactivo
+  (diferença de 20 000, IRT recalculado 3 280), segundo retroactivo sem diferenças, extra; âmbito por entidade legal e
+  quem tem o recibo no lote não aprova.
+- Backend unitário `hr_payroll_domain.spec.ts` (7 testes): taxas e arredondamento, tabela progressiva, escalões, recibo
+  completo, mês incompleto e faltas, erros, retroactivo.
+- `isolation_matrix` (regras, lotes, recibos, valores e meses de outra empresa), `routes_protection`.
+- Frontend `hr/payroll-model.spec.ts` (3 testes) e navegação.
+- Browser (5 passos, dois utilizadores): regras criadas pela interface com fonte obrigatória e tabela em três escalões,
+  publicadas; lote regular com horas extra calculado (210 000; 6 300; 10 740; 192 960), recibo com linhas, bases e
+  regras; quem calculou não aprova; o aprovador aprova; fecho; 390 px sem deslocamento. Sem erros na consola. O teste
+  funcional encontrou que os valores variáveis não entravam no regular e a matriz de isolamento que os meses de uma
+  entidade de outra empresa respondiam 200 vazio; ambos corrigidos.
+
+Testes do 7.8:
+
+- Backend funcional `hr_payroll_rules.spec.ts` (3 testes): casos com fonte obrigatória, sem casos não se confirma, caso
+  falhado com esperado e calculado, confirmação com nota, a edição apaga a confirmação, publicação, casos imutáveis na
+  base, auditoria; simulador (150 000 + 20 000 só IRT + 1 000,50 isentos ⇒ IRT 6 550, líquido 159 950,50); validade (a
+  partir do mês seguinte ao fim o processamento dá "sem regras"). `hr_payroll.spec.ts` actualizado (casos que deixam de
+  passar ao mudar a taxa patronal, confirmação antes de publicar).
+- Backend unitário (2 testes novos): simulação e comparação ao cêntimo só nos campos indicados; validação de exemplos e
+  casos.
+- `isolation_matrix` (verificar, simular e confirmar regras de outra empresa), frontend `hr/payroll-model.spec.ts`
+  (4 testes).
+- Browser (5 passos, sem erros na consola): versão com caso de IRT esperado errado; verificar mostra "Falha" com
+  esperado/calculado e publicar é recusado; simulador (200 000 ⇒ líquido 184 600); corrigir, verificar (passa), confirmar
+  com nota e declaração, publicar; 390 px sem deslocamento. O E2E levou a reescrever a mensagem de caso falhado (vinha
+  com o nome técnico do campo e montantes sem formato).
+
+Testes do 7.9:
+
+- Backend funcional `hr_payroll_payments.spec.ts` (3 testes): obrigações do fecho (líquido 184 600, IRT 9 400, INSS
+  22 000), pagamento acima do que falta, futuro, conta inválida, quem aprova não paga, conflito de versão, parcial e
+  pago, pagamentos e obrigações protegidos na base; contabilização sem regra (nada lançado), com regras (salários
+  216 000 = 200 000 + 16 000 e pagamento do líquido, ambos lançados), repetir não duplica, pagamento de IRT sem regra
+  falha sem deixar nada a meio; recibo PDF do próprio (texto, IBAN mascarado, sem cache), outro membro não o vê, quem
+  processa vê, lote por fechar sem recibo, descargas na auditoria.
+- Backend unitário `simple_pdf.spec.ts` (3 testes): WinAnsi e escapes, estrutura e tabela de referências do PDF,
+  formatação do recibo. `isolation_matrix` e `routes_protection` com as rotas novas.
+- Frontend `hr/payroll-model.spec.ts` (5 testes) e navegação ("Os meus recibos" para todos).
+- Browser (6 passos, dois utilizadores, sem erros na consola): lote fechado "por pagar" com as três obrigações;
+  pagamento do líquido ⇒ "Pago" e IRT/INSS por pagar; contabilizar sem regras ⇒ erro "Não há regra activa para
+  PAYROLL/SALARIES" e nada lançado; PDF do recibo a partir do lote (verificado o conteúdo); "Os meus recibos" descarrega
+  e o aprovador não vê o recibo de outra pessoa; 390 px sem deslocamento.
+
+Testes do 7.10:
+
+- Backend funcional `hr_training.spec.ts` (3 testes): catálogo (código repetido, modalidade, horas, nível, competência
+  repetida ou inactiva, validade sem certificado, permissões); sessão (datas, capacidade, custo por participante
+  45 000, resultados conforme a avaliação, conclusão só com todos os resultados, competências e certificado só para o
+  aprovado com validade de 24 meses, sessão concluída fixa, histórico só de acréscimo, avaliação posterior, certificado
+  externo expirado, custos 90 000 por curso e departamento); âmbito (gestor de outro departamento, resultados antes do
+  início, o próprio com OWN).
+- Backend funcional `hr_discipline.spec.ts` (2 testes): validação, código, instrução, registos, defesa antes da sanção,
+  encerramento, cronologia e processo encerrado fixos na base, auditoria sem o texto dos factos; RH geral não vê,
+  âmbito por departamento, leitura sem gestão, ninguém vê nem abre processos sobre si, consultas auditadas.
+- `isolation_matrix` (catálogo, sessões, inscrições, formação, certificados, processos e anexos de outra empresa),
+  `routes_protection`; frontend `hr/training-model.spec.ts` (3 testes) e navegação.
+- Browser (7 passos, dois utilizadores, sem erros na consola): competência e curso pela interface; sessão com custo
+  60 000 para 2 ⇒ 30 000 por participante, inscrições, concluir recusado sem todos os resultados, concluída com
+  certificado para a aprovada; ficha com nível 3 e certificado de 02/10/2026 a 02/10/2027, nada para o reprovado;
+  processo aberto na ficha, instrução, aviso de defesa em falta, defesa, encerrado com 4 registos na cronologia; outro
+  utilizador sem permissão recebe "Recurso inexistente" e não vê o cartão; 390 px sem deslocamento. O teste funcional
+  levou a corrigir a ordem da cronologia (passou a ser a do registo) e a detecção de competência repetida.
+
+Testes do 7.11:
+
+- Backend funcional `hr_terminations.spec.ts` (3 testes): validação (motivo, fonte do aviso, base da indemnização, aviso
+  depois do último dia), código, factos (61 dias dados de 60, 10 meses e 26 dias, saldo 10), processo repetido,
+  indemnização em falta, componente de desconto numa linha de abono, montante ≠ quantidade × valor, indemnização não
+  aplicável com linha, segregação, devolução com nota, aprovação com contrato terminado, colocação fechada e saldo de
+  férias a zero, base de dados recusa alterar processo e linhas aprovados, conclusão recusada sem lote e checklist, lote
+  EXTRA com bruto 466 666,67 e sem entradas manuais, conclusão, auditoria sem montantes; âmbito por departamento, a
+  própria cessação, lista vazia sem permissões, acesso da conta só feito com a conta suspensa; processo disciplinar por
+  decidir, mês posterior fechado, cancelar com motivo e novo processo.
+- Unitário `hr_termination_domain.spec.ts` (5 testes): datas, aviso, aritmética exacta, linhas, iniciativa.
+- `isolation_matrix` (processo, linhas, decisões, lote, tarefas e anexos de outra empresa), `routes_protection`;
+  frontend `hr/termination-model.spec.ts` (4 testes) e navegação.
+- Browser (8 passos, dois utilizadores, sem erros na consola): iniciar na ficha com erros de fonte e base em falta;
+  liquidação com 10 × 6 666,6667 = 66 666,67 e indemnização 400 000 ⇒ 466 666,67; submeter (quem preparou não vê
+  "Aprovar"); o aprovador aprova; concluir recusado com os motivos; lote gerado, calculado, aprovado e fechado; checklist
+  e conclusão; ficha sem "Iniciar cessação"; 390 px sem deslocamento.
+
+Testes do 7.12:
+
+- Backend funcional `hr_portal.spec.ts` (3 testes): o meu espaço (dados próprios, IBAN mascarado, contrato, campo não
+  editável, email inválido, conflito de versão, auditoria só com nomes de campos, conta sem ficha); a minha equipa
+  (dois níveis, ausente hoje com tipo confidencial mascarado, quem decide cada pedido, alerta de fim de contrato, nada de
+  salários nem dados pessoais, a chefia intermédia só vê a sua equipa); relatórios (sem permissão 403, efectivos 4 → 3
+  após uma cessação, rotatividade de janeiro 25,00 %, âmbito por departamento, folha só com `hr.payroll.read`, lote
+  fechado com bruto 800 000, INSS 24 000 + 64 000 e IRT 37 600, entidade alheia 404).
+- Unitário `hr_reports_domain.spec.ts` (3 testes); `isolation_matrix` (relatórios e portais de outra empresa) e
+  `routes_protection`; frontend `hr/portal-model.spec.ts` (3 testes) e navegação.
+- Browser (5 passos, dois utilizadores, sem erros na consola): o meu espaço com contrato e ausência, contactos com erro
+  de email e depois gravados; a chefia vê a equipa, o pedido com "Decidir" (abre o pedido) e nenhum salário; relatórios
+  com CSV verificado, rotatividade, férias e folha; 390 px sem deslocamento em /rh/eu e /rh/relatorios (o E2E levou a
+  limitar as barras e a corrigir a largura mínima dos cartões).
+
+## Pendências
+
+- Scripts E2E do Prompt 07 fora do repositório (ver `prompt-07-qa.md`).
+- Recrutamento: sem portal público de candidaturas nem envio de emails aos candidatos (não pedido neste bloco).
+- Taxas de IRT/INSS: configuráveis e confirmadas na legislação, nunca fixas no código.
+- 6.9 SAF-T continua bloqueado pela especificação oficial.
+- Contratos e carreira: limites legais (termo, renovações, período experimental) por confirmar na LGT 12/23; movimentos
+  com data futura (agendados) e transferência entre entidades legais ficam por fazer; documento do contrato em PDF fica
+  para o bloco de documentos/recibos.
+- Férias: meios dias, pedidos que atravessam o ano (dividir em dois), proporcionais na cessação (7.11), notificações
+  à chefia, e valores da LGT 12/23 por confirmar pela empresa na política.
+- Compensação: taxas e limites de IRT/INSS por confirmar na legislação (a empresa configura as incidências com a fonte);
+  aprovação de propostas com efeito em períodos de processamento fechados será bloqueada no 7.7.
+- Empréstimos: limites legais por confirmar pela empresa (configurados com a fonte); sem pedido pelo próprio
+  colaborador (portal, 7.12); saldo em dívida na cessação a tratar no 7.11; reescalonamento de prestações não pedido.
+- IRT/INSS: os valores da legislação angolana em vigor e os exemplos oficiais têm de ser introduzidos e confirmados
+  pela empresa (o projecto não os confirma nem pré-carrega). Processamento: a tributação de pagamentos extra (ex.: subsídios de férias e Natal) segue as mesmas regras do mês até o 7.8 o confirmar;
+  mudança de salário a meio do mês usa o valor do último dia pago; recibos em PDF, pagamento e lançamentos contabilísticos
+  no 7.9.
+- Recibos e pagamento: não há módulo de Finanças/Tesouraria nesta reconstrução — as obrigações ficam no RH com o
+  contrato `payrollObligations` e os prazos legais de entrega de IRT/INSS não estão no sistema (por confirmar e
+  configurar); envio de recibos por email e assinatura digital não feitos; contabilização por centro de custo e de
+  retroactivos negativos fica manual.
+- Formação e processos: avaliação de eficácia da formação e planos individuais não pedidos; alertas de certificados a
+  expirar ficam para os portais/relatórios (7.12); prazos legais do processo disciplinar (LGT) e retenção dos processos
+  por definir pela empresa; o próprio colaborador ainda não vê as decisões que lhe dizem respeito (portal, 7.12).
+- Cessação: dias de aviso, critérios de indemnização, férias e subsídios proporcionais da LGT 12/23 por confirmar e
+  indicar pela empresa em cada processo (o sistema não os calcula); declaração/certificado de trabalho em PDF e
+  notificação ao trabalhador ficam para os portais (7.12); suspender a conta continua em Membros (permissão própria);
+  o desconto do saldo de empréstimos na liquidação é registado à mão (linha de desconto + liquidação única no 7.6).
+- Portais e relatórios: a página de relatórios exige `hr.reports.read` (quem só tem `hr.payroll.read` usa o
+  processamento); relatórios por departamento usam a colocação com vigência, mas o âmbito de acesso é o da colocação
+  actual; sem pedido de alteração de dados (IBAN, identificação) pelo próprio com aprovação, nem calendário gráfico da
+  equipa; declaração de trabalho em PDF ainda por fazer.
+
