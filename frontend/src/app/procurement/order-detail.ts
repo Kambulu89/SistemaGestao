@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Api, ApiError } from '../core/api';
 import { Breadcrumbs } from '../core/breadcrumbs';
+import { Workspace } from '../core/workspace';
+import { RECEIPT_STATUS as RECEIPT_DOC_STATUS, type ReceiptRow } from './receipt-model';
 import { Attachments } from '../ui/attachments';
 import { AuditHistory } from '../ui/audit-history';
 import { ConfirmService } from '../ui/confirm';
@@ -148,6 +150,15 @@ type ReasonKind = 'reject' | 'revise' | 'cancel' | 'close';
               >
                 {{ o.number ? 'Emitir revisão' : 'Emitir' }}
               </button>
+            }
+            @if (receivable(o)) {
+              <a
+                class="btn-primary"
+                data-testid="od-receive"
+                routerLink="/compras/recepcoes/nova"
+                [queryParams]="{ orderId: o.id }"
+                >Receber</a
+              >
             }
             @if (o.can.revise) {
               <button
@@ -345,6 +356,23 @@ type ReasonKind = 'reject' | 'revise' | 'cancel' | 'close';
           </p>
         </section>
 
+        @if (receipts().length) {
+          <section class="card" aria-labelledby="od-rec-title">
+            <h2 id="od-rec-title" class="mb-2 font-semibold">Recepções</h2>
+            <ul class="space-y-1 text-sm" data-testid="od-receipts">
+              @for (r of receipts(); track r.id) {
+                <li>
+                  <a class="link" [routerLink]="['/compras/recepcoes', r.id]">{{
+                    r.number ?? 'Rascunho'
+                  }}</a>
+                  · {{ date(r.receiptDate) }} · {{ receiptLabel(r.status)
+                  }}{{ r.deliveryNote ? ' · guia ' + r.deliveryNote : '' }}
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
         @if (o.revisions.length) {
           <section class="card" aria-labelledby="od-rev-title">
             <h2 id="od-rev-title" class="mb-2 font-semibold">Revisões</h2>
@@ -428,6 +456,19 @@ export class PurchaseOrderDetail {
   private readonly toasts = inject(ToastService);
   private readonly confirmSvc = inject(ConfirmService);
   private readonly breadcrumbs = inject(Breadcrumbs);
+  private readonly workspace = inject(Workspace);
+  protected readonly receipts = signal<ReceiptRow[]>([]);
+  protected readonly receiptLabel = (s: ReceiptRow['status']) => RECEIPT_DOC_STATUS[s];
+  /** Pode receber: emitida na revisão em vigor, aprovada, não fechada, algo em falta, e quem vê regista recepções. */
+  protected receivable(o: Order) {
+    return (
+      this.workspace.canAny('procurement.receipts.manage') &&
+      o.approvalStatus === 'APPROVED' &&
+      o.issuedRevision === o.revision &&
+      !o.closed &&
+      o.receiptStatus !== 'RECEIVED'
+    );
+  }
   protected readonly x = signal<Order | null>(null);
   protected readonly loadError = signal<ApiError | null>(null);
   protected readonly act = new Action();
@@ -484,6 +525,13 @@ export class PurchaseOrderDetail {
     this.loadError.set(null);
     try {
       this.set(await this.api.get<Order>(`procurement/orders/${this.id()}`));
+      // As recepções só para quem as pode ver (sem permissão, a secção não aparece).
+      this.receipts.set(
+        await this.api
+          .page<ReceiptRow>('procurement/receipts', { orderId: this.id()!, limit: 50 })
+          .then((p) => p.items)
+          .catch(() => []),
+      );
     } catch (e) {
       this.loadError.set(ApiError.from(e));
     }

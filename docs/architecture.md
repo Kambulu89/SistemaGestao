@@ -451,7 +451,7 @@ regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis;
 
 ## Compras (módulo `procurement`, Prompt 09) e terceiros (módulo `partners`)
 
-9.1 a 9.6 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-052). O terceiro (`business_partners`, contactos) é do módulo `partners`,
+9.1 a 9.7 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-053). O terceiro (`business_partners`, contactos) é do módulo `partners`,
 sem rotas: os papéis de negócio usam o seu `index.ts`. O fornecedor (`suppliers`) é o papel de compra de um terceiro,
 com condições comerciais e homologação: critérios e tipos de documento configuráveis, documentos com validade (fixos,
 desactiváveis), pedidos de homologação fixos depois de decididos, dados bancários que só ficam activos com a aprovação
@@ -476,4 +476,7 @@ Contratos de fornecedor (9.6): aprovação segregada numerada; depois de aprovad
 pessoa (a base só o deixa mudar dentro da transacção que aplica a adenda); renovação como adenda; as ordens com
 contrato respeitam a tabela de preços e consomem o máximo líquido na emissão (`consumeContract`, idempotente, com o
 contrato bloqueado), devolvendo no fecho do resto e na anulação.
+Recepções (9.7): conferência por linha (aceite, recusada com motivo, lote/validade/séries); a confirmação, com a ordem
+bloqueada, faz uma única entrada no Inventário (`receivePurchase`, idempotente pela recepção) na unidade base e ao custo
+líquido em moeda funcional; serviços só aceites; corrige-se por estorno (`reverseStockPosting`), nunca editando.
 

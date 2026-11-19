@@ -4557,6 +4557,141 @@ export class PurchaseOrderSchema extends BaseModel {
   declare warehouseId: string | null
 }
 
+export class PurchaseReceiptEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'details', 'id', 'kind', 'reason', 'receiptId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseReceiptEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare receiptId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseReceiptLineSchema extends BaseModel {
+  static $columns = ['baseQuantity', 'createdAt', 'createdBy', 'expiryDate', 'id', 'lineNo', 'locationId', 'lotCode', 'notes', 'orderLineId', 'productId', 'quantity', 'receiptId', 'rejectReason', 'rejectedQuantity', 'serials', 'stocked', 'tenantId', 'unitCost', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = PurchaseReceiptLineSchema.$columns
+  @column()
+  declare baseQuantity: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare expiryDate: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare locationId: string | null
+  @column()
+  declare lotCode: string | null
+  @column()
+  declare notes: string | null
+  @column()
+  declare orderLineId: string
+  @column()
+  declare productId: string | null
+  @column()
+  declare quantity: string
+  @column()
+  declare receiptId: string
+  @column()
+  declare rejectReason: string | null
+  @column()
+  declare rejectedQuantity: string
+  @column()
+  declare serials: any | null
+  @column()
+  declare stocked: boolean
+  @column()
+  declare tenantId: string
+  @column()
+  declare unitCost: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseReceiptSchema extends BaseModel {
+  static $columns = ['cancelReason', 'confirmedAt', 'confirmedBy', 'createdAt', 'createdBy', 'deliveryNote', 'id', 'integrationEventId', 'legalEntityId', 'notes', 'number', 'orderId', 'postingId', 'receiptDate', 'reversalPostingId', 'reversalReason', 'reversedAt', 'reversedBy', 'seriesId', 'status', 'supplierId', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = PurchaseReceiptSchema.$columns
+  @column()
+  declare cancelReason: string | null
+  @column.dateTime()
+  declare confirmedAt: DateTime | null
+  @column()
+  declare confirmedBy: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare deliveryNote: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare integrationEventId: string | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column()
+  declare orderId: string
+  @column()
+  declare postingId: string | null
+  @column.date()
+  declare receiptDate: DateTime
+  @column()
+  declare reversalPostingId: string | null
+  @column()
+  declare reversalReason: string | null
+  @column.dateTime()
+  declare reversedAt: DateTime | null
+  @column()
+  declare reversedBy: string | null
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare supplierId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string | null
+}
+
 export class PurchaseRequisitionAllocationSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'id', 'idempotencyKey', 'lineId', 'quantity', 'sourceId', 'sourceLineId', 'sourceType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = PurchaseRequisitionAllocationSchema.$columns

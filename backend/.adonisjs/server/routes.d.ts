@@ -528,6 +528,15 @@ export type ScannedRoutes = {
     'contracts.propose': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'contracts.transition': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
     'contracts.amendment': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'receipts.index': { paramsTuple?: []; params?: {} }
+    'receipts.expected': { paramsTuple?: []; params?: {} }
+    'receipts.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.store': { paramsTuple?: []; params?: {} }
+    'receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.update_level': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -752,6 +761,10 @@ export type ScannedRoutes = {
     'contracts.index': { paramsTuple?: []; params?: {} }
     'contracts.options': { paramsTuple?: []; params?: {} }
     'contracts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.index': { paramsTuple?: []; params?: {} }
+    'receipts.expected': { paramsTuple?: []; params?: {} }
+    'receipts.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
@@ -960,6 +973,10 @@ export type ScannedRoutes = {
     'contracts.index': { paramsTuple?: []; params?: {} }
     'contracts.options': { paramsTuple?: []; params?: {} }
     'contracts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.index': { paramsTuple?: []; params?: {} }
+    'receipts.expected': { paramsTuple?: []; params?: {} }
+    'receipts.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
@@ -1219,6 +1236,10 @@ export type ScannedRoutes = {
     'contracts.propose': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'contracts.transition': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
     'contracts.amendment': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'action': ParamValue} }
+    'receipts.store': { paramsTuple?: []; params?: {} }
+    'receipts.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.reverse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
     'suppliers.settings_store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
@@ -1321,6 +1342,7 @@ export type ScannedRoutes = {
     'rfqs.update_award': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'contracts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'receipts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

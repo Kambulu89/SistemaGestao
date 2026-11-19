@@ -856,3 +856,25 @@ bloqueado, consome-se a diferença entre o valor líquido em vigor da ordem (lí
 quantidade) e o já consumido por ela, nunca acima do máximo (`CONTRACT_EXCEEDED`; também `CHECK` na base) e só com o
 contrato efectivamente activo. Fechar o resto e anular devolvem; um contrato terminado aceita devoluções mas não
 consumo novo. Os movimentos são idempotentes por chave e só de acréscimo.
+
+## D-053 Recepções de compra: conferência, entrada única no Inventário, aceitação de serviços e estorno (aceite)
+
+**Recepção.** De uma ordem aprovada e emitida na revisão em vigor (não fechada; uma revisão em curso suspende as
+recepções), com data (não futura), guia do fornecedor e, por linha em falta: quantidade aceite (na unidade da ordem),
+recusada com motivo (fica registada, não entra nem conta como recebida — base da não conformidade do 9.9), lote,
+validade, séries e localização nos bens armazenáveis. Rascunho editável e anulável com motivo.
+
+**Confirmação.** Com a ordem bloqueada (recepções simultâneas esperam umas pelas outras) volta a verificar o que falta
+receber (`OVER_RECEIPT`), dá o número da série `PURCHASE_RECEIPT` e faz **um único** pedido ao Inventário
+(`receivePurchase`, chave `pr-<recepção>`: repetir não duplica o movimento) com todos os bens armazenáveis, na unidade
+base do produto (quantidade × factor da unidade de compra; sem conversão → `NO_CONVERSION`) e ao **custo de entrada**:
+líquido da linha da ordem ÷ quantidade encomendada (desconto incluído, imposto excluído) × câmbio fixado na ordem ÷
+factor, na moeda funcional. Serviços e artigos não armazenáveis (ou ordens sem armazém) ficam só aceites, sem stock.
+Actualiza as quantidades recebidas e o estado de recepção da ordem. Uma recepção confirmada não se confirma de novo.
+
+**Correcção.** Confirmada, a recepção e as linhas não mudam (gatilho); corrige-se por **estorno** com motivo: estorna o
+lançamento de stock (`reverseStockPosting`, idempotente; um estorno não se estorna) e devolve as quantidades à ordem —
+recusado se a linha já foi facturada abaixo do que ficaria (`RECEIPT_INVOICED`; aí corrige-se por devolução, 9.9) ou se
+a ordem foi fechada. Permissões `procurement.receipts.read|manage` por entidade legal. As **entregas previstas** são
+calculadas na hora (linhas emitidas com quantidade em falta, pela data prevista da linha ou da ordem: atrasada, hoje,
+prevista, sem data).

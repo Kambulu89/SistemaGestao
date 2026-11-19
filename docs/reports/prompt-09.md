@@ -332,6 +332,50 @@ ordem de compra, a escolha do contrato (filtrado por entidade, fornecedor e moed
   consumidos e 4 000,00 disponíveis e a ordem; renovação com motivo obrigatório (fim +12 meses pré-preenchido),
   aprovada por outra pessoa, novo fim e sem alerta; 390 px.
 
+## 9.7 Recepções de compra
+
+### Modelo
+
+Migração `0049_create_purchase_receipts`: `purchase_receipts` (estados e número/estorno coerentes por `CHECK`, evento de
+integração e lançamento de stock; gatilho: confirmada só passa a estornada, finais imutáveis, sem eliminação),
+`purchase_receipt_lines` (aceite + recusada > 0, motivo da recusa, unidade base e custo coerentes; só em rascunho),
+`purchase_receipt_events` (só acréscimo).
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /receipts`, `GET /receipts/expected`, `GET /receipts/orders/:id`, `GET|PUT /receipts/:id`,
+  `POST /receipts/:id/{confirm|cancel|reverse}`.
+- Contratos do Inventário usados: `receivePurchase` (entrada única, idempotente) e `reverseStockPosting` (estorno).
+- Permissões `procurement.receipts.read|manage` (entidade legal). Anexos `purchase_receipt`.
+- Erros: `NOT_RECEIVABLE`, `OVER_RECEIPT`, `NOT_STOCKED`, `NO_CONVERSION`, `FUTURE`, `NO_SERIES`, `RECEIPT_INVOICED`,
+  `ORDER_CLOSED`, `INVALID_STATE`, versão (409).
+
+### Ecrãs
+
+Compras → Recepções de compra (lista), Entregas previstas (atrasadas/hoje/previstas/sem data, "Receber"), Nova/Editar
+recepção (ordem, data, guia; por linha em falta: aceite, recusada e motivo, localização, lote, validade, séries),
+Recepção (estado, ordem, armazém, conferência com a unidade base e o custo de entrada, lançamento de stock, confirmar,
+anular, estornar com motivo, anexos, cronologia, auditoria). Na ordem: "Receber" e a lista das recepções.
+
+### Testes e evidências
+
+- Unitário `procurement_receipts_domain.spec.ts` (3): unidade base (caixa de 12), custo de entrada (desconto; USD × 900 ÷
+  12; arredondamento), em falta, estado da entrega prevista, validação das linhas.
+- Funcional `procurement_receipts.spec.ts` (2): entregas previstas atrasadas; rastreio e armazenável por linha;
+  validações e âmbito; rascunho com recusa; `NO_SERIES`; confirmação com número, um único evento de integração com a
+  recepção como documento, lote criado, stock 6 UN e 24 UN (2 CX × 12), custo 900,00 e 500,00; ordem em parte; repetir
+  a confirmação não duplica; a base recusa alterar e apagar; segunda recepção completa (a recusada não conta);
+  `OVER_RECEIPT`; estorno devolve stock e ordem; já facturado → `RECEIPT_INVOICED`; anulação. Segundo: 120 USD × 900 ÷ 12
+  = 9 000,00; duas recepções concorrentes — a segunda recusada; serviços sem armazém aceites sem lançamento; ordem em
+  revisão não recebe.
+- `isolation_matrix` (recepção e ordem de outra empresa → 404 — apanhou que a ordem alheia devolvia 422; corrigido),
+  `routes_protection`, regressão de todo o backend; frontend `receipt-model.spec.ts`.
+- Browser (5 passos, três execuções seguidas, sem erros na consola; armazém só com permissão de recepções, comprador e
+  aprovador): entrega prevista para hoje, "Receber", conferência com recusa (motivo obrigatório), lote e validade,
+  serviço aceite; confirmação com número, lançamento e custo 900,00; a ordem fica "recebida em parte" e lista a
+  recepção; segunda recepção (4 em falta — a recusada não contou) deixa a ordem "recebida"; estorno com motivo volta a
+  "em parte"; 390 px.
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -355,3 +399,6 @@ ordem de compra, a escolha do contrato (filtrado por entidade, fornecedor e moed
 - 9.6: a renovação automática não corre sozinha (sem agendador): o alerta "a renovar" e a proposta de renovação são
   manuais; "caducado" é calculado na leitura; os SLA são medidos no 9.11; o máximo é líquido e na moeda do contrato
   (sem limites por quantidade ou por artigo); a aprovação do contrato é numa etapa.
+- 9.7: sem tolerância de sobre-entrega (o que vier a mais recusa-se); a recusada fica registada mas a não conformidade e a
+  devolução são do 9.9; uma ordem em revisão não recebe até ser reemitida; o custo de entrada usa o câmbio fixado na
+  ordem (a diferença para o câmbio da factura é do 9.8/9.10); sem leitura de códigos de barras no ecrã.

@@ -510,6 +510,24 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
   'POST /api/v1/procurement/contract-amendments/:id/:action':
     'âmbito RBAC de procurement.contracts.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/receipts':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/receipts/expected':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/receipts/orders/:id':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/receipts':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/receipts/:id':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/receipts/:id':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/receipts/:id/confirm':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/receipts/:id/cancel':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/receipts/:id/reverse':
+    'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/rfqs':
     'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/rfqs/options':

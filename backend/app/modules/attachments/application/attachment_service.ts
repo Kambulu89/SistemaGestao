@@ -24,6 +24,7 @@ import { productExists } from '#modules/inventory/index'
 import {
   purchaseContractAccess,
   purchaseOrderAccess,
+  purchaseReceiptAccess,
   rfqAccess,
   supplierExists,
 } from '#modules/procurement/index'
@@ -152,6 +153,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.purchase_contract = {
     feature: 'procurement',
     access: (scope, id) => purchaseContractAccess(scope, id),
+  }
+  // Documentos da recepção (guia do fornecedor, fotografias da conferência): o âmbito da recepção por entidade.
+  map.purchase_receipt = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseReceiptAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

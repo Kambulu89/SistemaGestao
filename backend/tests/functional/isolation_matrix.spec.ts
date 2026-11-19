@@ -811,8 +811,17 @@ async function populate(client: any) {
       [tenant.id, purchaseContract.id, admin.id]
     )
   ).rows[0] as { id: string }
+  // Recepção da empresa A inserida directamente (só interessa o isolamento).
+  const purchaseReceipt = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_receipts (tenant_id, legal_entity_id, order_id, supplier_id, receipt_date)
+       values (?, ?, ?, ?, current_date) returning id`,
+      [tenant.id, le.id, purchaseOrder.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    purchaseReceipt,
     purchaseContract,
     contractAmendment,
     purchaseOrder,
@@ -1571,6 +1580,37 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'cancel adenda alheia',
         B.post(`/api/v1/procurement/contract-amendments/${a.contractAmendment.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      ['GET recepção', B.get(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}`)],
+      [
+        'ordem alheia por receber',
+        B.get(`/api/v1/procurement/receipts/orders/${a.purchaseOrder.id}`),
+      ],
+      [
+        'recepção de ordem alheia',
+        B.post('/api/v1/procurement/receipts', { orderId: a.purchaseOrder.id, lines: [] }),
+      ],
+      [
+        'alterar recepção alheia',
+        B.put(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'confirmar recepção alheia',
+        B.post(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}/confirm`, v),
+      ],
+      [
+        'anular recepção alheia',
+        B.post(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'estornar recepção alheia',
+        B.post(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}/reverse`, {
           ...v,
           reason: 'x',
         }),
@@ -2494,6 +2534,9 @@ test.group('isolamento | matriz entre empresas', (group) => {
       `/api/v1/procurement/rfq-awards/${a.rfqAward.id}`,
       '/api/v1/procurement/orders',
       '/api/v1/procurement/contracts',
+      '/api/v1/procurement/receipts',
+      '/api/v1/procurement/receipts/expected',
+      `/api/v1/procurement/receipts/${a.purchaseReceipt.id}`,
       `/api/v1/procurement/contracts/${a.purchaseContract.id}`,
       `/api/v1/procurement/orders/${a.purchaseOrder.id}`,
       '/api/v1/procurement/rfqs?pendingAward=true',

@@ -18,3 +18,7 @@ export {
   ContractService,
   purchaseContractAccess,
 } from '#modules/procurement/application/contract_service'
+export {
+  purchaseReceiptAccess,
+  ReceiptService,
+} from '#modules/procurement/application/receipt_service'

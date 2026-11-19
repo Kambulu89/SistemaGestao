@@ -55,6 +55,7 @@ const PurchaseRequisitionsController = () =>
 const RfqsController = () => import('#modules/procurement/http/rfqs_controller')
 const PurchaseOrdersController = () => import('#modules/procurement/http/orders_controller')
 const ContractsController = () => import('#modules/procurement/http/contracts_controller')
+const ReceiptsController = () => import('#modules/procurement/http/receipts_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
@@ -1033,6 +1034,15 @@ router
                 router.post('contracts/:id/amendments', [ContractsController, 'propose'])
                 router.post('contracts/:id/:action', [ContractsController, 'transition'])
                 router.post('contract-amendments/:id/:action', [ContractsController, 'amendment'])
+                router.get('receipts', [ReceiptsController, 'index'])
+                router.get('receipts/expected', [ReceiptsController, 'expected'])
+                router.get('receipts/orders/:id', [ReceiptsController, 'order'])
+                router.post('receipts', [ReceiptsController, 'store'])
+                router.get('receipts/:id', [ReceiptsController, 'show'])
+                router.put('receipts/:id', [ReceiptsController, 'update'])
+                router.post('receipts/:id/confirm', [ReceiptsController, 'confirm'])
+                router.post('receipts/:id/cancel', [ReceiptsController, 'cancel'])
+                router.post('receipts/:id/reverse', [ReceiptsController, 'reverse'])
                 router.get('approval-levels', [PurchaseRequisitionsController, 'levels'])
                 router
                   .post('approval-levels', [PurchaseRequisitionsController, 'createLevel'])

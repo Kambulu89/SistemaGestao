@@ -33,6 +33,8 @@ const CONTRACT_PERMISSIONS = [
   'procurement.contracts.approve',
 ];
 
+const RECEIPT_PERMISSIONS = ['procurement.receipts.read', 'procurement.receipts.manage'];
+
 export const PROCUREMENT_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'fornecedores' },
   {
@@ -231,6 +233,48 @@ export const PROCUREMENT_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'procurement.contracts.manage', anyScope: true, mode: 'amend' },
         loadComponent: () => import('./contract-form').then((m) => m.ContractForm),
+      },
+    ],
+  },
+  {
+    path: 'entregas-previstas',
+    title: 'Entregas previstas',
+    canActivate: [accessGuard],
+    data: { anyOf: RECEIPT_PERMISSIONS, anyScope: true },
+    loadComponent: () => import('./expected-deliveries').then((m) => m.ExpectedDeliveries),
+  },
+  {
+    path: 'recepcoes',
+    title: 'Recepções de compra',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: RECEIPT_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./receipts').then((m) => m.Receipts),
+      },
+      {
+        path: 'nova',
+        title: 'Nova recepção',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.receipts.manage', anyScope: true },
+        loadComponent: () => import('./receipt-form').then((m) => m.ReceiptForm),
+      },
+      {
+        path: ':id',
+        title: 'Recepção',
+        canActivate: [accessGuard],
+        data: { anyOf: RECEIPT_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./receipt-detail').then((m) => m.ReceiptDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar recepção',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.receipts.manage', anyScope: true },
+        loadComponent: () => import('./receipt-form').then((m) => m.ReceiptForm),
       },
     ],
   },

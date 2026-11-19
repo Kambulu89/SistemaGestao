@@ -584,6 +584,17 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Aprovar ou recusar contratos e adendas das entidades do âmbito (nunca os que a própria pessoa submeteu ou propôs).',
   },
   {
+    code: 'procurement.receipts.read',
+    module: 'procurement',
+    description: 'Consultar recepções de compra e entregas previstas das entidades do âmbito.',
+  },
+  {
+    code: 'procurement.receipts.manage',
+    module: 'procurement',
+    description:
+      'Registar e confirmar recepções (entrada no inventário e aceitação de serviços), anular rascunhos e estornar.',
+  },
+  {
     code: 'procurement.settings',
     module: 'procurement',
     description:
