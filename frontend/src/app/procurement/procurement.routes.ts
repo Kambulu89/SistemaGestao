@@ -35,6 +35,12 @@ const CONTRACT_PERMISSIONS = [
 
 const RECEIPT_PERMISSIONS = ['procurement.receipts.read', 'procurement.receipts.manage'];
 
+const INVOICE_PERMISSIONS = [
+  'procurement.invoices.read',
+  'procurement.invoices.manage',
+  'procurement.invoices.approve',
+];
+
 export const PROCUREMENT_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'fornecedores' },
   {
@@ -279,11 +285,54 @@ export const PROCUREMENT_ROUTES: Routes = [
     ],
   },
   {
+    path: 'facturas',
+    title: 'Facturas de fornecedor',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: INVOICE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./invoices').then((m) => m.Invoices),
+      },
+      {
+        path: 'nova',
+        title: 'Registar factura',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.invoices.manage', anyScope: true },
+        loadComponent: () => import('./invoice-form').then((m) => m.InvoiceForm),
+      },
+      {
+        path: ':id',
+        title: 'Factura de fornecedor',
+        canActivate: [accessGuard],
+        data: { anyOf: INVOICE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./invoice-detail').then((m) => m.InvoiceDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar factura',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.invoices.manage', anyScope: true },
+        loadComponent: () => import('./invoice-form').then((m) => m.InvoiceForm),
+      },
+    ],
+  },
+  {
     path: 'adjudicacoes/:id',
     title: 'Adjudicação',
     canActivate: [accessGuard],
     data: { anyOf: RFQ_PERMISSIONS, anyScope: true },
     loadComponent: () => import('./rfq-award-detail').then((m) => m.RfqAwardDetail),
+  },
+  {
+    path: 'configuracao/tolerancias',
+    title: 'Tolerâncias da conferência',
+    canActivate: [accessGuard],
+    canDeactivate: [unsavedChangesGuard],
+    data: { permission: 'procurement.settings' },
+    loadComponent: () => import('./tolerances').then((m) => m.ToleranceSettings),
   },
   {
     path: 'configuracao/etapas',

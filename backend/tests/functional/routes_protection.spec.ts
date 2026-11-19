@@ -528,6 +528,28 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
   'POST /api/v1/procurement/receipts/:id/reverse':
     'âmbito RBAC de procurement.receipts.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/invoices':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/invoices/orders/:id':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/invoices/:id':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/invoices/:id':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/validate':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/approve':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/reject':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/refuse':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/invoices/:id/cancel':
+    'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/tolerances':
+    'tolerâncias da conferência da empresa: só valores de configuração, sem dados de documentos; alterar exige procurement.settings',
   'GET /api/v1/procurement/rfqs':
     'âmbito RBAC de procurement.rfqs.read/manage por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/rfqs/options':

@@ -3768,6 +3768,33 @@ export class PostingRuleSchema extends BaseModel {
   declare version: number
 }
 
+export class ProcurementToleranceSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'priceAmount', 'pricePct', 'qtyPct', 'tenantId', 'totalAmount', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ProcurementToleranceSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare priceAmount: string
+  @column()
+  declare pricePct: string
+  @column()
+  declare qtyPct: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class ProductCategorySchema extends BaseModel {
   static $columns = ['accountingClass', 'code', 'createdAt', 'createdBy', 'id', 'name', 'parentId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = ProductCategorySchema.$columns
@@ -4282,6 +4309,180 @@ export class PurchaseContractSchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseInvoiceEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'details', 'id', 'invoiceId', 'kind', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseInvoiceEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseInvoiceExceptionSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'decidedBy', 'decision', 'divergences', 'id', 'invoiceId', 'reason', 'requestedBy', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseInvoiceExceptionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare decidedBy: string
+  @column()
+  declare decision: string
+  @column()
+  declare divergences: any
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string
+  @column()
+  declare reason: string
+  @column()
+  declare requestedBy: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseInvoiceLineSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'description', 'discountAmount', 'discountRate', 'grossAmount', 'id', 'invoiceId', 'lineNo', 'match', 'netAmount', 'orderLineId', 'quantity', 'taxAmount', 'taxRate', 'tenantId', 'totalAmount', 'unitPrice', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseInvoiceLineSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column()
+  declare discountAmount: string
+  @column()
+  declare discountRate: string
+  @column()
+  declare grossAmount: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare match: any | null
+  @column()
+  declare netAmount: string
+  @column()
+  declare orderLineId: string | null
+  @column()
+  declare quantity: string
+  @column()
+  declare taxAmount: string
+  @column()
+  declare taxRate: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string
+  @column()
+  declare unitPrice: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseInvoiceSchema extends BaseModel {
+  static $columns = ['cancelReason', 'createdAt', 'createdBy', 'currency', 'declaredTotal', 'divergences', 'dueDate', 'exchangeRate', 'id', 'invoiceDate', 'invoiceNumber', 'invoiceNumberKey', 'legalEntityId', 'notes', 'number', 'orderId', 'rejectReason', 'seriesId', 'status', 'submittedAt', 'submittedBy', 'supplierId', 'tenantId', 'totalAmount', 'totalFunctional', 'totalNet', 'totalTax', 'updatedAt', 'updatedBy', 'validatedAt', 'validatedBy', 'version'] as const
+  $columns = PurchaseInvoiceSchema.$columns
+  @column()
+  declare cancelReason: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare declaredTotal: string
+  @column()
+  declare divergences: any | null
+  @column.date()
+  declare dueDate: DateTime
+  @column()
+  declare exchangeRate: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare invoiceDate: DateTime
+  @column()
+  declare invoiceNumber: string
+  @column()
+  declare invoiceNumberKey: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column()
+  declare orderId: string
+  @column()
+  declare rejectReason: string | null
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare supplierId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string
+  @column()
+  declare totalFunctional: string | null
+  @column()
+  declare totalNet: string
+  @column()
+  declare totalTax: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.dateTime()
+  declare validatedAt: DateTime | null
+  @column()
+  declare validatedBy: string | null
   @column()
   declare version: number
 }

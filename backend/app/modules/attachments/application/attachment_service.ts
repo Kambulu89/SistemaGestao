@@ -23,6 +23,7 @@ import { LocalStorage } from '#modules/attachments/infrastructure/local_storage'
 import { productExists } from '#modules/inventory/index'
 import {
   purchaseContractAccess,
+  purchaseInvoiceAccess,
   purchaseOrderAccess,
   purchaseReceiptAccess,
   rfqAccess,
@@ -158,6 +159,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.purchase_receipt = {
     feature: 'procurement',
     access: (scope, id) => purchaseReceiptAccess(scope, id),
+  }
+  // Factura do fornecedor (o PDF/digitalização): o âmbito da factura por entidade.
+  map.purchase_invoice = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseInvoiceAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

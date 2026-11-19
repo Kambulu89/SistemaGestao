@@ -22,3 +22,7 @@ export {
   purchaseReceiptAccess,
   ReceiptService,
 } from '#modules/procurement/application/receipt_service'
+export {
+  InvoiceService,
+  purchaseInvoiceAccess,
+} from '#modules/procurement/application/invoice_service'

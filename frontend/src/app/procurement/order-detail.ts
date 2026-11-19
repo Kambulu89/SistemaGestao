@@ -5,6 +5,7 @@ import { Api, ApiError } from '../core/api';
 import { Breadcrumbs } from '../core/breadcrumbs';
 import { Workspace } from '../core/workspace';
 import { RECEIPT_STATUS as RECEIPT_DOC_STATUS, type ReceiptRow } from './receipt-model';
+import { INVOICE_STATUS as INVOICE_DOC_STATUS, type InvoiceRow } from './invoice-model';
 import { Attachments } from '../ui/attachments';
 import { AuditHistory } from '../ui/audit-history';
 import { ConfirmService } from '../ui/confirm';
@@ -150,6 +151,15 @@ type ReasonKind = 'reject' | 'revise' | 'cancel' | 'close';
               >
                 {{ o.number ? 'Emitir revisão' : 'Emitir' }}
               </button>
+            }
+            @if (canInvoice(o)) {
+              <a
+                class="btn-secondary"
+                data-testid="od-invoice-new"
+                routerLink="/compras/facturas/nova"
+                [queryParams]="{ orderId: o.id }"
+                >Registar factura</a
+              >
             }
             @if (receivable(o)) {
               <a
@@ -356,6 +366,23 @@ type ReasonKind = 'reject' | 'revise' | 'cancel' | 'close';
           </p>
         </section>
 
+        @if (invoices().length) {
+          <section class="card" aria-labelledby="od-inv-title">
+            <h2 id="od-inv-title" class="mb-2 font-semibold">Facturas</h2>
+            <ul class="space-y-1 text-sm" data-testid="od-invoices">
+              @for (f of invoices(); track f.id) {
+                <li>
+                  <a class="link" [routerLink]="['/compras/facturas', f.id]">{{
+                    f.invoiceNumber
+                  }}</a>
+                  · {{ date(f.invoiceDate) }} · {{ money(f.totalAmount, f.currency) }} ·
+                  {{ invoiceLabel(f.status) }}
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
         @if (receipts().length) {
           <section class="card" aria-labelledby="od-rec-title">
             <h2 id="od-rec-title" class="mb-2 font-semibold">Recepções</h2>
@@ -458,6 +485,16 @@ export class PurchaseOrderDetail {
   private readonly breadcrumbs = inject(Breadcrumbs);
   private readonly workspace = inject(Workspace);
   protected readonly receipts = signal<ReceiptRow[]>([]);
+  protected readonly invoices = signal<InvoiceRow[]>([]);
+  protected readonly invoiceLabel = (s: InvoiceRow['status']) => INVOICE_DOC_STATUS[s];
+  /** Pode registar facturas: ordem emitida, não anulada, e quem vê regista facturas. */
+  protected canInvoice(o: Order) {
+    return (
+      this.workspace.canAny('procurement.invoices.manage') &&
+      o.issuedRevision !== null &&
+      o.approvalStatus !== 'CANCELLED'
+    );
+  }
   protected readonly receiptLabel = (s: ReceiptRow['status']) => RECEIPT_DOC_STATUS[s];
   /** Pode receber: emitida na revisão em vigor, aprovada, não fechada, algo em falta, e quem vê regista recepções. */
   protected receivable(o: Order) {
@@ -529,6 +566,12 @@ export class PurchaseOrderDetail {
       this.receipts.set(
         await this.api
           .page<ReceiptRow>('procurement/receipts', { orderId: this.id()!, limit: 50 })
+          .then((p) => p.items)
+          .catch(() => []),
+      );
+      this.invoices.set(
+        await this.api
+          .page<InvoiceRow>('procurement/invoices', { orderId: this.id()!, limit: 50 })
           .then((p) => p.items)
           .catch(() => []),
       );

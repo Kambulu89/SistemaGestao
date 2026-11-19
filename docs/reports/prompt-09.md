@@ -376,6 +376,50 @@ anular, estornar com motivo, anexos, cronologia, auditoria). Na ordem: "Receber"
   recepção; segunda recepção (4 em falta — a recusada não contou) deixa a ordem "recebida"; estorno com motivo volta a
   "em parte"; 390 px.
 
+## 9.8 Facturas de fornecedor
+
+### Modelo
+
+Migração `0050_create_purchase_invoices`: `procurement_tolerances` (uma por empresa), `purchase_invoices` (estados,
+número externo e chave, totais e câmbio coerentes por `CHECK`; índice único parcial por fornecedor e chave, excluindo
+anuladas; gatilho: finais imutáveis, conteúdo fixo com excepção pendente, sem eliminação), `purchase_invoice_lines`
+(totais exactos, linha da ordem única por factura, resultado da conferência; só em rascunho),
+`purchase_invoice_exceptions` (só acréscimo, decisor ≠ requerente) e `purchase_invoice_events`.
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /invoices`, `GET /invoices/orders/:id` (por facturar), `GET|PUT /invoices/:id`,
+  `POST /invoices/:id/{validate|approve|reject|refuse|cancel}`, `GET|PUT /tolerances`.
+- Permissões `procurement.invoices.read|manage|approve` (entidade legal); tolerâncias com `procurement.settings`.
+  Anexos `purchase_invoice`.
+- Erros: `DUPLICATE_INVOICE`, `CURRENCY_MISMATCH`, `NOT_INVOICEABLE`, `FUTURE`, `SELF_APPROVAL`,
+  `DIVERGENCES_CHANGED`, `NO_RATE`, `NO_SERIES`, `INVALID_STATE`, versão (409).
+
+### Ecrãs
+
+Compras → Facturas de fornecedor (lista com filtros de estado, ordem, fornecedor e divergentes), Nova/Editar factura (a
+partir da ordem: recebido por facturar por linha, encargos, total calculado e diferença para o declarado),
+Factura (estado, divergências, conferência a três por linha — encomendado, recebido, já facturado, facturado, preço,
+imposto —, excepções com motivo, validar, autorizar/recusar excepção, devolver ao fornecedor, anular, anexos,
+cronologia, auditoria). Configuração → Tolerâncias da conferência. Na ordem: "Registar factura" e a lista das facturas.
+
+### Testes e evidências
+
+- Unitário `procurement_invoices_domain.spec.ts` (6): tolerâncias, chave do número, preço líquido unitário, conferência
+  por linha (quantidade com tolerância, preço por percentagem ou valor, imposto, encargo), total, linhas e vencimento.
+- Funcional `procurement_invoices.spec.ts` (2): factura conforme validada com número, câmbio e quantidade facturada na
+  ordem; duplicado (também com outra grafia e sem o resto preenchido) recusado; divergências → excepção pendente com
+  conteúdo fixo; a mesma pessoa não autoriza; outra autoriza com motivo; divergências mudadas recusam a decisão;
+  recusa da excepção volta a rascunho; devolução e anulação (a anulada liberta o número); a base recusa alterar a
+  validada; moeda diferente e data futura recusadas; sem permissão de aprovação → `OUT_OF_SCOPE`; tolerâncias só com
+  `procurement.settings`; factura em USD com o câmbio da data da factura e total funcional.
+- `isolation_matrix` (factura de outra empresa → 404), `routes_protection`, regressão de todo o backend; frontend
+  `invoice-model.spec.ts`.
+- Browser (7 passos, três execuções seguidas, sem erros na consola; comprador e aprovador): tolerâncias pela navegação;
+  factura a partir da ordem com o recebido por facturar, total e diferença, validada conforme; a mesma factura outra vez
+  recusada como duplicada (apanhou que a verificação vinha depois da validação das linhas; corrigido); divergências
+  (acima do recebido, encargo, total) pedem excepção e outra pessoa autoriza com motivo; 390 px.
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -402,3 +446,8 @@ anular, estornar com motivo, anexos, cronologia, auditoria). Na ordem: "Receber"
 - 9.7: sem tolerância de sobre-entrega (o que vier a mais recusa-se); a recusada fica registada mas a não conformidade e a
   devolução são do 9.9; uma ordem em revisão não recebe até ser reemitida; o custo de entrada usa o câmbio fixado na
   ordem (a diferença para o câmbio da factura é do 9.8/9.10); sem leitura de códigos de barras no ecrã.
+- 9.8: a obrigação a pagar, o pagamento e a contabilização (incluindo a diferença entre o câmbio da ordem e o da
+  factura) são do 9.10; a correcção de uma factura validada e as notas de crédito são do 9.9; sem leitura automática
+  (OCR) nem recepção electrónica de facturas; as tolerâncias são da empresa (sem valores por fornecedor ou categoria);
+  a excepção é decidida numa só etapa; com várias séries `PURCHASE_INVOICE` activas usa-se a primeira por código; a
+  conformidade fiscal do documento do fornecedor não é verificada.

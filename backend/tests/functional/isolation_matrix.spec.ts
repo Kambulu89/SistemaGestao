@@ -819,8 +819,18 @@ async function populate(client: any) {
       [tenant.id, le.id, purchaseOrder.id, supplier.id]
     )
   ).rows[0] as { id: string }
+  // Factura da empresa A inserida directamente (só interessa o isolamento).
+  const purchaseInvoice = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_invoices (tenant_id, legal_entity_id, supplier_id, order_id, invoice_number, invoice_number_key,
+          invoice_date, due_date, currency, declared_total) values (?, ?, ?, ?, 'FA-1', 'FA-1', current_date, current_date,
+          'AOA', 0) returning id`,
+      [tenant.id, le.id, supplier.id, purchaseOrder.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    purchaseInvoice,
     purchaseReceipt,
     purchaseContract,
     contractAmendment,
@@ -1611,6 +1621,55 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'estornar recepção alheia',
         B.post(`/api/v1/procurement/receipts/${a.purchaseReceipt.id}/reverse`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      ['GET factura de fornecedor', B.get(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}`)],
+      [
+        'ordem alheia por facturar',
+        B.get(`/api/v1/procurement/invoices/orders/${a.purchaseOrder.id}`),
+      ],
+      [
+        'factura de ordem alheia',
+        B.post('/api/v1/procurement/invoices', {
+          orderId: a.purchaseOrder.id,
+          invoiceNumber: 'X',
+          lines: [],
+        }),
+      ],
+      [
+        'alterar factura alheia',
+        B.put(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'validar factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/validate`, v),
+      ],
+      [
+        'approve factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/approve`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'reject factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/reject`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'refuse factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/refuse`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      [
+        'cancel factura alheia',
+        B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/cancel`, {
           ...v,
           reason: 'x',
         }),
@@ -2535,6 +2594,8 @@ test.group('isolamento | matriz entre empresas', (group) => {
       '/api/v1/procurement/orders',
       '/api/v1/procurement/contracts',
       '/api/v1/procurement/receipts',
+      '/api/v1/procurement/invoices',
+      `/api/v1/procurement/invoices/${a.purchaseInvoice.id}`,
       '/api/v1/procurement/receipts/expected',
       `/api/v1/procurement/receipts/${a.purchaseReceipt.id}`,
       `/api/v1/procurement/contracts/${a.purchaseContract.id}`,

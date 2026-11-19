@@ -878,3 +878,28 @@ recusado se a linha já foi facturada abaixo do que ficaria (`RECEIPT_INVOICED`;
 a ordem foi fechada. Permissões `procurement.receipts.read|manage` por entidade legal. As **entregas previstas** são
 calculadas na hora (linhas emitidas com quantidade em falta, pela data prevista da linha ou da ordem: atrasada, hoje,
 prevista, sem data).
+
+## D-054 Facturas de fornecedor: conferência a três, tolerâncias e excepções autorizadas (aceite)
+
+**Registo.** A factura do fornecedor parte de uma ordem aprovada e emitida (entidade, fornecedor e moeda vêm da ordem;
+outra moeda → `CURRENCY_MISMATCH`), com número externo, data (não futura), total declarado e vencimento (data + prazo
+de pagamento do fornecedor, alterável). O número externo é único por fornecedor, comparado em maiúsculas e sem espaços,
+excluindo as anuladas (índice parcial na base e verificação antes de tudo o resto: `DUPLICATE_INVOICE` com a factura
+existente). Linhas ligadas a uma linha da ordem (uma vez cada) ou encargos sem linha, com preço, desconto e imposto
+exactos; totais conferidos pela base.
+
+**Conferência a três** (ordem, recepção/aceitação, factura), na unidade da ordem e com a ordem bloqueada:
+`QTY_OVER_RECEIVED` (já facturado + quantidade > recebido × (1 + tolerância)), `PRICE_OVER_ORDER` (preço líquido
+unitário acima do da ordem para lá da tolerância em percentagem **ou** em valor da linha), `TAX_MISMATCH`,
+`UNMATCHED_LINE` (encargo) e `TOTAL_MISMATCH` (|declarado − soma| acima da tolerância de total). Preço ou quantidade
+abaixo não são divergências. As tolerâncias são da empresa (`procurement.settings`), zero por omissão.
+
+**Validação.** Sem divergências, validar finaliza; com divergências a factura fica com **excepção pendente** e o
+conteúdo fixo (gatilho). Outra pessoa (`procurement.invoices.approve`; `CHECK` de segregação na base) autoriza ou
+recusa com motivo; ao decidir a conferência corre de novo e, se as divergências mudaram (outra factura ou um estorno
+entretanto), a decisão é recusada (`DIVERGENCES_CHANGED`). Recusada a excepção, volta a rascunho. Finalizar fixa o
+câmbio da data da factura na moeda funcional (`NO_RATE` se não houver), dá o número da série `PURCHASE_INVOICE`, soma
+as quantidades facturadas às linhas da ordem e actualiza o estado de facturação. Validada, recusada (devolvida ao
+fornecedor) e anulada são finais e imutáveis; uma validada corrige-se por nota de crédito (9.9). A obrigação a pagar e
+a contabilização são do 9.10 (aqui não se cria nada no Finance nem no razão).
+
