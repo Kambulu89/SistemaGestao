@@ -16,6 +16,7 @@ import { ToastService } from '../ui/toasts';
 import { money } from '../inventory/valuation-model';
 import { qty } from '../inventory/stock-model';
 import { type Receipt, RECEIPT_EVENT, RECEIPT_STATUS, receiptTone } from './receipt-model';
+import { REMEDY, type Remedy, RETURN_STATUS, type ReturnStatus } from './return-model';
 
 type ReasonKind = 'cancel' | 'reverse';
 
@@ -121,7 +122,32 @@ type ReasonKind = 'cancel' | 'reverse';
                 Estornar
               </button>
             }
+            @if (r.can.return) {
+              <a
+                class="btn-secondary"
+                data-testid="rd-return"
+                routerLink="/compras/devolucoes/nova"
+                [queryParams]="{ receiptId: r.id }"
+                >Registar não conformidade</a
+              >
+            }
           </div>
+          @if (r.returns.length) {
+            <div data-testid="rd-returns">
+              <h3 class="text-sm font-medium">Devoluções</h3>
+              <ul class="text-sm">
+                @for (d of r.returns; track d.id) {
+                  <li>
+                    <a class="link" [routerLink]="['/compras/devolucoes', d.id]">{{
+                      d.number ?? 'Rascunho'
+                    }}</a>
+                    · {{ date(d.returnDate) }} · {{ returnStatus(d.status) }} ·
+                    {{ remedy(d.remedy) }}
+                  </li>
+                }
+              </ul>
+            </div>
+          }
         </section>
 
         <section class="card" aria-labelledby="rd-lines-title">
@@ -274,6 +300,8 @@ export class ReceiptDetail {
   protected readonly tone = receiptTone;
   protected readonly label = (s: Receipt['status']) => RECEIPT_STATUS[s];
   protected readonly event = (k: string) => RECEIPT_EVENT[k] ?? k;
+  protected readonly returnStatus = (k: string) => RETURN_STATUS[k as ReturnStatus] ?? k;
+  protected readonly remedy = (k: string) => REMEDY[k as Remedy] ?? k;
 
   constructor() {
     effect(() => {

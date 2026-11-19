@@ -17,6 +17,7 @@ export {
   releaseSaleReservation,
   reserveForSale,
   returnFromSale,
+  returnToSupplier,
   type IntegrationInput,
   type IntegrationLineInput,
 } from '#modules/inventory/application/integration_service'

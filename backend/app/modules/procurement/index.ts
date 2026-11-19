@@ -26,3 +26,11 @@ export {
   InvoiceService,
   purchaseInvoiceAccess,
 } from '#modules/procurement/application/invoice_service'
+export {
+  purchaseReturnAccess,
+  ReturnService,
+} from '#modules/procurement/application/return_service'
+export {
+  CreditNoteService,
+  purchaseCreditNoteAccess,
+} from '#modules/procurement/application/credit_note_service'

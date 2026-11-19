@@ -15,6 +15,7 @@ import { EntityFormPage } from '../ui/templates';
 import { ToastService } from '../ui/toasts';
 import { money } from '../inventory/valuation-model';
 import { qty } from '../inventory/stock-model';
+import { CREDIT_NOTE_STATUS } from './credit-note-model';
 import {
   DIVERGENCE,
   type DivergenceCode,
@@ -167,6 +168,15 @@ type ReasonKind = 'approve' | 'reject' | 'refuse' | 'cancel';
                 Anular
               </button>
             }
+            @if (v.can.credit) {
+              <a
+                class="btn-secondary"
+                data-testid="id-credit-new"
+                routerLink="/compras/notas-credito/nova"
+                [queryParams]="{ invoiceId: v.id }"
+                >Registar nota de crédito</a
+              >
+            }
           </div>
         </section>
 
@@ -235,6 +245,27 @@ type ReasonKind = 'approve' | 'reject' | 'refuse' | 'cancel';
             {{ money(v.totalAmount, v.currency) }}
           </p>
         </section>
+
+        @if (v.creditNotes.length) {
+          <section class="card" aria-labelledby="id-cn-title" data-testid="id-credits">
+            <h2 id="id-cn-title" class="mb-2 font-semibold">Notas de crédito</h2>
+            <ul class="space-y-1 text-sm">
+              @for (c of v.creditNotes; track c.id) {
+                <li>
+                  <a class="link" [routerLink]="['/compras/notas-credito', c.id]">{{
+                    c.number ?? 'Rascunho'
+                  }}</a>
+                  · {{ c.creditNoteNumber }} · {{ date(c.creditNoteDate) }} ·
+                  {{ money(c.totalAmount, v.currency) }} · {{ creditStatus(c.status) }}
+                </li>
+              }
+            </ul>
+            <p class="mt-2 text-sm" data-testid="id-balance">
+              Creditado {{ money(v.creditedTotal, v.currency) }} · saldo da factura
+              {{ money(v.balance, v.currency) }}
+            </p>
+          </section>
+        }
 
         @if (v.exceptions.length) {
           <section class="card" aria-labelledby="id-ex-title">
@@ -329,6 +360,7 @@ export class InvoiceDetail {
   protected readonly kind = signal<ReasonKind | null>(null);
   protected reason = '';
   protected readonly money = money;
+  protected readonly creditStatus = (k: keyof typeof CREDIT_NOTE_STATUS) => CREDIT_NOTE_STATUS[k];
   protected readonly q = qty;
   protected readonly date = formatDate;
   protected readonly when = formatDateTime;

@@ -595,16 +595,28 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Registar e confirmar recepções (entrada no inventário e aceitação de serviços), anular rascunhos e estornar.',
   },
   {
+    code: 'procurement.returns.read',
+    module: 'procurement',
+    description:
+      'Consultar devoluções a fornecedor e não conformidades das entidades do âmbito, com as evidências.',
+  },
+  {
+    code: 'procurement.returns.manage',
+    module: 'procurement',
+    description:
+      'Registar não conformidades e devoluções a fornecedor, juntar evidências, confirmar (saída do inventário) e anular rascunhos.',
+  },
+  {
     code: 'procurement.invoices.read',
     module: 'procurement',
     description:
-      'Consultar facturas de fornecedor das entidades do âmbito, conferência e divergências.',
+      'Consultar facturas e notas de crédito de fornecedor das entidades do âmbito, conferência e divergências.',
   },
   {
     code: 'procurement.invoices.manage',
     module: 'procurement',
     description:
-      'Registar facturas de fornecedor, pedir a validação (conferência a três), devolver ao fornecedor e anular.',
+      'Registar facturas e notas de crédito de fornecedor, pedir a validação (conferência a três), validar notas de crédito, devolver ao fornecedor e anular.',
   },
   {
     code: 'procurement.invoices.approve',

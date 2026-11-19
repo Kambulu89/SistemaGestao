@@ -30,6 +30,7 @@ import {
   normalizeTolerances,
   type Tolerances,
 } from '#modules/procurement/domain/invoices'
+import { invoiceCredits } from '#modules/procurement/application/credit_note_service'
 
 /*
  * Facturas de fornecedor (9.8). Permissões no âmbito da entidade legal: `procurement.invoices.read`, `.manage`
@@ -483,6 +484,8 @@ async function detail(scope: TenantScope, id: string) {
   ).rows as any[]
   const status = i.status as InvoiceStatus
   const me = scope.context.userId
+  const credits = await invoiceCredits(scope, id)
+  const creditManage = covers((await scopesOf(scope)).manage, i.legal_entity_id)
   return {
     id: i.id as string,
     version: Number(i.version),
@@ -528,7 +531,11 @@ async function detail(scope: TenantScope, id: string) {
       taxAmount: money(c2(l.tax_amount)),
       totalAmount: money(c2(l.total_amount)),
       match: l.match ?? null,
+      credited: credits.byLine.get(l.id as string) ?? null,
     })),
+    creditedTotal: money(credits.credited),
+    balance: money(c2(i.total_amount) - credits.credited),
+    creditNotes: credits.notes,
     exceptions: exceptions.map((x) => ({
       decision: x.decision as 'APPROVE' | 'REJECT',
       reason: x.reason as string,
@@ -554,6 +561,7 @@ async function detail(scope: TenantScope, id: string) {
           : null,
       refuse: g.manage && (status === 'DRAFT' || status === 'PENDING_EXCEPTION'),
       cancel: g.manage && (status === 'DRAFT' || status === 'PENDING_EXCEPTION'),
+      credit: creditManage && status === 'VALIDATED' && credits.credited < c2(i.total_amount),
     },
   }
 }

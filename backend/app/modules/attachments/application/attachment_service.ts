@@ -23,9 +23,11 @@ import { LocalStorage } from '#modules/attachments/infrastructure/local_storage'
 import { productExists } from '#modules/inventory/index'
 import {
   purchaseContractAccess,
+  purchaseCreditNoteAccess,
   purchaseInvoiceAccess,
   purchaseOrderAccess,
   purchaseReceiptAccess,
+  purchaseReturnAccess,
   rfqAccess,
   supplierExists,
 } from '#modules/procurement/index'
@@ -164,6 +166,16 @@ function policies(): Record<string, SubjectPolicy> {
   map.purchase_invoice = {
     feature: 'procurement',
     access: (scope, id) => purchaseInvoiceAccess(scope, id),
+  }
+  // Evidências da não conformidade (fotografias, relatório de inspecção): juntam-se só no rascunho da devolução.
+  map.purchase_return = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseReturnAccess(scope, id),
+  }
+  // Nota de crédito do fornecedor (o PDF/digitalização): o âmbito da nota por entidade.
+  map.purchase_credit_note = {
+    feature: 'procurement',
+    access: (scope, id) => purchaseCreditNoteAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

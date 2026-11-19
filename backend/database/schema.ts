@@ -4313,6 +4313,137 @@ export class PurchaseContractSchema extends BaseModel {
   declare version: number
 }
 
+export class PurchaseCreditNoteEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'creditNoteId', 'details', 'id', 'kind', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseCreditNoteEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare creditNoteId: string
+  @column()
+  declare details: any | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseCreditNoteLineSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'creditNoteId', 'id', 'invoiceLineId', 'kind', 'lineNo', 'netAmount', 'orderLineId', 'quantity', 'returnLineId', 'taxAmount', 'taxRate', 'tenantId', 'totalAmount', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseCreditNoteLineSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare creditNoteId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceLineId: string
+  @column()
+  declare kind: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare netAmount: string
+  @column()
+  declare orderLineId: string | null
+  @column()
+  declare quantity: string
+  @column()
+  declare returnLineId: string | null
+  @column()
+  declare taxAmount: string
+  @column()
+  declare taxRate: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseCreditNoteSchema extends BaseModel {
+  static $columns = ['cancelReason', 'createdAt', 'createdBy', 'creditNoteDate', 'creditNoteNumber', 'creditNoteNumberKey', 'currency', 'declaredTotal', 'exchangeRate', 'id', 'invoiceId', 'legalEntityId', 'number', 'orderId', 'reason', 'returnId', 'seriesId', 'status', 'supplierId', 'tenantId', 'totalAmount', 'totalFunctional', 'totalNet', 'totalTax', 'updatedAt', 'updatedBy', 'validatedAt', 'validatedBy', 'version'] as const
+  $columns = PurchaseCreditNoteSchema.$columns
+  @column()
+  declare cancelReason: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare creditNoteDate: DateTime
+  @column()
+  declare creditNoteNumber: string
+  @column()
+  declare creditNoteNumberKey: string
+  @column()
+  declare currency: string
+  @column()
+  declare declaredTotal: string
+  @column()
+  declare exchangeRate: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare number: string | null
+  @column()
+  declare orderId: string
+  @column()
+  declare reason: string
+  @column()
+  declare returnId: string | null
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare supplierId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare totalAmount: string
+  @column()
+  declare totalFunctional: string | null
+  @column()
+  declare totalNet: string
+  @column()
+  declare totalTax: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.dateTime()
+  declare validatedAt: DateTime | null
+  @column()
+  declare validatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class PurchaseInvoiceEventSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'details', 'id', 'invoiceId', 'kind', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = PurchaseInvoiceEventSchema.$columns
@@ -5114,6 +5245,143 @@ export class PurchaseRequisitionSchema extends BaseModel {
   declare updatedBy: string | null
   @column()
   declare version: number
+}
+
+export class PurchaseReturnEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'details', 'id', 'kind', 'reason', 'returnId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PurchaseReturnEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare returnId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseReturnLineSchema extends BaseModel {
+  static $columns = ['baseQuantity', 'bucket', 'createdAt', 'createdBy', 'creditQuantity', 'creditedQuantity', 'id', 'lineNo', 'locationId', 'lotCode', 'notes', 'orderLineId', 'productId', 'quantity', 'receiptLineId', 'returnId', 'serials', 'source', 'stocked', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = PurchaseReturnLineSchema.$columns
+  @column()
+  declare baseQuantity: string | null
+  @column()
+  declare bucket: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare creditQuantity: string
+  @column()
+  declare creditedQuantity: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare locationId: string | null
+  @column()
+  declare lotCode: string | null
+  @column()
+  declare notes: string | null
+  @column()
+  declare orderLineId: string
+  @column()
+  declare productId: string | null
+  @column()
+  declare quantity: string
+  @column()
+  declare receiptLineId: string
+  @column()
+  declare returnId: string
+  @column()
+  declare serials: any | null
+  @column()
+  declare source: string
+  @column()
+  declare stocked: boolean
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class PurchaseReturnSchema extends BaseModel {
+  static $columns = ['cancelReason', 'carrierRef', 'confirmedAt', 'confirmedBy', 'createdAt', 'createdBy', 'creditStatus', 'description', 'id', 'integrationEventId', 'legalEntityId', 'number', 'orderId', 'postingId', 'reasonCode', 'receiptId', 'remedy', 'returnDate', 'seriesId', 'status', 'supplierId', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = PurchaseReturnSchema.$columns
+  @column()
+  declare cancelReason: string | null
+  @column()
+  declare carrierRef: string | null
+  @column.dateTime()
+  declare confirmedAt: DateTime | null
+  @column()
+  declare confirmedBy: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare creditStatus: string
+  @column()
+  declare description: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare integrationEventId: string | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare number: string | null
+  @column()
+  declare orderId: string
+  @column()
+  declare postingId: string | null
+  @column()
+  declare reasonCode: string
+  @column()
+  declare receiptId: string
+  @column()
+  declare remedy: string
+  @column.date()
+  declare returnDate: DateTime
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare supplierId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string | null
 }
 
 export class RateLimitCounterSchema extends BaseModel {

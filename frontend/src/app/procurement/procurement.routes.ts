@@ -27,6 +27,10 @@ const ORDER_PERMISSIONS = [
   'procurement.orders.approve',
 ];
 
+const RETURN_PERMISSIONS = ['procurement.returns.read', 'procurement.returns.manage'];
+
+const CREDIT_NOTE_PERMISSIONS = ['procurement.invoices.read', 'procurement.invoices.manage'];
+
 const CONTRACT_PERMISSIONS = [
   'procurement.contracts.read',
   'procurement.contracts.manage',
@@ -316,6 +320,76 @@ export const PROCUREMENT_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'procurement.invoices.manage', anyScope: true },
         loadComponent: () => import('./invoice-form').then((m) => m.InvoiceForm),
+      },
+    ],
+  },
+  {
+    path: 'devolucoes',
+    title: 'Devoluções a fornecedor',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: RETURN_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./returns').then((m) => m.Returns),
+      },
+      {
+        path: 'nova',
+        title: 'Registar devolução',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.returns.manage', anyScope: true },
+        loadComponent: () => import('./return-form').then((m) => m.ReturnForm),
+      },
+      {
+        path: ':id',
+        title: 'Devolução a fornecedor',
+        canActivate: [accessGuard],
+        data: { anyOf: RETURN_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./return-detail').then((m) => m.ReturnDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar devolução',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.returns.manage', anyScope: true },
+        loadComponent: () => import('./return-form').then((m) => m.ReturnForm),
+      },
+    ],
+  },
+  {
+    path: 'notas-credito',
+    title: 'Notas de crédito de fornecedor',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: CREDIT_NOTE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./credit-notes').then((m) => m.CreditNotes),
+      },
+      {
+        path: 'nova',
+        title: 'Registar nota de crédito',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.invoices.manage', anyScope: true },
+        loadComponent: () => import('./credit-note-form').then((m) => m.CreditNoteForm),
+      },
+      {
+        path: ':id',
+        title: 'Nota de crédito',
+        canActivate: [accessGuard],
+        data: { anyOf: CREDIT_NOTE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./credit-note-detail').then((m) => m.CreditNoteDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar nota de crédito',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'procurement.invoices.manage', anyScope: true },
+        loadComponent: () => import('./credit-note-form').then((m) => m.CreditNoteForm),
       },
     ],
   },

@@ -420,6 +420,61 @@ cronologia, auditoria). Configuração → Tolerâncias da conferência. Na orde
   recusada como duplicada (apanhou que a verificação vinha depois da validação das linhas; corrigido); divergências
   (acima do recebido, encargo, total) pedem excepção e outra pessoa autoriza com motivo; 390 px.
 
+## 9.9 Devoluções, não conformidades e notas de crédito
+
+### Modelo
+
+Migração `0051_create_purchase_returns`: `purchase_returns` (motivo, solução, estado e estado do crédito coerentes por
+`CHECK`; gatilho: confirmada só muda o estado do crédito, anulada imutável, sem eliminação), `purchase_return_lines`
+(origem aceite/recusada; só o aceite armazenável leva estado de stock, lote, séries e localização; por creditar ≤
+devolvido; confirmada só aumenta o creditado), `purchase_credit_notes` (número externo único por fornecedor fora as
+anuladas; câmbio da factura fixo; validada e anulada imutáveis), `purchase_credit_note_lines` (quantidade em linhas da
+ordem ou ajuste de valor; só em rascunho) e os eventos (só acréscimo). O Inventário passa a aceitar o evento de
+integração `PURCHASE_RETURN`.
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /returns`, `GET /returns/receipts/:id`, `GET|PUT /returns/:id`, `POST /returns/:id/{confirm|cancel}`.
+- `GET|POST /credit-notes`, `GET /credit-notes/invoices/:id`, `GET|PUT /credit-notes/:id`,
+  `POST /credit-notes/:id/{validate|cancel}`.
+- Inventário: contrato `returnToSupplier` (também `POST /inventory/integrations/purchase-returns`), valorização pela
+  recepção de origem, evento contabilístico `ISSUE_PURCHASE_RETURN`, classe de movimento "devolução a fornecedor".
+- Permissões `procurement.returns.read|manage` (entidade legal); notas de crédito com `procurement.invoices.read|manage`.
+  Anexos `purchase_return` (evidências, só em rascunho) e `purchase_credit_note`. A factura mostra o creditado e o saldo.
+- Erros: `OVER_RETURN`, `NOT_STOCKED`, `NOT_RECEIVED`, `SERIAL_COUNT`, `EVIDENCE_REQUIRED`, `ORDER_CLOSED`,
+  `NOT_RETURNABLE`, `RECEIPT_RETURNED`, `NOT_CREDITABLE`, `DUPLICATE_CREDIT_NOTE`, `OVER_INVOICED`, `OVER_PENDING`,
+  `TOTAL_MISMATCH`, `BEFORE_INVOICE`, `NO_SERIES`, `INVALID_STATE`, versão (409).
+
+### Ecrãs
+
+Compras → Devoluções a fornecedor (lista com estado e crédito), Nova/Editar devolução (a partir da recepção: motivo,
+solução, descrição, guia; por linha aceite ou recusada, quantidade com aviso acima do disponível, estado de stock,
+localização, séries), Devolução (estado e crédito, evidências obrigatórias para confirmar, saída de stock, por
+creditar/creditado, notas de crédito, cronologia, auditoria). Notas de crédito (lista), Nova/Editar nota (da factura ou
+da devolução: quantidade pendente preenchida, ajuste de valor, total calculado e diferença para o declarado), Nota de
+crédito (linhas, totais e funcional, validar, anular). Na recepção: "Registar não conformidade" e a lista das
+devoluções; na factura: "Registar nota de crédito", creditado e saldo.
+
+### Testes e evidências
+
+- Unitário `procurement_returns_domain.spec.ts` (5): linhas e cabeçalho da devolução, devolvível, por creditar,
+  cancelamento a crédito, estado do crédito, valores do crédito (333,33 + 333,33 + 333,34; imposto que fecha a linha) e
+  linhas da nota.
+- Funcional `procurement_returns.spec.ts` (2): devolução a crédito com validações, âmbito, rascunho que reserva,
+  `RECEIPT_RETURNED`, `EVIDENCE_REQUIRED`, `NO_SERIES`, saída 2 UN valorizada −1 800,00 (fonte `RETURN`) com evento
+  `PURCHASE_RETURN`, ordem recebido 4/cancelado 2/facturado 6, imutável na base e sem evidências depois; nota de crédito
+  com `TOTAL_MISMATCH`, `OVER_PENDING`, `OVER_INVOICED`, `BEFORE_INVOICE`, 1 800,00 + 252,00, validada (facturado 4,
+  devolução creditada, saldo da factura 9 104,00), duplicado com outra grafia, ajuste de valor sem mexer na facturação,
+  anulação. Segundo: substituição com aceite e recusada (só o aceite sai do stock; a ordem volta a esperar), ordem
+  fechada recusa substituição e aceita crédito, anulação do rascunho liberta a quantidade.
+- `isolation_matrix` (devolução e nota de crédito de outra empresa → 404), `routes_protection`, regressão de todo o
+  backend; frontend `return-model.spec.ts` e `credit-note-model.spec.ts`.
+- Browser (6 passos, três execuções seguidas, sem erros na consola; administração e leitor): não conformidade a partir
+  da recepção (aviso acima do disponível), confirmar bloqueado sem evidência, evidência junta e confirmação com saída de
+  stock e crédito pendente, recepção sem "Estornar", leitor sem acções; nota de crédito a partir da devolução com total
+  2 052,00, diferença −52,00 recusada pelo servidor, validada (devolução creditada, saldo 9 104,00); duplicado recusado;
+  listas; 390 px.
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -451,3 +506,9 @@ cronologia, auditoria). Configuração → Tolerâncias da conferência. Na orde
   (OCR) nem recepção electrónica de facturas; as tolerâncias são da empresa (sem valores por fornecedor ou categoria);
   a excepção é decidida numa só etapa; com várias séries `PURCHASE_INVOICE` activas usa-se a primeira por código; a
   conformidade fiscal do documento do fornecedor não é verificada.
+- 9.9: a devolução não se estorna depois de confirmada (corrige-se com nova recepção); sem guia de transporte emitida
+  pelo sistema nem envio ao fornecedor; a nota de crédito não exige aprovação de outra pessoa (só reduz a obrigação);
+  o crédito pendente só nasce de devoluções a crédito sobre quantidades já facturadas (diferenças de preço registam-se
+  como ajuste de valor sem devolução); a obrigação líquida, o pagamento e a contabilização da nota de crédito são do
+  9.10; a avaliação do fornecedor com estas não conformidades é do 9.11; a conformidade fiscal das notas de crédito do
+  fornecedor não é verificada.

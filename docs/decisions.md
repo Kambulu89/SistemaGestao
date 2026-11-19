@@ -903,3 +903,33 @@ as quantidades facturadas às linhas da ordem e actualiza o estado de facturaç�
 fornecedor) e anulada são finais e imutáveis; uma validada corrige-se por nota de crédito (9.9). A obrigação a pagar e
 a contabilização são do 9.10 (aqui não se cria nada no Finance nem no razão).
 
+## D-055 Devoluções a fornecedor, não conformidades e notas de crédito (aceite)
+
+**Não conformidade / devolução.** Parte de uma recepção confirmada: data (não futura), motivo (qualidade, danificado,
+artigo errado, fora de validade, quantidade a mais, documentação, outro), descrição, solução pedida e, por linha da
+recepção, o que volta: do **aceite** (estava em stock; sai pelo Inventário com o lote da recepção, as séries recebidas
+escolhidas, a localização e o estado de stock — livre, bloqueado ou quarentena) ou do **recusado** na conferência
+(nunca entrou: só fica registado). O disponível é o aceite/recusado menos as outras devoluções não anuladas (os
+rascunhos também reservam). **Evidência obrigatória**: confirma-se só com pelo menos um anexo, e os anexos só se juntam
+ou retiram em rascunho.
+
+**Confirmação.** Com a ordem bloqueada volta a verificar o disponível, dá o número da série `PURCHASE_RETURN` e faz
+**uma** saída no Inventário (contrato novo `returnToSupplier`, evento `PURCHASE_RETURN`, chave `prt-<devolução>`:
+repetir não duplica), valorizada primeiro pelas camadas/custo da recepção de origem (`returnOfDocumentRef`); o evento
+contabilístico é `ISSUE_PURCHASE_RETURN` (as contas vêm das regras da empresa). Na ordem, o aceite devolvido deixa de
+contar como recebido. **Substituição**: a ordem volta a esperar a quantidade (recusada se a ordem estiver fechada:
+`ORDER_CLOSED`). **Crédito**: deixa de a esperar (cancelada até ao que falta receber) e o que já estava facturado acima
+do novo recebido fica **por creditar** na linha. Confirmada, a devolução não muda (só o creditado e o estado do
+crédito, pela nota de crédito); uma recepção com devoluções já não se estorna (`RECEIPT_RETURNED`).
+
+**Nota de crédito.** Do fornecedor, sobre uma factura validada (opcionalmente ligada a uma devolução): número externo
+único por fornecedor (maiúsculas, sem espaços, fora as anuladas; verificado antes de tudo — `DUPLICATE_CREDIT_NOTE`),
+data entre a da factura e hoje, motivo, total declarado (tem de bater com o calculado dentro da tolerância de total) e,
+por linha da factura, **quantidade devolvida** ao preço líquido da factura (só em linhas da ordem) e/ou **ajuste de
+valor**; imposto à taxa da linha; a última que fecha a linha leva o resto exacto (sem cêntimos perdidos). Nunca acima do
+facturado por creditar (`OVER_INVOICED`) nem do pendente da devolução (`OVER_PENDING`). A validação, com a factura e a
+ordem bloqueadas, recalcula com o que já foi creditado no momento, dá o número da série `PURCHASE_CREDIT_NOTE`, fica ao
+**câmbio da factura**, abate a quantidade facturada da ordem e o pendente da devolução (estado: sem crédito a receber,
+pendente, creditada). Validada é imutável. A obrigação a pagar (factura − notas de crédito), o pagamento e a
+contabilização são do 9.10.
+

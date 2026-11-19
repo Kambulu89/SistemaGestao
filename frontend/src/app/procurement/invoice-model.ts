@@ -42,6 +42,7 @@ export interface InvoiceLine {
   netAmount: string;
   taxAmount: string;
   totalAmount: string;
+  credited: { quantity: string; total: string } | null;
   match: {
     ordered: string | null;
     received: string | null;
@@ -79,6 +80,16 @@ export interface Invoice {
   rejectReason: string | null;
   cancelReason: string | null;
   lines: InvoiceLine[];
+  creditedTotal: string;
+  balance: string;
+  creditNotes: {
+    id: string;
+    number: string | null;
+    creditNoteNumber: string;
+    status: 'DRAFT' | 'VALIDATED' | 'CANCELLED';
+    creditNoteDate: string;
+    totalAmount: string;
+  }[];
   exceptions: {
     decision: 'APPROVE' | 'REJECT';
     reason: string;
@@ -95,6 +106,7 @@ export interface Invoice {
     decideBlockedBy: string | null;
     refuse: boolean;
     cancel: boolean;
+    credit: boolean;
   };
 }
 

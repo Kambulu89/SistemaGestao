@@ -828,8 +828,27 @@ async function populate(client: any) {
       [tenant.id, le.id, supplier.id, purchaseOrder.id]
     )
   ).rows[0] as { id: string }
+  // Devolução e nota de crédito da empresa A inseridas directamente (só interessa o isolamento).
+  const purchaseReturn = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_returns (tenant_id, legal_entity_id, receipt_id, order_id, supplier_id, return_date,
+          reason_code, description, remedy) values (?, ?, ?, ?, ?, current_date, 'QUALITY', 'Isolamento', 'CREDIT')
+       returning id`,
+      [tenant.id, le.id, purchaseReceipt.id, purchaseOrder.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
+  const purchaseCreditNote = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_credit_notes (tenant_id, legal_entity_id, supplier_id, order_id, invoice_id,
+          credit_note_number, credit_note_number_key, credit_note_date, currency, reason, declared_total, exchange_rate)
+       values (?, ?, ?, ?, ?, 'NC-1', 'NC-1', current_date, 'AOA', 'Isolamento', 1, 1) returning id`,
+      [tenant.id, le.id, supplier.id, purchaseOrder.id, purchaseInvoice.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    purchaseReturn,
+    purchaseCreditNote,
     purchaseInvoice,
     purchaseReceipt,
     purchaseContract,
@@ -1670,6 +1689,58 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'cancel factura alheia',
         B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      ['GET devolução alheia', B.get(`/api/v1/procurement/returns/${a.purchaseReturn.id}`)],
+      [
+        'recepção alheia por devolver',
+        B.get(`/api/v1/procurement/returns/receipts/${a.purchaseReceipt.id}`),
+      ],
+      [
+        'devolução de recepção alheia',
+        B.post('/api/v1/procurement/returns', { receiptId: a.purchaseReceipt.id, lines: [] }),
+      ],
+      [
+        'alterar devolução alheia',
+        B.put(`/api/v1/procurement/returns/${a.purchaseReturn.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'confirmar devolução alheia',
+        B.post(`/api/v1/procurement/returns/${a.purchaseReturn.id}/confirm`, v),
+      ],
+      [
+        'anular devolução alheia',
+        B.post(`/api/v1/procurement/returns/${a.purchaseReturn.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      [
+        'GET nota de crédito alheia',
+        B.get(`/api/v1/procurement/credit-notes/${a.purchaseCreditNote.id}`),
+      ],
+      [
+        'factura alheia por creditar',
+        B.get(`/api/v1/procurement/credit-notes/invoices/${a.purchaseInvoice.id}`),
+      ],
+      [
+        'nota de crédito de factura alheia',
+        B.post('/api/v1/procurement/credit-notes', {
+          invoiceId: a.purchaseInvoice.id,
+          creditNoteNumber: 'X',
+          lines: [],
+        }),
+      ],
+      [
+        'alterar nota de crédito alheia',
+        B.put(`/api/v1/procurement/credit-notes/${a.purchaseCreditNote.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'validar nota de crédito alheia',
+        B.post(`/api/v1/procurement/credit-notes/${a.purchaseCreditNote.id}/validate`, v),
+      ],
+      [
+        'anular nota de crédito alheia',
+        B.post(`/api/v1/procurement/credit-notes/${a.purchaseCreditNote.id}/cancel`, {
           ...v,
           reason: 'x',
         }),

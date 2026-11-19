@@ -42,6 +42,7 @@ const accountingQuery = vine.create(
 )
 const KIND_OF: Record<string, IntegrationKind> = {
   'purchase-receipts': 'PURCHASE_RECEIPT',
+  'purchase-returns': 'PURCHASE_RETURN',
   'sale-reservations': 'SALE_RESERVATION',
   'sale-releases': 'SALE_RELEASE',
   'sale-deliveries': 'SALE_DELIVERY',

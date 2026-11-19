@@ -548,6 +548,34 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
   'POST /api/v1/procurement/invoices/:id/cancel':
     'âmbito RBAC de procurement.invoices.read/manage/approve por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/returns':
+    'âmbito RBAC de procurement.returns.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/returns/receipts/:id':
+    'âmbito RBAC de procurement.returns.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/returns':
+    'âmbito RBAC de procurement.returns.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/returns/:id':
+    'âmbito RBAC de procurement.returns.read/manage por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/returns/:id':
+    'âmbito RBAC de procurement.returns.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/returns/:id/confirm':
+    'âmbito RBAC de procurement.returns.read/manage por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/returns/:id/cancel':
+    'âmbito RBAC de procurement.returns.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/credit-notes':
+    'âmbito RBAC de procurement.invoices.read/manage (notas de crédito) por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/credit-notes/invoices/:id':
+    'âmbito RBAC de procurement.invoices.read/manage (notas de crédito) por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/credit-notes':
+    'âmbito RBAC de procurement.invoices.read/manage (notas de crédito) por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/credit-notes/:id':
+    'âmbito RBAC de procurement.invoices.read/manage (notas de crédito) por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/credit-notes/:id':
+    'âmbito RBAC de procurement.invoices.read/manage (notas de crédito) por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/credit-notes/:id/validate':
+    'âmbito RBAC de procurement.invoices.read/manage (notas de crédito) por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/credit-notes/:id/cancel':
+    'âmbito RBAC de procurement.invoices.read/manage (notas de crédito) por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/tolerances':
     'tolerâncias da conferência da empresa: só valores de configuração, sem dados de documentos; alterar exige procurement.settings',
   'GET /api/v1/procurement/rfqs':

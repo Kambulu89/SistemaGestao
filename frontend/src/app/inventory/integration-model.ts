@@ -40,6 +40,7 @@ export const ACCOUNTING_STATUS: Record<AccountingEvent['status'], string> = {
 
 export const INTEGRATION_KIND: Record<string, string> = {
   PURCHASE_RECEIPT: 'Recepção de compra',
+  PURCHASE_RETURN: 'Devolução ao fornecedor',
   SALE_RESERVATION: 'Reserva de venda',
   SALE_RELEASE: 'Libertação de reserva',
   SALE_DELIVERY: 'Entrega de venda',
