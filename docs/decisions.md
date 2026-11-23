@@ -933,3 +933,38 @@ ordem bloqueadas, recalcula com o que já foi creditado no momento, dá o númer
 pendente, creditada). Validada é imutável. A obrigação a pagar (factura − notas de crédito), o pagamento e a
 contabilização são do 9.10.
 
+## D-056 Compras ↔ orçamento, obrigação a pagar e contabilidade: compromisso sem duplo bloqueio, obrigação única, sem duplicar o inventário (aceite)
+
+**Compromisso por centro de custo.** Um livro só de acréscimo (`procurement_commitments`) por centro de custo e ano, em
+moeda funcional e líquido de imposto. Cada requisição e ordem grava só a **diferença** para o seu valor em aberto actual
+(sincronização idempotente), por isso a soma é sempre o estado: requisição aprovada = líquido × (quantidade − encomendada
+− fechada) ÷ quantidade, ao câmbio da requisição; ordem aprovada e emitida = líquido × (quantidade − cancelada −
+facturada) ÷ quantidade, ao câmbio da ordem (em revisão fica o da versão emitida). A ordem tira à requisição o que
+encomenda e a factura tira à ordem o que factura: **a mesma verba nunca fica bloqueada duas vezes**. Realizado = facturas
+validadas − notas de crédito (líquido, ao câmbio da factura), no centro de custo da ordem. Documentos sem centro de custo
+não comprometem. Recalcula-se na aprovação final, fecho e anulação da requisição, nas afectações, na emissão, fecho e
+anulação da ordem, na validação de facturas e notas de crédito e na confirmação de devoluções.
+
+**Verba.** `procurement_budgets` por centro de custo e ano (`procurement.budgets.manage`), com controlo BLOCK (a aprovação
+final da requisição ou a emissão da ordem que aumente o comprometido para lá da verba é recusada, `BUDGET_EXCEEDED`, e a
+transacção desfaz-se) ou WARN (passa; o disponível fica negativo e assinalado). Concorrência: bloqueio por centro de
+custo/ano. Sem verba, o compromisso regista-se mas nada é bloqueado. É uma verba de compras, não o orçamento geral da
+empresa (que, quando existir, usa este livro como contrato).
+
+**Obrigação a pagar.** Exactamente uma por factura validada (`procurement_payables`, índice único), na moeda e ao câmbio
+da factura, com vencimento da factura; abatida pelas notas de crédito validadas. Como ainda não há módulo de
+Finanças/Tesouraria (Prompt 11), os **pagamentos** registam-se aqui, como no salário (D-032), com a permissão própria
+`procurement.payables.pay`: nunca acima do saldo, data não futura nem anterior à factura, referência, conta bancária
+activa da entidade na moeda da factura, câmbio da data do pagamento; só de acréscimo. O contrato `procurementPayables`
+publica as obrigações com saldo para esse módulo.
+
+**Contabilidade sem duplicar o inventário.** Eventos ao motor (origem `PROCUREMENT`), guardados e enviados num savepoint:
+sem regra ou com erro ficam FALHADOS com o motivo e repetem-se sem bloquear o documento; cada um é idempotente pela chave.
+A recepção de bens armazenáveis já lançou o stock contra a conta de recepções por facturar (regra da empresa para
+`INVENTORY/RECEIPT_PURCHASE`); a factura (`INVOICE`) **salda essa conta** pelo valor a que os bens entraram
+(`goodsReceived`, ao câmbio da ordem) e lança só a diferença de preço/câmbio (`priceVarianceUp|Down`), os serviços e
+artigos sem stock (`services`), o imposto (`tax`) e o fornecedor (`payable`, = soma, equilibrado ao cêntimo). A nota de
+crédito (`CREDIT_NOTE`) usa as mesmas chaves (a quantidade devolvida volta pelas recepções por facturar; o ajuste de valor
+num bem em stock é diferença de preço). O pagamento (`PAYMENT`): `payable` ao câmbio da factura, `bank` ao do pagamento,
+`fxLoss|fxGain`. As Compras nunca debitam stock.
+

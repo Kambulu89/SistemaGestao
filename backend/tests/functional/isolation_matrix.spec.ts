@@ -845,8 +845,33 @@ async function populate(client: any) {
       [tenant.id, le.id, supplier.id, purchaseOrder.id, purchaseInvoice.id]
     )
   ).rows[0] as { id: string }
+  // Centro de custo, verba e obrigação a pagar da empresa A inseridos directamente (só interessa o isolamento).
+  const costCenter = (
+    await db.connection('owner').rawQuery(
+      `insert into cost_centers (tenant_id, legal_entity_id, code, name) values (?, ?, 'CC-ISO', 'Centro isolado')
+       returning id`,
+      [tenant.id, le.id]
+    )
+  ).rows[0] as { id: string }
+  const procurementBudget = (
+    await db.connection('owner').rawQuery(
+      `insert into procurement_budgets (tenant_id, legal_entity_id, cost_center_id, fiscal_year, amount)
+       values (?, ?, ?, 2026, 1000) returning id`,
+      [tenant.id, le.id, costCenter.id]
+    )
+  ).rows[0] as { id: string }
+  const procurementPayable = (
+    await db.connection('owner').rawQuery(
+      `insert into procurement_payables (tenant_id, legal_entity_id, supplier_id, order_id, invoice_id, currency, amount,
+          exchange_rate, due_date) values (?, ?, ?, ?, ?, 'AOA', 100, 1, current_date) returning id`,
+      [tenant.id, le.id, supplier.id, purchaseOrder.id, purchaseInvoice.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    costCenter,
+    procurementBudget,
+    procurementPayable,
     purchaseReturn,
     purchaseCreditNote,
     purchaseInvoice,
@@ -1692,6 +1717,31 @@ test.group('isolamento | matriz entre empresas', (group) => {
           ...v,
           reason: 'x',
         }),
+      ],
+      ['GET verba alheia', B.get(`/api/v1/procurement/budgets/${a.procurementBudget.id}`)],
+      [
+        'alterar verba alheia',
+        B.put(`/api/v1/procurement/budgets/${a.procurementBudget.id}`, { ...v, amount: '1' }),
+      ],
+      [
+        'verba num centro de custo alheio',
+        B.post('/api/v1/procurement/budgets', {
+          costCenterId: a.costCenter.id,
+          fiscalYear: 2027,
+          amount: '1',
+        }),
+      ],
+      ['GET obrigação alheia', B.get(`/api/v1/procurement/payables/${a.procurementPayable.id}`)],
+      [
+        'pagar obrigação alheia',
+        B.post(`/api/v1/procurement/payables/${a.procurementPayable.id}/payments`, {
+          ...v,
+          amount: '1',
+        }),
+      ],
+      [
+        'repetir contabilização alheia',
+        B.post(`/api/v1/procurement/payables/${a.procurementPayable.id}/accounting/retry`, {}),
       ],
       ['GET devolução alheia', B.get(`/api/v1/procurement/returns/${a.purchaseReturn.id}`)],
       [

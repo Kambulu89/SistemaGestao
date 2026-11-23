@@ -475,6 +475,52 @@ devoluções; na factura: "Registar nota de crédito", creditado e saldo.
   2 052,00, diferença −52,00 recusada pelo servidor, validada (devolução creditada, saldo 9 104,00); duplicado recusado;
   listas; 390 px.
 
+## 9.10 Orçamento, obrigação a pagar e contabilidade
+
+### Modelo
+
+Migração `0052_create_procurement_finance`: `procurement_budgets` (verba por centro de custo e ano, BLOCK/WARN, única),
+`procurement_commitments` (livro só de acréscimo: COMMITMENT/ACTUAL por documento), `procurement_payables` (única por
+factura; valor, moeda e câmbio fixos; pago e creditado só sobem; nunca acima da factura), `procurement_payments` (só de
+acréscimo) e `procurement_accounting_events` (pedido imutável, chave única; só o resultado do envio muda).
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /budgets`, `GET /budgets/options`, `GET|PUT /budgets/:id` (com os documentos que compõem o comprometido).
+- `GET /payables`, `GET /payables/:id`, `POST /payables/:id/payments`, `POST /payables/:id/accounting/retry`.
+- Ligações: aprovação/fecho/anulação de requisições e afectações; emissão/fecho/anulação de ordens; validação de
+  facturas (realizado, obrigação única, evento) e de notas de crédito (abate, realizado negativo, evento); devoluções.
+- Permissões `procurement.budgets.read|manage` e `procurement.payables.read|pay` (entidade legal). Contrato
+  `procurementPayables` para a futura Tesouraria; `syncCommitments` no `index.ts`.
+- Erros: `BUDGET_EXCEEDED`, `BUDGET_EXISTS`, `OVER_BALANCE`, `CURRENCY_MISMATCH`, `BEFORE_INVOICE`, `FUTURE`, `NO_RATE`,
+  versão (409).
+
+### Ecrãs
+
+Compras → Orçamento de compras (por ano: verba, requisições, ordens, realizado, disponível com barra, documentos;
+nova/editar verba), Obrigações a pagar (lista com estado e em atraso) e Obrigação (valor, notas de crédito, pago, saldo,
+pagamentos, registar pagamento, contabilização com montantes e motivo do falhado, repetir). Na factura: "Obrigação a
+pagar" (só para quem a vê). Na requisição, o erro de uma decisão (p. ex. verba excedida) fica visível na página.
+
+### Testes e evidências
+
+- Unitário `procurement_finance_domain.spec.ts` (5): parte em aberto, compromisso de requisição e ordem (com câmbio),
+  verba, estado da obrigação, pagamento, montantes da factura (6 600 + 300 + 500 + 966 = 8 366; em USD a diferença de
+  câmbio) e do pagamento (ganho/perda cambial).
+- Funcional `procurement_finance.spec.ts` (2): verba (âmbito, validação, duplicada); requisição 10 000; a ordem de 6 a
+  1 100 deixa 4 000 + 6 600 (não 16 600); segunda requisição recusada com `BUDGET_EXCEEDED` (passa 600,00) e aprovada com
+  WARN (−600,00); factura a 1 150 → realizado 6 900, ordem 0; documentos do livro; livro só de acréscimo; fecho da
+  requisição liberta. Segundo, com regras reais: a recepção lança 6 600 em stock contra o 22; a factura salda o 22 (saldo
+  0), stock fica 6 600, fornecedor 8 366; obrigação única (também na base); nota de crédito de 114 abate e lança a
+  diferença; pagamentos (âmbito, `FUTURE`, `OVER_BALANCE`, conta inválida); pagamento sem regra fica FALHADO, a regra é
+  criada e a repetição lança; segundo pagamento salda (fornecedor 0, banco −8 252); imutabilidade na base.
+- `isolation_matrix` (verba, obrigação, pagamento e repetição de outra empresa → 404), `routes_protection`, regressão de
+  todo o backend; frontend `finance-model.spec.ts`.
+- Browser (7 passos, três execuções seguidas, sem erros na consola; administração e aprovador/leitor): verba pela
+  navegação; aprovar a requisição compromete; a segunda é recusada com a mensagem na página; ordem/recepção/factura;
+  obrigação a partir da factura, pagamento acima do saldo recusado, pagamento parcial, contabilização falhada com motivo
+  (a demonstração não tem regras PROCUREMENT); lista; leitor sem "Registar pagamento"; realizado na verba; 390 px.
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -512,3 +558,10 @@ devoluções; na factura: "Registar nota de crédito", creditado e saldo.
   como ajuste de valor sem devolução); a obrigação líquida, o pagamento e a contabilização da nota de crédito são do
   9.10; a avaliação do fornecedor com estas não conformidades é do 9.11; a conformidade fiscal das notas de crédito do
   fornecedor não é verificada.
+- 9.10: a Tesouraria (Prompt 11) é que deve passar a registar os pagamentos — aqui ficam com permissão própria e o
+  contrato `procurementPayables`; sem estorno de pagamento (só de acréscimo; um pagamento errado corrige-se na
+  Tesouraria); a verba é de compras por centro de custo e ano (sem orçamento geral, períodos mensais nem linhas por
+  natureza de custo); compromisso líquido de imposto (não distingue imposto não dedutível); documentos sem centro de custo
+  não comprometem; os pequenos arredondamentos entre o custo de entrada do inventário (por unidade base, 6 casas) e o
+  valor saldado pela factura ficam na conta de recepções por facturar (sem relatório de reconciliação ainda); as contas
+  e regras de contabilização têm de ser configuradas pela empresa (nenhuma é pré-carregada).

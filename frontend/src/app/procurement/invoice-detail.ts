@@ -168,6 +168,14 @@ type ReasonKind = 'approve' | 'reject' | 'refuse' | 'cancel';
                 Anular
               </button>
             }
+            @if (v.payable) {
+              <a
+                class="btn-secondary"
+                data-testid="id-payable"
+                [routerLink]="['/compras/obrigacoes', v.payable.id]"
+                >Obrigação a pagar</a
+              >
+            }
             @if (v.can.credit) {
               <a
                 class="btn-secondary"

@@ -34,3 +34,9 @@ export {
   CreditNoteService,
   purchaseCreditNoteAccess,
 } from '#modules/procurement/application/credit_note_service'
+export {
+  BudgetService,
+  PayableService,
+  procurementPayables,
+  syncCommitments,
+} from '#modules/procurement/application/finance_service'

@@ -59,6 +59,7 @@ const ReceiptsController = () => import('#modules/procurement/http/receipts_cont
 const InvoicesController = () => import('#modules/procurement/http/invoices_controller')
 const ReturnsController = () => import('#modules/procurement/http/returns_controller')
 const CreditNotesController = () => import('#modules/procurement/http/credit_notes_controller')
+const ProcurementFinanceController = () => import('#modules/procurement/http/finance_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
@@ -1070,6 +1071,18 @@ router
                 router.put('credit-notes/:id', [CreditNotesController, 'update'])
                 router.post('credit-notes/:id/validate', [CreditNotesController, 'validate'])
                 router.post('credit-notes/:id/cancel', [CreditNotesController, 'cancel'])
+                router.get('budgets', [ProcurementFinanceController, 'budgets'])
+                router.get('budgets/options', [ProcurementFinanceController, 'budgetOptions'])
+                router.post('budgets', [ProcurementFinanceController, 'createBudget'])
+                router.get('budgets/:id', [ProcurementFinanceController, 'budget'])
+                router.put('budgets/:id', [ProcurementFinanceController, 'updateBudget'])
+                router.get('payables', [ProcurementFinanceController, 'payables'])
+                router.get('payables/:id', [ProcurementFinanceController, 'payable'])
+                router.post('payables/:id/payments', [ProcurementFinanceController, 'pay'])
+                router.post('payables/:id/accounting/retry', [
+                  ProcurementFinanceController,
+                  'retry',
+                ])
                 router.get('tolerances', [InvoicesController, 'tolerances'])
                 router
                   .put('tolerances', [InvoicesController, 'setTolerances'])

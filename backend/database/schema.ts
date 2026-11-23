@@ -3768,6 +3768,199 @@ export class PostingRuleSchema extends BaseModel {
   declare version: number
 }
 
+export class ProcurementAccountingEventSchema extends BaseModel {
+  static $columns = ['amounts', 'attempts', 'costCenterId', 'createdAt', 'createdBy', 'documentId', 'documentType', 'error', 'event', 'id', 'idempotencyKey', 'legalEntityId', 'occurredOn', 'postingEventId', 'sourceRef', 'status', 'tenantId', 'thirdPartyRef', 'total', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ProcurementAccountingEventSchema.$columns
+  @column()
+  declare amounts: any
+  @column()
+  declare attempts: number
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare documentId: string
+  @column()
+  declare documentType: string
+  @column()
+  declare error: string | null
+  @column()
+  declare event: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare legalEntityId: string
+  @column.date()
+  declare occurredOn: DateTime
+  @column()
+  declare postingEventId: string | null
+  @column()
+  declare sourceRef: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare thirdPartyRef: string | null
+  @column()
+  declare total: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class ProcurementBudgetSchema extends BaseModel {
+  static $columns = ['amount', 'control', 'costCenterId', 'createdAt', 'createdBy', 'fiscalYear', 'id', 'legalEntityId', 'notes', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ProcurementBudgetSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare control: string
+  @column()
+  declare costCenterId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare fiscalYear: number
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class ProcurementCommitmentSchema extends BaseModel {
+  static $columns = ['amount', 'costCenterId', 'createdAt', 'createdBy', 'fiscalYear', 'id', 'kind', 'legalEntityId', 'sourceId', 'sourceRef', 'sourceType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ProcurementCommitmentSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare costCenterId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare fiscalYear: number
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare sourceId: string
+  @column()
+  declare sourceRef: string | null
+  @column()
+  declare sourceType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class ProcurementPayableSchema extends BaseModel {
+  static $columns = ['amount', 'costCenterId', 'createdAt', 'createdBy', 'creditedAmount', 'currency', 'dueDate', 'exchangeRate', 'id', 'invoiceId', 'legalEntityId', 'orderId', 'paidAmount', 'status', 'supplierId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ProcurementPayableSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare costCenterId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare creditedAmount: string
+  @column()
+  declare currency: string
+  @column.date()
+  declare dueDate: DateTime
+  @column()
+  declare exchangeRate: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare orderId: string
+  @column()
+  declare paidAmount: string
+  @column()
+  declare status: string
+  @column()
+  declare supplierId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class ProcurementPaymentSchema extends BaseModel {
+  static $columns = ['amount', 'amountFunctional', 'bankAccountId', 'createdAt', 'createdBy', 'exchangeRate', 'id', 'notes', 'paidOn', 'payableId', 'reference', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = ProcurementPaymentSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare amountFunctional: string
+  @column()
+  declare bankAccountId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare exchangeRate: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare notes: string | null
+  @column.date()
+  declare paidOn: DateTime
+  @column()
+  declare payableId: string
+  @column()
+  declare reference: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class ProcurementToleranceSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'id', 'priceAmount', 'pricePct', 'qtyPct', 'tenantId', 'totalAmount', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = ProcurementToleranceSchema.$columns

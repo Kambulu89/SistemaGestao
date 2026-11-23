@@ -576,6 +576,24 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de procurement.invoices.read/manage (notas de crédito) por entidade legal, verificado no serviço',
   'POST /api/v1/procurement/credit-notes/:id/cancel':
     'âmbito RBAC de procurement.invoices.read/manage (notas de crédito) por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/budgets':
+    'âmbito RBAC de procurement.budgets.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/budgets/options':
+    'centros de custo activos das entidades em que o membro gere o orçamento (procurement.budgets.manage), filtrados no serviço',
+  'POST /api/v1/procurement/budgets':
+    'âmbito RBAC de procurement.budgets.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/budgets/:id':
+    'âmbito RBAC de procurement.budgets.read/manage por entidade legal, verificado no serviço',
+  'PUT /api/v1/procurement/budgets/:id':
+    'âmbito RBAC de procurement.budgets.read/manage por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/payables':
+    'âmbito RBAC de procurement.payables.read/pay por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/payables/:id':
+    'âmbito RBAC de procurement.payables.read/pay por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/payables/:id/payments':
+    'âmbito RBAC de procurement.payables.read/pay por entidade legal, verificado no serviço',
+  'POST /api/v1/procurement/payables/:id/accounting/retry':
+    'âmbito RBAC de procurement.payables.read/pay por entidade legal, verificado no serviço',
   'GET /api/v1/procurement/tolerances':
     'tolerâncias da conferência da empresa: só valores de configuração, sem dados de documentos; alterar exige procurement.settings',
   'GET /api/v1/procurement/rfqs':

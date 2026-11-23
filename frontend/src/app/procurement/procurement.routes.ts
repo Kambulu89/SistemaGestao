@@ -27,6 +27,8 @@ const ORDER_PERMISSIONS = [
   'procurement.orders.approve',
 ];
 
+const PAYABLE_PERMISSIONS = ['procurement.payables.read', 'procurement.payables.pay'];
+
 const RETURN_PERMISSIONS = ['procurement.returns.read', 'procurement.returns.manage'];
 
 const CREDIT_NOTE_PERMISSIONS = ['procurement.invoices.read', 'procurement.invoices.manage'];
@@ -322,6 +324,35 @@ export const PROCUREMENT_ROUTES: Routes = [
         loadComponent: () => import('./invoice-form').then((m) => m.InvoiceForm),
       },
     ],
+  },
+  {
+    path: 'obrigacoes',
+    title: 'Obrigações a pagar',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: PAYABLE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./payables').then((m) => m.Payables),
+      },
+      {
+        path: ':id',
+        title: 'Obrigação a pagar',
+        canActivate: [accessGuard],
+        data: { anyOf: PAYABLE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./payable-detail').then((m) => m.PayableDetail),
+      },
+    ],
+  },
+  {
+    path: 'orcamento',
+    title: 'Orçamento de compras',
+    canActivate: [accessGuard],
+    data: {
+      anyOf: ['procurement.budgets.read', 'procurement.budgets.manage'],
+      anyScope: true,
+    },
+    loadComponent: () => import('./budgets').then((m) => m.Budgets),
   },
   {
     path: 'devolucoes',

@@ -82,6 +82,7 @@ export interface Invoice {
   lines: InvoiceLine[];
   creditedTotal: string;
   balance: string;
+  payable: { id: string; status: 'OPEN' | 'PARTIALLY_PAID' | 'SETTLED' } | null;
   creditNotes: {
     id: string;
     number: string | null;

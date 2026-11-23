@@ -23,6 +23,7 @@ import {
   returnable,
   type ReturnStatus,
 } from '#modules/procurement/domain/returns'
+import { syncCommitments } from '#modules/procurement/application/finance_service'
 
 /*
  * Devoluções a fornecedor e não conformidades (9.9). Permissões no âmbito da entidade legal:
@@ -846,6 +847,8 @@ export class ReturnService {
           ] as never[]
         )
       const orderStatus = await refreshOrder(scope, o.id)
+      // A crédito, a ordem deixa de esperar a quantidade: o compromisso baixa.
+      await syncCommitments(scope, { orderIds: [o.id] })
       const creditStatus = creditStatusOf(
         credit.map((c) => ({ creditQuantity: c.need, credited: 0n }))
       )

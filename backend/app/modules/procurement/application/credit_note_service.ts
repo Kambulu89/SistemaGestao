@@ -22,6 +22,7 @@ import {
   normalizeCreditLines,
 } from '#modules/procurement/domain/returns'
 import { tolerancesOf } from '#modules/procurement/application/invoice_service'
+import { onCreditNoteValidated } from '#modules/procurement/application/finance_service'
 
 /*
  * Notas de crédito de fornecedor (9.9). Mesmas permissões das facturas (`procurement.invoices.read|manage`, por
@@ -860,6 +861,8 @@ export class CreditNoteService {
         validated_at: new Date(),
         validated_by: context.userId,
       })
+      // Abate a obrigação, realizado negativo, compromisso da ordem e evento contabilístico (9.10).
+      await onCreditNoteValidated(scope, id)
       await event(scope, id, 'VALIDATED', {
         details: { number, total: money(p.total), orderInvoiceStatus: status },
       })

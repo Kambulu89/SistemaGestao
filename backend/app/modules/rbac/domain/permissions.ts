@@ -625,6 +625,30 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Autorizar ou recusar as excepções da conferência das facturas do âmbito (nunca as que a própria pessoa pediu).',
   },
   {
+    code: 'procurement.budgets.read',
+    module: 'procurement',
+    description:
+      'Consultar a verba de compras por centro de custo e ano das entidades do âmbito: comprometido, realizado e disponível.',
+  },
+  {
+    code: 'procurement.budgets.manage',
+    module: 'procurement',
+    description:
+      'Definir e alterar a verba de compras por centro de custo e ano (bloquear ou só avisar o excesso).',
+  },
+  {
+    code: 'procurement.payables.read',
+    module: 'procurement',
+    description:
+      'Consultar as obrigações a pagar das facturas de fornecedor, pagamentos e contabilização das entidades do âmbito.',
+  },
+  {
+    code: 'procurement.payables.pay',
+    module: 'procurement',
+    description:
+      'Tesouraria: registar pagamentos de facturas de fornecedor (nunca acima do saldo) e repetir a contabilização falhada.',
+  },
+  {
     code: 'procurement.settings',
     module: 'procurement',
     description:
