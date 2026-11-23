@@ -903,3 +903,104 @@ as quantidades facturadas às linhas da ordem e actualiza o estado de facturaç�
 fornecedor) e anulada são finais e imutáveis; uma validada corrige-se por nota de crédito (9.9). A obrigação a pagar e
 a contabilização são do 9.10 (aqui não se cria nada no Finance nem no razão).
 
+## D-055 Devoluções a fornecedor, não conformidades e notas de crédito (aceite)
+
+**Não conformidade / devolução.** Parte de uma recepção confirmada: data (não futura), motivo (qualidade, danificado,
+artigo errado, fora de validade, quantidade a mais, documentação, outro), descrição, solução pedida e, por linha da
+recepção, o que volta: do **aceite** (estava em stock; sai pelo Inventário com o lote da recepção, as séries recebidas
+escolhidas, a localização e o estado de stock — livre, bloqueado ou quarentena) ou do **recusado** na conferência
+(nunca entrou: só fica registado). O disponível é o aceite/recusado menos as outras devoluções não anuladas (os
+rascunhos também reservam). **Evidência obrigatória**: confirma-se só com pelo menos um anexo, e os anexos só se juntam
+ou retiram em rascunho.
+
+**Confirmação.** Com a ordem bloqueada volta a verificar o disponível, dá o número da série `PURCHASE_RETURN` e faz
+**uma** saída no Inventário (contrato novo `returnToSupplier`, evento `PURCHASE_RETURN`, chave `prt-<devolução>`:
+repetir não duplica), valorizada primeiro pelas camadas/custo da recepção de origem (`returnOfDocumentRef`); o evento
+contabilístico é `ISSUE_PURCHASE_RETURN` (as contas vêm das regras da empresa). Na ordem, o aceite devolvido deixa de
+contar como recebido. **Substituição**: a ordem volta a esperar a quantidade (recusada se a ordem estiver fechada:
+`ORDER_CLOSED`). **Crédito**: deixa de a esperar (cancelada até ao que falta receber) e o que já estava facturado acima
+do novo recebido fica **por creditar** na linha. Confirmada, a devolução não muda (só o creditado e o estado do
+crédito, pela nota de crédito); uma recepção com devoluções já não se estorna (`RECEIPT_RETURNED`).
+
+**Nota de crédito.** Do fornecedor, sobre uma factura validada (opcionalmente ligada a uma devolução): número externo
+único por fornecedor (maiúsculas, sem espaços, fora as anuladas; verificado antes de tudo — `DUPLICATE_CREDIT_NOTE`),
+data entre a da factura e hoje, motivo, total declarado (tem de bater com o calculado dentro da tolerância de total) e,
+por linha da factura, **quantidade devolvida** ao preço líquido da factura (só em linhas da ordem) e/ou **ajuste de
+valor**; imposto à taxa da linha; a última que fecha a linha leva o resto exacto (sem cêntimos perdidos). Nunca acima do
+facturado por creditar (`OVER_INVOICED`) nem do pendente da devolução (`OVER_PENDING`). A validação, com a factura e a
+ordem bloqueadas, recalcula com o que já foi creditado no momento, dá o número da série `PURCHASE_CREDIT_NOTE`, fica ao
+**câmbio da factura**, abate a quantidade facturada da ordem e o pendente da devolução (estado: sem crédito a receber,
+pendente, creditada). Validada é imutável. A obrigação a pagar (factura − notas de crédito), o pagamento e a
+contabilização são do 9.10.
+
+## D-056 Compras ↔ orçamento, obrigação a pagar e contabilidade: compromisso sem duplo bloqueio, obrigação única, sem duplicar o inventário (aceite)
+
+**Compromisso por centro de custo.** Um livro só de acréscimo (`procurement_commitments`) por centro de custo e ano, em
+moeda funcional e líquido de imposto. Cada requisição e ordem grava só a **diferença** para o seu valor em aberto actual
+(sincronização idempotente), por isso a soma é sempre o estado: requisição aprovada = líquido × (quantidade − encomendada
+− fechada) ÷ quantidade, ao câmbio da requisição; ordem aprovada e emitida = líquido × (quantidade − cancelada −
+facturada) ÷ quantidade, ao câmbio da ordem (em revisão fica o da versão emitida). A ordem tira à requisição o que
+encomenda e a factura tira à ordem o que factura: **a mesma verba nunca fica bloqueada duas vezes**. Realizado = facturas
+validadas − notas de crédito (líquido, ao câmbio da factura), no centro de custo da ordem. Documentos sem centro de custo
+não comprometem. Recalcula-se na aprovação final, fecho e anulação da requisição, nas afectações, na emissão, fecho e
+anulação da ordem, na validação de facturas e notas de crédito e na confirmação de devoluções.
+
+**Verba.** `procurement_budgets` por centro de custo e ano (`procurement.budgets.manage`), com controlo BLOCK (a aprovação
+final da requisição ou a emissão da ordem que aumente o comprometido para lá da verba é recusada, `BUDGET_EXCEEDED`, e a
+transacção desfaz-se) ou WARN (passa; o disponível fica negativo e assinalado). Concorrência: bloqueio por centro de
+custo/ano. Sem verba, o compromisso regista-se mas nada é bloqueado. É uma verba de compras, não o orçamento geral da
+empresa (que, quando existir, usa este livro como contrato).
+
+**Obrigação a pagar.** Exactamente uma por factura validada (`procurement_payables`, índice único), na moeda e ao câmbio
+da factura, com vencimento da factura; abatida pelas notas de crédito validadas. Como ainda não há módulo de
+Finanças/Tesouraria (Prompt 11), os **pagamentos** registam-se aqui, como no salário (D-032), com a permissão própria
+`procurement.payables.pay`: nunca acima do saldo, data não futura nem anterior à factura, referência, conta bancária
+activa da entidade na moeda da factura, câmbio da data do pagamento; só de acréscimo. O contrato `procurementPayables`
+publica as obrigações com saldo para esse módulo.
+
+**Contabilidade sem duplicar o inventário.** Eventos ao motor (origem `PROCUREMENT`), guardados e enviados num savepoint:
+sem regra ou com erro ficam FALHADOS com o motivo e repetem-se sem bloquear o documento; cada um é idempotente pela chave.
+A recepção de bens armazenáveis já lançou o stock contra a conta de recepções por facturar (regra da empresa para
+`INVENTORY/RECEIPT_PURCHASE`); a factura (`INVOICE`) **salda essa conta** pelo valor a que os bens entraram
+(`goodsReceived`, ao câmbio da ordem) e lança só a diferença de preço/câmbio (`priceVarianceUp|Down`), os serviços e
+artigos sem stock (`services`), o imposto (`tax`) e o fornecedor (`payable`, = soma, equilibrado ao cêntimo). A nota de
+crédito (`CREDIT_NOTE`) usa as mesmas chaves (a quantidade devolvida volta pelas recepções por facturar; o ajuste de valor
+num bem em stock é diferença de preço). O pagamento (`PAYMENT`): `payable` ao câmbio da factura, `bank` ao do pagamento,
+`fxLoss|fxGain`. As Compras nunca debitam stock.
+
+## D-057 Avaliação de fornecedores: indicadores das provas, pesos da empresa, publicação imutável (aceite)
+
+**Indicadores calculados das provas do período** (nunca introduzidos à mão), em pontos de 0 a 100:
+- **qualidade** — por linha de recepção confirmada, (aceite − devolvido do aceite) ÷ (aceite + recusado); média das
+  linhas, cada linha conta igual, para não misturar unidades;
+- **prazo** — linhas recebidas até à data prevista (da linha ou da ordem) ÷ linhas com data;
+- **conformidade** — facturas validadas sem excepção ÷ (validadas + devolvidas ao fornecedor);
+- **custo** — por linha de pedido de cotação aberto no período, o menor preço proposto na mesma moeda ÷ o preço do
+  fornecedor; média das linhas.
+
+**Nota e classe.** A nota é a média ponderada pelos pesos da empresa (inteiros que somam 100, `procurement.settings`;
+por omissão 30/30/20/20). Um critério sem provas (ou com peso 0) não conta e os pesos dos outros reescalam-se; sem
+provas nenhumas não há nota. Classes: A ≥ 85, B ≥ 70, C ≥ 50, D abaixo.
+
+**Mapa e provas.** `procurement.evaluations.read` vê o mapa e as provas só das entidades do âmbito: recepções
+atrasadas, com recusa ou devolução, facturas com excepção, cotações em que o fornecedor foi o mais barato, e o
+cumprimento dos SLA dos contratos que se medem automaticamente:
+- prazo — média de dias da emissão à recepção ≤ alvo;
+- taxa de entrega — recebido ÷ encomendado ≥ alvo;
+- taxa de qualidade — o indicador de qualidade ≥ alvo.
+
+**Publicação.** Exige `procurement.evaluations.manage` no âmbito da empresa (o fornecedor é da empresa toda) e recalcula
+com as provas de todas as entidades. Guarda a fotografia — pesos, indicadores com número de provas, nota, classe e
+comentário — que a base de dados não deixa alterar nem apagar. Uma nova publicação do mesmo período substitui a
+anterior, que fica no histórico. A ficha do fornecedor mostra a avaliação em vigor.
+
+## D-058 Unicidade verificada na aplicação e garantida na base: a corrida devolve 409, nunca 500 (aceite)
+
+Onde um número ou chave tem de ser único (número externo de facturas e notas de crédito por fornecedor, verba por
+centro de custo e ano, códigos), o serviço verifica primeiro, para dar uma resposta clara. É o **índice único da base**
+que garante a regra quando dois pedidos passam a verificação ao mesmo tempo, e esse erro (`23505`, pela restrição) é
+convertido no mesmo 409 da verificação (`DUPLICATE_INVOICE`, `DUPLICATE_CREDIT_NOTE`, `BUDGET_EXISTS`, …). Onde a
+transição pode bloquear o documento-pai, bloqueia-o (`FOR UPDATE` ou advisory lock) e a corrida resolve-se por ordem.
+O QA do Prompt 09 (9.12) encontrou duas operações sem a conversão (notas de crédito e verbas: o segundo pedido
+simultâneo dava 500) e passou a testá-las com pedidos em paralelo.
+

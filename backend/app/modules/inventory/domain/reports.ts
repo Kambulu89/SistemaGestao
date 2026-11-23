@@ -122,7 +122,8 @@ export function movementClass(m: {
       if (m.sourceType === 'INTERNAL_REQUISITION' || m.documentOrigin === 'CONSUMPTION')
         return 'CONSUMPTION'
       if (m.documentOrigin === 'LOSS') return 'LOSS'
-      if (m.documentOrigin === 'RETURN') return 'SUPPLIER_RETURN'
+      if (m.sourceType === 'PURCHASE_RETURN' || m.documentOrigin === 'RETURN')
+        return 'SUPPLIER_RETURN'
       if (m.documentOrigin === 'SAMPLE') return 'SAMPLE'
       return 'OTHER_ISSUE'
     case 'ADJUSTMENT':

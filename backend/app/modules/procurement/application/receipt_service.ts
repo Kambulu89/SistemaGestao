@@ -17,6 +17,7 @@ import {
   toBaseQuantity,
   unitCostFunctional,
 } from '#modules/procurement/domain/receipts'
+import { receiptHasReturns } from '#modules/procurement/application/return_service'
 
 /*
  * Recepções de compra (9.7). Permissões no âmbito da entidade legal: `procurement.receipts.read` e `.manage` (registar,
@@ -309,9 +310,18 @@ async function detail(scope: TenantScope, id: string) {
     )
   ).rows as any[]
   const status = r.status as ReceiptStatus
+  const returns = { manage: await permissionScope(scope, 'procurement.returns.manage') }
+  const returnList = (
+    await scope.trx.rawQuery(
+      `select id, number, status, credit_status, remedy, return_date from purchase_returns
+        where tenant_id = ? and receipt_id = ? order by created_at`,
+      [t, id]
+    )
+  ).rows as any[]
   const canReverse =
     status === 'CONFIRMED' &&
     !info.closed_at &&
+    !(await receiptHasReturns(scope, id)) &&
     lines.every((l) => q6(l.received_quantity) - q6(l.quantity) >= q6(l.invoiced_quantity))
   return {
     id: r.id as string,
@@ -340,6 +350,14 @@ async function detail(scope: TenantScope, id: string) {
     reversedBy: (info.reversed_name as string) ?? null,
     reversalReason: (r.reversal_reason as string) ?? null,
     cancelReason: (r.cancel_reason as string) ?? null,
+    returns: returnList.map((x) => ({
+      id: x.id as string,
+      number: (x.number as string) ?? null,
+      status: x.status as string,
+      creditStatus: x.credit_status as string,
+      remedy: x.remedy as string,
+      returnDate: isoDate(x.return_date)!,
+    })),
     lines: lines.map((l) => ({
       id: l.id as string,
       orderLineId: l.order_line_id as string,
@@ -374,6 +392,7 @@ async function detail(scope: TenantScope, id: string) {
       confirm: g.manage && status === 'DRAFT',
       cancel: g.manage && status === 'DRAFT',
       reverse: g.manage && canReverse,
+      return: status === 'CONFIRMED' && covers(returns.manage, r.legal_entity_id),
     },
   }
 }
@@ -782,6 +801,11 @@ export class ReceiptService {
       const reason = reasonOf(input.reason)
       const t = context.tenantId
       const o = await loadOrder(scope, r.order_id, true)
+      if (await receiptHasReturns(scope, id))
+        throw ApiError.conflict(
+          'RECEIPT_RETURNED',
+          'A recepção tem devoluções: já não se estorna (corrija com nova recepção ou devolução).'
+        )
       if (o.closed_at)
         throw ApiError.conflict(
           'ORDER_CLOSED',

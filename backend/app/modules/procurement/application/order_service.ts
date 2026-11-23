@@ -38,6 +38,7 @@ import {
   RECEIPT_STATUSES,
   type ReceiptStatus,
 } from '#modules/procurement/domain/orders'
+import { syncCommitments } from '#modules/procurement/application/finance_service'
 
 /*
  * Ordens de compra (9.5). Permissões no âmbito da entidade legal: `procurement.orders.read`, `.manage` (criar,
@@ -1388,6 +1389,8 @@ export class PurchaseOrderService {
           revision: { from: null, to: Number(o.revision) },
         },
       })
+      // Emitida: compromete a verba (a requisição já libertou o que esta ordem encomenda).
+      await syncCommitments(scope, { orderIds: [id] }, { check: true })
       return detail(scope, id)
     })
   }
@@ -1459,6 +1462,7 @@ export class PurchaseOrderService {
         entityId: id,
         changes: { approvalStatus: { from: o.approval_status, to: 'CANCELLED' } },
       })
+      await syncCommitments(scope, { orderIds: [id] })
       return detail(scope, id)
     })
   }
@@ -1498,6 +1502,7 @@ export class PurchaseOrderService {
         entityId: id,
         changes: { receiptStatus: { from: o.receipt_status, to: 'RECEIVED' } },
       })
+      await syncCommitments(scope, { orderIds: [id] })
       return detail(scope, id)
     })
   }

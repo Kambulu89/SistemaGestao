@@ -30,6 +30,8 @@ import {
   normalizeTolerances,
   type Tolerances,
 } from '#modules/procurement/domain/invoices'
+import { invoiceCredits } from '#modules/procurement/application/credit_note_service'
+import { onInvoiceValidated } from '#modules/procurement/application/finance_service'
 
 /*
  * Facturas de fornecedor (9.8). Permissões no âmbito da entidade legal: `procurement.invoices.read`, `.manage`
@@ -439,6 +441,8 @@ async function finalize(scope: TenantScope, inv: any, ols: Map<string, any>, lin
     validated_at: new Date(),
     validated_by: scope.context.userId,
   })
+  // Realizado, compromisso da ordem, obrigação a pagar única e evento contabilístico (9.10).
+  await onInvoiceValidated(scope, inv.id)
   return { number, orderInvoiceStatus: status }
 }
 
@@ -483,6 +487,14 @@ async function detail(scope: TenantScope, id: string) {
   ).rows as any[]
   const status = i.status as InvoiceStatus
   const me = scope.context.userId
+  const credits = await invoiceCredits(scope, id)
+  const payable = (
+    await scope.trx.rawQuery(
+      `select id, status from procurement_payables where tenant_id = ? and invoice_id = ?`,
+      [t, id]
+    )
+  ).rows[0] as { id: string; status: string } | undefined
+  const creditManage = covers((await scopesOf(scope)).manage, i.legal_entity_id)
   return {
     id: i.id as string,
     version: Number(i.version),
@@ -528,7 +540,18 @@ async function detail(scope: TenantScope, id: string) {
       taxAmount: money(c2(l.tax_amount)),
       totalAmount: money(c2(l.total_amount)),
       match: l.match ?? null,
+      credited: credits.byLine.get(l.id as string) ?? null,
     })),
+    creditedTotal: money(credits.credited),
+    balance: money(c2(i.total_amount) - credits.credited),
+    creditNotes: credits.notes,
+    // Só para quem vê as obrigações a pagar desta entidade.
+    payable:
+      payable &&
+      (covers(await permissionScope(scope, 'procurement.payables.read'), i.legal_entity_id) ||
+        covers(await permissionScope(scope, 'procurement.payables.pay'), i.legal_entity_id))
+        ? { id: payable.id, status: payable.status }
+        : null,
     exceptions: exceptions.map((x) => ({
       decision: x.decision as 'APPROVE' | 'REJECT',
       reason: x.reason as string,
@@ -554,6 +577,7 @@ async function detail(scope: TenantScope, id: string) {
           : null,
       refuse: g.manage && (status === 'DRAFT' || status === 'PENDING_EXCEPTION'),
       cancel: g.manage && (status === 'DRAFT' || status === 'PENDING_EXCEPTION'),
+      credit: creditManage && status === 'VALIDATED' && credits.credited < c2(i.total_amount),
     },
   }
 }

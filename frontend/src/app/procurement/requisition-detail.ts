@@ -71,6 +71,9 @@ type ReasonKind = 'reject' | 'cancel' | 'close';
           @for (m of messages(x); track m) {
             <p class="text-sm text-muted">{{ m }}</p>
           }
+          @if (kind() === null && act.error(); as err) {
+            <app-error-alert [error]="err" [showDetails]="true" data-testid="rd-error" />
+          }
           @if (x.can.decideBlockedBy) {
             <p class="text-sm text-warning-text" data-testid="rd-blocked">
               {{ blocked(x.can.decideBlockedBy) }}

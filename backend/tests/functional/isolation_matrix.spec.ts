@@ -828,8 +828,61 @@ async function populate(client: any) {
       [tenant.id, le.id, supplier.id, purchaseOrder.id]
     )
   ).rows[0] as { id: string }
+  // Devolução e nota de crédito da empresa A inseridas directamente (só interessa o isolamento).
+  const purchaseReturn = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_returns (tenant_id, legal_entity_id, receipt_id, order_id, supplier_id, return_date,
+          reason_code, description, remedy) values (?, ?, ?, ?, ?, current_date, 'QUALITY', 'Isolamento', 'CREDIT')
+       returning id`,
+      [tenant.id, le.id, purchaseReceipt.id, purchaseOrder.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
+  const purchaseCreditNote = (
+    await db.connection('owner').rawQuery(
+      `insert into purchase_credit_notes (tenant_id, legal_entity_id, supplier_id, order_id, invoice_id,
+          credit_note_number, credit_note_number_key, credit_note_date, currency, reason, declared_total, exchange_rate)
+       values (?, ?, ?, ?, ?, 'NC-1', 'NC-1', current_date, 'AOA', 'Isolamento', 1, 1) returning id`,
+      [tenant.id, le.id, supplier.id, purchaseOrder.id, purchaseInvoice.id]
+    )
+  ).rows[0] as { id: string }
+  // Centro de custo, verba e obrigação a pagar da empresa A inseridos directamente (só interessa o isolamento).
+  const costCenter = (
+    await db.connection('owner').rawQuery(
+      `insert into cost_centers (tenant_id, legal_entity_id, code, name) values (?, ?, 'CC-ISO', 'Centro isolado')
+       returning id`,
+      [tenant.id, le.id]
+    )
+  ).rows[0] as { id: string }
+  const procurementBudget = (
+    await db.connection('owner').rawQuery(
+      `insert into procurement_budgets (tenant_id, legal_entity_id, cost_center_id, fiscal_year, amount)
+       values (?, ?, ?, 2026, 1000) returning id`,
+      [tenant.id, le.id, costCenter.id]
+    )
+  ).rows[0] as { id: string }
+  const procurementPayable = (
+    await db.connection('owner').rawQuery(
+      `insert into procurement_payables (tenant_id, legal_entity_id, supplier_id, order_id, invoice_id, currency, amount,
+          exchange_rate, due_date) values (?, ?, ?, ?, ?, 'AOA', 100, 1, current_date) returning id`,
+      [tenant.id, le.id, supplier.id, purchaseOrder.id, purchaseInvoice.id]
+    )
+  ).rows[0] as { id: string }
+  // Avaliação publicada da empresa A inserida directamente (só interessa o isolamento).
+  const supplierEvaluation = (
+    await db.connection('owner').rawQuery(
+      `insert into supplier_evaluations (tenant_id, supplier_id, period_from, period_to, weights, indicators, score, rating)
+       values (?, ?, '2026-01-01', '2026-06-30', '{}', '{}', 80, 'B') returning id`,
+      [tenant.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    supplierEvaluation,
+    costCenter,
+    procurementBudget,
+    procurementPayable,
+    purchaseReturn,
+    purchaseCreditNote,
     purchaseInvoice,
     purchaseReceipt,
     purchaseContract,
@@ -1670,6 +1723,94 @@ test.group('isolamento | matriz entre empresas', (group) => {
       [
         'cancel factura alheia',
         B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/cancel`, {
+          ...v,
+          reason: 'x',
+        }),
+      ],
+      ['GET avaliação alheia', B.get(`/api/v1/procurement/evaluations/${a.supplierEvaluation.id}`)],
+      [
+        'provas de fornecedor alheio',
+        B.get(`/api/v1/procurement/evaluations/suppliers/${a.supplier.id}?from=2026-01-01`),
+      ],
+      [
+        'publicar avaliação de fornecedor alheio',
+        B.post(`/api/v1/procurement/evaluations/suppliers/${a.supplier.id}`, {
+          from: '2026-01-01',
+        }),
+      ],
+      ['GET verba alheia', B.get(`/api/v1/procurement/budgets/${a.procurementBudget.id}`)],
+      [
+        'alterar verba alheia',
+        B.put(`/api/v1/procurement/budgets/${a.procurementBudget.id}`, { ...v, amount: '1' }),
+      ],
+      [
+        'verba num centro de custo alheio',
+        B.post('/api/v1/procurement/budgets', {
+          costCenterId: a.costCenter.id,
+          fiscalYear: 2027,
+          amount: '1',
+        }),
+      ],
+      ['GET obrigação alheia', B.get(`/api/v1/procurement/payables/${a.procurementPayable.id}`)],
+      [
+        'pagar obrigação alheia',
+        B.post(`/api/v1/procurement/payables/${a.procurementPayable.id}/payments`, {
+          ...v,
+          amount: '1',
+        }),
+      ],
+      [
+        'repetir contabilização alheia',
+        B.post(`/api/v1/procurement/payables/${a.procurementPayable.id}/accounting/retry`, {}),
+      ],
+      ['GET devolução alheia', B.get(`/api/v1/procurement/returns/${a.purchaseReturn.id}`)],
+      [
+        'recepção alheia por devolver',
+        B.get(`/api/v1/procurement/returns/receipts/${a.purchaseReceipt.id}`),
+      ],
+      [
+        'devolução de recepção alheia',
+        B.post('/api/v1/procurement/returns', { receiptId: a.purchaseReceipt.id, lines: [] }),
+      ],
+      [
+        'alterar devolução alheia',
+        B.put(`/api/v1/procurement/returns/${a.purchaseReturn.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'confirmar devolução alheia',
+        B.post(`/api/v1/procurement/returns/${a.purchaseReturn.id}/confirm`, v),
+      ],
+      [
+        'anular devolução alheia',
+        B.post(`/api/v1/procurement/returns/${a.purchaseReturn.id}/cancel`, { ...v, reason: 'x' }),
+      ],
+      [
+        'GET nota de crédito alheia',
+        B.get(`/api/v1/procurement/credit-notes/${a.purchaseCreditNote.id}`),
+      ],
+      [
+        'factura alheia por creditar',
+        B.get(`/api/v1/procurement/credit-notes/invoices/${a.purchaseInvoice.id}`),
+      ],
+      [
+        'nota de crédito de factura alheia',
+        B.post('/api/v1/procurement/credit-notes', {
+          invoiceId: a.purchaseInvoice.id,
+          creditNoteNumber: 'X',
+          lines: [],
+        }),
+      ],
+      [
+        'alterar nota de crédito alheia',
+        B.put(`/api/v1/procurement/credit-notes/${a.purchaseCreditNote.id}`, { ...v, lines: [] }),
+      ],
+      [
+        'validar nota de crédito alheia',
+        B.post(`/api/v1/procurement/credit-notes/${a.purchaseCreditNote.id}/validate`, v),
+      ],
+      [
+        'anular nota de crédito alheia',
+        B.post(`/api/v1/procurement/credit-notes/${a.purchaseCreditNote.id}/cancel`, {
           ...v,
           reason: 'x',
         }),

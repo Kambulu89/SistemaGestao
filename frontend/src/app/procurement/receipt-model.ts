@@ -65,9 +65,17 @@ export interface Receipt {
   reversedBy: string | null;
   reversalReason: string | null;
   cancelReason: string | null;
+  returns: {
+    id: string;
+    number: string | null;
+    status: string;
+    creditStatus: string;
+    remedy: string;
+    returnDate: string;
+  }[];
   lines: ReceiptLine[];
   history: { kind: string; reason: string | null; at: string; by: string | null }[];
-  can: { edit: boolean; confirm: boolean; cancel: boolean; reverse: boolean };
+  can: { edit: boolean; confirm: boolean; cancel: boolean; reverse: boolean; return: boolean };
 }
 
 export interface ReceivableOrder {

@@ -1,15 +1,15 @@
 # Relatório — Prompt 09 (compras)
 
-Estado: **9.1 e 9.2 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 9.3 a 9.12 seguem, um de cada
-vez. Decisões a partir de D-047.
+Estado: **Prompt 09 concluído** — 9.1 a 9.11 implementados e verificados, QA no 9.12 (`docs/reports/prompt-09-qa.md`), no
+branch `claude/pensive-clarke-5gm075`. Decisões D-047 a D-058.
 
 ## Inventário AS-IS → TO-BE
 
-| Bloco            | Antes                                  | Agora                                                                                                                                                                                                                                                                                                                                                                   | Estado    |
-| ---------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| 9.1 Fornecedores | Sem terceiros nem compras na aplicação | Terceiro reutilizável (fornecedor e, no Prompt 10, cliente); ficha com NIF por país, contactos e morada; condições comerciais; documentos com validade e ficheiro; critérios e tipos de documento configuráveis; homologação segregada com validade derivada dos documentos; dados bancários protegidos com aprovação de outra pessoa; suspensão; histórico e auditoria | Feito     |
-| 9.2–9.11         | —                                      | Requisições, RFQ, comparação, ordens, contratos, recepções, facturas, devoluções, orçamento/finance, avaliação                                                                                                                                                                                                                                                          | Por fazer |
-| 9.12 QA          | —                                      | —                                                                                                                                                                                                                                                                                                                                                                       | Por fazer |
+| Bloco            | Antes                                  | Agora                                                                                                                                                                                                                                                                                                                                                                   | Estado |
+| ---------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 9.1 Fornecedores | Sem terceiros nem compras na aplicação | Terceiro reutilizável (fornecedor e, no Prompt 10, cliente); ficha com NIF por país, contactos e morada; condições comerciais; documentos com validade e ficheiro; critérios e tipos de documento configuráveis; homologação segregada com validade derivada dos documentos; dados bancários protegidos com aprovação de outra pessoa; suspensão; histórico e auditoria | Feito  |
+| 9.2–9.11         | —                                      | Requisições, RFQ, comparação, ordens, contratos, recepções, facturas, devoluções, orçamento/finance, avaliação                                                                                                                                                                                                                                                          | Feito  |
+| 9.12 QA          | —                                      | Ciclo completo com ataques de concorrência e duplicação, isolamento e regressão (backend, frontend, browser)                                                                                                                                                                                                                                                            | Feito  |
 
 ## 9.1 Fornecedores
 
@@ -420,6 +420,178 @@ cronologia, auditoria). Configuração → Tolerâncias da conferência. Na orde
   recusada como duplicada (apanhou que a verificação vinha depois da validação das linhas; corrigido); divergências
   (acima do recebido, encargo, total) pedem excepção e outra pessoa autoriza com motivo; 390 px.
 
+## 9.9 Devoluções, não conformidades e notas de crédito
+
+### Modelo
+
+Migração `0051_create_purchase_returns`: `purchase_returns` (motivo, solução, estado e estado do crédito coerentes por
+`CHECK`; gatilho: confirmada só muda o estado do crédito, anulada imutável, sem eliminação), `purchase_return_lines`
+(origem aceite/recusada; só o aceite armazenável leva estado de stock, lote, séries e localização; por creditar ≤
+devolvido; confirmada só aumenta o creditado), `purchase_credit_notes` (número externo único por fornecedor fora as
+anuladas; câmbio da factura fixo; validada e anulada imutáveis), `purchase_credit_note_lines` (quantidade em linhas da
+ordem ou ajuste de valor; só em rascunho) e os eventos (só acréscimo). O Inventário passa a aceitar o evento de
+integração `PURCHASE_RETURN`.
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /returns`, `GET /returns/receipts/:id`, `GET|PUT /returns/:id`, `POST /returns/:id/{confirm|cancel}`.
+- `GET|POST /credit-notes`, `GET /credit-notes/invoices/:id`, `GET|PUT /credit-notes/:id`,
+  `POST /credit-notes/:id/{validate|cancel}`.
+- Inventário: contrato `returnToSupplier` (também `POST /inventory/integrations/purchase-returns`), valorização pela
+  recepção de origem, evento contabilístico `ISSUE_PURCHASE_RETURN`, classe de movimento "devolução a fornecedor".
+- Permissões `procurement.returns.read|manage` (entidade legal); notas de crédito com `procurement.invoices.read|manage`.
+  Anexos `purchase_return` (evidências, só em rascunho) e `purchase_credit_note`. A factura mostra o creditado e o saldo.
+- Erros: `OVER_RETURN`, `NOT_STOCKED`, `NOT_RECEIVED`, `SERIAL_COUNT`, `EVIDENCE_REQUIRED`, `ORDER_CLOSED`,
+  `NOT_RETURNABLE`, `RECEIPT_RETURNED`, `NOT_CREDITABLE`, `DUPLICATE_CREDIT_NOTE`, `OVER_INVOICED`, `OVER_PENDING`,
+  `TOTAL_MISMATCH`, `BEFORE_INVOICE`, `NO_SERIES`, `INVALID_STATE`, versão (409).
+
+### Ecrãs
+
+Compras → Devoluções a fornecedor (lista com estado e crédito), Nova/Editar devolução (a partir da recepção: motivo,
+solução, descrição, guia; por linha aceite ou recusada, quantidade com aviso acima do disponível, estado de stock,
+localização, séries), Devolução (estado e crédito, evidências obrigatórias para confirmar, saída de stock, por
+creditar/creditado, notas de crédito, cronologia, auditoria). Notas de crédito (lista), Nova/Editar nota (da factura ou
+da devolução: quantidade pendente preenchida, ajuste de valor, total calculado e diferença para o declarado), Nota de
+crédito (linhas, totais e funcional, validar, anular). Na recepção: "Registar não conformidade" e a lista das
+devoluções; na factura: "Registar nota de crédito", creditado e saldo.
+
+### Testes e evidências
+
+- Unitário `procurement_returns_domain.spec.ts` (5): linhas e cabeçalho da devolução, devolvível, por creditar,
+  cancelamento a crédito, estado do crédito, valores do crédito (333,33 + 333,33 + 333,34; imposto que fecha a linha) e
+  linhas da nota.
+- Funcional `procurement_returns.spec.ts` (2): devolução a crédito com validações, âmbito, rascunho que reserva,
+  `RECEIPT_RETURNED`, `EVIDENCE_REQUIRED`, `NO_SERIES`, saída 2 UN valorizada −1 800,00 (fonte `RETURN`) com evento
+  `PURCHASE_RETURN`, ordem recebido 4/cancelado 2/facturado 6, imutável na base e sem evidências depois; nota de crédito
+  com `TOTAL_MISMATCH`, `OVER_PENDING`, `OVER_INVOICED`, `BEFORE_INVOICE`, 1 800,00 + 252,00, validada (facturado 4,
+  devolução creditada, saldo da factura 9 104,00), duplicado com outra grafia, ajuste de valor sem mexer na facturação,
+  anulação. Segundo: substituição com aceite e recusada (só o aceite sai do stock; a ordem volta a esperar), ordem
+  fechada recusa substituição e aceita crédito, anulação do rascunho liberta a quantidade.
+- `isolation_matrix` (devolução e nota de crédito de outra empresa → 404), `routes_protection`, regressão de todo o
+  backend; frontend `return-model.spec.ts` e `credit-note-model.spec.ts`.
+- Browser (6 passos, três execuções seguidas, sem erros na consola; administração e leitor): não conformidade a partir
+  da recepção (aviso acima do disponível), confirmar bloqueado sem evidência, evidência junta e confirmação com saída de
+  stock e crédito pendente, recepção sem "Estornar", leitor sem acções; nota de crédito a partir da devolução com total
+  2 052,00, diferença −52,00 recusada pelo servidor, validada (devolução creditada, saldo 9 104,00); duplicado recusado;
+  listas; 390 px.
+
+## 9.10 Orçamento, obrigação a pagar e contabilidade
+
+### Modelo
+
+Migração `0052_create_procurement_finance`: `procurement_budgets` (verba por centro de custo e ano, BLOCK/WARN, única),
+`procurement_commitments` (livro só de acréscimo: COMMITMENT/ACTUAL por documento), `procurement_payables` (única por
+factura; valor, moeda e câmbio fixos; pago e creditado só sobem; nunca acima da factura), `procurement_payments` (só de
+acréscimo) e `procurement_accounting_events` (pedido imutável, chave única; só o resultado do envio muda).
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|POST /budgets`, `GET /budgets/options`, `GET|PUT /budgets/:id` (com os documentos que compõem o comprometido).
+- `GET /payables`, `GET /payables/:id`, `POST /payables/:id/payments`, `POST /payables/:id/accounting/retry`.
+- Ligações: aprovação/fecho/anulação de requisições e afectações; emissão/fecho/anulação de ordens; validação de
+  facturas (realizado, obrigação única, evento) e de notas de crédito (abate, realizado negativo, evento); devoluções.
+- Permissões `procurement.budgets.read|manage` e `procurement.payables.read|pay` (entidade legal). Contrato
+  `procurementPayables` para a futura Tesouraria; `syncCommitments` no `index.ts`.
+- Erros: `BUDGET_EXCEEDED`, `BUDGET_EXISTS`, `OVER_BALANCE`, `CURRENCY_MISMATCH`, `BEFORE_INVOICE`, `FUTURE`, `NO_RATE`,
+  versão (409).
+
+### Ecrãs
+
+Compras → Orçamento de compras (por ano: verba, requisições, ordens, realizado, disponível com barra, documentos;
+nova/editar verba), Obrigações a pagar (lista com estado e em atraso) e Obrigação (valor, notas de crédito, pago, saldo,
+pagamentos, registar pagamento, contabilização com montantes e motivo do falhado, repetir). Na factura: "Obrigação a
+pagar" (só para quem a vê). Na requisição, o erro de uma decisão (p. ex. verba excedida) fica visível na página.
+
+### Testes e evidências
+
+- Unitário `procurement_finance_domain.spec.ts` (5): parte em aberto, compromisso de requisição e ordem (com câmbio),
+  verba, estado da obrigação, pagamento, montantes da factura (6 600 + 300 + 500 + 966 = 8 366; em USD a diferença de
+  câmbio) e do pagamento (ganho/perda cambial).
+- Funcional `procurement_finance.spec.ts` (2): verba (âmbito, validação, duplicada); requisição 10 000; a ordem de 6 a
+  1 100 deixa 4 000 + 6 600 (não 16 600); segunda requisição recusada com `BUDGET_EXCEEDED` (passa 600,00) e aprovada com
+  WARN (−600,00); factura a 1 150 → realizado 6 900, ordem 0; documentos do livro; livro só de acréscimo; fecho da
+  requisição liberta. Segundo, com regras reais: a recepção lança 6 600 em stock contra o 22; a factura salda o 22 (saldo
+  0), stock fica 6 600, fornecedor 8 366; obrigação única (também na base); nota de crédito de 114 abate e lança a
+  diferença; pagamentos (âmbito, `FUTURE`, `OVER_BALANCE`, conta inválida); pagamento sem regra fica FALHADO, a regra é
+  criada e a repetição lança; segundo pagamento salda (fornecedor 0, banco −8 252); imutabilidade na base.
+- `isolation_matrix` (verba, obrigação, pagamento e repetição de outra empresa → 404), `routes_protection`, regressão de
+  todo o backend; frontend `finance-model.spec.ts`.
+- Browser (7 passos, três execuções seguidas, sem erros na consola; administração e aprovador/leitor): verba pela
+  navegação; aprovar a requisição compromete; a segunda é recusada com a mensagem na página; ordem/recepção/factura;
+  obrigação a partir da factura, pagamento acima do saldo recusado, pagamento parcial, contabilização falhada com motivo
+  (a demonstração não tem regras PROCUREMENT); lista; leitor sem "Registar pagamento"; realizado na verba; 390 px.
+
+## 9.11 Avaliação de fornecedores
+
+### Modelo
+
+Migração `0053_create_supplier_evaluations`:
+
+- `supplier_evaluation_settings`: pesos que somam 100, uma linha por empresa;
+- `supplier_evaluations`: fotografia publicada (pesos, indicadores, nota, classe, comentário). É imutável na base de
+  dados; só pode ser marcada uma vez como substituída, com uma única em vigor por fornecedor e período.
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|PUT /evaluations/weights` (alterar com `procurement.settings`).
+- `GET /evaluations/ranking?from&to`.
+- `GET|POST /evaluations/suppliers/:id` (provas, SLA, histórico / publicar).
+- `GET /evaluations/:id`.
+- A ficha do fornecedor (`GET /suppliers/:id`) traz a avaliação em vigor. Contrato `latestEvaluation` no `index.ts`.
+- Permissões `procurement.evaluations.read|manage`.
+- Erros: `SUM`, `BEFORE_FROM`, `FUTURE`, `TOO_LONG`, `NO_EVIDENCE`, `OUT_OF_SCOPE`.
+
+### Ecrãs
+
+- **Compras → Avaliação de fornecedores**:
+  - período;
+  - resumo por classe;
+  - tabela ordenada pela nota, com os quatro indicadores e o número de provas;
+  - pesos, num modal com a soma visível.
+- **Avaliação do fornecedor**:
+  - nota e classe;
+  - indicadores com peso e definição;
+  - recepções (atrasada, com recusa, com devolução), facturas (conforme, com excepção, devolvida) e cotações;
+  - SLA dos contratos (cumprido, falhado ou sem medição);
+  - publicar com comentário e histórico.
+- **Ficha do fornecedor**: classe em vigor, com ligação à avaliação.
+
+### Testes e evidências
+
+- Unitário `procurement_evaluations_domain.spec.ts` (3): indicadores, nota com critérios sem provas e peso 0,
+  classes, pesos, período e SLA.
+- Funcional `procurement_evaluations.spec.ts` (1), com provas reais:
+  - fornecedor 1 — ordem atrasada com 8 aceites, 2 recusadas e 2 devolvidas; ordem a tempo; uma factura conforme e
+    outra a 110 só com excepção autorizada; proposta a 120 contra 100;
+  - mapa: fornecedor 2 com 100 (A) e fornecedor 1 com 65,67 (C), com qualidade 80, prazo 50, conformidade 50 e custo
+    83,33;
+  - pesos: soma errada recusada; com 50/50 a nota passa a 65,00;
+  - publicação: leitor e outra entidade recusados (`OUT_OF_SCOPE`), `BEFORE_FROM`, `NO_EVIDENCE`; a fotografia fica
+    com 65,67 C; a republicação substitui a anterior, que fica no histórico; a base recusa alterar, reactivar e apagar;
+  - a ficha do fornecedor mostra a avaliação; outra entidade vê o mapa vazio e o fornecedor sem nota.
+- `isolation_matrix` (avaliação, provas e publicação de outra empresa → 404), `routes_protection`, regressão de todo o
+  backend; frontend `evaluation-model.spec.ts`.
+- Browser (6 passos, três execuções seguidas, sem erros na consola; administração e leitor):
+  - mapa pela navegação (fornecedor 2 com A; fornecedor 1 com 65,00 C, sem provas de custo);
+  - pesos: soma 120 assinalada; com 50/50 o fornecedor 1 sobe a 70,00 B; pesos repostos;
+  - provas do fornecedor 1 (qualidade 90, prazo e conformidade 50, recepção atrasada e com recusa, factura com
+    excepção) e publicação com comentário (classe C);
+  - ficha do fornecedor com a classe; leitor sem "Publicar" nem "Pesos";
+  - 390 px.
+
+## 9.12 QA e Git
+
+Relatório completo em `docs/reports/prompt-09-qa.md`.
+
+- Ciclo completo novo (`procurement_lifecycle.spec.ts`): requisição → aprovação → cotação → adjudicação → ordem →
+  recepção única → factura validada → obrigação única, com aprovações segregadas e não repetíveis, pedidos em paralelo
+  (aprovação, geração de ordens, emissão, recepção, factura duplicada, validação, pagamentos), preço/quantidade,
+  rastreabilidade e isolamento entre empresas. Executado sete vezes seguidas.
+- Defeito encontrado e corrigido: notas de crédito e verbas duplicadas em simultâneo davam 500 (o índice único travava,
+  mas o erro não era convertido); agora 409 (D-058), com teste de corridas que falha sem a correcção.
+- Regressão: backend 364 testes, frontend 194, browser 10 scripts / 63 passos (os 4 scripts que procuravam o prefixo
+  da série foram generalizados; o produto estava correcto).
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -451,3 +623,25 @@ cronologia, auditoria). Configuração → Tolerâncias da conferência. Na orde
   (OCR) nem recepção electrónica de facturas; as tolerâncias são da empresa (sem valores por fornecedor ou categoria);
   a excepção é decidida numa só etapa; com várias séries `PURCHASE_INVOICE` activas usa-se a primeira por código; a
   conformidade fiscal do documento do fornecedor não é verificada.
+- 9.9: a devolução não se estorna depois de confirmada (corrige-se com nova recepção); sem guia de transporte emitida
+  pelo sistema nem envio ao fornecedor; a nota de crédito não exige aprovação de outra pessoa (só reduz a obrigação);
+  o crédito pendente só nasce de devoluções a crédito sobre quantidades já facturadas (diferenças de preço registam-se
+  como ajuste de valor sem devolução); a obrigação líquida, o pagamento e a contabilização da nota de crédito são do
+  9.10; a avaliação do fornecedor com estas não conformidades é do 9.11; a conformidade fiscal das notas de crédito do
+  fornecedor não é verificada.
+- 9.10: a Tesouraria (Prompt 11) é que deve passar a registar os pagamentos — aqui ficam com permissão própria e o
+  contrato `procurementPayables`; sem estorno de pagamento (só de acréscimo; um pagamento errado corrige-se na
+  Tesouraria); a verba é de compras por centro de custo e ano (sem orçamento geral, períodos mensais nem linhas por
+  natureza de custo); compromisso líquido de imposto (não distingue imposto não dedutível); documentos sem centro de custo
+  não comprometem; os pequenos arredondamentos entre o custo de entrada do inventário (por unidade base, 6 casas) e o
+  valor saldado pela factura ficam na conta de recepções por facturar (sem relatório de reconciliação ainda); as contas
+  e regras de contabilização têm de ser configuradas pela empresa (nenhuma é pré-carregada).
+- 9.11:
+  - a nota de qualidade da adjudicação (9.4) continua manual: não é preenchida a partir da avaliação publicada;
+  - sem agendamento de avaliações periódicas nem aviso ao fornecedor;
+  - indicadores:
+    - o custo compara só propostas na mesma moeda;
+    - a qualidade conta cada linha igual, sem ponderar pelo valor;
+    - a conformidade documental (documentos do fornecedor a caducar) não entra na nota;
+  - SLA sem medição automática: tempo de resposta e "outro";
+  - classes com limites fixos (85/70/50), não configuráveis.

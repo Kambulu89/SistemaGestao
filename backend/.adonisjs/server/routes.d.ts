@@ -547,6 +547,35 @@ export type ScannedRoutes = {
     'invoices.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.refuse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.index': { paramsTuple?: []; params?: {} }
+    'returns.receipt': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.store': { paramsTuple?: []; params?: {} }
+    'returns.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.index': { paramsTuple?: []; params?: {} }
+    'credit_notes.invoice': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.store': { paramsTuple?: []; params?: {} }
+    'credit_notes.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.validate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.budgets': { paramsTuple?: []; params?: {} }
+    'procurement_finance.budget_options': { paramsTuple?: []; params?: {} }
+    'procurement_finance.create_budget': { paramsTuple?: []; params?: {} }
+    'procurement_finance.budget': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.update_budget': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.payables': { paramsTuple?: []; params?: {} }
+    'procurement_finance.payable': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.pay': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.retry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.weights': { paramsTuple?: []; params?: {} }
+    'evaluations.set_weights': { paramsTuple?: []; params?: {} }
+    'evaluations.ranking': { paramsTuple?: []; params?: {} }
+    'evaluations.supplier': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.publish': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.tolerances': { paramsTuple?: []; params?: {} }
     'invoices.set_tolerances': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
@@ -780,6 +809,21 @@ export type ScannedRoutes = {
     'invoices.index': { paramsTuple?: []; params?: {} }
     'invoices.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.index': { paramsTuple?: []; params?: {} }
+    'returns.receipt': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.index': { paramsTuple?: []; params?: {} }
+    'credit_notes.invoice': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.budgets': { paramsTuple?: []; params?: {} }
+    'procurement_finance.budget_options': { paramsTuple?: []; params?: {} }
+    'procurement_finance.budget': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.payables': { paramsTuple?: []; params?: {} }
+    'procurement_finance.payable': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.weights': { paramsTuple?: []; params?: {} }
+    'evaluations.ranking': { paramsTuple?: []; params?: {} }
+    'evaluations.supplier': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.tolerances': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
@@ -996,6 +1040,21 @@ export type ScannedRoutes = {
     'invoices.index': { paramsTuple?: []; params?: {} }
     'invoices.order': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.index': { paramsTuple?: []; params?: {} }
+    'returns.receipt': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.index': { paramsTuple?: []; params?: {} }
+    'credit_notes.invoice': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.budgets': { paramsTuple?: []; params?: {} }
+    'procurement_finance.budget_options': { paramsTuple?: []; params?: {} }
+    'procurement_finance.budget': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.payables': { paramsTuple?: []; params?: {} }
+    'procurement_finance.payable': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.weights': { paramsTuple?: []; params?: {} }
+    'evaluations.ranking': { paramsTuple?: []; params?: {} }
+    'evaluations.supplier': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.tolerances': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
@@ -1266,6 +1325,16 @@ export type ScannedRoutes = {
     'invoices.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.refuse': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.store': { paramsTuple?: []; params?: {} }
+    'returns.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.store': { paramsTuple?: []; params?: {} }
+    'credit_notes.validate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.create_budget': { paramsTuple?: []; params?: {} }
+    'procurement_finance.pay': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.retry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.publish': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
     'suppliers.settings_store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
@@ -1370,6 +1439,10 @@ export type ScannedRoutes = {
     'contracts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'receipts.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'returns.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'credit_notes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'procurement_finance.update_budget': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.set_weights': { paramsTuple?: []; params?: {} }
     'invoices.set_tolerances': { paramsTuple?: []; params?: {} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }

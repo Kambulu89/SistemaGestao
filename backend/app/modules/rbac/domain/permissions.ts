@@ -595,16 +595,28 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Registar e confirmar recepções (entrada no inventário e aceitação de serviços), anular rascunhos e estornar.',
   },
   {
+    code: 'procurement.returns.read',
+    module: 'procurement',
+    description:
+      'Consultar devoluções a fornecedor e não conformidades das entidades do âmbito, com as evidências.',
+  },
+  {
+    code: 'procurement.returns.manage',
+    module: 'procurement',
+    description:
+      'Registar não conformidades e devoluções a fornecedor, juntar evidências, confirmar (saída do inventário) e anular rascunhos.',
+  },
+  {
     code: 'procurement.invoices.read',
     module: 'procurement',
     description:
-      'Consultar facturas de fornecedor das entidades do âmbito, conferência e divergências.',
+      'Consultar facturas e notas de crédito de fornecedor das entidades do âmbito, conferência e divergências.',
   },
   {
     code: 'procurement.invoices.manage',
     module: 'procurement',
     description:
-      'Registar facturas de fornecedor, pedir a validação (conferência a três), devolver ao fornecedor e anular.',
+      'Registar facturas e notas de crédito de fornecedor, pedir a validação (conferência a três), validar notas de crédito, devolver ao fornecedor e anular.',
   },
   {
     code: 'procurement.invoices.approve',
@@ -613,10 +625,46 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Autorizar ou recusar as excepções da conferência das facturas do âmbito (nunca as que a própria pessoa pediu).',
   },
   {
+    code: 'procurement.budgets.read',
+    module: 'procurement',
+    description:
+      'Consultar a verba de compras por centro de custo e ano das entidades do âmbito: comprometido, realizado e disponível.',
+  },
+  {
+    code: 'procurement.budgets.manage',
+    module: 'procurement',
+    description:
+      'Definir e alterar a verba de compras por centro de custo e ano (bloquear ou só avisar o excesso).',
+  },
+  {
+    code: 'procurement.payables.read',
+    module: 'procurement',
+    description:
+      'Consultar as obrigações a pagar das facturas de fornecedor, pagamentos e contabilização das entidades do âmbito.',
+  },
+  {
+    code: 'procurement.payables.pay',
+    module: 'procurement',
+    description:
+      'Tesouraria: registar pagamentos de facturas de fornecedor (nunca acima do saldo) e repetir a contabilização falhada.',
+  },
+  {
+    code: 'procurement.evaluations.read',
+    module: 'procurement',
+    description:
+      'Consultar o mapa de avaliação dos fornecedores (qualidade, prazo, conformidade, custo) com as provas das entidades do âmbito.',
+  },
+  {
+    code: 'procurement.evaluations.manage',
+    module: 'procurement',
+    description:
+      'Publicar avaliações de fornecedores por período (no âmbito da empresa: as provas de todas as entidades).',
+  },
+  {
     code: 'procurement.settings',
     module: 'procurement',
     description:
-      'Configurar as compras: tipos de documento exigidos, critérios de homologação, etapas de aprovação e tolerâncias da conferência de facturas.',
+      'Configurar as compras: tipos de documento exigidos, critérios de homologação, etapas de aprovação, tolerâncias da conferência de facturas e pesos da avaliação de fornecedores.',
   },
 ]
 

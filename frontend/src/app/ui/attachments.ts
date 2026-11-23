@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { Component, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { Api } from '../core/api';
 import { formatDateTime } from './dates';
 import { ErrorAlert } from './error-alert';
@@ -116,6 +116,8 @@ export class Attachments {
   readonly subjectType = input.required<string>();
   readonly subjectId = input.required<string>();
   readonly canWrite = input(false);
+  /** Depois de carregar ou eliminar (para quem depende de haver anexos, p. ex. evidências). */
+  readonly changed = output<void>();
   private readonly api = inject(Api);
   private readonly confirm = inject(ConfirmService);
   private readonly toasts = inject(ToastService);
@@ -158,6 +160,7 @@ export class Attachments {
     if (uploaded) this.toasts.show(`"${file.name}" carregado.`);
     input.value = '';
     await this.list.load();
+    if (uploaded) this.changed.emit();
   }
 
   protected async download(a: Attachment) {
@@ -182,5 +185,6 @@ export class Attachments {
     await this.action.run(() => this.api.delete(`attachments/${a.id}`));
     if (!this.action.error()) this.toasts.show('Anexo eliminado.');
     await this.list.load();
+    this.changed.emit();
   }
 }

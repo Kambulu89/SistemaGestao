@@ -23,6 +23,8 @@ import { postStock, type PostStockLineInput } from '#modules/inventory/applicati
  * pedido é recusada. Cada pedido fica registado (só acréscimo) com o lançamento de stock que produziu:
  *
  *  - recepção de compra → entrada ao custo da compra (com lote/validade/séries);
+ *  - devolução ao fornecedor → saída (do estado indicado: livre, bloqueado ou quarentena) valorizada primeiro pelas
+ *    camadas/custo da recepção de origem (`returnOfDocumentRef`);
  *  - reserva de venda → reservado do armazém (baixa o disponível); libertação → liberta o que está em aberto;
  *  - entrega de venda → sai do stock (FEFO) e consome a reserva da encomenda; devolução → entra ao custo a que saiu.
  *
@@ -57,6 +59,8 @@ export interface IntegrationLineInput {
   lotCode?: string | null
   expiryDate?: string | null
   serials?: string[] | null
+  /** Só na devolução ao fornecedor: de que estado sai (livre por omissão). */
+  bucket?: 'UNRESTRICTED' | 'BLOCKED' | 'QUARANTINE' | null
 }
 
 export interface IntegrationInput {
@@ -68,6 +72,8 @@ export interface IntegrationInput {
   documentRef?: string | null
   /** Fornecedor ou cliente (referência no módulo de origem). */
   counterpartyRef?: string | null
+  /** Devolução ao fornecedor: a recepção (documentRef da entrada) de onde a mercadoria saiu. */
+  returnOfDocumentRef?: string | null
   lines?: IntegrationLineInput[]
 }
 
@@ -77,6 +83,7 @@ interface Normal {
   orderRef: string
   documentRef: string | null
   counterpartyRef: string | null
+  returnOfDocumentRef: string | null
   lines: {
     productId: string
     variantId: string | null
@@ -87,6 +94,7 @@ interface Normal {
     lotCode: string | null
     expiryDate: string | null
     serials: string[]
+    bucket: 'UNRESTRICTED' | 'BLOCKED' | 'QUARANTINE'
   }[]
 }
 
@@ -115,13 +123,23 @@ function normalize(kind: IntegrationKind, raw: any): Normal {
       code: 'INVALID',
       message: 'Referência do documento (até 80).',
     })
-  if (['PURCHASE_RECEIPT', 'SALE_DELIVERY', 'SALE_RETURN'].includes(kind) && !documentRef)
+  if (
+    ['PURCHASE_RECEIPT', 'PURCHASE_RETURN', 'SALE_DELIVERY', 'SALE_RETURN'].includes(kind) &&
+    !documentRef
+  )
     issues.push({
       path: 'documentRef',
       code: 'REQUIRED',
       message: 'Referência do documento (recepção, guia ou devolução).',
     })
   const counterpartyRef = ref(raw?.counterpartyRef)?.slice(0, 80) ?? null
+  const returnOfDocumentRef = kind === 'PURCHASE_RETURN' ? ref(raw?.returnOfDocumentRef) : null
+  if (kind === 'PURCHASE_RETURN' && (!returnOfDocumentRef || !REF.test(returnOfDocumentRef)))
+    issues.push({
+      path: 'returnOfDocumentRef',
+      code: 'REQUIRED',
+      message: 'Referência da recepção de onde a mercadoria é devolvida.',
+    })
   const lines: Normal['lines'] = []
   const optional = kind === 'SALE_RELEASE'
   // Libertação sem linhas = libertar tudo o que a encomenda tem reservado.
@@ -142,6 +160,11 @@ function normalize(kind: IntegrationKind, raw: any): Normal {
         (l?.unitCost === undefined || l?.unitCost === null || l?.unitCost === '')
       )
         at('unitCost', 'REQUIRED', 'A recepção de compra traz o custo unitário.')
+      const bucket = l?.bucket ?? 'UNRESTRICTED'
+      if (kind === 'PURCHASE_RETURN' && !['UNRESTRICTED', 'BLOCKED', 'QUARANTINE'].includes(bucket))
+        at('bucket', 'INVALID', 'Sai do livre, do bloqueado ou da quarentena.')
+      if (kind !== 'PURCHASE_RETURN' && l?.bucket)
+        at('bucket', 'NOT_ALLOWED', 'O estado de origem só se indica na devolução ao fornecedor.')
       lines.push({
         productId: l?.productId,
         variantId: isUuid(l?.variantId) ? l.variantId : null,
@@ -152,6 +175,7 @@ function normalize(kind: IntegrationKind, raw: any): Normal {
         lotCode: typeof l?.lotCode === 'string' && l.lotCode.trim() ? l.lotCode.trim() : null,
         expiryDate: typeof l?.expiryDate === 'string' && l.expiryDate ? l.expiryDate : null,
         serials: Array.isArray(l?.serials) ? l.serials.map((s: unknown) => String(s).trim()) : [],
+        bucket,
       })
     })
   fail(issues)
@@ -161,6 +185,7 @@ function normalize(kind: IntegrationKind, raw: any): Normal {
     orderRef: orderRef!,
     documentRef,
     counterpartyRef,
+    returnOfDocumentRef,
     lines,
   }
 }
@@ -174,6 +199,7 @@ const hashOf = (kind: string, n: Normal) =>
         o: n.orderRef,
         d: n.documentRef,
         c: n.counterpartyRef,
+        r: n.returnOfDocumentRef,
         l: n.lines.map((l) => ({ ...l, quantity: txt(l.quantity) })),
       })
     )
@@ -299,6 +325,34 @@ async function run(
       lotId: l.lotId,
       lotCode: l.lotCode,
       expiryDate: l.expiryDate,
+      serials: l.serials,
+    }))
+  } else if (kind === 'PURCHASE_RETURN') {
+    type = 'ISSUE'
+    // A entrada de onde sai: a recepção desta encomenda neste armazém (valoriza pelas suas camadas/custo).
+    const origin = (
+      await scope.trx.rawQuery(
+        `select posting_id from inventory_integration_events where tenant_id = ? and warehouse_id = ? and order_ref = ?
+            and kind = 'PURCHASE_RECEIPT' and document_ref = ? and posting_id is not null`,
+        [t, n.warehouseId, n.orderRef, n.returnOfDocumentRef] as never[]
+      )
+    ).rows as any[]
+    if (!origin.length)
+      fail([
+        {
+          path: 'returnOfDocumentRef',
+          code: 'NOT_FOUND',
+          message: 'Não há entrada desta recepção para a encomenda neste armazém.',
+        },
+      ])
+    returnOf = origin.map((x) => x.posting_id as string)
+    lines = n.lines.map((l) => ({
+      ...base(l),
+      locationId: l.locationId,
+      bucket: l.bucket,
+      quantity: `-${txt(l.quantity)}`,
+      lotId: l.lotId,
+      lotCode: l.lotCode,
       serials: l.serials,
     }))
   } else if (kind === 'SALE_RESERVATION') {
@@ -451,6 +505,9 @@ async function run(
 /** Contrato para Compras: recepção de uma compra (entra ao custo da compra). */
 export const receivePurchase = (scope: TenantScope, input: IntegrationInput) =>
   run(scope, 'PURCHASE_RECEIPT', input, 'PURCHASES', false)
+/** Contrato para Compras: devolução ao fornecedor (sai valorizada pela recepção de origem). */
+export const returnToSupplier = (scope: TenantScope, input: IntegrationInput) =>
+  run(scope, 'PURCHASE_RETURN', input, 'PURCHASES', false)
 /** Contratos para Vendas: reserva, libertação, entrega (consome a reserva) e devolução (ao custo a que saiu). */
 export const reserveForSale = (scope: TenantScope, input: IntegrationInput) =>
   run(scope, 'SALE_RESERVATION', input, 'SALES', false)

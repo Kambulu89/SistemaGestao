@@ -8,6 +8,7 @@ export const NO_CLASS = 'SEM_CLASSE'
 
 export const INTEGRATION_KINDS = [
   'PURCHASE_RECEIPT',
+  'PURCHASE_RETURN',
   'SALE_RESERVATION',
   'SALE_RELEASE',
   'SALE_DELIVERY',
@@ -18,6 +19,7 @@ export type IntegrationKind = (typeof INTEGRATION_KINDS)[number]
 /** Origem dos lançamentos de stock feitos pelas integrações (aparecem nos movimentos e no livro de custo). */
 export const INTEGRATION_SOURCE: Record<IntegrationKind, string> = {
   PURCHASE_RECEIPT: 'PURCHASE_RECEIPT',
+  PURCHASE_RETURN: 'PURCHASE_RETURN',
   SALE_RESERVATION: 'SALES_ORDER',
   SALE_RELEASE: 'SALES_ORDER',
   SALE_DELIVERY: 'SALES_DELIVERY',
@@ -45,6 +47,7 @@ export function accountingEvent(p: {
       return 'RECEIPT_OTHER'
     case 'ISSUE':
       if (p.sourceType === 'SALES_DELIVERY') return 'ISSUE_SALE'
+      if (p.sourceType === 'PURCHASE_RETURN') return 'ISSUE_PURCHASE_RETURN'
       if (p.sourceType === 'INTERNAL_REQUISITION') return 'ISSUE_CONSUMPTION'
       if (p.sourceType === 'STOCK_DOCUMENT' && p.documentOrigin) return `ISSUE_${p.documentOrigin}`
       return 'ISSUE_OTHER'

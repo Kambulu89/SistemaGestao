@@ -24,6 +24,7 @@ import {
   SERIES_TYPE,
   toFunctional,
 } from '#modules/procurement/domain/requisitions'
+import { syncCommitments } from '#modules/procurement/application/finance_service'
 
 /*
  * Requisições de compra (9.2). Permissões com âmbito: `procurement.requisitions.request` (departamento, filial,
@@ -667,6 +668,8 @@ export async function allocateRequisition(
       sourceId: input.sourceId,
     },
   })
+  // O que a ordem encomenda deixa de estar comprometido na requisição (passa a estar na ordem).
+  await syncCommitments(scope, { requisitionIds: [r.id] })
   return { replayed: false, requisitionStatus: next }
 }
 
@@ -1100,6 +1103,8 @@ export class RequisitionService {
           ...(to === 'APPROVED' ? { approved_at: new Date() } : { reject_reason: reason }),
         })
       else await setStatus(scope, id, {})
+      // Aprovada: compromete a verba do centro de custo (recusado se passar uma verba com bloqueio).
+      if (to === 'APPROVED') await syncCommitments(scope, { requisitionIds: [id] }, { check: true })
       await event(scope, id, decision === 'approve' ? 'STEP_APPROVED' : 'REJECTED', {
         from: 'PENDING_APPROVAL',
         to,
@@ -1129,6 +1134,7 @@ export class RequisitionService {
       const reason = reasonOf(input.reason)
       await setStatus(scope, id, { status: 'CANCELLED', cancel_reason: reason })
       await event(scope, id, 'CANCELLED', { from: r.status, to: 'CANCELLED', reason })
+      await syncCommitments(scope, { requisitionIds: [id] })
       await audit(scope, {
         action: 'purchase_requisition.cancelled',
         entityType: 'purchase_requisition',
@@ -1153,6 +1159,7 @@ export class RequisitionService {
       )
       await setStatus(scope, id, { status: 'CLOSED', close_reason: reason })
       await event(scope, id, 'CLOSED', { from: r.status, to: 'CLOSED', reason })
+      await syncCommitments(scope, { requisitionIds: [id] })
       await audit(scope, {
         action: 'purchase_requisition.closed',
         entityType: 'purchase_requisition',

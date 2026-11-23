@@ -451,7 +451,7 @@ regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis;
 
 ## Compras (módulo `procurement`, Prompt 09) e terceiros (módulo `partners`)
 
-9.1 a 9.8 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-054). O terceiro (`business_partners`, contactos) é do módulo `partners`,
+Prompt 09 concluído: 9.1 a 9.11 feitos e QA no 9.12 (ver `docs/reports/prompt-09.md` e `docs/reports/prompt-09-qa.md`, D-047 a D-058). O terceiro (`business_partners`, contactos) é do módulo `partners`,
 sem rotas: os papéis de negócio usam o seu `index.ts`. O fornecedor (`suppliers`) é o papel de compra de um terceiro,
 com condições comerciais e homologação: critérios e tipos de documento configuráveis, documentos com validade (fixos,
 desactiváveis), pedidos de homologação fixos depois de decididos, dados bancários que só ficam activos com a aprovação
@@ -483,4 +483,17 @@ Facturas de fornecedor (9.8): número externo único por fornecedor (sem anulada
 ordem (quantidade contra o recebido, preço líquido, imposto, encargos, total) com tolerâncias da empresa; divergências
 exigem excepção autorizada por outra pessoa, com a conferência repetida na decisão; validar fixa o câmbio da data da
 factura, numera e soma a quantidade facturada à ordem; validada é imutável (correcção por nota de crédito no 9.9).
+Devoluções e notas de crédito (9.9): a não conformidade parte de uma recepção confirmada (aceite que sai do stock ou
+recusado que só se regista), exige evidência e, confirmada, faz uma única saída no Inventário (`returnToSupplier`,
+idempotente, valorizada pela recepção de origem) e acerta a ordem (substituição volta a esperar; crédito deixa de
+esperar e o facturado fica por creditar); a nota de crédito do fornecedor, sobre uma factura validada e ao seu câmbio,
+credita quantidade ao preço da factura ou valor, nunca acima do facturado, e abate a facturação da ordem e o pendente.
+Orçamento, obrigação e contabilidade (9.10): livro de compromissos por centro de custo e ano em que cada documento grava
+só a diferença para o seu valor em aberto (a ordem tira à requisição, a factura à ordem — sem duplo bloqueio), verba com
+bloqueio ou aviso; uma obrigação a pagar por factura validada, abatida por notas de crédito, com pagamentos da tesouraria
+(`procurement.payables.pay`, até haver o módulo de Tesouraria); eventos `PROCUREMENT` idempotentes e repetíveis em que a
+factura salda as recepções por facturar lançadas pelo Inventário e só lança diferenças (o stock nunca é lançado duas vezes).
+Avaliação de fornecedores (9.11): indicadores calculados na hora das provas (recepções, devoluções, facturas e
+propostas), com nota ponderada pelos pesos da empresa, em que os critérios sem provas não contam, e classe A–D; mapa
+por período no âmbito do membro; publicação no âmbito da empresa como fotografia imutável, substituível por período.
 

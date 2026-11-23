@@ -32,6 +32,7 @@ import {
   type DocumentFact,
   type SupplierStatus,
 } from '#modules/procurement/domain/suppliers'
+import { latestEvaluation } from '#modules/procurement/application/evaluation_service'
 
 /*
  * Fornecedores (9.1). Permissões no âmbito da empresa: `procurement.suppliers.read` (consultar), `.manage` (ficha,
@@ -321,6 +322,7 @@ async function detail(scope: TenantScope, id: string, access: Access) {
       name: d.name as string,
       required: d.required as boolean,
     })),
+    evaluation: await latestEvaluation(scope, id),
     can: {
       manage: access.manage,
       submit: access.manage && CAN_SUBMIT.includes(s.status as SupplierStatus),
