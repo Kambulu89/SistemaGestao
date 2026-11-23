@@ -581,6 +581,9 @@ Ver `docs/reports/prompt-08-qa.md`: rastreabilidade dos testes exigidos, regress
 
 ## Pendências
 
+> **Actualização (revisão antes do Prompt 10):** as Compras (Prompt 09) já usam `receivePurchase` (9.7) e o novo
+> contrato `returnToSupplier` (9.9). As Vendas chegam com o Prompt 10. Ver `docs/reports/revisao-prompts-01-09.md`.
+
 - Mudança de tipo ou de unidade base de um produto com movimentos fica bloqueada quando houver stock (8.3).
 - Tabelas de preços por cliente/canal ficam para Vendas; a imagem principal é a primeira anexada (sem ordenação).
 - 8.2: o acesso `OPERATE` só passa a ter efeito nas operações de stock (8.4 em diante); mudar a entidade legal de um

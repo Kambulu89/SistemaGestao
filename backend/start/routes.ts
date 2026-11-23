@@ -61,6 +61,7 @@ const ReturnsController = () => import('#modules/procurement/http/returns_contro
 const CreditNotesController = () => import('#modules/procurement/http/credit_notes_controller')
 const ProcurementFinanceController = () => import('#modules/procurement/http/finance_controller')
 const EvaluationsController = () => import('#modules/procurement/http/evaluations_controller')
+const CustomersController = () => import('#modules/sales/http/customers_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
@@ -1113,6 +1114,38 @@ router
               })
               .prefix('procurement')
               .use(middleware.entitled({ feature: 'procurement' }))
+
+            // Vendas e Facturação (Prompt 10): clientes. Permissões verificadas no serviço (ver routes_protection).
+            router
+              .group(() => {
+                router.get('customers', [CustomersController, 'index'])
+                router.get('customers/lookup', [CustomersController, 'lookup'])
+                router.post('customers', [CustomersController, 'store'])
+                router.get('customers/:id', [CustomersController, 'show'])
+                router.patch('customers/:id', [CustomersController, 'update'])
+                router.post('customers/:id/credit', [CustomersController, 'credit'])
+                router.post('customers/:id/status', [CustomersController, 'status'])
+                router.post('customers/:id/addresses', [CustomersController, 'addAddress'])
+                router.patch('customers/:id/addresses/:addressId', [
+                  CustomersController,
+                  'updateAddress',
+                ])
+                router.post('customers/:id/contacts', [CustomersController, 'addContact'])
+                router.patch('customers/:id/contacts/:contactId', [
+                  CustomersController,
+                  'updateContact',
+                ])
+                router.get('customers/:id/current-version', [CustomersController, 'currentVersion'])
+                router.get('segments', [CustomersController, 'segments'])
+                router
+                  .post('segments', [CustomersController, 'createSegment'])
+                  .use(middleware.can({ permission: 'sales.settings' }))
+                router
+                  .patch('segments/:id', [CustomersController, 'updateSegment'])
+                  .use(middleware.can({ permission: 'sales.settings' }))
+              })
+              .prefix('sales')
+              .use(middleware.entitled({ feature: 'sales' }))
 
             // Anexos: o acesso (e a funcionalidade) herda do registo a que pertencem.
             router.get('attachments', [AttachmentsController, 'index'])

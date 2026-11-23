@@ -1004,3 +1004,25 @@ transição pode bloquear o documento-pai, bloqueia-o (`FOR UPDATE` ou advisory 
 O QA do Prompt 09 (9.12) encontrou duas operações sem a conversão (notas de crédito e verbas: o segundo pedido
 simultâneo dava 500) e passou a testá-las com pedidos em paralelo.
 
+
+## D-059 Cliente como papel do terceiro, com versões imutáveis dos dados usados nos documentos (aceite)
+
+O cliente (`customers`, módulo `sales`) é o **papel de venda** de um terceiro (`business_partners`, módulo `partners`),
+como o fornecedor é o papel de compra (D-047): um terceiro por NIF e país, no máximo um cliente por terceiro, e o
+mesmo terceiro pode ser fornecedor e cliente sem duplicar a ficha. Ao criar, o NIF de um terceiro existente dá
+`TAX_ID_TAKEN` com o terceiro, e o ecrã oferece "tornar este terceiro cliente". O cliente nunca se apaga nem muda de
+terceiro (gatilho na base): os documentos de venda vão referi-lo.
+
+**Condições e crédito.** Moeda, prazo (0–365 dias), segmento e notas são de `sales.customers.manage`. O limite de crédito
+(`numeric`, vazio = sem limite) é de `sales.customers.credit`, com motivo, e fica no histórico; a edição geral recusa-o.
+Bloquear e inactivar exigem motivo (`CHECK` na base); um cliente bloqueado não recebe documentos novos (regra aplicada
+pelos blocos 10.3 a 10.7).
+
+**Versões.** A identidade fiscal e a morada de facturação usadas nos documentos (código, nome, tipo, NIF, país, e-mail,
+morada de facturação por omissão ou a do terceiro) ficam em `customer_versions`, só de acréscimo (gatilho). Cada
+alteração que muda a impressão digital (sha256 dos dados) cria a versão seguinte, sob advisory lock por cliente; os
+documentos de venda guardarão a versão que usaram (`customerSnapshot`), e uma correcção posterior do cliente não altera
+documentos emitidos. Alterar só condições comerciais não cria versão.
+
+**Fiscal.** Este bloco não configura nada fiscal: códigos de isenção, regimes e requisitos da AGT (Decreto Presidencial
+n.º 71/25 e regulamentação) ficam para os blocos 10.5 e 10.9, depois de verificados nas fontes oficiais.

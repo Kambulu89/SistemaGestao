@@ -715,6 +715,22 @@ export const NAVIGATION: NavGroup[] = [
         feature: 'procurement',
         section: 'Compras',
       },
+      {
+        label: 'Clientes',
+        path: '/vendas/clientes',
+        icon: 'users',
+        anyOf: ['sales.customers.read', 'sales.customers.manage', 'sales.customers.credit'],
+        feature: 'sales',
+        section: 'Vendas',
+      },
+      {
+        label: 'Segmentos de clientes',
+        path: '/vendas/segmentos',
+        icon: 'layers',
+        anyOf: ['sales.customers.read', 'sales.customers.manage', 'sales.settings'],
+        feature: 'sales',
+        section: 'Vendas',
+      },
     ],
   },
   {

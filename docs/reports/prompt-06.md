@@ -164,6 +164,10 @@ na abertura e o novo encerramento recusava transportar ("abertura não vazia"); 
 
 ## Pendências
 
+> **Actualização (revisão antes do Prompt 10):** já emitem eventos para o motor o Inventário (8.10), o RH (7.9) e as
+> Compras (9.10). Os terceiros existem no módulo `partners` (9.1), mas os lançamentos continuam a guardar o terceiro como
+> referência de texto (`thirdPartyRef`). Ver `docs/reports/revisao-prompts-01-09.md`.
+
 - 6.9 (acima), bloqueado pela especificação oficial do SAF-T (AO). Demonstrações: fluxos de caixa e modelos oficiais do PGC por confirmar na fonte oficial. Regularizações: diferenças cambiais realizadas por documento (factura/recebimento) esperam
   pelas Finanças (Prompt 11); a reconciliação bancária (extractos) também. Activos fixos: saldos de abertura de activos já depreciados (migração de fichas antigas),
   abates parciais, reavaliações e transferências entre entidades ainda não existem. Os módulos de negócio (Facturação, Compras, Inventário, RH, Finanças) ainda não existem neste

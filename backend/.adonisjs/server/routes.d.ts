@@ -584,6 +584,21 @@ export type ScannedRoutes = {
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'suppliers.settings_store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'suppliers.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'customers.index': { paramsTuple?: []; params?: {} }
+    'customers.lookup': { paramsTuple?: []; params?: {} }
+    'customers.store': { paramsTuple?: []; params?: {} }
+    'customers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.credit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.add_address': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.update_address': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'addressId': ParamValue} }
+    'customers.add_contact': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.update_contact': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'contactId': ParamValue} }
+    'customers.current_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.segments': { paramsTuple?: []; params?: {} }
+    'customers.create_segment': { paramsTuple?: []; params?: {} }
+    'customers.update_segment': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -827,6 +842,11 @@ export type ScannedRoutes = {
     'invoices.tolerances': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'customers.index': { paramsTuple?: []; params?: {} }
+    'customers.lookup': { paramsTuple?: []; params?: {} }
+    'customers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.current_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.segments': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -1058,6 +1078,11 @@ export type ScannedRoutes = {
     'invoices.tolerances': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'customers.index': { paramsTuple?: []; params?: {} }
+    'customers.lookup': { paramsTuple?: []; params?: {} }
+    'customers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.current_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.segments': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -1337,6 +1362,12 @@ export type ScannedRoutes = {
     'evaluations.publish': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
     'suppliers.settings_store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
+    'customers.store': { paramsTuple?: []; params?: {} }
+    'customers.credit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.status': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.add_address': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.add_contact': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.create_segment': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1416,6 +1447,10 @@ export type ScannedRoutes = {
     'suppliers.update_contact': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'contactId': ParamValue} }
     'purchase_requisitions.update_level': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'suppliers.settings_update': { paramsTuple: [ParamValue,ParamValue]; params: {'kind': ParamValue,'id': ParamValue} }
+    'customers.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'customers.update_address': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'addressId': ParamValue} }
+    'customers.update_contact': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'contactId': ParamValue} }
+    'customers.update_segment': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }

@@ -1090,6 +1090,167 @@ export class CostCenterSchema extends BaseModel {
   declare version: number
 }
 
+export class CustomerAddressSchema extends BaseModel {
+  static $columns = ['addressLine', 'city', 'countryCode', 'createdAt', 'createdBy', 'customerId', 'id', 'isDefault', 'kind', 'label', 'municipality', 'postalCode', 'province', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CustomerAddressSchema.$columns
+  @column()
+  declare addressLine: string
+  @column()
+  declare city: string | null
+  @column()
+  declare countryCode: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare customerId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare isDefault: boolean
+  @column()
+  declare kind: string
+  @column()
+  declare label: string
+  @column()
+  declare municipality: string | null
+  @column()
+  declare postalCode: string | null
+  @column()
+  declare province: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class CustomerEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'customerId', 'details', 'fromStatus', 'id', 'kind', 'reason', 'tenantId', 'toStatus', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CustomerEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare customerId: string
+  @column()
+  declare details: any | null
+  @column()
+  declare fromStatus: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare toStatus: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class CustomerSegmentSchema extends BaseModel {
+  static $columns = ['code', 'createdAt', 'createdBy', 'description', 'id', 'name', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CustomerSegmentSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class CustomerVersionSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'customerId', 'data', 'hash', 'id', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'versionNo'] as const
+  $columns = CustomerVersionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare customerId: string
+  @column()
+  declare data: any
+  @column()
+  declare hash: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare versionNo: number
+}
+
+export class CustomerSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'creditLimit', 'currency', 'id', 'notes', 'partnerId', 'paymentTermsDays', 'segmentId', 'status', 'statusReason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CustomerSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare creditLimit: string | null
+  @column()
+  declare currency: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare partnerId: string
+  @column()
+  declare paymentTermsDays: number
+  @column()
+  declare segmentId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare statusReason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class DepartmentSchema extends BaseModel {
   static $columns = ['branchId', 'code', 'costCenterId', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'managerMembershipId', 'name', 'parentId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = DepartmentSchema.$columns

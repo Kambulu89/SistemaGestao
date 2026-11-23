@@ -31,6 +31,7 @@ import {
   rfqAccess,
   supplierExists,
 } from '#modules/procurement/index'
+import { customerAccess } from '#modules/sales/index'
 
 /**
  * Política de acesso por tipo de registo: o anexo herda a autorização (e a funcionalidade contratada) do registo a que
@@ -176,6 +177,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.purchase_credit_note = {
     feature: 'procurement',
     access: (scope, id) => purchaseCreditNoteAccess(scope, id),
+  }
+  // Documentos do cliente (contratos, certidões): quem lê clientes vê; quem os gere carrega.
+  map.customer = {
+    feature: 'sales',
+    access: (scope, id) => customerAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

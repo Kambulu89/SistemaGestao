@@ -604,6 +604,32 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de procurement.evaluations.read/manage verificado no serviço (publicar exige o âmbito da empresa)',
   'GET /api/v1/procurement/evaluations/:id':
     'âmbito RBAC de procurement.evaluations.read/manage verificado no serviço (publicar exige o âmbito da empresa)',
+  'GET /api/v1/sales/customers':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'GET /api/v1/sales/customers/lookup':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'POST /api/v1/sales/customers':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'GET /api/v1/sales/customers/:id':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'PATCH /api/v1/sales/customers/:id':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'POST /api/v1/sales/customers/:id/credit':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'POST /api/v1/sales/customers/:id/status':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'POST /api/v1/sales/customers/:id/addresses':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'PATCH /api/v1/sales/customers/:id/addresses/:addressId':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'POST /api/v1/sales/customers/:id/contacts':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'PATCH /api/v1/sales/customers/:id/contacts/:contactId':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'GET /api/v1/sales/customers/:id/current-version':
+    'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'GET /api/v1/sales/segments':
+    'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':
     'tolerâncias da conferência da empresa: só valores de configuração, sem dados de documentos; alterar exige procurement.settings',
   'GET /api/v1/procurement/rfqs':

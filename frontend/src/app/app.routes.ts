@@ -196,6 +196,13 @@ export const routes: Routes = [
               import('./procurement/procurement.routes').then((m) => m.PROCUREMENT_ROUTES),
           },
           {
+            path: 'vendas',
+            title: 'Vendas',
+            canActivate: [accessGuard],
+            data: { feature: 'sales' },
+            loadChildren: () => import('./sales/sales.routes').then((m) => m.SALES_ROUTES),
+          },
+          {
             path: 'rh',
             title: 'Recursos humanos',
             canActivate: [accessGuard],

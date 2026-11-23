@@ -875,8 +875,35 @@ async function populate(client: any) {
       [tenant.id, supplier.id]
     )
   ).rows[0] as { id: string }
+  // Cliente da empresa A (o terceiro do fornecedor A também é cliente) e segmento, inseridos directamente.
+  const customerSegment = (
+    await db
+      .connection('owner')
+      .rawQuery(
+        `insert into customer_segments (tenant_id, code, name) values (?, 'SEG-A', 'Segmento A') returning id`,
+        [tenant.id]
+      )
+  ).rows[0] as { id: string }
+  const customer = (
+    await db
+      .connection('owner')
+      .rawQuery(
+        `insert into customers (tenant_id, partner_id, currency) values (?, ?, 'AOA') returning id`,
+        [tenant.id, supplier.partner.id]
+      )
+  ).rows[0] as { id: string }
+  const customerAddress = (
+    await db.connection('owner').rawQuery(
+      `insert into customer_addresses (tenant_id, customer_id, kind, label, address_line, country_code)
+       values (?, ?, 'BILLING', 'Sede', 'Rua A', 'AO') returning id`,
+      [tenant.id, customer.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    customerSegment,
+    customer,
+    customerAddress,
     supplierEvaluation,
     costCenter,
     procurementBudget,
@@ -1726,6 +1753,59 @@ test.group('isolamento | matriz entre empresas', (group) => {
           ...v,
           reason: 'x',
         }),
+      ],
+      ['GET cliente alheio', B.get(`/api/v1/sales/customers/${a.customer.id}`)],
+      [
+        'alterar cliente alheio',
+        B.patch(`/api/v1/sales/customers/${a.customer.id}`, { ...v, paymentTermsDays: 1 }),
+      ],
+      [
+        'crédito de cliente alheio',
+        B.post(`/api/v1/sales/customers/${a.customer.id}/credit`, {
+          ...v,
+          creditLimit: '1',
+          reason: 'xxx',
+        }),
+      ],
+      [
+        'estado de cliente alheio',
+        B.post(`/api/v1/sales/customers/${a.customer.id}/status`, {
+          ...v,
+          status: 'BLOCKED',
+          reason: 'xxx',
+        }),
+      ],
+      [
+        'morada em cliente alheio',
+        B.post(`/api/v1/sales/customers/${a.customer.id}/addresses`, {
+          kind: 'BILLING',
+          label: 'X',
+          addressLine: 'Rua X',
+          countryCode: 'AO',
+        }),
+      ],
+      [
+        'alterar morada alheia',
+        B.patch(`/api/v1/sales/customers/${a.customer.id}/addresses/${a.customerAddress.id}`, {
+          ...v,
+          label: 'Outra',
+        }),
+      ],
+      [
+        'contacto em cliente alheio',
+        B.post(`/api/v1/sales/customers/${a.customer.id}/contacts`, { name: 'X', email: 'x@x.ao' }),
+      ],
+      [
+        'versão de cliente alheio',
+        B.get(`/api/v1/sales/customers/${a.customer.id}/current-version`),
+      ],
+      [
+        'cliente sobre terceiro alheio',
+        B.post('/api/v1/sales/customers', { partnerId: a.supplier.partner.id, currency: 'AOA' }),
+      ],
+      [
+        'alterar segmento alheio',
+        B.patch(`/api/v1/sales/segments/${a.customerSegment.id}`, { ...v, name: 'Outro' }),
       ],
       ['GET avaliação alheia', B.get(`/api/v1/procurement/evaluations/${a.supplierEvaluation.id}`)],
       [

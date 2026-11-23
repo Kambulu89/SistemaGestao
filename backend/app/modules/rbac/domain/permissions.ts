@@ -666,6 +666,28 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Configurar as compras: tipos de documento exigidos, critérios de homologação, etapas de aprovação, tolerâncias da conferência de facturas e pesos da avaliação de fornecedores.',
   },
+  {
+    code: 'sales.customers.read',
+    module: 'sales',
+    description:
+      'Consultar clientes: ficha, condições de venda, moradas, contactos e versões dos dados fiscais.',
+  },
+  {
+    code: 'sales.customers.manage',
+    module: 'sales',
+    description:
+      'Registar e alterar clientes (ficha do terceiro, condições, moradas, contactos), bloquear e inactivar com motivo.',
+  },
+  {
+    code: 'sales.customers.credit',
+    module: 'sales',
+    description: 'Definir o limite de crédito dos clientes, com motivo (separado de quem vende).',
+  },
+  {
+    code: 'sales.settings',
+    module: 'sales',
+    description: 'Configurar as vendas: segmentos de clientes.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

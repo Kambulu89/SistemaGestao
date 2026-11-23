@@ -69,6 +69,13 @@ export const FEATURES: readonly FeatureDefinition[] = [
     description:
       'Compras: fornecedores e homologação, requisições, cotações, ordens, recepções e facturas.',
   },
+  {
+    code: 'sales',
+    module: 'sales',
+    kind: 'BOOLEAN',
+    description:
+      'Vendas e facturação: clientes, preços, propostas, encomendas, documentos fiscais e cobranças.',
+  },
 ]
 
 export const FEATURE_KINDS: ReadonlyMap<string, FeatureKind> = new Map(
