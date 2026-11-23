@@ -155,6 +155,12 @@ export interface Supplier {
     required: boolean;
   }[];
   documentTypes: { id: string; code: string; name: string; required: boolean }[];
+  evaluation: {
+    id: string;
+    rating: 'A' | 'B' | 'C' | 'D' | null;
+    score: string | null;
+    periodTo: string;
+  } | null;
   can: {
     manage: boolean;
     submit: boolean;

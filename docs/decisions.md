@@ -968,3 +968,29 @@ crédito (`CREDIT_NOTE`) usa as mesmas chaves (a quantidade devolvida volta pela
 num bem em stock é diferença de preço). O pagamento (`PAYMENT`): `payable` ao câmbio da factura, `bank` ao do pagamento,
 `fxLoss|fxGain`. As Compras nunca debitam stock.
 
+## D-057 Avaliação de fornecedores: indicadores das provas, pesos da empresa, publicação imutável (aceite)
+
+**Indicadores calculados das provas do período** (nunca introduzidos à mão), em pontos de 0 a 100:
+- **qualidade** — por linha de recepção confirmada, (aceite − devolvido do aceite) ÷ (aceite + recusado); média das
+  linhas, cada linha conta igual, para não misturar unidades;
+- **prazo** — linhas recebidas até à data prevista (da linha ou da ordem) ÷ linhas com data;
+- **conformidade** — facturas validadas sem excepção ÷ (validadas + devolvidas ao fornecedor);
+- **custo** — por linha de pedido de cotação aberto no período, o menor preço proposto na mesma moeda ÷ o preço do
+  fornecedor; média das linhas.
+
+**Nota e classe.** A nota é a média ponderada pelos pesos da empresa (inteiros que somam 100, `procurement.settings`;
+por omissão 30/30/20/20). Um critério sem provas (ou com peso 0) não conta e os pesos dos outros reescalam-se; sem
+provas nenhumas não há nota. Classes: A ≥ 85, B ≥ 70, C ≥ 50, D abaixo.
+
+**Mapa e provas.** `procurement.evaluations.read` vê o mapa e as provas só das entidades do âmbito: recepções
+atrasadas, com recusa ou devolução, facturas com excepção, cotações em que o fornecedor foi o mais barato, e o
+cumprimento dos SLA dos contratos que se medem automaticamente:
+- prazo — média de dias da emissão à recepção ≤ alvo;
+- taxa de entrega — recebido ÷ encomendado ≥ alvo;
+- taxa de qualidade — o indicador de qualidade ≥ alvo.
+
+**Publicação.** Exige `procurement.evaluations.manage` no âmbito da empresa (o fornecedor é da empresa toda) e recalcula
+com as provas de todas as entidades. Guarda a fotografia — pesos, indicadores com número de provas, nota, classe e
+comentário — que a base de dados não deixa alterar nem apagar. Uma nova publicação do mesmo período substitui a
+anterior, que fica no histórico. A ficha do fornecedor mostra a avaliação em vigor.
+

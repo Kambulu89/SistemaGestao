@@ -60,6 +60,7 @@ const InvoicesController = () => import('#modules/procurement/http/invoices_cont
 const ReturnsController = () => import('#modules/procurement/http/returns_controller')
 const CreditNotesController = () => import('#modules/procurement/http/credit_notes_controller')
 const ProcurementFinanceController = () => import('#modules/procurement/http/finance_controller')
+const EvaluationsController = () => import('#modules/procurement/http/evaluations_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
@@ -1083,6 +1084,14 @@ router
                   ProcurementFinanceController,
                   'retry',
                 ])
+                router.get('evaluations/weights', [EvaluationsController, 'weights'])
+                router
+                  .put('evaluations/weights', [EvaluationsController, 'setWeights'])
+                  .use(middleware.can({ permission: 'procurement.settings' }))
+                router.get('evaluations/ranking', [EvaluationsController, 'ranking'])
+                router.get('evaluations/suppliers/:id', [EvaluationsController, 'supplier'])
+                router.post('evaluations/suppliers/:id', [EvaluationsController, 'publish'])
+                router.get('evaluations/:id', [EvaluationsController, 'show'])
                 router.get('tolerances', [InvoicesController, 'tolerances'])
                 router
                   .put('tolerances', [InvoicesController, 'setTolerances'])

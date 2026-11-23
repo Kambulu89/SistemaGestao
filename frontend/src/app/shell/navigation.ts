@@ -670,6 +670,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Compras',
       },
       {
+        label: 'Avaliação de fornecedores',
+        path: '/compras/avaliacao',
+        icon: 'grid',
+        anyOf: ['procurement.evaluations.read', 'procurement.evaluations.manage'],
+        feature: 'procurement',
+        anyScope: true,
+        section: 'Compras',
+      },
+      {
         label: 'Contratos de fornecedor',
         path: '/compras/contratos',
         icon: 'file',

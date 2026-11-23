@@ -451,7 +451,7 @@ regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis;
 
 ## Compras (módulo `procurement`, Prompt 09) e terceiros (módulo `partners`)
 
-9.1 a 9.10 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-056). O terceiro (`business_partners`, contactos) é do módulo `partners`,
+9.1 a 9.11 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-057). O terceiro (`business_partners`, contactos) é do módulo `partners`,
 sem rotas: os papéis de negócio usam o seu `index.ts`. O fornecedor (`suppliers`) é o papel de compra de um terceiro,
 com condições comerciais e homologação: critérios e tipos de documento configuráveis, documentos com validade (fixos,
 desactiváveis), pedidos de homologação fixos depois de decididos, dados bancários que só ficam activos com a aprovação
@@ -493,4 +493,7 @@ só a diferença para o seu valor em aberto (a ordem tira à requisição, a fac
 bloqueio ou aviso; uma obrigação a pagar por factura validada, abatida por notas de crédito, com pagamentos da tesouraria
 (`procurement.payables.pay`, até haver o módulo de Tesouraria); eventos `PROCUREMENT` idempotentes e repetíveis em que a
 factura salda as recepções por facturar lançadas pelo Inventário e só lança diferenças (o stock nunca é lançado duas vezes).
+Avaliação de fornecedores (9.11): indicadores calculados na hora das provas (recepções, devoluções, facturas e
+propostas), com nota ponderada pelos pesos da empresa, em que os critérios sem provas não contam, e classe A–D; mapa
+por período no âmbito do membro; publicação no âmbito da empresa como fotografia imutável, substituível por período.
 

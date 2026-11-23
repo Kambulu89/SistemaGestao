@@ -521,6 +521,63 @@ pagar" (só para quem a vê). Na requisição, o erro de uma decisão (p. ex. ve
   obrigação a partir da factura, pagamento acima do saldo recusado, pagamento parcial, contabilização falhada com motivo
   (a demonstração não tem regras PROCUREMENT); lista; leitor sem "Registar pagamento"; realizado na verba; 390 px.
 
+## 9.11 Avaliação de fornecedores
+
+### Modelo
+
+Migração `0053_create_supplier_evaluations`:
+- `supplier_evaluation_settings`: pesos que somam 100, uma linha por empresa;
+- `supplier_evaluations`: fotografia publicada (pesos, indicadores, nota, classe, comentário). É imutável na base de
+  dados; só pode ser marcada uma vez como substituída, com uma única em vigor por fornecedor e período.
+
+### Backend e API (`/api/v1/procurement`)
+
+- `GET|PUT /evaluations/weights` (alterar com `procurement.settings`).
+- `GET /evaluations/ranking?from&to`.
+- `GET|POST /evaluations/suppliers/:id` (provas, SLA, histórico / publicar).
+- `GET /evaluations/:id`.
+- A ficha do fornecedor (`GET /suppliers/:id`) traz a avaliação em vigor. Contrato `latestEvaluation` no `index.ts`.
+- Permissões `procurement.evaluations.read|manage`.
+- Erros: `SUM`, `BEFORE_FROM`, `FUTURE`, `TOO_LONG`, `NO_EVIDENCE`, `OUT_OF_SCOPE`.
+
+### Ecrãs
+
+- **Compras → Avaliação de fornecedores**:
+  - período;
+  - resumo por classe;
+  - tabela ordenada pela nota, com os quatro indicadores e o número de provas;
+  - pesos, num modal com a soma visível.
+- **Avaliação do fornecedor**:
+  - nota e classe;
+  - indicadores com peso e definição;
+  - recepções (atrasada, com recusa, com devolução), facturas (conforme, com excepção, devolvida) e cotações;
+  - SLA dos contratos (cumprido, falhado ou sem medição);
+  - publicar com comentário e histórico.
+- **Ficha do fornecedor**: classe em vigor, com ligação à avaliação.
+
+### Testes e evidências
+
+- Unitário `procurement_evaluations_domain.spec.ts` (3): indicadores, nota com critérios sem provas e peso 0,
+  classes, pesos, período e SLA.
+- Funcional `procurement_evaluations.spec.ts` (1), com provas reais:
+  - fornecedor 1 — ordem atrasada com 8 aceites, 2 recusadas e 2 devolvidas; ordem a tempo; uma factura conforme e
+    outra a 110 só com excepção autorizada; proposta a 120 contra 100;
+  - mapa: fornecedor 2 com 100 (A) e fornecedor 1 com 65,67 (C), com qualidade 80, prazo 50, conformidade 50 e custo
+    83,33;
+  - pesos: soma errada recusada; com 50/50 a nota passa a 65,00;
+  - publicação: leitor e outra entidade recusados (`OUT_OF_SCOPE`), `BEFORE_FROM`, `NO_EVIDENCE`; a fotografia fica
+    com 65,67 C; a republicação substitui a anterior, que fica no histórico; a base recusa alterar, reactivar e apagar;
+  - a ficha do fornecedor mostra a avaliação; outra entidade vê o mapa vazio e o fornecedor sem nota.
+- `isolation_matrix` (avaliação, provas e publicação de outra empresa → 404), `routes_protection`, regressão de todo o
+  backend; frontend `evaluation-model.spec.ts`.
+- Browser (6 passos, três execuções seguidas, sem erros na consola; administração e leitor):
+  - mapa pela navegação (fornecedor 2 com A; fornecedor 1 com 65,00 C, sem provas de custo);
+  - pesos: soma 120 assinalada; com 50/50 o fornecedor 1 sobe a 70,00 B; pesos repostos;
+  - provas do fornecedor 1 (qualidade 90, prazo e conformidade 50, recepção atrasada e com recusa, factura com
+    excepção) e publicação com comentário (classe C);
+  - ficha do fornecedor com a classe; leitor sem "Publicar" nem "Pesos";
+  - 390 px.
+
 ## Pendências
 
 - 9.1: a homologação é uma decisão directa segregada (não usa os workflows de aprovação em várias etapas); não há aviso
@@ -565,3 +622,12 @@ pagar" (só para quem a vê). Na requisição, o erro de uma decisão (p. ex. ve
   não comprometem; os pequenos arredondamentos entre o custo de entrada do inventário (por unidade base, 6 casas) e o
   valor saldado pela factura ficam na conta de recepções por facturar (sem relatório de reconciliação ainda); as contas
   e regras de contabilização têm de ser configuradas pela empresa (nenhuma é pré-carregada).
+- 9.11:
+  - a nota de qualidade da adjudicação (9.4) continua manual: não é preenchida a partir da avaliação publicada;
+  - sem agendamento de avaliações periódicas nem aviso ao fornecedor;
+  - indicadores:
+    - o custo compara só propostas na mesma moeda;
+    - a qualidade conta cada linha igual, sem ponderar pelo valor;
+    - a conformidade documental (documentos do fornecedor a caducar) não entra na nota;
+  - SLA sem medição automática: tempo de resposta e "outro";
+  - classes com limites fixos (85/70/50), não configuráveis.

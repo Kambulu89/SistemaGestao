@@ -28,6 +28,7 @@ import {
   SUPPLIER_TYPE,
   supplierTone,
 } from './supplier-model';
+import { ratingTone } from './evaluation-model';
 
 type ReasonKind = 'reject' | 'suspend' | 'bank-reject' | 'bank-deactivate' | 'doc-deactivate';
 type FormKind = 'contact' | 'bank' | 'document' | 'submit';
@@ -69,6 +70,18 @@ type FormKind = 'contact' | 'bank' | 'document' | 'submit';
             }}</span>
             @if (x.approvedAt) {
               <span class="text-sm text-muted">Homologado em {{ date(x.approvedAt) }}</span>
+            }
+            @if (x.evaluation) {
+              <a
+                class="badge"
+                [class]="ratingTone(x.evaluation.rating)"
+                data-testid="sd-evaluation"
+                [routerLink]="['/compras/avaliacao', x.id]"
+                [attr.aria-label]="'Avaliação: classe ' + (x.evaluation.rating ?? '—')"
+                >Avaliação {{ x.evaluation.rating ?? '—' }} ·
+                {{ x.evaluation.score?.replace('.', ',') ?? '—' }} (até
+                {{ date(x.evaluation.periodTo) }})</a
+              >
             }
           </div>
           <p
@@ -724,6 +737,7 @@ export class SupplierDetailPage {
   protected submitNotes = '';
   protected readonly results = Object.entries(RESULT);
   protected readonly date = formatDate;
+  protected readonly ratingTone = ratingTone;
   protected readonly when = formatDateTime;
   protected readonly tone = supplierTone;
   protected readonly btone = bankTone;

@@ -570,6 +570,12 @@ export type ScannedRoutes = {
     'procurement_finance.payable': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'procurement_finance.pay': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'procurement_finance.retry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.weights': { paramsTuple?: []; params?: {} }
+    'evaluations.set_weights': { paramsTuple?: []; params?: {} }
+    'evaluations.ranking': { paramsTuple?: []; params?: {} }
+    'evaluations.supplier': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.publish': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.tolerances': { paramsTuple?: []; params?: {} }
     'invoices.set_tolerances': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
@@ -814,6 +820,10 @@ export type ScannedRoutes = {
     'procurement_finance.budget': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'procurement_finance.payables': { paramsTuple?: []; params?: {} }
     'procurement_finance.payable': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.weights': { paramsTuple?: []; params?: {} }
+    'evaluations.ranking': { paramsTuple?: []; params?: {} }
+    'evaluations.supplier': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.tolerances': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
@@ -1041,6 +1051,10 @@ export type ScannedRoutes = {
     'procurement_finance.budget': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'procurement_finance.payables': { paramsTuple?: []; params?: {} }
     'procurement_finance.payable': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.weights': { paramsTuple?: []; params?: {} }
+    'evaluations.ranking': { paramsTuple?: []; params?: {} }
+    'evaluations.supplier': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'invoices.tolerances': { paramsTuple?: []; params?: {} }
     'purchase_requisitions.levels': { paramsTuple?: []; params?: {} }
     'suppliers.settings_index': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
@@ -1320,6 +1334,7 @@ export type ScannedRoutes = {
     'procurement_finance.create_budget': { paramsTuple?: []; params?: {} }
     'procurement_finance.pay': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'procurement_finance.retry': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.publish': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'purchase_requisitions.create_level': { paramsTuple?: []; params?: {} }
     'suppliers.settings_store': { paramsTuple: [ParamValue]; params: {'kind': ParamValue} }
     'attachments.store': { paramsTuple?: []; params?: {} }
@@ -1427,6 +1442,7 @@ export type ScannedRoutes = {
     'returns.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'credit_notes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'procurement_finance.update_budget': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'evaluations.set_weights': { paramsTuple?: []; params?: {} }
     'invoices.set_tolerances': { paramsTuple?: []; params?: {} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }

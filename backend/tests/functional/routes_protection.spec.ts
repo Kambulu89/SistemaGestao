@@ -594,6 +594,16 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de procurement.payables.read/pay por entidade legal, verificado no serviço',
   'POST /api/v1/procurement/payables/:id/accounting/retry':
     'âmbito RBAC de procurement.payables.read/pay por entidade legal, verificado no serviço',
+  'GET /api/v1/procurement/evaluations/weights':
+    'pesos da avaliação da empresa: só configuração, sem dados de documentos; alterar exige procurement.settings',
+  'GET /api/v1/procurement/evaluations/ranking':
+    'âmbito RBAC de procurement.evaluations.read/manage verificado no serviço (publicar exige o âmbito da empresa)',
+  'GET /api/v1/procurement/evaluations/suppliers/:id':
+    'âmbito RBAC de procurement.evaluations.read/manage verificado no serviço (publicar exige o âmbito da empresa)',
+  'POST /api/v1/procurement/evaluations/suppliers/:id':
+    'âmbito RBAC de procurement.evaluations.read/manage verificado no serviço (publicar exige o âmbito da empresa)',
+  'GET /api/v1/procurement/evaluations/:id':
+    'âmbito RBAC de procurement.evaluations.read/manage verificado no serviço (publicar exige o âmbito da empresa)',
   'GET /api/v1/procurement/tolerances':
     'tolerâncias da conferência da empresa: só valores de configuração, sem dados de documentos; alterar exige procurement.settings',
   'GET /api/v1/procurement/rfqs':

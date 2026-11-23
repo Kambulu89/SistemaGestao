@@ -40,3 +40,7 @@ export {
   procurementPayables,
   syncCommitments,
 } from '#modules/procurement/application/finance_service'
+export {
+  EvaluationService,
+  latestEvaluation,
+} from '#modules/procurement/application/evaluation_service'

@@ -7402,6 +7402,70 @@ export class SupplierDocumentSchema extends BaseModel {
   declare version: number
 }
 
+export class SupplierEvaluationSettingSchema extends BaseModel {
+  static $columns = ['complianceWeight', 'costWeight', 'createdAt', 'createdBy', 'deliveryWeight', 'id', 'qualityWeight', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = SupplierEvaluationSettingSchema.$columns
+  @column()
+  declare complianceWeight: number
+  @column()
+  declare costWeight: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare deliveryWeight: number
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare qualityWeight: number
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class SupplierEvaluationSchema extends BaseModel {
+  static $columns = ['comment', 'createdAt', 'createdBy', 'id', 'indicators', 'periodFrom', 'periodTo', 'rating', 'score', 'supersededById', 'supplierId', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'weights'] as const
+  $columns = SupplierEvaluationSchema.$columns
+  @column()
+  declare comment: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare indicators: any
+  @column.date()
+  declare periodFrom: DateTime
+  @column.date()
+  declare periodTo: DateTime
+  @column()
+  declare rating: string | null
+  @column()
+  declare score: string | null
+  @column()
+  declare supersededById: string | null
+  @column()
+  declare supplierId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare weights: any
+}
+
 export class SupplierEventSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'details', 'fromStatus', 'id', 'kind', 'reason', 'supplierId', 'tenantId', 'toStatus', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = SupplierEventSchema.$columns

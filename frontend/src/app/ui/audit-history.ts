@@ -156,6 +156,8 @@ export class AuditHistory {
       'procurement_payable.accounting_retried': 'Contabilização repetida',
       'procurement_budget.created': 'Verba criada',
       'procurement_budget.updated': 'Verba alterada',
+      'supplier_evaluation.published': 'Avaliação publicada',
+      'supplier_evaluation.weights_updated': 'Pesos da avaliação alterados',
       terminated: 'Terminado',
       amendment_proposed: 'Adenda proposta',
       'purchase_contract.amended': 'Adenda aplicada',

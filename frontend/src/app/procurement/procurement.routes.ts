@@ -27,6 +27,8 @@ const ORDER_PERMISSIONS = [
   'procurement.orders.approve',
 ];
 
+const EVALUATION_PERMISSIONS = ['procurement.evaluations.read', 'procurement.evaluations.manage'];
+
 const PAYABLE_PERMISSIONS = ['procurement.payables.read', 'procurement.payables.pay'];
 
 const RETURN_PERMISSIONS = ['procurement.returns.read', 'procurement.returns.manage'];
@@ -322,6 +324,26 @@ export const PROCUREMENT_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'procurement.invoices.manage', anyScope: true },
         loadComponent: () => import('./invoice-form').then((m) => m.InvoiceForm),
+      },
+    ],
+  },
+  {
+    path: 'avaliacao',
+    title: 'Avaliação de fornecedores',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: EVALUATION_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./supplier-evaluations').then((m) => m.SupplierEvaluations),
+      },
+      {
+        path: ':id',
+        title: 'Avaliação do fornecedor',
+        canActivate: [accessGuard],
+        data: { anyOf: EVALUATION_PERMISSIONS, anyScope: true },
+        loadComponent: () =>
+          import('./supplier-evaluation').then((m) => m.SupplierEvaluationDetail),
       },
     ],
   },

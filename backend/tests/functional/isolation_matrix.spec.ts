@@ -867,8 +867,17 @@ async function populate(client: any) {
       [tenant.id, le.id, supplier.id, purchaseOrder.id, purchaseInvoice.id]
     )
   ).rows[0] as { id: string }
+  // Avaliação publicada da empresa A inserida directamente (só interessa o isolamento).
+  const supplierEvaluation = (
+    await db.connection('owner').rawQuery(
+      `insert into supplier_evaluations (tenant_id, supplier_id, period_from, period_to, weights, indicators, score, rating)
+       values (?, ?, '2026-01-01', '2026-06-30', '{}', '{}', 80, 'B') returning id`,
+      [tenant.id, supplier.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    supplierEvaluation,
     costCenter,
     procurementBudget,
     procurementPayable,
@@ -1716,6 +1725,17 @@ test.group('isolamento | matriz entre empresas', (group) => {
         B.post(`/api/v1/procurement/invoices/${a.purchaseInvoice.id}/cancel`, {
           ...v,
           reason: 'x',
+        }),
+      ],
+      ['GET avaliação alheia', B.get(`/api/v1/procurement/evaluations/${a.supplierEvaluation.id}`)],
+      [
+        'provas de fornecedor alheio',
+        B.get(`/api/v1/procurement/evaluations/suppliers/${a.supplier.id}?from=2026-01-01`),
+      ],
+      [
+        'publicar avaliação de fornecedor alheio',
+        B.post(`/api/v1/procurement/evaluations/suppliers/${a.supplier.id}`, {
+          from: '2026-01-01',
         }),
       ],
       ['GET verba alheia', B.get(`/api/v1/procurement/budgets/${a.procurementBudget.id}`)],

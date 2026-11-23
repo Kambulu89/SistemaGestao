@@ -649,10 +649,22 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Tesouraria: registar pagamentos de facturas de fornecedor (nunca acima do saldo) e repetir a contabilização falhada.',
   },
   {
+    code: 'procurement.evaluations.read',
+    module: 'procurement',
+    description:
+      'Consultar o mapa de avaliação dos fornecedores (qualidade, prazo, conformidade, custo) com as provas das entidades do âmbito.',
+  },
+  {
+    code: 'procurement.evaluations.manage',
+    module: 'procurement',
+    description:
+      'Publicar avaliações de fornecedores por período (no âmbito da empresa: as provas de todas as entidades).',
+  },
+  {
     code: 'procurement.settings',
     module: 'procurement',
     description:
-      'Configurar as compras: tipos de documento exigidos, critérios de homologação, etapas de aprovação e tolerâncias da conferência de facturas.',
+      'Configurar as compras: tipos de documento exigidos, critérios de homologação, etapas de aprovação, tolerâncias da conferência de facturas e pesos da avaliação de fornecedores.',
   },
 ]
 
