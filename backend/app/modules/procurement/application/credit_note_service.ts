@@ -352,6 +352,9 @@ async function duplicateOf(
     )
   ).rows[0] as any
 }
+const isNoteDuplicate = (e: any) =>
+  e?.code === '23505' &&
+  String(e?.constraint ?? e?.message).includes('purchase_credit_notes_external_unique')
 const duplicateError = (d: any) =>
   new ApiError(
     409,
@@ -656,32 +659,39 @@ export class CreditNoteService {
         : null
       if (known) throw duplicateError(known)
       const p = await prepare(scope, inv, input, null)
-      const ins = await scope.trx.rawQuery(
-        `insert into purchase_credit_notes (tenant_id, legal_entity_id, supplier_id, order_id, invoice_id, return_id,
-            credit_note_number, credit_note_number_key, credit_note_date, currency, reason, declared_total, total_net,
-            total_tax, total_amount, exchange_rate, created_by, updated_by)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
-        [
-          context.tenantId,
-          inv.legal_entity_id,
-          inv.supplier_id,
-          inv.order_id,
-          inv.id,
-          p.returnId,
-          p.number,
-          p.key,
-          p.date,
-          inv.currency,
-          p.reason,
-          money(p.declared),
-          money(p.totalNet),
-          money(p.totalTax),
-          money(p.total),
-          inv.exchange_rate,
-          context.userId,
-          context.userId,
-        ] as never[]
-      )
+      let ins: { rows: unknown[] }
+      try {
+        ins = await scope.trx.rawQuery(
+          `insert into purchase_credit_notes (tenant_id, legal_entity_id, supplier_id, order_id, invoice_id, return_id,
+              credit_note_number, credit_note_number_key, credit_note_date, currency, reason, declared_total, total_net,
+              total_tax, total_amount, exchange_rate, created_by, updated_by)
+           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
+          [
+            context.tenantId,
+            inv.legal_entity_id,
+            inv.supplier_id,
+            inv.order_id,
+            inv.id,
+            p.returnId,
+            p.number,
+            p.key,
+            p.date,
+            inv.currency,
+            p.reason,
+            money(p.declared),
+            money(p.totalNet),
+            money(p.totalTax),
+            money(p.total),
+            inv.exchange_rate,
+            context.userId,
+            context.userId,
+          ] as never[]
+        )
+      } catch (e: any) {
+        // Duas pessoas a registar a mesma nota ao mesmo tempo: o índice único decide (409, nunca 500).
+        if (isNoteDuplicate(e)) throw duplicateError({ id: null, credit_note_number: p.number })
+        throw e
+      }
       const id = (ins.rows[0] as { id: string }).id
       await writeLines(scope, id, p.rows)
       await event(scope, id, 'CREATED')
@@ -712,17 +722,22 @@ export class CreditNoteService {
       if (known) throw duplicateError(known)
       const p = await prepare(scope, inv, merged, id)
       await writeLines(scope, id, p.rows)
-      await setNote(scope, id, {
-        return_id: p.returnId,
-        credit_note_number: p.number,
-        credit_note_number_key: p.key,
-        credit_note_date: p.date,
-        reason: p.reason,
-        declared_total: money(p.declared),
-        total_net: money(p.totalNet),
-        total_tax: money(p.totalTax),
-        total_amount: money(p.total),
-      })
+      try {
+        await setNote(scope, id, {
+          return_id: p.returnId,
+          credit_note_number: p.number,
+          credit_note_number_key: p.key,
+          credit_note_date: p.date,
+          reason: p.reason,
+          declared_total: money(p.declared),
+          total_net: money(p.totalNet),
+          total_tax: money(p.totalTax),
+          total_amount: money(p.total),
+        })
+      } catch (e: any) {
+        if (isNoteDuplicate(e)) throw duplicateError({ id: null, credit_note_number: p.number })
+        throw e
+      }
       await event(scope, id, 'UPDATED')
       return detail(scope, id)
     })

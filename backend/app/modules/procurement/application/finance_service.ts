@@ -1129,21 +1129,35 @@ export class BudgetService {
           'BUDGET_EXISTS',
           'Já há verba para este centro de custo neste ano: altere-a.'
         )
-      const ins = await scope.trx.rawQuery(
-        `insert into procurement_budgets (tenant_id, legal_entity_id, cost_center_id, fiscal_year, amount, control, notes,
-            created_by, updated_by) values (?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
-        [
-          context.tenantId,
-          cc!.legalEntityId,
-          ccId,
-          budget.fiscalYear,
-          money(budget.amount),
-          budget.control,
-          budget.notes,
-          context.userId,
-          context.userId,
-        ] as never[]
-      )
+      let ins: { rows: unknown[] }
+      try {
+        ins = await scope.trx.rawQuery(
+          `insert into procurement_budgets (tenant_id, legal_entity_id, cost_center_id, fiscal_year, amount, control, notes,
+              created_by, updated_by) values (?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
+          [
+            context.tenantId,
+            cc!.legalEntityId,
+            ccId,
+            budget.fiscalYear,
+            money(budget.amount),
+            budget.control,
+            budget.notes,
+            context.userId,
+            context.userId,
+          ] as never[]
+        )
+      } catch (e: any) {
+        // Duas verbas para o mesmo centro de custo e ano ao mesmo tempo: o índice único decide (409, nunca 500).
+        if (
+          e?.code === '23505' &&
+          String(e?.constraint ?? e?.message).includes('procurement_budgets_unique')
+        )
+          throw ApiError.conflict(
+            'BUDGET_EXISTS',
+            'Já há verba para este centro de custo neste ano: altere-a.'
+          )
+        throw e
+      }
       const id = (ins.rows[0] as { id: string }).id
       await audit(scope, {
         action: 'procurement_budget.created',

@@ -451,7 +451,7 @@ regras estão em `domain/reports.ts`. Quantidades pelos armazéns consultáveis;
 
 ## Compras (módulo `procurement`, Prompt 09) e terceiros (módulo `partners`)
 
-9.1 a 9.11 feitos (ver `docs/reports/prompt-09.md`, D-047 a D-057). O terceiro (`business_partners`, contactos) é do módulo `partners`,
+Prompt 09 concluído: 9.1 a 9.11 feitos e QA no 9.12 (ver `docs/reports/prompt-09.md` e `docs/reports/prompt-09-qa.md`, D-047 a D-058). O terceiro (`business_partners`, contactos) é do módulo `partners`,
 sem rotas: os papéis de negócio usam o seu `index.ts`. O fornecedor (`suppliers`) é o papel de compra de um terceiro,
 com condições comerciais e homologação: critérios e tipos de documento configuráveis, documentos com validade (fixos,
 desactiváveis), pedidos de homologação fixos depois de decididos, dados bancários que só ficam activos com a aprovação

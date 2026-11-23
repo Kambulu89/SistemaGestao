@@ -1,15 +1,15 @@
 # Relatório — Prompt 09 (compras)
 
-Estado: **9.1 e 9.2 implementados e verificados** no branch `claude/pensive-clarke-5gm075`. Blocos 9.3 a 9.12 seguem, um de cada
-vez. Decisões a partir de D-047.
+Estado: **Prompt 09 concluído** — 9.1 a 9.11 implementados e verificados, QA no 9.12 (`docs/reports/prompt-09-qa.md`), no
+branch `claude/pensive-clarke-5gm075`. Decisões D-047 a D-058.
 
 ## Inventário AS-IS → TO-BE
 
-| Bloco            | Antes                                  | Agora                                                                                                                                                                                                                                                                                                                                                                   | Estado    |
-| ---------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| 9.1 Fornecedores | Sem terceiros nem compras na aplicação | Terceiro reutilizável (fornecedor e, no Prompt 10, cliente); ficha com NIF por país, contactos e morada; condições comerciais; documentos com validade e ficheiro; critérios e tipos de documento configuráveis; homologação segregada com validade derivada dos documentos; dados bancários protegidos com aprovação de outra pessoa; suspensão; histórico e auditoria | Feito     |
-| 9.2–9.11         | —                                      | Requisições, RFQ, comparação, ordens, contratos, recepções, facturas, devoluções, orçamento/finance, avaliação                                                                                                                                                                                                                                                          | Por fazer |
-| 9.12 QA          | —                                      | —                                                                                                                                                                                                                                                                                                                                                                       | Por fazer |
+| Bloco            | Antes                                  | Agora                                                                                                                                                                                                                                                                                                                                                                   | Estado |
+| ---------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 9.1 Fornecedores | Sem terceiros nem compras na aplicação | Terceiro reutilizável (fornecedor e, no Prompt 10, cliente); ficha com NIF por país, contactos e morada; condições comerciais; documentos com validade e ficheiro; critérios e tipos de documento configuráveis; homologação segregada com validade derivada dos documentos; dados bancários protegidos com aprovação de outra pessoa; suspensão; histórico e auditoria | Feito  |
+| 9.2–9.11         | —                                      | Requisições, RFQ, comparação, ordens, contratos, recepções, facturas, devoluções, orçamento/finance, avaliação                                                                                                                                                                                                                                                          | Feito  |
+| 9.12 QA          | —                                      | Ciclo completo com ataques de concorrência e duplicação, isolamento e regressão (backend, frontend, browser)                                                                                                                                                                                                                                                            | Feito  |
 
 ## 9.1 Fornecedores
 
@@ -526,6 +526,7 @@ pagar" (só para quem a vê). Na requisição, o erro de uma decisão (p. ex. ve
 ### Modelo
 
 Migração `0053_create_supplier_evaluations`:
+
 - `supplier_evaluation_settings`: pesos que somam 100, uma linha por empresa;
 - `supplier_evaluations`: fotografia publicada (pesos, indicadores, nota, classe, comentário). É imutável na base de
   dados; só pode ser marcada uma vez como substituída, com uma única em vigor por fornecedor e período.
@@ -577,6 +578,19 @@ Migração `0053_create_supplier_evaluations`:
     excepção) e publicação com comentário (classe C);
   - ficha do fornecedor com a classe; leitor sem "Publicar" nem "Pesos";
   - 390 px.
+
+## 9.12 QA e Git
+
+Relatório completo em `docs/reports/prompt-09-qa.md`.
+
+- Ciclo completo novo (`procurement_lifecycle.spec.ts`): requisição → aprovação → cotação → adjudicação → ordem →
+  recepção única → factura validada → obrigação única, com aprovações segregadas e não repetíveis, pedidos em paralelo
+  (aprovação, geração de ordens, emissão, recepção, factura duplicada, validação, pagamentos), preço/quantidade,
+  rastreabilidade e isolamento entre empresas. Executado sete vezes seguidas.
+- Defeito encontrado e corrigido: notas de crédito e verbas duplicadas em simultâneo davam 500 (o índice único travava,
+  mas o erro não era convertido); agora 409 (D-058), com teste de corridas que falha sem a correcção.
+- Regressão: backend 364 testes, frontend 194, browser 10 scripts / 63 passos (os 4 scripts que procuravam o prefixo
+  da série foram generalizados; o produto estava correcto).
 
 ## Pendências
 

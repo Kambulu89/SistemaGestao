@@ -994,3 +994,13 @@ com as provas de todas as entidades. Guarda a fotografia — pesos, indicadores 
 comentário — que a base de dados não deixa alterar nem apagar. Uma nova publicação do mesmo período substitui a
 anterior, que fica no histórico. A ficha do fornecedor mostra a avaliação em vigor.
 
+## D-058 Unicidade verificada na aplicação e garantida na base: a corrida devolve 409, nunca 500 (aceite)
+
+Onde um número ou chave tem de ser único (número externo de facturas e notas de crédito por fornecedor, verba por
+centro de custo e ano, códigos), o serviço verifica primeiro, para dar uma resposta clara. É o **índice único da base**
+que garante a regra quando dois pedidos passam a verificação ao mesmo tempo, e esse erro (`23505`, pela restrição) é
+convertido no mesmo 409 da verificação (`DUPLICATE_INVOICE`, `DUPLICATE_CREDIT_NOTE`, `BUDGET_EXISTS`, …). Onde a
+transição pode bloquear o documento-pai, bloqueia-o (`FOR UPDATE` ou advisory lock) e a corrida resolve-se por ordem.
+O QA do Prompt 09 (9.12) encontrou duas operações sem a conversão (notas de crédito e verbas: o segundo pedido
+simultâneo dava 500) e passou a testá-las com pedidos em paralelo.
+
