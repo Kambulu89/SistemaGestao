@@ -9,6 +9,8 @@ const CUSTOMER_PERMISSIONS = [
   'sales.customers.credit',
 ];
 
+const QUOTE_PERMISSIONS = ['sales.quotes.read', 'sales.quotes.manage', 'sales.quotes.approve'];
+
 const PRICE_PERMISSIONS = ['sales.prices.read', 'sales.prices.manage', 'sales.prices.approve'];
 
 type Load = NonNullable<Route['loadComponent']>;
@@ -128,5 +130,40 @@ export const SALES_ROUTES: Routes = [
     canActivate: [accessGuard],
     data: { anyOf: PRICE_PERMISSIONS },
     loadComponent: () => import('./price-check').then((m) => m.PriceCheck),
+  },
+  {
+    path: 'orcamentos',
+    title: 'Orçamentos',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: QUOTE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./quotes').then((m) => m.Quotes),
+      },
+      {
+        path: 'novo',
+        title: 'Novo orçamento',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.quotes.manage', anyScope: true },
+        loadComponent: () => import('./quote-form').then((m) => m.QuoteFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Orçamento',
+        canActivate: [accessGuard],
+        data: { anyOf: QUOTE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./quote-detail').then((m) => m.QuoteDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar orçamento',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.quotes.manage', anyScope: true },
+        loadComponent: () => import('./quote-form').then((m) => m.QuoteFormPage),
+      },
+    ],
   },
 ];

@@ -31,7 +31,7 @@ import {
   rfqAccess,
   supplierExists,
 } from '#modules/procurement/index'
-import { customerAccess } from '#modules/sales/index'
+import { customerAccess, quoteAccess } from '#modules/sales/index'
 
 /**
  * Política de acesso por tipo de registo: o anexo herda a autorização (e a funcionalidade contratada) do registo a que
@@ -182,6 +182,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.customer = {
     feature: 'sales',
     access: (scope, id) => customerAccess(scope, id),
+  }
+  // Orçamento (proposta assinada, pedido do cliente): o âmbito do orçamento.
+  map.sales_quote = {
+    feature: 'sales',
+    access: (scope, id) => quoteAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

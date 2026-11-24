@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 e 10.2 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 e D-060. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 a 10.3 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-061. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -180,3 +180,108 @@ Também cobertos:
   - limites por vendedor ou perfil;
   - preços noutra unidade;
   - promoções acumuláveis.
+
+## 10.3 Orçamentos e propostas
+
+### Modelo
+
+Migração `0056_create_sales_quotes`:
+
+- `sales_quotes` — guarda:
+  - entidade legal, cliente, comercial (membro);
+  - data, validade, moeda e prazo (por omissão os do cliente);
+  - referência e notas;
+  - totais `numeric` (`CHECK` total = líquido + imposto);
+  - estado, versão em curso, série e número;
+  - submissão, aprovação, envio e decisão do cliente;
+  - encomenda de conversão (índice único).
+- `sales_quote_lines` — produto/variante, descrição, quantidade, desconto ou preço manual (nunca os dois), taxa de
+  imposto e motivo de isenção a 0 %, origem e valores do preço, snapshot do motor (`jsonb`), indicação de aprovação.
+- `sales_quote_versions` — fotografia de cada versão enviada: dados, versão do cliente, impressão digital, canal e
+  destinatário. Só de acréscimo.
+- `sales_quote_events` — cronologia, só de acréscimo.
+
+Gatilhos na base:
+
+- conteúdo do cabeçalho e linhas só mudam em rascunho;
+- número e série fixos depois de atribuídos;
+- anulado e convertido são finais;
+- aceite só passa a convertido;
+- nada se apaga.
+
+### Backend e API (`/api/v1/sales/quotes`)
+
+- `GET /quotes`, com os filtros estado (incluindo `EXPIRED`), cliente, entidade e pesquisa.
+- `GET /quotes/options`, `GET /quotes/search/{customers|products}`.
+- `POST /quotes`, `GET|PATCH /quotes/:id`.
+- `POST /quotes/:id/{submit|approve|reject|send|accept|decline|revise|cancel}`.
+- Contratos para o 10.4: `acceptedQuote(scope, id)` e `markQuoteConverted(scope, id, orderId)`.
+- Permissões `sales.quotes.read|manage|approve` com âmbito de empresa, entidade legal ou OWN. Anexos com o assunto
+  `sales_quote`. Auditoria `sales_quote.*` na mesma transacção.
+- Erros:
+  - `INVALID_STATE`, `NO_LINES`, `NO_PRICE`;
+  - `CUSTOMER_BLOCKED`, `SELF_APPROVAL`;
+  - `NO_SERIES`, `SERIES_REQUIRED`;
+  - `EXPIRED`, `VERSION_MISMATCH`, `ALREADY_CONVERTED`, `NOT_ACCEPTED`;
+  - `VERSION_CONFLICT`, `OUT_OF_SCOPE`.
+
+### Ecrãs (`/vendas/orcamentos`)
+
+- **Lista** — número e versão, cliente, entidade, datas, total e estado (com "Expirado").
+- **Formulário** — entidade, cliente por pesquisa, comercial, datas, moeda e prazo; linhas com produto, descrição,
+  quantidade, desconto ou preço manual, imposto e motivo de isenção a 0 %.
+- **Ficha** — linhas com a origem do preço (tabela/catálogo/manual, regra, desconto e limite) e motivos de aprovação,
+  e os totais. Acções: submeter, aprovar (outra pessoa, com confirmação), devolver, enviar (série, canal,
+  destinatário), aceitação e recusa do cliente, rever, anular. Também versões enviadas com impressão digital, anexos,
+  cronologia e auditoria.
+
+### Testes e evidências
+
+**Backend**
+
+`tests/unit/sales_quotes_domain.spec.ts` (4 testes):
+
+- cabeçalho;
+- linhas e isenção;
+- imposto por linha e totais exactos;
+- envio, decisão, transições e expiração.
+
+`tests/functional/sales_quotes.spec.ts` (2 testes):
+
+- **Preços e aprovação:** preços do catálogo com desconto e preço manual; isenção obrigatória a 0 %; aprovação
+  pendente, devolução com motivo e aprovação automática sem excepções.
+- **Envio:** `NO_SERIES`, `SERIES_REQUIRED` e e-mail obrigatório; número da série.
+- **Imutabilidade na base:** linhas, totais e versões.
+- **Revisão e decisão:** versão 2 com o mesmo número e a versão 1 fotografada intacta; `VERSION_MISMATCH`; recusa com
+  motivo; aceite sem revisão nem anulação.
+- **Conversão:** duas conversões simultâneas pelo contrato, das quais só uma passa.
+- **Âmbitos:** por entidade (404 fora do âmbito), OWN (só os próprios; sem atribuir a outro comercial) e
+  `SELF_APPROVAL`.
+- **Cliente e validade:** cliente bloqueado impede criar, submeter e enviar; expirado listado e aceitação recusada.
+
+Também cobertos:
+
+- `isolation_matrix`: 5 tentativas sobre o orçamento de outra empresa, todas com 404; criação com entidade e cliente
+  alheios recusada; a lista não mostra o orçamento alheio.
+- `routes_protection`.
+
+**Frontend:** `quote-model.spec.ts`.
+
+**Browser (`p1003`):** 7 passos.
+
+- orçamento pela navegação: 1 000 −10 % × 2 + 14 % = 2 052,00, assinalado "Desconto acima do limite";
+- quem submeteu não vê "Aprovar" e outra pessoa aprova;
+- envio por e-mail com destinatário obrigatório, número da série e versão 1;
+- revisão para versão 2 com o mesmo número: 3 × 970 + 14 % = 3 317,40, aprovado logo (3 % ≤ limite), versão 2
+  enviada;
+- aceitação sobre a versão 2, sem rever, anular nem editar;
+- a lista mostra "Aceite";
+- telemóvel sem deslocamento horizontal.
+
+### Pendências
+
+- Converter em encomenda chega com o 10.4: o contrato está feito e testado, e não há botão nem encomenda provisória.
+- O imposto por linha é provisório até ao motor fiscal (10.5), que traz códigos, isenções e vigência verificados nas
+  fontes oficiais.
+- O PDF e o envio por e-mail ficam para o 10.13.
+- A expiração é calculada na leitura (sem agendador).

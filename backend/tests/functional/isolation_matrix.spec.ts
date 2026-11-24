@@ -927,8 +927,23 @@ async function populate(client: any) {
       [tenant.id]
     )
   ).rows[0] as { id: string }
+  // Orçamento da empresa A (10.3), em rascunho com uma linha, inserido directamente.
+  const salesQuote = (
+    await owner.rawQuery(
+      `insert into sales_quotes (tenant_id, legal_entity_id, customer_id, salesperson_membership_id, quote_date,
+         valid_until, currency) values (?, ?, ?, (select id from tenant_memberships where tenant_id = ? limit 1),
+         '2026-06-01', '2026-06-30', 'AOA') returning id`,
+      [tenant.id, le.id, customer.id, tenant.id]
+    )
+  ).rows[0] as { id: string }
+  await owner.rawQuery(
+    `insert into sales_quote_lines (tenant_id, quote_id, line_no, product_id, description, quantity, tax_rate,
+       price_source, pricing) values (?, ?, 1, ?, 'Linha A', 1, 14, 'CATALOG', '{}')`,
+    [tenant.id, salesQuote.id, product.id]
+  )
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    salesQuote,
     priceList,
     priceListLine,
     discountRule,
@@ -1835,6 +1850,20 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'cliente sobre terceiro alheio',
         B.post('/api/v1/sales/customers', { partnerId: a.supplier.partner.id, currency: 'AOA' }),
       ],
+      ['GET orçamento alheio', B.get(`/api/v1/sales/quotes/${a.salesQuote.id}`)],
+      [
+        'alterar orçamento alheio',
+        B.patch(`/api/v1/sales/quotes/${a.salesQuote.id}`, { ...v, notes: 'x' }),
+      ],
+      ['submeter orçamento alheio', B.post(`/api/v1/sales/quotes/${a.salesQuote.id}/submit`, v)],
+      [
+        'enviar orçamento alheio',
+        B.post(`/api/v1/sales/quotes/${a.salesQuote.id}/send`, { ...v, channel: 'HAND' }),
+      ],
+      [
+        'anular orçamento alheio',
+        B.post(`/api/v1/sales/quotes/${a.salesQuote.id}/cancel`, { ...v, reason: 'xxx' }),
+      ],
       ['GET tabela de preços alheia', B.get(`/api/v1/sales/price-lists/${a.priceList.id}`)],
       [
         'alterar tabela de preços alheia',
@@ -2549,6 +2578,19 @@ test.group('isolamento | matriz entre empresas', (group) => {
         maxPct: '50',
       }),
     ]
+    crossPricing.push(
+      await B.post('/api/v1/sales/quotes', {
+        legalEntityId: a.le.id,
+        customerId: a.customer.id,
+        quoteDate: '2026-06-01',
+        validUntil: '2026-06-30',
+        lines: [],
+      })
+    )
+    assert.notInclude(
+      (await B.get('/api/v1/sales/quotes')).body().data.map((x: any) => x.id),
+      a.salesQuote.id
+    )
     for (const r of crossPricing) {
       assert.include([404, 422], r.status())
       assert.notInclude(JSON.stringify(r.body()), 'PL-A')

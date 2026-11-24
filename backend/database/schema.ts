@@ -6381,6 +6381,202 @@ export class RoleSchema extends BaseModel {
   declare version: number
 }
 
+export class SalesQuoteEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'details', 'fromStatus', 'id', 'kind', 'quoteId', 'reason', 'tenantId', 'toStatus', 'updatedAt', 'updatedBy', 'version', 'versionNo'] as const
+  $columns = SalesQuoteEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column()
+  declare fromStatus: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare quoteId: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare toStatus: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare versionNo: number
+}
+
+export class SalesQuoteLineSchema extends BaseModel {
+  static $columns = ['basePrice', 'createdAt', 'createdBy', 'description', 'grossAmount', 'id', 'lineNo', 'manualDiscountPct', 'manualUnitPrice', 'netAmount', 'netUnitPrice', 'priceSource', 'pricing', 'productId', 'quantity', 'quoteId', 'requiresApproval', 'taxAmount', 'taxExemptionReason', 'taxRate', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = SalesQuoteLineSchema.$columns
+  @column()
+  declare basePrice: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column()
+  declare grossAmount: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare manualDiscountPct: string | null
+  @column()
+  declare manualUnitPrice: string | null
+  @column()
+  declare netAmount: string
+  @column()
+  declare netUnitPrice: string | null
+  @column()
+  declare priceSource: string
+  @column()
+  declare pricing: any
+  @column()
+  declare productId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare quoteId: string
+  @column()
+  declare requiresApproval: boolean
+  @column()
+  declare taxAmount: string
+  @column()
+  declare taxExemptionReason: string | null
+  @column()
+  declare taxRate: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class SalesQuoteVersionSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'customerVersionId', 'data', 'hash', 'id', 'quoteId', 'sentChannel', 'sentTo', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'versionNo'] as const
+  $columns = SalesQuoteVersionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare customerVersionId: string
+  @column()
+  declare data: any
+  @column()
+  declare hash: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare quoteId: string
+  @column()
+  declare sentChannel: string
+  @column()
+  declare sentTo: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare versionNo: number
+}
+
+export class SalesQuoteSchema extends BaseModel {
+  static $columns = ['approvedAt', 'approvedBy', 'convertedAt', 'convertedOrderId', 'createdAt', 'createdBy', 'currency', 'customerId', 'customerReference', 'decidedAt', 'decidedByName', 'decisionReason', 'grossTotal', 'id', 'legalEntityId', 'netTotal', 'notes', 'number', 'paymentTermsDays', 'pricingHash', 'quoteDate', 'requiresApproval', 'salespersonMembershipId', 'sentAt', 'seriesId', 'status', 'submittedAt', 'submittedBy', 'taxTotal', 'tenantId', 'updatedAt', 'updatedBy', 'validUntil', 'version', 'versionNo'] as const
+  $columns = SalesQuoteSchema.$columns
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column.dateTime()
+  declare convertedAt: DateTime | null
+  @column()
+  declare convertedOrderId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare customerId: string
+  @column()
+  declare customerReference: string | null
+  @column.dateTime()
+  declare decidedAt: DateTime | null
+  @column()
+  declare decidedByName: string | null
+  @column()
+  declare decisionReason: string | null
+  @column()
+  declare grossTotal: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare netTotal: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column()
+  declare paymentTermsDays: number
+  @column()
+  declare pricingHash: string | null
+  @column.date()
+  declare quoteDate: DateTime
+  @column()
+  declare requiresApproval: boolean
+  @column()
+  declare salespersonMembershipId: string
+  @column.dateTime()
+  declare sentAt: DateTime | null
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare taxTotal: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validUntil: DateTime
+  @column()
+  declare version: number
+  @column()
+  declare versionNo: number
+}
+
 export class StatementNoteSchema extends BaseModel {
   static $columns = ['body', 'createdAt', 'createdBy', 'fiscalYearId', 'id', 'number', 'tenantId', 'title', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = StatementNoteSchema.$columns

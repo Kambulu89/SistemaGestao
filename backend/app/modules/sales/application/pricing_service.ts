@@ -1536,43 +1536,7 @@ export class PricingService {
   search(context: TenantContext, kind: 'customers' | 'products', q: string) {
     return runInTenant(context, async (scope) => {
       need((await accessOf(scope)).read, 'Não pode consultar preços.')
-      const t = context.tenantId
-      const like = `%${q.toLowerCase().replace(/[\\%_]/g, (x) => `\\${x}`)}%`
-      if (kind === 'customers')
-        return (
-          (
-            await scope.trx.rawQuery(
-              `select c.id, p.code, p.name, c.status from customers c
-                 join business_partners p on p.tenant_id = c.tenant_id and p.id = c.partner_id
-                where c.tenant_id = ? and (lower(p.code) like ? or lower(p.name) like ?) order by p.code limit 20`,
-              [t, like, like]
-            )
-          ).rows as any[]
-        ).map((r) => ({
-          id: r.id as string,
-          code: r.code as string,
-          name: r.name as string,
-          status: r.status as string,
-        }))
-      const rows = (
-        await scope.trx.rawQuery(
-          `select p.id, p.sku, p.name, p.currency, p.sale_price::text as price,
-                  coalesce((select json_agg(json_build_object('id', v.id, 'sku', v.sku) order by v.sku)
-                     from product_variants v where v.tenant_id = p.tenant_id and v.product_id = p.id and v.status = 'ACTIVE'), '[]') as variants
-             from products p where p.tenant_id = ? and p.status = 'ACTIVE' and (lower(p.sku) like ? or lower(p.name) like ?)
-            order by p.sku limit 20`,
-          [t, like, like]
-        )
-      ).rows as any[]
-      return rows.map((r) => ({
-        id: r.id as string,
-        sku: r.sku as string,
-        name: r.name as string,
-        currency: r.currency ? String(r.currency).trim() : null,
-        salePrice:
-          r.price === null ? null : scaledText(dbScaled(r.price, PRICE_SCALE), PRICE_SCALE),
-        variants: r.variants as { id: string; sku: string }[],
-      }))
+      return searchSalesRefs(scope, kind, q)
     })
   }
 
@@ -1603,4 +1567,48 @@ export class PricingService {
       }
     })
   }
+}
+
+/** Pesquisa de clientes e produtos activos (só identificação) para os formulários de vendas. */
+export async function searchSalesRefs(
+  scope: TenantScope,
+  kind: 'customers' | 'products',
+  q: string
+) {
+  const t = scope.context.tenantId
+  const like = `%${q.toLowerCase().replace(/[\\%_]/g, (x) => `\\${x}`)}%`
+  if (kind === 'customers')
+    return (
+      (
+        await scope.trx.rawQuery(
+          `select c.id, p.code, p.name, c.status from customers c
+             join business_partners p on p.tenant_id = c.tenant_id and p.id = c.partner_id
+            where c.tenant_id = ? and (lower(p.code) like ? or lower(p.name) like ?) order by p.code limit 20`,
+          [t, like, like]
+        )
+      ).rows as any[]
+    ).map((r) => ({
+      id: r.id as string,
+      code: r.code as string,
+      name: r.name as string,
+      status: r.status as string,
+    }))
+  const rows = (
+    await scope.trx.rawQuery(
+      `select p.id, p.sku, p.name, p.currency, p.sale_price::text as price,
+              coalesce((select json_agg(json_build_object('id', v.id, 'sku', v.sku) order by v.sku)
+                 from product_variants v where v.tenant_id = p.tenant_id and v.product_id = p.id and v.status = 'ACTIVE'), '[]') as variants
+         from products p where p.tenant_id = ? and p.status = 'ACTIVE' and (lower(p.sku) like ? or lower(p.name) like ?)
+        order by p.sku limit 20`,
+      [t, like, like]
+    )
+  ).rows as any[]
+  return rows.map((r) => ({
+    id: r.id as string,
+    sku: r.sku as string,
+    name: r.name as string,
+    currency: r.currency ? String(r.currency).trim() : null,
+    salePrice: r.price === null ? null : scaledText(dbScaled(r.price, PRICE_SCALE), PRICE_SCALE),
+    variants: r.variants as { id: string; sku: string }[],
+  }))
 }

@@ -682,6 +682,36 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
   'GET /api/v1/sales/pricing/search/products':
     'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'GET /api/v1/sales/quotes':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'GET /api/v1/sales/quotes/options':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'GET /api/v1/sales/quotes/search/customers':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'GET /api/v1/sales/quotes/search/products':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'POST /api/v1/sales/quotes':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'GET /api/v1/sales/quotes/:id':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'PATCH /api/v1/sales/quotes/:id':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'POST /api/v1/sales/quotes/:id/submit':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'POST /api/v1/sales/quotes/:id/approve':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'POST /api/v1/sales/quotes/:id/reject':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'POST /api/v1/sales/quotes/:id/send':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'POST /api/v1/sales/quotes/:id/accept':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'POST /api/v1/sales/quotes/:id/decline':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'POST /api/v1/sales/quotes/:id/revise':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'POST /api/v1/sales/quotes/:id/cancel':
+    'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

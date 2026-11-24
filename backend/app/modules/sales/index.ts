@@ -13,3 +13,10 @@ export {
   PricingService,
   resolvePrices,
 } from '#modules/sales/application/pricing_service'
+export {
+  acceptedQuote,
+  markQuoteConverted,
+  quoteAccess,
+  QuoteService,
+  type QuoteView,
+} from '#modules/sales/application/quote_service'

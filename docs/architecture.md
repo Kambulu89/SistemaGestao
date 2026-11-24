@@ -499,7 +499,7 @@ por período no âmbito do membro; publicação no âmbito da empresa como fotog
 
 ## Vendas e facturação (módulo `sales`, Prompt 10)
 
-Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 e D-060). Clientes (10.1): o cliente é o papel de venda de um
+Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-061). Clientes (10.1): o cliente é o papel de venda de um
 terceiro do módulo `partners` (um por terceiro, partilhado com o fornecedor), com moeda, prazo, segmento, limite de
 crédito (permissão própria, com motivo) e estado (activo, bloqueado ou inactivo com motivo); moradas de facturação e
 entrega (uma por omissão de cada tipo, índice único parcial); contactos no terceiro; versões só de acréscimo da
@@ -511,6 +511,10 @@ preços por produto/variante e escalão, e regras de desconto automático; ambas
 pessoa, imutáveis depois (gatilhos), copiadas para mudar preços; sobreposição com a mesma prioridade recusada na
 aprovação; limites do desconto manual (cliente > segmento > geral, 0 % sem nenhum; a linha da tabela pode reduzir). O
 contrato `resolvePrices` devolve o snapshot de preço por linha com impressão digital, sem gravar; permissões
-`sales.prices.read|manage|approve`. O módulo não escreve em Inventário, Finanças nem Contabilidade: os blocos seguintes
+`sales.prices.read|manage|approve`. Orçamentos (10.3): por entidade legal e comercial (âmbitos empresa, entidade ou
+OWN); linhas com preço do motor e imposto por linha (até ao 10.5); aprovação só por excepção (descontos acima do limite
+ou preço manual) e por outra pessoa; envio numerado pela série `SALES_QUOTE` (escolha explícita com várias), com cada
+versão enviada fotografada e imutável; aceitação/recusa sobre a versão em vigor e dentro da validade; revisões com
+versão nova e o mesmo número; conversão única em encomenda pelo contrato `acceptedQuote`/`markQuoteConverted`. O módulo não escreve em Inventário, Finanças nem Contabilidade: os blocos seguintes
 usam os contratos desses módulos (`index.ts`).
 

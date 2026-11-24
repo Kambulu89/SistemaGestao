@@ -1064,3 +1064,38 @@ Ficam para depois:
 - limites de desconto por vendedor ou perfil;
 - preços noutra unidade que não a base;
 - promoções que acumulam.
+
+## D-061 Orçamentos: aprovação só por excepção, envio numerado com versão fotografada e conversão única (aceite)
+
+**Âmbito.** Os orçamentos são da entidade legal. `sales.quotes.read|manage|approve` valem no âmbito da empresa, de uma
+entidade legal ou só para os próprios (âmbito OWN: os orçamentos de que a pessoa é o comercial). Um comercial OWN não
+cria orçamentos para outro comercial. Um orçamento fora do âmbito responde 404.
+
+**Preços e imposto.** As linhas pedem o produto (ou variante), a quantidade e, se houver, um desconto ou preço manual.
+O preço vem sempre do motor do 10.2 (`resolvePrices`), à data do orçamento. É recalculado a cada gravação do rascunho
+e na submissão, e o snapshot fica em cada linha. Até ao motor fiscal (10.5), o imposto é uma taxa por linha (0–100 %):
+a 0 % exige o motivo da isenção em texto, sem códigos inventados. O imposto arredonda a 2 casas por linha e os totais
+somam as linhas (`CHECK` total = líquido + imposto).
+
+**Aprovação.** Submeter sem nenhuma linha acima do limite de desconto e sem preço manual aprova logo (a política de
+limites já foi aprovada). Com elas, o orçamento aguarda `sales.quotes.approve` de **outra pessoa**
+(`SELF_APPROVAL`; `CHECK` na base). Devolver exige motivo e volta a rascunho. Um cliente bloqueado ou inactivo impede
+criar, submeter e enviar (`CUSTOMER_BLOCKED`). Linhas sem preço impedem a submissão (`NO_PRICE`).
+
+**Envio e versões.** O primeiro envio atribui o número pela série `SALES_QUOTE` da entidade. Com várias séries
+activas, a escolha é explícita (`SERIES_REQUIRED`), nunca "a primeira". Cada versão enviada fica fotografada em
+`sales_quote_versions`, só de acréscimo, com impressão digital: cabeçalho, versão imutável dos dados do cliente
+(`customerSnapshot`), linhas com o snapshot de preço e totais. O envio é **registado** (canal e destinatário); o envio
+automático por e-mail com PDF fica para o 10.13. Rever (de aprovado, enviado ou recusado) exige motivo e volta a
+rascunho com a versão seguinte, mantendo o número. A aceitação ou recusa do cliente refere-se à versão enviada em vigor
+(`VERSION_MISMATCH`), e a aceitação só é possível dentro da validade (`EXPIRED`). "Expirado" é calculado na leitura,
+não guardado.
+
+**Imutabilidade.** Fora do rascunho, a base recusa alterar o conteúdo do cabeçalho, mexer nas linhas e mudar o número
+ou a série. Recusa também reabrir um anulado ou convertido, sair de aceite a não ser para convertido, e apagar.
+
+**Conversão.** A conversão única é um contrato para as encomendas (10.4). `acceptedQuote` devolve o orçamento aceite,
+a versão do cliente e a impressão digital da versão aceite. `markQuoteConverted` faz a passagem a convertido com
+`UPDATE … WHERE status = 'ACCEPTED' AND converted_order_id IS NULL`, e o índice único em `converted_order_id` garante
+uma encomenda por orçamento. Duas conversões simultâneas: uma passa, a outra recebe `ALREADY_CONVERTED`. O botão
+"Converter em encomenda" chega com o 10.4: não há encomenda provisória.

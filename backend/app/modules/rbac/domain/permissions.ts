@@ -705,6 +705,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Aprovar ou devolver tabelas de preços e regras de desconto submetidas por outra pessoa, e definir os limites de desconto manual.',
   },
+  {
+    code: 'sales.quotes.read',
+    module: 'sales',
+    description:
+      'Consultar orçamentos e propostas (no âmbito: empresa, entidade legal ou só os próprios).',
+  },
+  {
+    code: 'sales.quotes.manage',
+    module: 'sales',
+    description:
+      'Preparar, submeter, enviar, rever e anular orçamentos e registar a aceitação ou recusa do cliente.',
+  },
+  {
+    code: 'sales.quotes.approve',
+    module: 'sales',
+    description:
+      'Aprovar ou devolver orçamentos com descontos acima do limite ou preço manual, submetidos por outra pessoa.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))
