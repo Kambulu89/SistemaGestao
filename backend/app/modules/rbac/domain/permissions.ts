@@ -765,6 +765,22 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Confirmar ou retirar taxas e isenções preparadas por outra pessoa, depois de verificadas na fonte oficial.',
   },
+  {
+    code: 'sales.invoices.read',
+    module: 'sales',
+    description: 'Consultar facturas de venda (no âmbito da entidade legal).',
+  },
+  {
+    code: 'sales.invoices.manage',
+    module: 'sales',
+    description:
+      'Preparar facturas em rascunho (de serviços ou a partir de encomendas expedidas) e descartá-las com motivo.',
+  },
+  {
+    code: 'sales.invoices.issue',
+    module: 'sales',
+    description: 'Emitir facturas (numeração pela série fiscal; nesta fase só em simulação).',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

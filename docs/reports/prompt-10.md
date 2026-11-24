@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 a 10.5 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-063. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 a 10.6 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-064. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -524,3 +524,111 @@ Também cobertos:
 - Os documentos fiscais (10.6–10.8) vão usar `resolveTaxes` e `allocateFiscalNumber`. O imposto por linha de
   orçamentos e encomendas passará a vir do motor no 10.6.
 - Contingência e comunicação com a AGT ficam para o 10.9, com adaptador e simulador identificado.
+
+## 10.6 Factura
+
+### Modelo
+
+Migração `0059_create_sales_invoices`:
+
+- `sales_invoices` — guarda:
+  - entidade emitente e estabelecimento;
+  - série fiscal, número sequencial e formatado (únicos);
+  - cliente, versão dos dados e fotografia (nome, NIF, morada);
+  - encomenda de origem;
+  - data, vencimento, moeda, moeda funcional e câmbio;
+  - prazo, referência e notas;
+  - os três estados e o nível de arredondamento;
+  - totais (líquido, imposto, bruto, retenção, a pagar, pago) e resumo dos impostos (`jsonb`);
+  - impressão digital, emissão e motivo do descarte.
+
+  `CHECK`s de coerência: bruto = líquido + imposto, a pagar = bruto − retenção, pago ≤ a pagar, e todos os campos da
+  emissão presentes numa emitida.
+
+- `sales_invoice_lines` — produto/variante, descrição, quantidade, unidade, desconto ou preço manual, origem e preço,
+  desconto efectivo, valor líquido, códigos de imposto (`uuid[]`), isenção, imposto, impostos por linha (`jsonb`),
+  fotografia do preço e linha da encomenda.
+- `sales_invoice_events` — cronologia, só de acréscimo.
+
+Gatilhos na base: a emitida não muda nem se apaga (só o estado fiscal, a cobrança e a passagem a corrigida); as linhas
+só mudam em rascunho; a descartada é final.
+
+### Backend e API (`/api/v1/sales/invoices`)
+
+- `GET /invoices`, com os filtros estado, fiscal, cobrança (incluindo `OVERDUE`), cliente, encomenda e pesquisa.
+- `GET /invoices/options`, `GET /invoices/search/{customers|products}`, `GET /invoices/order-draft/:orderId`.
+- `POST /invoices` (com `orderId` para facturar a encomenda), `GET|PATCH /invoices/:id`.
+- `POST /invoices/:id/{issue|discard}`.
+- Contratos da encomenda: `invoiceableOrder` e `recordInvoiced` (no módulo, chamados na emissão).
+- Permissões `sales.invoices.read|manage|issue` por entidade legal. Anexos com o assunto `sales_invoice`. Auditoria
+  `sales_invoice.*` na mesma transacção.
+- Erros:
+  - `STOCK_NEEDS_ORDER`, `OVER_INVOICED`, `PRICING_APPROVAL_REQUIRED`, `NO_PRICE`, `NO_LINES`;
+  - `NO_RATE` (câmbio), `NO_RATE` e `EXEMPTION_REQUIRED` (fiscais), `FUTURE`;
+  - `NO_SERIES`, `SERIES_REQUIRED`, `ALREADY_ISSUED`, `CUSTOMER_BLOCKED`;
+  - `INVALID_STATE`, `VERSION_CONFLICT`, `OUT_OF_SCOPE`.
+
+### Ecrãs (`/vendas/facturas`)
+
+- **Lista** — número, cliente, datas, a pagar, estado e cobrança (com "Vencida"); filtro fiscal.
+- **Formulário** — factura de serviços: entidade, estabelecimento, cliente, data, moeda e prazo; linhas com serviço,
+  quantidade, desconto, impostos do país da entidade e motivo de isenção. Numa factura de encomenda, ajusta-se só a
+  quantidade e os impostos.
+- **Ficha** — aviso de simulação; os três estados; emitente e série; cliente fotografado; data e vencimento, moeda e
+  câmbio, origem; linhas com unidade, preço, desconto e impostos; resumo dos impostos; totais; impressão digital
+  interna. Acções: emitir (com série se houver várias) e descartar com motivo. Anexos, cronologia e auditoria.
+- **Encomenda** — "Facturar o entregue": quantidades por facturar e impostos por linha (com sugestão) → rascunho da
+  factura.
+
+### Testes e evidências
+
+**Backend**
+
+`tests/unit/sales_invoices_domain.spec.ts` (4 testes):
+
+- validação e origem;
+- valores exactos: linha, desconto efectivo, vencimento;
+- vencida calculada;
+- impressão digital canónica.
+
+`tests/functional/sales_invoices.spec.ts` (2 testes):
+
+- **Factura de serviços:**
+  - produto de stock sem encomenda e 0 % sem isenção recusados;
+  - impostos do motor: 2 × 400 + 10 %, mais 500 isento, dá 1 380,00;
+  - desconto sem limite não se emite; emissão por quem não tem `issue` recusada;
+  - emitida com `FT A/1`, fiscal pendente, por pagar, vencimento a 30 dias, câmbio 1, cliente fotografado e impressão
+    digital;
+  - segunda emissão `ALREADY_ISSUED`; editar ou descartar recusados; base recusa alterar, voltar a rascunho e apagar;
+  - cliente renomeado depois mantém a fotografia;
+  - 5 emissões simultâneas dão `FT A/2..6`;
+  - descarte com motivo, data futura e sem linhas recusados.
+- **Factura da encomenda:**
+  - o rascunho da encomenda propõe o imposto;
+  - facturar acima do entregue é recusado; 3 + serviço emitida, e a encomenda fica com facturação parcial;
+  - depois de nova entrega, dois rascunhos sobre as mesmas 2 unidades emitidos em simultâneo: um passa, o outro é
+    recusado e não gasta número (série 1, 2);
+  - a encomenda fica toda facturada e fechada.
+
+Também cobertos:
+
+- `isolation_matrix`: 6 tentativas sobre a factura e a encomenda de outra empresa, todas com 404; criação com entidade
+  e cliente alheios recusada; a lista não mostra a factura alheia.
+- `routes_protection`.
+
+**Frontend:** `invoice-model.spec.ts`.
+
+**Browser (`p1006`):** 6 passos.
+
+- "Facturar o entregue" na encomenda: rascunho com 3 + serviço = 880,00 e aviso de simulação;
+- emissão: número da série em simulação, "Fiscal: pendente", "Por pagar", NIF do cliente com "Dados fiscais como na
+  emissão", imposto no resumo, sem editar, emitir ou descartar;
+- a encomenda mostra "Facturação parcial" e "Facturada" na cronologia, sem mais nada por facturar;
+- factura de serviços pela navegação (1 100,00) descartada com motivo;
+- telemóvel sem deslocamento horizontal.
+
+### Pendências
+
+- Recibos e cobrança (10.7); notas de crédito e débito e o estado "corrigida" (10.8); estado fiscal real e
+  contingência (10.9); eventos contabilísticos (10.12); PDF (10.13).
+- O imposto por linha de orçamentos e encomendas continua a ser uma taxa; a factura liga-a aos códigos do motor fiscal.

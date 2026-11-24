@@ -1509,3 +1509,92 @@ export async function orderAccess(scope: TenantScope, id: string) {
   const g = rights(await scopesOf(scope), o, scope.context.membershipId)
   return g.read ? { read: true, write: g.manage || g.fulfil } : null
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Contratos para a facturação (10.6)
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Encomenda (confirmada ou fechada) e, por linha, o que está entregue e ainda por facturar, com o preço acordado. */
+export async function invoiceableOrder(scope: TenantScope, orderId: string) {
+  const o = await load(scope, orderId)
+  if (!['CONFIRMED', 'CLOSED'].includes(o.status))
+    throw ApiError.conflict('INVALID_STATE', 'Só se factura uma encomenda confirmada ou fechada.')
+  const lines = (await lineRows(scope, orderId)).map((l) => {
+    const pending = qty(l.delivered_qty) - qty(l.invoiced_qty)
+    return {
+      id: l.id as string,
+      lineNo: Number(l.line_no),
+      productId: l.product_id as string,
+      variantId: (l.variant_id as string) ?? null,
+      description: l.description as string,
+      isStock: !!l.is_stock,
+      taxRate: num(l.tax_rate, PCT_SCALE)!,
+      taxExemptionReason: (l.tax_exemption_reason as string) ?? null,
+      basePrice: num(l.base_price, PRICE_SCALE),
+      netUnitPrice: num(l.net_unit_price, PRICE_SCALE)!,
+      manualDiscountPct: num(l.manual_discount_pct, PCT_SCALE),
+      manualUnitPrice: num(l.manual_unit_price, PRICE_SCALE),
+      pricing: l.pricing as Record<string, unknown>,
+      invoiceable: qtyText(pending > 0n ? pending : 0n),
+    }
+  })
+  return { order: o, lines }
+}
+
+/**
+ * Regista quantidades facturadas na emissão da factura (na mesma transacção): bloqueia as linhas, recusa facturar
+ * mais do que o entregue e ainda não facturado (nunca duplica), actualiza o estado de facturação e fecha a encomenda
+ * quando está toda entregue e facturada.
+ */
+export async function recordInvoiced(
+  scope: TenantScope,
+  orderId: string,
+  lines: { orderLineId: string; quantity: string }[],
+  invoiceRef: string
+) {
+  const o = await load(scope, orderId, true)
+  if (!['CONFIRMED', 'CLOSED'].includes(o.status))
+    throw ApiError.conflict('INVALID_STATE', 'A encomenda já não pode ser facturada.')
+  const rows = await lineRows(scope, orderId, true)
+  const per = new Map<string, bigint>()
+  const issues: ErrorDetail[] = []
+  lines.forEach((x, i) => {
+    const l = rows.find((r) => r.id === x.orderLineId)
+    if (!l)
+      return issues.push({
+        path: `lines.${i}.orderLineId`,
+        code: 'NOT_FOUND',
+        message: 'Linha inexistente nesta encomenda.',
+      })
+    const total = (per.get(l.id) ?? 0n) + qty(x.quantity)
+    const can = qty(l.delivered_qty) - qty(l.invoiced_qty)
+    if (total > can)
+      issues.push({
+        path: `lines.${i}.quantity`,
+        code: 'OVER_INVOICED',
+        message: `Da linha ${l.line_no} só há ${qtyText(can > 0n ? can : 0n)} entregue por facturar.`,
+      })
+    per.set(l.id, total)
+  })
+  if (issues.length) throw new ApiError(409, 'OVER_INVOICED', issues[0].message, issues)
+  for (const [lineId, quantity] of per) {
+    const l = rows.find((r) => r.id === lineId)!
+    await scope.trx.rawQuery(
+      `update sales_order_lines set invoiced_qty = invoiced_qty + ?, version = version + 1, updated_at = now(), updated_by = ?
+        where tenant_id = ? and id = ?`,
+      [qtyText(quantity), scope.context.userId, scope.context.tenantId, l.id]
+    )
+  }
+  await refreshStatuses(scope, orderId)
+  const after = await load(scope, orderId)
+  if (
+    after.status === 'CONFIRMED' &&
+    after.delivery_status === 'FULL' &&
+    after.invoicing_status === 'FULL'
+  )
+    await setOrder(scope, orderId, { status: 'CLOSED' })
+  await event(scope, orderId, 'INVOICED', null, {
+    invoice: invoiceRef,
+    lines: [...per].map(([l, q]) => ({ lineId: l, quantity: qtyText(q) })),
+  })
+}

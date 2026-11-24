@@ -6457,6 +6457,175 @@ export class RoleSchema extends BaseModel {
   declare version: number
 }
 
+export class SalesInvoiceEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'details', 'id', 'invoiceId', 'kind', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = SalesInvoiceEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class SalesInvoiceLineSchema extends BaseModel {
+  static $columns = ['basePrice', 'createdAt', 'createdBy', 'description', 'discountPct', 'exemptionCode', 'id', 'invoiceId', 'lineNo', 'manualDiscountPct', 'manualUnitPrice', 'netAmount', 'netUnitPrice', 'orderLineId', 'priceSource', 'pricing', 'productId', 'quantity', 'taxAmount', 'taxCodeIds', 'taxes', 'tenantId', 'uomCode', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = SalesInvoiceLineSchema.$columns
+  @column()
+  declare basePrice: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column()
+  declare discountPct: string
+  @column()
+  declare exemptionCode: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare manualDiscountPct: string | null
+  @column()
+  declare manualUnitPrice: string | null
+  @column()
+  declare netAmount: string
+  @column()
+  declare netUnitPrice: string | null
+  @column()
+  declare orderLineId: string | null
+  @column()
+  declare priceSource: string
+  @column()
+  declare pricing: any
+  @column()
+  declare productId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare taxAmount: string
+  @column()
+  declare taxCodeIds: any
+  @column()
+  declare taxes: any | null
+  @column()
+  declare tenantId: string
+  @column()
+  declare uomCode: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class SalesInvoiceSchema extends BaseModel {
+  static $columns = ['branchId', 'collectionStatus', 'createdAt', 'createdBy', 'currency', 'customerId', 'customerReference', 'customerSnapshot', 'customerVersionId', 'discardReason', 'documentHash', 'dueDate', 'exchangeRate', 'fiscalNumber', 'fiscalStatus', 'functionalCurrency', 'grossTotal', 'id', 'invoiceDate', 'issuedAt', 'issuedBy', 'legalEntityId', 'netTotal', 'notes', 'number', 'orderId', 'paidTotal', 'payableTotal', 'paymentTermsDays', 'roundingLevel', 'seriesId', 'status', 'taxSummary', 'taxTotal', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'withholdingTotal'] as const
+  $columns = SalesInvoiceSchema.$columns
+  @column()
+  declare branchId: string | null
+  @column()
+  declare collectionStatus: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare customerId: string
+  @column()
+  declare customerReference: string | null
+  @column()
+  declare customerSnapshot: any | null
+  @column()
+  declare customerVersionId: string | null
+  @column()
+  declare discardReason: string | null
+  @column()
+  declare documentHash: string | null
+  @column.date()
+  declare dueDate: DateTime | null
+  @column()
+  declare exchangeRate: string | null
+  @column()
+  declare fiscalNumber: number | null
+  @column()
+  declare fiscalStatus: string | null
+  @column()
+  declare functionalCurrency: string | null
+  @column()
+  declare grossTotal: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare invoiceDate: DateTime
+  @column.dateTime()
+  declare issuedAt: DateTime | null
+  @column()
+  declare issuedBy: string | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare netTotal: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column()
+  declare orderId: string | null
+  @column()
+  declare paidTotal: string
+  @column()
+  declare payableTotal: string
+  @column()
+  declare paymentTermsDays: number
+  @column()
+  declare roundingLevel: string | null
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare taxSummary: any | null
+  @column()
+  declare taxTotal: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare withholdingTotal: string
+}
+
 export class SalesOrderDeliverySchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'deliveryDate', 'id', 'notes', 'orderId', 'reference', 'requestHash', 'requestKey', 'seq', 'stockEventId', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
   $columns = SalesOrderDeliverySchema.$columns

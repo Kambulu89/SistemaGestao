@@ -647,6 +647,16 @@ export type ScannedRoutes = {
     'fiscal.activate_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.close_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.simulate': { paramsTuple?: []; params?: {} }
+    'sales_invoices.index': { paramsTuple?: []; params?: {} }
+    'sales_invoices.options': { paramsTuple?: []; params?: {} }
+    'sales_invoices.search_customers': { paramsTuple?: []; params?: {} }
+    'sales_invoices.search_products': { paramsTuple?: []; params?: {} }
+    'sales_invoices.order_draft': { paramsTuple: [ParamValue]; params: {'orderId': ParamValue} }
+    'sales_invoices.store': { paramsTuple?: []; params?: {} }
+    'sales_invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_invoices.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_invoices.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_invoices.discard': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -941,6 +951,12 @@ export type ScannedRoutes = {
     'fiscal.settings': { paramsTuple?: []; params?: {} }
     'fiscal.series': { paramsTuple?: []; params?: {} }
     'fiscal.series_numbers': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_invoices.index': { paramsTuple?: []; params?: {} }
+    'sales_invoices.options': { paramsTuple?: []; params?: {} }
+    'sales_invoices.search_customers': { paramsTuple?: []; params?: {} }
+    'sales_invoices.search_products': { paramsTuple?: []; params?: {} }
+    'sales_invoices.order_draft': { paramsTuple: [ParamValue]; params: {'orderId': ParamValue} }
+    'sales_invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -1202,6 +1218,12 @@ export type ScannedRoutes = {
     'fiscal.settings': { paramsTuple?: []; params?: {} }
     'fiscal.series': { paramsTuple?: []; params?: {} }
     'fiscal.series_numbers': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_invoices.index': { paramsTuple?: []; params?: {} }
+    'sales_invoices.options': { paramsTuple?: []; params?: {} }
+    'sales_invoices.search_customers': { paramsTuple?: []; params?: {} }
+    'sales_invoices.search_products': { paramsTuple?: []; params?: {} }
+    'sales_invoices.order_draft': { paramsTuple: [ParamValue]; params: {'orderId': ParamValue} }
+    'sales_invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -1524,6 +1546,9 @@ export type ScannedRoutes = {
     'fiscal.activate_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.close_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.simulate': { paramsTuple?: []; params?: {} }
+    'sales_invoices.store': { paramsTuple?: []; params?: {} }
+    'sales_invoices.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_invoices.discard': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.store': { paramsTuple?: []; params?: {} }
     'orders.from_quote': { paramsTuple?: []; params?: {} }
     'orders.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1636,6 +1661,7 @@ export type ScannedRoutes = {
     'fiscal.update_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.update_exemption': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.update_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_invoices.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'quotes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

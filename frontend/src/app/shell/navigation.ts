@@ -739,6 +739,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Vendas',
       },
       {
+        label: 'Facturas de venda',
+        path: '/vendas/facturas',
+        icon: 'file',
+        anyOf: ['sales.invoices.read', 'sales.invoices.manage', 'sales.invoices.issue'],
+        feature: 'sales',
+        anyScope: true,
+        section: 'Vendas',
+      },
+      {
         label: 'Clientes',
         path: '/vendas/clientes',
         icon: 'users',

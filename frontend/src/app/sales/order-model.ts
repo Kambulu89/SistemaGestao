@@ -167,6 +167,7 @@ export const ORDER_EVENT: Record<string, string> = {
   RESERVED: 'Reservada',
   RELEASED: 'Reserva libertada',
   DELIVERED: 'Expedida',
+  INVOICED: 'Facturada',
   CLOSED: 'Fechada',
   CANCELLED: 'Anulada',
 };

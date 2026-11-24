@@ -18,6 +18,12 @@ const ORDER_PERMISSIONS = [
   'sales.orders.fulfil',
 ];
 
+const INVOICE_PERMISSIONS = [
+  'sales.invoices.read',
+  'sales.invoices.manage',
+  'sales.invoices.issue',
+];
+
 const FISCAL_PERMISSIONS = ['sales.fiscal.read', 'sales.fiscal.manage', 'sales.fiscal.confirm'];
 
 const PRICE_PERMISSIONS = ['sales.prices.read', 'sales.prices.manage', 'sales.prices.approve'];
@@ -249,6 +255,41 @@ export const SALES_ROUTES: Routes = [
         canActivate: [accessGuard],
         data: { anyOf: FISCAL_PERMISSIONS },
         loadComponent: () => import('./tax-simulator').then((m) => m.TaxSimulator),
+      },
+    ],
+  },
+  {
+    path: 'facturas',
+    title: 'Facturas de venda',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: INVOICE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./invoices').then((m) => m.Invoices),
+      },
+      {
+        path: 'nova',
+        title: 'Nova factura',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.invoices.manage', anyScope: true },
+        loadComponent: () => import('./invoice-form').then((m) => m.InvoiceFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Factura',
+        canActivate: [accessGuard],
+        data: { anyOf: INVOICE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./invoice-detail').then((m) => m.InvoiceDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar factura',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.invoices.manage', anyScope: true },
+        loadComponent: () => import('./invoice-form').then((m) => m.InvoiceFormPage),
       },
     ],
   },

@@ -499,7 +499,7 @@ por período no âmbito do membro; publicação no âmbito da empresa como fotog
 
 ## Vendas e facturação (módulo `sales`, Prompt 10)
 
-Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-063). Clientes (10.1): o cliente é o papel de venda de um
+Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-064). Clientes (10.1): o cliente é o papel de venda de um
 terceiro do módulo `partners` (um por terceiro, partilhado com o fornecedor), com moeda, prazo, segmento, limite de
 crédito (permissão própria, com motivo) e estado (activo, bloqueado ou inactivo com motivo); moradas de facturação e
 entrega (uma por omissão de cada tipo, índice único parcial); contactos no terceiro; versões só de acréscimo da
@@ -524,7 +524,11 @@ e anulação que libertam reservas; permissões `sales.orders.read|manage|approv
 impostos e retenções por país com taxas por vigência (do país ou da entidade) e motivos de isenção, todos com fonte legal
 e confirmados por outra pessoa (nenhum valor pré-carregado); arredondamento por linha ou documento por entidade;
 `resolveTaxes` usa só valores confirmados em vigor; séries fiscais por entidade, tipo e ano, só em modo SIMULAÇÃO, com
-`allocateFiscalNumber` sem saltos, cronológico e protegido na base; permissões `sales.fiscal.read|manage|confirm`. O
+`allocateFiscalNumber` sem saltos, cronológico e protegido na base; permissões `sales.fiscal.read|manage|confirm`.
+Facturas (10.6), emissão demonstrativa: estados de negócio, fiscal e de cobrança distintos; emissão que recalcula preços
+e impostos, fotografa o cliente, fixa câmbio e vencimento, regista o facturado na encomenda (`recordInvoiced`, nunca
+acima do entregue) e numera pela série fiscal em simulação, com impressão digital interna; emitida imutável na base;
+stock só a partir de encomenda expedida, serviços sem encomenda; permissões `sales.invoices.read|manage|issue`. O
 módulo não escreve em Inventário, Finanças nem Contabilidade: os blocos seguintes
 usam os contratos desses módulos (`index.ts`).
 

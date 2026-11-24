@@ -1186,3 +1186,42 @@ QR, códigos de isenção, validação de séries). As fontes secundárias diver
 - verificar o texto oficial e a especificação da AGT;
 - só depois configurar valores reais e implementar o adaptador de comunicação (10.9), que nesta fase só terá
   simulador identificado.
+
+## D-064 Facturas: três estados distintos, emissão demonstrativa que fotografa e fixa tudo, facturação da encomenda sem duplicar (aceite)
+
+**Estados.** A factura tem três estados independentes:
+- **negócio:** rascunho → emitida → corrigida (pelas notas do 10.8); um rascunho pode ser descartado com motivo;
+- **fiscal:** pendente na emissão; aceite, rejeitada ou contingência quando existir a integração do 10.9;
+- **cobrança:** por pagar → parcial → paga (pelos recibos do 10.7). "Vencida" calcula-se na leitura: emitida, não paga
+  e com o vencimento ultrapassado.
+
+**Emissão.** Acontece numa só transacção, sob bloqueio da factura:
+- recalcula preços (os da encomenda ou o motor de preços à data) e impostos (o motor fiscal, só valores confirmados
+  em vigor);
+- fotografa o cliente: versão imutável e dados (nome, NIF, morada);
+- fixa o vencimento (data + prazo) e o câmbio para a moeda funcional na data (`NO_RATE` sem câmbio);
+- regista o facturado na encomenda;
+- atribui o número da série fiscal (em simulação, 10.5; escolha explícita com várias séries do ano);
+- guarda uma impressão digital sha256 do conteúdo canónico. É controlo interno e **não** é a assinatura ou o hash da
+  AGT.
+
+Uma segunda emissão é recusada (`ALREADY_ISSUED`), por isso nunca há dois números. Uma emissão que falha não gasta
+número. Não se emite:
+- com data futura (`FUTURE`);
+- com cliente bloqueado;
+- sem linhas, ou com linhas sem preço;
+- com descontos acima do limite ou preços manuais numa factura sem encomenda (`PRICING_APPROVAL_REQUIRED`): a
+  aprovação faz-se no orçamento ou na encomenda.
+
+**Imutabilidade.** Emitida, a base recusa alterar qualquer campo do conteúdo ou das linhas, voltar a rascunho ou
+apagar. Só mudam o estado fiscal, a cobrança e a passagem a corrigida. Descartada é final.
+
+**Stock.** Produtos de stock só se facturam a partir de uma encomenda, e só o que foi expedido e ainda não facturado
+(`OVER_INVOICED`). Sem encomenda, a factura só leva serviços. Assim o stock nunca fica por movimentar nem é
+movimentado pela factura: a saída é da expedição. `recordInvoiced` corre na emissão, bloqueia as linhas da encomenda
+e recusa facturar acima do entregue. Duas emissões concorrentes sobre as mesmas unidades: uma passa, a outra é
+recusada e não gasta número. Toda entregue e facturada, a encomenda fecha.
+
+**Imposto vindo da encomenda.** Orçamentos e encomendas guardam uma taxa por linha (até ao 10.5). Ao facturar, a
+linha precisa dos códigos de imposto do motor fiscal. Propõe-se o único imposto confirmado em vigor com essa taxa; se
+houver mais de um, ou nenhum, a escolha é de quem factura.

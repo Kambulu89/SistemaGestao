@@ -66,6 +66,7 @@ const PricingController = () => import('#modules/sales/http/pricing_controller')
 const QuotesController = () => import('#modules/sales/http/quotes_controller')
 const OrdersController = () => import('#modules/sales/http/orders_controller')
 const FiscalController = () => import('#modules/sales/http/fiscal_controller')
+const SalesInvoicesController = () => import('#modules/sales/http/sales_invoices_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
@@ -1195,6 +1196,19 @@ router
                 router.post('fiscal/series/:id/activate', [FiscalController, 'activateSeries'])
                 router.post('fiscal/series/:id/close', [FiscalController, 'closeSeries'])
                 router.post('fiscal/simulate', [FiscalController, 'simulate'])
+                router.get('invoices', [SalesInvoicesController, 'index'])
+                router.get('invoices/options', [SalesInvoicesController, 'options'])
+                router.get('invoices/search/customers', [
+                  SalesInvoicesController,
+                  'searchCustomers',
+                ])
+                router.get('invoices/search/products', [SalesInvoicesController, 'searchProducts'])
+                router.get('invoices/order-draft/:orderId', [SalesInvoicesController, 'orderDraft'])
+                router.post('invoices', [SalesInvoicesController, 'store'])
+                router.get('invoices/:id', [SalesInvoicesController, 'show'])
+                router.patch('invoices/:id', [SalesInvoicesController, 'update'])
+                router.post('invoices/:id/issue', [SalesInvoicesController, 'issue'])
+                router.post('invoices/:id/discard', [SalesInvoicesController, 'discard'])
                 router.get('orders', [OrdersController, 'index'])
                 router.get('orders/options', [OrdersController, 'options'])
                 router.get('orders/addresses/:customerId', [OrdersController, 'addresses'])

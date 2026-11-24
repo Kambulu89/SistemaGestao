@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Api, ApiError } from '../core/api';
 import { Breadcrumbs } from '../core/breadcrumbs';
+import { Workspace } from '../core/workspace';
 import { Attachments } from '../ui/attachments';
 import { AuditHistory } from '../ui/audit-history';
 import { ConfirmService } from '../ui/confirm';
@@ -31,7 +32,7 @@ import {
   subTone,
 } from './order-model';
 
-type Dialog = 'submit' | 'reject' | 'deliver' | 'close' | 'cancel' | null;
+type Dialog = 'submit' | 'reject' | 'deliver' | 'close' | 'cancel' | 'invoice' | null;
 
 /**
  * Encomenda: estados separados (ciclo, aprovação, reserva, entrega, facturação), quantidades por linha, verificação do
@@ -222,6 +223,16 @@ type Dialog = 'submit' | 'reject' | 'deliver' | 'close' | 'cancel' | null;
                 Anular
               </button>
             }
+            @if (canInvoice(o)) {
+              <button
+                type="button"
+                class="btn-primary"
+                data-testid="od-invoice"
+                (click)="openInvoice(o)"
+              >
+                Facturar o entregue
+              </button>
+            }
           </div>
         </section>
 
@@ -318,6 +329,46 @@ type Dialog = 'submit' | 'reject' | 'deliver' | 'close' | 'cancel' | null;
               </app-field>
             }
           }
+          @case ('invoice') {
+            <p class="text-sm">
+              Rascunho de factura com o entregue ainda por facturar, ao preço da encomenda. Escolha
+              o imposto de cada linha (só os confirmados em vigor contam).
+            </p>
+            @for (l of invoice.lines; track l.orderLineId; let i = $index) {
+              <div class="space-y-2 border-b border-border pb-2" data-testid="od-i-line">
+                <app-field
+                  [label]="'Linha ' + l.lineNo + ' · ' + l.label + ' (por facturar ' + l.max + ')'"
+                  [error]="act.field('lines.' + i + '.quantity')"
+                >
+                  <input
+                    appControl
+                    class="input w-36"
+                    inputmode="decimal"
+                    [name]="'iq' + i"
+                    data-testid="od-i-qty"
+                    [(ngModel)]="l.quantity"
+                  />
+                </app-field>
+                <fieldset class="text-sm">
+                  <legend class="label">Impostos</legend>
+                  @for (c of taxCodes(); track c.id) {
+                    <label class="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        [name]="'it' + i + c.id"
+                        [attr.data-testid]="'od-i-tax-' + c.code"
+                        [(ngModel)]="l.taxCodes[c.id]"
+                      />
+                      {{ c.code }} — {{ c.name }}
+                    </label>
+                  }
+                  @if (act.field('lines.' + i + '.taxCodeIds'); as e) {
+                    <p class="field-error">{{ e }}</p>
+                  }
+                </fieldset>
+              </div>
+            }
+          }
           @case ('deliver') {
             <app-field
               label="Data da expedição"
@@ -380,6 +431,18 @@ export class OrderDetail {
   private readonly toasts = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly breadcrumbs = inject(Breadcrumbs);
+  private readonly workspace = inject(Workspace);
+  protected readonly taxCodes = signal<{ id: string; code: string; name: string }[]>([]);
+  protected invoice = {
+    lines: [] as {
+      orderLineId: string;
+      lineNo: number;
+      label: string;
+      max: string;
+      quantity: string;
+      taxCodes: Record<string, boolean>;
+    }[],
+  };
   protected readonly x = signal<Order | null>(null);
   protected readonly opts = signal<OrderOptions | null>(null);
   protected readonly loadError = signal<ApiError | null>(null);
@@ -464,6 +527,7 @@ export class OrderDetail {
           submit: 'Submeter a encomenda',
           reject: 'Devolver a encomenda',
           deliver: 'Expedir',
+          invoice: 'Facturar o entregue',
           close: 'Fechar o resto da encomenda',
           cancel: 'Anular a encomenda',
         } as Record<string, string>
@@ -577,6 +641,69 @@ export class OrderDetail {
         return this.post('close', { reason: this.reason }, 'Encomenda fechada.');
       case 'cancel':
         return this.post('cancel', { reason: this.reason }, 'Encomenda anulada.');
+      case 'invoice': {
+        const o = this.x()!;
+        const r = await this.act.run(() =>
+          this.api.post<{ id: string }>('sales/invoices', {
+            orderId: o.id,
+            invoiceDate: new Date().toISOString().slice(0, 10),
+            lines: this.invoice.lines
+              .filter((l) => nz(l.quantity) && !/^0+([.,]0*)?$/.test(l.quantity.trim()))
+              .map((l) => ({
+                orderLineId: l.orderLineId,
+                quantity: l.quantity.trim().replace(',', '.'),
+                taxCodeIds: Object.entries(l.taxCodes)
+                  .filter(([, on]) => on)
+                  .map(([id]) => id),
+              })),
+          }),
+        );
+        if (!r) return;
+        this.dialog.set(null);
+        this.toasts.show('Rascunho de factura criado.');
+        await this.router.navigate(['/vendas/facturas', r.id]);
+        return;
+      }
     }
+  }
+
+  protected canInvoice(o: Order) {
+    return (
+      ['CONFIRMED', 'CLOSED'].includes(o.status) &&
+      this.workspace.canAny('sales.invoices.manage') &&
+      o.lines.some((l) => l.deliveredQty !== l.invoicedQty)
+    );
+  }
+
+  protected async openInvoice(o: Order) {
+    this.act.error.set(null);
+    const [d, opts] = await Promise.all([
+      this.api.get<{
+        lines: {
+          id: string;
+          lineNo: number;
+          description: string;
+          invoiceable: string;
+          suggestedTaxCodeIds: string[];
+        }[];
+      }>(`sales/invoices/order-draft/${o.id}`),
+      this.api.get<{
+        legalEntities: { id: string; countryCode: string }[];
+        taxCodes: { id: string; code: string; name: string; countryCode: string }[];
+      }>('sales/invoices/options'),
+    ]);
+    const country = opts.legalEntities.find((e) => e.id === o.legalEntity.id)?.countryCode ?? 'AO';
+    this.taxCodes.set(opts.taxCodes.filter((c) => c.countryCode === country));
+    this.invoice = {
+      lines: d.lines.map((l) => ({
+        orderLineId: l.id,
+        lineNo: l.lineNo,
+        label: l.description,
+        max: qty(l.invoiceable),
+        quantity: qty(l.invoiceable).replace(',', '.'),
+        taxCodes: Object.fromEntries(l.suggestedTaxCodeIds.map((t) => [t, true])),
+      })),
+    };
+    this.open('invoice');
   }
 }

@@ -792,6 +792,26 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
   'POST /api/v1/sales/fiscal/simulate':
     'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/invoices':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'GET /api/v1/sales/invoices/options':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'GET /api/v1/sales/invoices/search/customers':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'GET /api/v1/sales/invoices/search/products':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'GET /api/v1/sales/invoices/order-draft/:orderId':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'POST /api/v1/sales/invoices':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'GET /api/v1/sales/invoices/:id':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'PATCH /api/v1/sales/invoices/:id':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'POST /api/v1/sales/invoices/:id/issue':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'POST /api/v1/sales/invoices/:id/discard':
+    'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

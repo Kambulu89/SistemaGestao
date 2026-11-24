@@ -982,8 +982,16 @@ async function populate(client: any) {
       [tenant.id, le.id]
     )
   ).rows[0] as { id: string }
+  // Factura de venda da empresa A (10.6), em rascunho, inserida directamente.
+  const salesInvoice = (
+    await owner.rawQuery(
+      `insert into sales_invoices (tenant_id, legal_entity_id, customer_id, invoice_date, currency) values (?, ?, ?, '2026-06-01', 'AOA') returning id`,
+      [tenant.id, le.id, customer.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    salesInvoice,
     taxCode,
     taxRate,
     taxExemption,
@@ -1897,6 +1905,25 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'cliente sobre terceiro alheio',
         B.post('/api/v1/sales/customers', { partnerId: a.supplier.partner.id, currency: 'AOA' }),
       ],
+      ['GET factura alheia', B.get(`/api/v1/sales/invoices/${a.salesInvoice.id}`)],
+      [
+        'alterar factura alheia',
+        B.patch(`/api/v1/sales/invoices/${a.salesInvoice.id}`, { ...v, notes: 'x' }),
+      ],
+      ['emitir factura alheia', B.post(`/api/v1/sales/invoices/${a.salesInvoice.id}/issue`, v)],
+      [
+        'descartar factura alheia',
+        B.post(`/api/v1/sales/invoices/${a.salesInvoice.id}/discard`, { ...v, reason: 'xxx' }),
+      ],
+      ['facturar encomenda alheia', B.get(`/api/v1/sales/invoices/order-draft/${a.salesOrder.id}`)],
+      [
+        'factura a partir de encomenda alheia',
+        B.post('/api/v1/sales/invoices', {
+          orderId: a.salesOrder.id,
+          invoiceDate: '2026-06-01',
+          lines: [],
+        }),
+      ],
       ['GET imposto alheio', B.get(`/api/v1/sales/fiscal/tax-codes/${a.taxCode.id}`)],
       [
         'alterar imposto alheio',
@@ -2736,6 +2763,18 @@ test.group('isolamento | matriz entre empresas', (group) => {
       })
     )
     assert.lengthOf((await B.get('/api/v1/sales/fiscal/series')).body().data.items, 0)
+    crossPricing.push(
+      await B.post('/api/v1/sales/invoices', {
+        legalEntityId: a.le.id,
+        customerId: a.customer.id,
+        invoiceDate: '2026-06-01',
+        lines: [],
+      })
+    )
+    assert.notInclude(
+      (await B.get('/api/v1/sales/invoices')).body().data.map((x: any) => x.id),
+      a.salesInvoice.id
+    )
     for (const r of crossPricing) {
       assert.include([404, 422], r.status())
       assert.notInclude(JSON.stringify(r.body()), 'PL-A')
