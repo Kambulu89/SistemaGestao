@@ -1225,3 +1225,40 @@ recusada e não gasta número. Toda entregue e facturada, a encomenda fecha.
 **Imposto vindo da encomenda.** Orçamentos e encomendas guardam uma taxa por linha (até ao 10.5). Ao facturar, a
 linha precisa dos códigos de imposto do motor fiscal. Propõe-se o único imposto confirmado em vigor com essa taxa; se
 houver mais de um, ou nenhum, a escolha é de quem factura.
+
+## D-065 Recibos e facturas-recibo: só contam depois da confirmação financeira por outra pessoa; adiantamentos sem duplicação (aceite)
+
+**Contexto.** O 10.7 pede recibos e facturas-recibo "conforme regime", que só contem depois da confirmação financeira,
+com afectação parcial ou total a facturas e adiantamentos sem duplicação. O módulo Finanças/Tesouraria (Prompt 11)
+ainda não existe.
+
+**Decisão.**
+- **Registo ≠ recebimento.** Registar um recebimento (valor, meio, conta, referência, data, afectações) cria-o
+  `PENDING`. Nada é abatido nas facturas até alguém **diferente de quem registou** o confirmar com
+  `sales.receipts.confirm` (a base recusa `confirmed_by = created_by`). Recusa e anulação exigem motivo e são finais.
+  Este é o contrato que a Tesouraria do Prompt 11 vai chamar (conciliação bancária); até lá a confirmação é manual. Não
+  se cria um módulo de Finanças provisório.
+- **Recibo (RC).** As afectações são só a facturas emitidas do mesmo cliente, entidade e moeda, cada uma ≤ ao valor por
+  receber, e somam ≤ ao valor recebido (`OVER_ALLOCATED`). Na confirmação, sob bloqueio de cada factura, aplica-se o
+  pagamento (`OVER_PAYMENT` se outra confirmação já a pagou entretanto, e tudo volta atrás), a cobrança passa a
+  parcial/paga e o recibo recebe o número da série `RECEIPT` em simulação. O excedente fica como **adiantamento**.
+- **Adiantamentos sem duplicação.** O saldo é `advance_total − advance_used`, com `CHECK advance_used ≤
+  advance_total`. Usar um adiantamento bloqueia o recibo, grava uma aplicação só de acréscimo e abate a factura numa só
+  transacção. Duas aplicações simultâneas acima do saldo: uma passa, a outra recebe `OVER_ADVANCE`.
+- **Factura-recibo (FR).** É um rascunho de factura com `document_kind = INVOICE_RECEIPT`, que **não** se emite
+  directamente (`FR_NEEDS_PAYMENT`). Regista-se o recebimento do valor exacto a pagar (`AMOUNT_MISMATCH`) e, na
+  confirmação, a FR é emitida pela série `INVOICE_RECEIPT` (preços e impostos recalculados; se o valor mudou, nada é
+  feito) e fica paga. Só pode haver um recebimento pendente ou confirmado por FR (índice único parcial).
+- **Idempotência.** O registo leva `requestKey`; o mesmo pedido devolve o mesmo recebimento e um corpo diferente com
+  a mesma chave é recusado (`IDEMPOTENCY_MISMATCH`, por impressão digital do corpo).
+- **Imutabilidade.** Confirmado, o conteúdo do recebimento não muda; afectações e aplicações são só de acréscimo; a
+  cobrança da factura nunca desce (gatilhos). O tipo de documento da factura fica fixo depois do rascunho.
+- **"Conforme regime".** Quando se usa factura-recibo, recibo ou outro documento por regime (geral, simplificado,
+  exclusão) não foi verificado no texto oficial nem na especificação da AGT (ver D-063). Por isso a escolha é de quem
+  factura e nada está bloqueado por regime. As séries continuam só em simulação e **não** há qualquer declaração de
+  conformidade ou de validação pela AGT.
+
+**Consequências.** As facturas só ficam pagas por recebimentos confirmados. A contabilização (10.12) e a conciliação
+bancária (Prompt 11) ligam-se a `CONFIRMED`. Devoluções de adiantamentos e estornos de recebimentos confirmados ficam
+para as notas de crédito (10.8) e a Tesouraria.
+

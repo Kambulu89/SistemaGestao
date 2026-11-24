@@ -499,7 +499,7 @@ por período no âmbito do membro; publicação no âmbito da empresa como fotog
 
 ## Vendas e facturação (módulo `sales`, Prompt 10)
 
-Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-064). Clientes (10.1): o cliente é o papel de venda de um
+Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-065). Clientes (10.1): o cliente é o papel de venda de um
 terceiro do módulo `partners` (um por terceiro, partilhado com o fornecedor), com moeda, prazo, segmento, limite de
 crédito (permissão própria, com motivo) e estado (activo, bloqueado ou inactivo com motivo); moradas de facturação e
 entrega (uma por omissão de cada tipo, índice único parcial); contactos no terceiro; versões só de acréscimo da
@@ -530,5 +530,11 @@ e impostos, fotografa o cliente, fixa câmbio e vencimento, regista o facturado 
 acima do entregue) e numera pela série fiscal em simulação, com impressão digital interna; emitida imutável na base;
 stock só a partir de encomenda expedida, serviços sem encomenda; permissões `sales.invoices.read|manage|issue`. O
 módulo não escreve em Inventário, Finanças nem Contabilidade: os blocos seguintes
-usam os contratos desses módulos (`index.ts`).
+usam os contratos desses módulos (`index.ts`). Recibos e factura-recibo (10.7): o registo de um recebimento fica pendente e só abate facturas
+quando outra pessoa com `sales.receipts.confirm` o confirma (o contrato que a Tesouraria do Prompt 11 vai usar);
+afectações só a facturas emitidas do mesmo cliente, entidade e moeda, nunca acima do valor por receber; o excedente é
+adiantamento com saldo protegido (`advance_used ≤ advance_total`, aplicações só de acréscimo sob bloqueio); a
+factura-recibo é um rascunho emitido na confirmação do seu recebimento (valor exacto, um só activo); registo
+idempotente por chave e impressão digital; recibos numerados pela série `RECEIPT` em simulação; permissões
+`sales.receipts.read|manage|confirm`.
 

@@ -38,3 +38,8 @@ export {
   InvoiceService,
   type InvoiceView,
 } from '#modules/sales/application/invoice_service'
+export {
+  receiptAccess,
+  ReceiptService,
+  type ReceiptView,
+} from '#modules/sales/application/receipt_service'

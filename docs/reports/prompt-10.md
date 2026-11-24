@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 a 10.6 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-064. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 a 10.7 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-065. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -632,3 +632,103 @@ Também cobertos:
 - Recibos e cobrança (10.7); notas de crédito e débito e o estado "corrigida" (10.8); estado fiscal real e
   contingência (10.9); eventos contabilísticos (10.12); PDF (10.13).
 - O imposto por linha de orçamentos e encomendas continua a ser uma taxa; a factura liga-a aos códigos do motor fiscal.
+
+## 10.7 Factura-recibo e recibos
+
+### Modelo
+
+Migração `0060_create_sales_receipts`:
+
+- `sales_invoices.document_kind`: `INVOICE` ou `INVOICE_RECEIPT`, fixo depois do rascunho. Um gatilho também impede
+  que o valor pago desça.
+- `sales_receipts` — guarda:
+  - entidade, cliente, finalidade (recibo ou factura-recibo) e a factura-recibo;
+  - moeda, valor, meio (numerário, transferência, cartão, cheque, outro), conta bancária, referência e data;
+  - chave e impressão digital do pedido;
+  - estado `PENDING → CONFIRMED | REJECTED | CANCELLED`;
+  - série, número fiscal e formatado;
+  - afectado, adiantamento e adiantamento usado;
+  - quem confirmou (≠ quem registou), quando e motivo.
+
+  `CHECK`s de coerência, chave única por entidade, número único por série e um único recebimento activo por FR.
+
+- `sales_receipt_allocations` — afectações às facturas; só se inserem com o recibo pendente e são só de acréscimo.
+- `sales_advance_applications` — usos do adiantamento, só de acréscimo.
+
+### Backend e API (`/api/v1/sales/receipts`)
+
+- `GET /receipts` (filtros estado, cliente, com adiantamento, pesquisa), `GET /receipts/options`,
+  `GET /receipts/search/customers`, `GET /receipts/open-items/:legalEntityId/:customerId`.
+- `POST /receipts`, `GET /receipts/:id`, `POST /receipts/:id/{confirm|reject|cancel|apply-advance}`.
+- Contratos na factura: `issueDraft` (emissão partilhada com a FR), `applyInvoicePayment` (bloqueio, `OVER_PAYMENT`,
+  cobrança, evento `PAYMENT`). `POST /invoices` aceita `documentKind`; a ficha da factura devolve `payments`.
+- Permissões `sales.receipts.read|manage|confirm` por entidade legal; anexos `sales_receipt`; auditoria
+  `sales_receipt.*` na mesma transacção.
+- Erros:
+  - `SELF_CONFIRMATION`, `OVER_ALLOCATED`, `OVER_PAYMENT`, `OVER_ADVANCE`;
+  - `AMOUNT_MISMATCH`, `FR_NEEDS_PAYMENT`, `FR_PENDING`;
+  - `IDEMPOTENCY_MISMATCH`, `SERIES_REQUIRED`, `NO_SERIES`;
+  - `INVALID_STATE`, `VERSION_CONFLICT`, `OUT_OF_SCOPE`.
+
+### Ecrãs (`/vendas/recebimentos`)
+
+- **Lista** — número, cliente, data, valor, meio e estado.
+- **Registar** — entidade, cliente, tipo, valor, data, meio, conta e referência. As facturas por receber do cliente
+  aparecem com "Tudo", e o ecrã mostra o afectado e o que fica como adiantamento. Para uma factura-recibo, escolhe-se
+  o rascunho e o valor fica fixado.
+- **Ficha** — estado, valores, meio, conta e referência, quem registou e quem confirmou. Acções:
+  - confirmar (só outra pessoa; série se houver várias; aviso de simulação);
+  - recusar ou anular com motivo;
+  - usar o adiantamento numa factura.
+
+  A ficha mostra as afectações, as aplicações e o saldo do adiantamento, mais anexos e auditoria.
+
+- **Factura** — o tipo (Factura / Factura-recibo) escolhe-se na criação. A FR em rascunho não tem "Emitir" e liga a
+  "Registar o recebimento". A ficha lista os recebimentos e o valor pago.
+
+### Testes e evidências
+
+**Backend:** `tests/functional/sales_receipts.spec.ts` (2 testes).
+
+- **Recibo:**
+  - validações de meio, conta e referência; afectação acima do valor por receber, acima do valor recebido ou a uma
+    factura não emitida recusada;
+  - idempotência: o mesmo pedido devolve o mesmo registo, e um corpo diferente dá `IDEMPOTENCY_MISMATCH`;
+  - antes da confirmação nada é abatido; quem registou não confirma (`SELF_CONFIRMATION`);
+  - confirmado `RC A/1`: A paga, B parcial, 600 de adiantamento;
+  - uso do adiantamento acima do saldo recusado; duas aplicações simultâneas — uma passa;
+  - a base recusa alterar o confirmado e as afectações;
+  - recusa com motivo sem efeito nas facturas.
+- **Factura-recibo:**
+  - emissão directa `FR_NEEDS_PAYMENT`; valor diferente `AMOUNT_MISMATCH`; segundo registo `FR_PENDING`;
+  - confirmada: `FR A/1` paga;
+  - uma confirmação falhada não gasta número; a seguinte é `FR A/2`.
+
+Também cobertos:
+
+- `isolation_matrix`: 6 tentativas sobre o recebimento de outra empresa, todas com 404; registo com entidade alheia
+  recusado.
+- `routes_protection`.
+
+**Frontend:** `receipt-model.spec.ts` (somas exactas em bigint).
+
+**Browser (`p1007`):** 7 passos.
+
+- preparação: imposto confirmado, séries FT/RC/FR em simulação e três facturas;
+- registo de 3 000,00: A toda, B 1 500,00, 400,00 de adiantamento, "Por confirmar", sem confirmar para quem registou,
+  facturas por abater;
+- a tesouraria confirma: número `RC`, A "Paga" com o recibo na ficha, B "Paga em parte" com 1 500,00, 400,00
+  disponíveis;
+- adiantamento usado na factura D: disponível 0,00, sem mais acção, D parcial com 400,00;
+- factura-recibo: sem "Emitir"; "Registar o recebimento" com o valor fixado; continua rascunho até à confirmação;
+  depois número `FR` e "Paga";
+- recusa com motivo, sem efeito na factura;
+- telemóvel sem deslocamento horizontal.
+
+### Pendências
+
+- A regra "conforme regime" (que documento cada regime exige) por verificar no texto oficial e na especificação da AGT;
+  as séries continuam em simulação (D-063, D-065).
+- A confirmação é manual até à Tesouraria/conciliação bancária (Prompt 11). Estornos de recebimentos confirmados e
+  devolução de adiantamentos ficam para as notas de crédito (10.8) e a Tesouraria. A contabilização é do 10.12 e o PDF
+  do 10.13.

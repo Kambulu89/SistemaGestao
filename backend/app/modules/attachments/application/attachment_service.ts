@@ -31,7 +31,13 @@ import {
   rfqAccess,
   supplierExists,
 } from '#modules/procurement/index'
-import { customerAccess, invoiceAccess, orderAccess, quoteAccess } from '#modules/sales/index'
+import {
+  customerAccess,
+  invoiceAccess,
+  orderAccess,
+  quoteAccess,
+  receiptAccess,
+} from '#modules/sales/index'
 
 /**
  * Política de acesso por tipo de registo: o anexo herda a autorização (e a funcionalidade contratada) do registo a que
@@ -197,6 +203,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.sales_invoice = {
     feature: 'sales',
     access: (scope, id) => invoiceAccess(scope, id),
+  }
+  // Recebimento de cliente (comprovativo de transferência ou depósito): o âmbito do recebimento.
+  map.sales_receipt = {
+    feature: 'sales',
+    access: (scope, id) => receiptAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

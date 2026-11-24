@@ -657,6 +657,16 @@ export type ScannedRoutes = {
     'sales_invoices.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.discard': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.index': { paramsTuple?: []; params?: {} }
+    'sales_receipts.options': { paramsTuple?: []; params?: {} }
+    'sales_receipts.search_customers': { paramsTuple?: []; params?: {} }
+    'sales_receipts.open_items': { paramsTuple: [ParamValue,ParamValue]; params: {'legalEntityId': ParamValue,'customerId': ParamValue} }
+    'sales_receipts.store': { paramsTuple?: []; params?: {} }
+    'sales_receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.apply_advance': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -957,6 +967,11 @@ export type ScannedRoutes = {
     'sales_invoices.search_products': { paramsTuple?: []; params?: {} }
     'sales_invoices.order_draft': { paramsTuple: [ParamValue]; params: {'orderId': ParamValue} }
     'sales_invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.index': { paramsTuple?: []; params?: {} }
+    'sales_receipts.options': { paramsTuple?: []; params?: {} }
+    'sales_receipts.search_customers': { paramsTuple?: []; params?: {} }
+    'sales_receipts.open_items': { paramsTuple: [ParamValue,ParamValue]; params: {'legalEntityId': ParamValue,'customerId': ParamValue} }
+    'sales_receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -1224,6 +1239,11 @@ export type ScannedRoutes = {
     'sales_invoices.search_products': { paramsTuple?: []; params?: {} }
     'sales_invoices.order_draft': { paramsTuple: [ParamValue]; params: {'orderId': ParamValue} }
     'sales_invoices.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.index': { paramsTuple?: []; params?: {} }
+    'sales_receipts.options': { paramsTuple?: []; params?: {} }
+    'sales_receipts.search_customers': { paramsTuple?: []; params?: {} }
+    'sales_receipts.open_items': { paramsTuple: [ParamValue,ParamValue]; params: {'legalEntityId': ParamValue,'customerId': ParamValue} }
+    'sales_receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -1549,6 +1569,11 @@ export type ScannedRoutes = {
     'sales_invoices.store': { paramsTuple?: []; params?: {} }
     'sales_invoices.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.discard': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.store': { paramsTuple?: []; params?: {} }
+    'sales_receipts.confirm': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_receipts.apply_advance': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.store': { paramsTuple?: []; params?: {} }
     'orders.from_quote': { paramsTuple?: []; params?: {} }
     'orders.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

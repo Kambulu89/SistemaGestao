@@ -382,6 +382,22 @@ async function detail(scope: TenantScope, id: string, g?: ReturnType<typeof righ
       [t, id]
     )
   ).rows as any[]
+  const payments = (
+    await scope.trx.rawQuery(
+      `select r.id, r.number, r.received_date::text as d, a.amount, 'RECEIPT' as kind from sales_receipt_allocations a
+         join sales_receipts r on r.tenant_id = a.tenant_id and r.id = a.receipt_id
+        where a.tenant_id = ? and a.invoice_id = ? and r.status = 'CONFIRMED'
+       union all
+       select r.id, r.number, x.created_at::date::text as d, x.amount, 'ADVANCE' as kind from sales_advance_applications x
+         join sales_receipts r on r.tenant_id = x.tenant_id and r.id = x.receipt_id
+        where x.tenant_id = ? and x.invoice_id = ?
+       union all
+       select r.id, r.number, r.received_date::text as d, r.amount, 'INVOICE_RECEIPT' as kind from sales_receipts r
+        where r.tenant_id = ? and r.invoice_id = ? and r.purpose = 'INVOICE_RECEIPT' and r.status = 'CONFIRMED'
+       order by d`,
+      [t, id, t, id, t, id]
+    )
+  ).rows as any[]
   const a = g ?? rights(await scopesOf(scope), i.legal_entity_id)
   const draft = i.status === 'DRAFT'
   return {
@@ -391,6 +407,7 @@ async function detail(scope: TenantScope, id: string, g?: ReturnType<typeof righ
     status: i.status as string,
     fiscalStatus: (i.fiscal_status as string) ?? null,
     collectionStatus: collectionView(i.status, i.collection_status, i.ddate, today()),
+    documentKind: i.document_kind as 'INVOICE' | 'INVOICE_RECEIPT',
     simulation: i.series_id ? i.s_mode === 'SIMULATION' : true,
     legalEntity: {
       id: i.legal_entity_id as string,
@@ -432,6 +449,13 @@ async function detail(scope: TenantScope, id: string, g?: ReturnType<typeof righ
     issuedAt: i.issued_at ? new Date(i.issued_at).toISOString() : null,
     issuedBy: (i.issuer as string) ?? null,
     discardReason: (i.discard_reason as string) ?? null,
+    payments: payments.map((p) => ({
+      receiptId: p.id as string,
+      number: (p.number as string) ?? null,
+      date: p.d as string,
+      amount: money(p.amount),
+      kind: p.kind as string,
+    })),
     lines: lines.map((l) => ({
       id: l.id as string,
       lineNo: Number(l.line_no),
@@ -484,6 +508,145 @@ async function suggestTaxCodes(
     )
   ).rows as any[]
   return rows.length === 1 ? [rows[0].id as string] : []
+}
+
+/**
+ * Emissão de um rascunho (factura ou factura-recibo) na transacção de quem chama: recalcula preços e impostos,
+ * fotografa o cliente, fixa câmbio e vencimento, regista o facturado na encomenda, numera pela série fiscal do tipo e
+ * fixa a impressão digital. A factura-recibo só é emitida pela confirmação do recebimento (10.7).
+ */
+export async function issueDraft(scope: TenantScope, i: any, seriesInput: unknown) {
+  const context = scope.context
+  const id = i.id as string
+  const kind = i.document_kind as 'INVOICE' | 'INVOICE_RECEIPT'
+  if (i.idate > today())
+    fail([
+      {
+        path: 'invoiceDate',
+        code: 'FUTURE',
+        message: 'A data da factura não pode ser futura.',
+      },
+    ])
+  const customer = await customerSnapshot(scope, i.customer_id)
+  if (customer.status !== 'ACTIVE')
+    throw ApiError.conflict('CUSTOMER_BLOCKED', 'O cliente não está activo.')
+  const lines = await storedLines(scope, id)
+  if (!lines.length) throw ApiError.conflict('NO_LINES', 'A factura não tem linhas.')
+  const w = await writeLines(scope, i, lines)
+  if (w.missing) throw ApiError.conflict('NO_PRICE', 'Há linhas sem preço.')
+  if (w.pricingApproval)
+    throw ApiError.conflict(
+      'PRICING_APPROVAL_REQUIRED',
+      'Há descontos acima do limite ou preços manuais: passe por orçamento ou encomenda aprovados.'
+    )
+  // Série fiscal de facturas da entidade, do ano da data: a indicada ou a única activa.
+  const year = Number(i.idate.slice(0, 4))
+  let seriesId = typeof seriesInput === 'string' && seriesInput ? seriesInput : null
+  if (!seriesId) {
+    const ser = (
+      await scope.trx.rawQuery(
+        `select id, code from fiscal_series where tenant_id = ? and legal_entity_id = ? and document_kind = ? and status = 'ACTIVE' and fiscal_year = ? order by code`,
+        [context.tenantId, i.legal_entity_id, kind, year]
+      )
+    ).rows as any[]
+    if (!ser.length)
+      throw ApiError.conflict(
+        'NO_SERIES',
+        `Sem série fiscal de ${kind === 'INVOICE' ? 'facturas' : 'facturas-recibo'} activa para ${year} nesta entidade.`
+      )
+    if (ser.length > 1)
+      throw new ApiError(
+        409,
+        'SERIES_REQUIRED',
+        'Há várias séries de facturas activas: escolha uma.',
+        [
+          {
+            path: 'seriesId',
+            code: 'REQUIRED',
+            message: `Escolha a série (${ser.map((x) => x.code).join(', ')}).`,
+          },
+        ]
+      )
+    seriesId = ser[0].id
+  }
+  const le = (await legalEntityFacts(scope, i.legal_entity_id))!
+  const functional = le.functionalCurrency
+  const cur = String(i.currency).trim()
+  let rate = '1.0000000000'
+  if (cur !== functional) {
+    const r = await rateOn(scope, cur, functional, i.idate)
+    if (!r) throw ApiError.conflict('NO_RATE', `Sem câmbio ${cur}→${functional} até ${i.idate}.`)
+    rate = r.rate
+  }
+  const fiscalNo = await allocateFiscalNumber(scope, {
+    seriesId: seriesId!,
+    legalEntityId: i.legal_entity_id,
+    documentKind: kind,
+    issueDate: i.idate,
+    documentType: 'SALES_INVOICE',
+    documentId: id,
+  })
+  if (i.order_id)
+    await recordInvoiced(
+      scope,
+      i.order_id,
+      w.priced.map((p) => ({ orderLineId: p.input.orderLineId!, quantity: p.input.quantity })),
+      fiscalNo.formatted
+    )
+  const dueDate = addDays(i.idate, Number(i.payment_terms_days))
+  const content = {
+    number: fiscalNo.formatted,
+    series: fiscalNo.seriesId,
+    mode: fiscalNo.mode,
+    legalEntity: { id: le.id, code: le.code },
+    branchId: i.branch_id,
+    customer: { versionId: customer.versionId, data: customer.data },
+    invoiceDate: i.idate,
+    dueDate,
+    currency: cur,
+    exchangeRate: rate,
+    lines: w.priced.map((p, n) => ({
+      n: n + 1,
+      productId: p.productId,
+      description: p.description,
+      quantity: p.input.quantity,
+      uom: p.uom,
+      unitPrice: p.netUnitPrice,
+      net: p.netAmount,
+      taxes: w.taxes!.lines[n].taxes,
+    })),
+    totals: w.taxes!.totals,
+  }
+  const payable = w.taxes!.totals.payable
+  await setInvoice(scope, id, {
+    status: 'ISSUED',
+    series_id: fiscalNo.seriesId,
+    fiscal_number: fiscalNo.number,
+    number: fiscalNo.formatted,
+    customer_version_id: customer.versionId,
+    customer_snapshot: JSON.stringify(customer.data),
+    due_date: dueDate,
+    functional_currency: functional,
+    exchange_rate: rate,
+    fiscal_status: 'PENDING',
+    collection_status: dbScaled(payable, 2) === 0n ? 'PAID' : 'UNPAID',
+    document_hash: documentHash(content),
+    issued_by: context.userId,
+    issued_at: new Date(),
+  })
+  await event(scope, id, 'ISSUED', null, {
+    number: fiscalNo.formatted,
+    mode: fiscalNo.mode,
+    payable,
+  })
+  await audit(scope, {
+    action: 'sales_invoice.issued',
+    entityType: 'sales_invoice',
+    entityId: id,
+    changes: { status: { from: 'DRAFT', to: 'ISSUED' } },
+    metadata: { number: fiscalNo.formatted, mode: fiscalNo.mode, payable },
+  })
+  return { payable: w.taxes!.totals.payable }
 }
 
 export class InvoiceService {
@@ -742,8 +905,8 @@ export class InvoiceService {
       }
       const ins = await scope.trx.rawQuery(
         `insert into sales_invoices (tenant_id, legal_entity_id, branch_id, customer_id, order_id, invoice_date, currency,
-           payment_terms_days, customer_reference, notes, created_by, updated_by)
-         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
+           payment_terms_days, customer_reference, notes, created_by, updated_by, document_kind)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
         [
           context.tenantId,
           le!.id,
@@ -761,6 +924,7 @@ export class InvoiceService {
           v.notes ?? null,
           context.userId,
           context.userId,
+          input.documentKind === 'INVOICE_RECEIPT' ? 'INVOICE_RECEIPT' : 'INVOICE',
         ] as never[]
       )
       const id = (ins.rows[0] as any).id as string
@@ -855,134 +1019,12 @@ export class InvoiceService {
       if (i.status !== 'DRAFT')
         throw ApiError.conflict('ALREADY_ISSUED', 'A factura já foi emitida (ou descartada).')
       versionCheck(i, input.expectedVersion)
-      if (i.idate > today())
-        fail([
-          {
-            path: 'invoiceDate',
-            code: 'FUTURE',
-            message: 'A data da factura não pode ser futura.',
-          },
-        ])
-      const customer = await customerSnapshot(scope, i.customer_id)
-      if (customer.status !== 'ACTIVE')
-        throw ApiError.conflict('CUSTOMER_BLOCKED', 'O cliente não está activo.')
-      const lines = await storedLines(scope, id)
-      if (!lines.length) throw ApiError.conflict('NO_LINES', 'A factura não tem linhas.')
-      const w = await writeLines(scope, i, lines)
-      if (w.missing) throw ApiError.conflict('NO_PRICE', 'Há linhas sem preço.')
-      if (w.pricingApproval)
+      if (i.document_kind === 'INVOICE_RECEIPT')
         throw ApiError.conflict(
-          'PRICING_APPROVAL_REQUIRED',
-          'Há descontos acima do limite ou preços manuais: passe por orçamento ou encomenda aprovados.'
+          'FR_NEEDS_PAYMENT',
+          'A factura-recibo emite-se quando a tesouraria confirma o recebimento (registe o recibo).'
         )
-      // Série fiscal de facturas da entidade, do ano da data: a indicada ou a única activa.
-      const year = Number(i.idate.slice(0, 4))
-      let seriesId = typeof input.seriesId === 'string' && input.seriesId ? input.seriesId : null
-      if (!seriesId) {
-        const ser = (
-          await scope.trx.rawQuery(
-            `select id, code from fiscal_series where tenant_id = ? and legal_entity_id = ? and document_kind = 'INVOICE' and status = 'ACTIVE' and fiscal_year = ? order by code`,
-            [context.tenantId, i.legal_entity_id, year]
-          )
-        ).rows as any[]
-        if (!ser.length)
-          throw ApiError.conflict(
-            'NO_SERIES',
-            `Sem série fiscal de facturas activa para ${year} nesta entidade.`
-          )
-        if (ser.length > 1)
-          throw new ApiError(
-            409,
-            'SERIES_REQUIRED',
-            'Há várias séries de facturas activas: escolha uma.',
-            [
-              {
-                path: 'seriesId',
-                code: 'REQUIRED',
-                message: `Escolha a série (${ser.map((x) => x.code).join(', ')}).`,
-              },
-            ]
-          )
-        seriesId = ser[0].id
-      }
-      const le = (await legalEntityFacts(scope, i.legal_entity_id))!
-      const functional = le.functionalCurrency
-      const cur = String(i.currency).trim()
-      let rate = '1.0000000000'
-      if (cur !== functional) {
-        const r = await rateOn(scope, cur, functional, i.idate)
-        if (!r)
-          throw ApiError.conflict('NO_RATE', `Sem câmbio ${cur}→${functional} até ${i.idate}.`)
-        rate = r.rate
-      }
-      const fiscalNo = await allocateFiscalNumber(scope, {
-        seriesId: seriesId!,
-        legalEntityId: i.legal_entity_id,
-        documentKind: 'INVOICE',
-        issueDate: i.idate,
-        documentType: 'SALES_INVOICE',
-        documentId: id,
-      })
-      if (i.order_id)
-        await recordInvoiced(
-          scope,
-          i.order_id,
-          w.priced.map((p) => ({ orderLineId: p.input.orderLineId!, quantity: p.input.quantity })),
-          fiscalNo.formatted
-        )
-      const dueDate = addDays(i.idate, Number(i.payment_terms_days))
-      const content = {
-        number: fiscalNo.formatted,
-        series: fiscalNo.seriesId,
-        mode: fiscalNo.mode,
-        legalEntity: { id: le.id, code: le.code },
-        branchId: i.branch_id,
-        customer: { versionId: customer.versionId, data: customer.data },
-        invoiceDate: i.idate,
-        dueDate,
-        currency: cur,
-        exchangeRate: rate,
-        lines: w.priced.map((p, n) => ({
-          n: n + 1,
-          productId: p.productId,
-          description: p.description,
-          quantity: p.input.quantity,
-          uom: p.uom,
-          unitPrice: p.netUnitPrice,
-          net: p.netAmount,
-          taxes: w.taxes!.lines[n].taxes,
-        })),
-        totals: w.taxes!.totals,
-      }
-      const payable = w.taxes!.totals.payable
-      await setInvoice(scope, id, {
-        status: 'ISSUED',
-        series_id: fiscalNo.seriesId,
-        fiscal_number: fiscalNo.number,
-        number: fiscalNo.formatted,
-        customer_version_id: customer.versionId,
-        customer_snapshot: JSON.stringify(customer.data),
-        due_date: dueDate,
-        functional_currency: functional,
-        exchange_rate: rate,
-        fiscal_status: 'PENDING',
-        collection_status: dbScaled(payable, 2) === 0n ? 'PAID' : 'UNPAID',
-        document_hash: documentHash(content),
-        issued_by: context.userId,
-        issued_at: new Date(),
-      })
-      await event(scope, id, 'ISSUED', null, {
-        number: fiscalNo.formatted,
-        mode: fiscalNo.mode,
-        payable,
-      })
-      await audit(scope, {
-        action: 'sales_invoice.issued',
-        entityType: 'sales_invoice',
-        entityId: id,
-        changes: { status: { from: 'DRAFT', to: 'ISSUED' } },
-        metadata: { number: fiscalNo.formatted, mode: fiscalNo.mode, payable },
-      })
+      await issueDraft(scope, i, input.seriesId)
       return detail(scope, id)
     })
   }
@@ -1024,4 +1066,56 @@ export async function invoiceAccess(scope: TenantScope, id: string) {
   if (!i) return null
   const g = rights(await scopesOf(scope), i.legal_entity_id)
   return g.read ? { read: true, write: g.manage || g.issue } : null
+}
+
+/**
+ * Aplica um pagamento confirmado a uma factura emitida (na transacção de quem chama): bloqueia a factura, nunca deixa
+ * o pago passar o valor a pagar (`OVER_PAYMENT`) e actualiza o estado de cobrança.
+ */
+export async function applyInvoicePayment(scope: TenantScope, invoiceId: string, amount: string) {
+  const i = await load(scope, invoiceId, true)
+  if (i.status !== 'ISSUED' && i.status !== 'CORRECTED')
+    throw ApiError.conflict('INVOICE_NOT_ISSUED', 'Só se recebe de facturas emitidas.')
+  const paid = dbScaled(i.paid_total, 2) + dbScaled(amount, 2)
+  const payable = dbScaled(i.payable_total, 2)
+  if (paid > payable)
+    throw ApiError.conflict(
+      'OVER_PAYMENT',
+      `A factura ${i.number} só tem ${scaledText(payable - dbScaled(i.paid_total, 2), 2)} por receber.`
+    )
+  await setInvoice(scope, invoiceId, {
+    paid_total: scaledText(paid, 2),
+    collection_status: paid === payable ? 'PAID' : 'PARTIAL',
+  })
+  await event(scope, invoiceId, 'PAYMENT', null, { amount, paid: scaledText(paid, 2) })
+  return { number: i.number as string, open: scaledText(payable - paid, 2) }
+}
+
+/** Valores de uma factura para afectação: emitida, cliente, entidade, moeda e o que falta receber. */
+export async function invoiceForPayment(scope: TenantScope, invoiceId: string) {
+  if (!isUuid(invoiceId)) return null
+  const i = (
+    await scope.trx.rawQuery(
+      `select id, number, status, document_kind, legal_entity_id, customer_id, currency, payable_total, paid_total
+         from sales_invoices where tenant_id = ? and id = ?`,
+      [scope.context.tenantId, invoiceId]
+    )
+  ).rows[0] as any
+  if (!i) return null
+  return {
+    id: i.id as string,
+    number: (i.number as string) ?? null,
+    status: i.status as string,
+    documentKind: i.document_kind as string,
+    legalEntityId: i.legal_entity_id as string,
+    customerId: i.customer_id as string,
+    currency: String(i.currency).trim(),
+    payable: money(i.payable_total),
+    open: scaledText(dbScaled(i.payable_total, 2) - dbScaled(i.paid_total, 2), 2),
+  }
+}
+
+/** Rascunho de factura bloqueado para a emissão pela confirmação do recebimento (factura-recibo). */
+export async function lockDraftInvoice(scope: TenantScope, invoiceId: string) {
+  return load(scope, invoiceId, true)
 }

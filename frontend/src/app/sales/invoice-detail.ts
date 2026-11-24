@@ -74,6 +74,9 @@ import {
             <span class="badge" [class]="tone(v.status)" data-testid="id-status">{{
               status(v.status)
             }}</span>
+            <span class="text-sm text-muted" data-testid="id-kind">{{
+              v.documentKind === 'INVOICE_RECEIPT' ? 'Factura-recibo' : 'Factura'
+            }}</span>
             @if (v.fiscalStatus) {
               <span class="badge" [class]="tone(v.fiscalStatus)" data-testid="id-fiscal">{{
                 fiscal(v.fiscalStatus)
@@ -164,7 +167,7 @@ import {
                 >Editar</a
               >
             }
-            @if (v.can.issue) {
+            @if (v.can.issue && v.documentKind === 'INVOICE') {
               <button
                 type="button"
                 class="btn-primary"
@@ -173,6 +176,18 @@ import {
               >
                 Emitir
               </button>
+            }
+            @if (v.status === 'DRAFT' && v.documentKind === 'INVOICE_RECEIPT') {
+              <a
+                class="btn-primary"
+                data-testid="id-register-payment"
+                routerLink="/vendas/recebimentos/novo"
+                [queryParams]="{ purpose: 'INVOICE_RECEIPT' }"
+                >Registar o recebimento</a
+              >
+              <span class="self-center text-sm text-muted"
+                >Emite-se quando a tesouraria confirmar o recebimento.</span
+              >
             }
             @if (v.can.discard) {
               <button
@@ -242,6 +257,25 @@ import {
           }
         </section>
 
+        @if (v.payments.length) {
+          <section class="card" aria-labelledby="id-p-title">
+            <h2 id="id-p-title" class="mb-2 font-semibold">Recebimentos</h2>
+            <ul class="space-y-1 text-sm" data-testid="id-payments">
+              @for (p of v.payments; track $index) {
+                <li>
+                  <a class="link" [routerLink]="['/vendas/recebimentos', p.receiptId]">{{
+                    p.number ?? (p.kind === 'INVOICE_RECEIPT' ? 'Factura-recibo' : 'Recebimento')
+                  }}</a>
+                  · {{ p.date }} · {{ money(p.amount, v.currency)
+                  }}{{ p.kind === 'ADVANCE' ? ' (adiantamento)' : '' }}
+                </li>
+              }
+            </ul>
+            <p class="mt-1 text-sm">
+              Pago: {{ money(v.paidTotal, v.currency) }} de {{ money(v.payableTotal, v.currency) }}
+            </p>
+          </section>
+        }
         <app-attachments
           subjectType="sales_invoice"
           [subjectId]="v.id"

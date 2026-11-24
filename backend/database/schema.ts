@@ -6457,6 +6457,31 @@ export class RoleSchema extends BaseModel {
   declare version: number
 }
 
+export class SalesAdvanceApplicationSchema extends BaseModel {
+  static $columns = ['amount', 'createdAt', 'createdBy', 'id', 'invoiceId', 'receiptId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = SalesAdvanceApplicationSchema.$columns
+  @column()
+  declare amount: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string
+  @column()
+  declare receiptId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class SalesInvoiceEventSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'details', 'id', 'invoiceId', 'kind', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = SalesInvoiceEventSchema.$columns
@@ -6544,7 +6569,7 @@ export class SalesInvoiceLineSchema extends BaseModel {
 }
 
 export class SalesInvoiceSchema extends BaseModel {
-  static $columns = ['branchId', 'collectionStatus', 'createdAt', 'createdBy', 'currency', 'customerId', 'customerReference', 'customerSnapshot', 'customerVersionId', 'discardReason', 'documentHash', 'dueDate', 'exchangeRate', 'fiscalNumber', 'fiscalStatus', 'functionalCurrency', 'grossTotal', 'id', 'invoiceDate', 'issuedAt', 'issuedBy', 'legalEntityId', 'netTotal', 'notes', 'number', 'orderId', 'paidTotal', 'payableTotal', 'paymentTermsDays', 'roundingLevel', 'seriesId', 'status', 'taxSummary', 'taxTotal', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'withholdingTotal'] as const
+  static $columns = ['branchId', 'collectionStatus', 'createdAt', 'createdBy', 'currency', 'customerId', 'customerReference', 'customerSnapshot', 'customerVersionId', 'discardReason', 'documentHash', 'documentKind', 'dueDate', 'exchangeRate', 'fiscalNumber', 'fiscalStatus', 'functionalCurrency', 'grossTotal', 'id', 'invoiceDate', 'issuedAt', 'issuedBy', 'legalEntityId', 'netTotal', 'notes', 'number', 'orderId', 'paidTotal', 'payableTotal', 'paymentTermsDays', 'roundingLevel', 'seriesId', 'status', 'taxSummary', 'taxTotal', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'withholdingTotal'] as const
   $columns = SalesInvoiceSchema.$columns
   @column()
   declare branchId: string | null
@@ -6568,6 +6593,8 @@ export class SalesInvoiceSchema extends BaseModel {
   declare discardReason: string | null
   @column()
   declare documentHash: string | null
+  @column()
+  declare documentKind: string
   @column.date()
   declare dueDate: DateTime | null
   @column()
@@ -7061,6 +7088,96 @@ export class SalesQuoteSchema extends BaseModel {
   declare version: number
   @column()
   declare versionNo: number
+}
+
+export class SalesReceiptAllocationSchema extends BaseModel {
+  static $columns = ['amount', 'createdAt', 'createdBy', 'id', 'invoiceId', 'receiptId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = SalesReceiptAllocationSchema.$columns
+  @column()
+  declare amount: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string
+  @column()
+  declare receiptId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class SalesReceiptSchema extends BaseModel {
+  static $columns = ['advanceTotal', 'advanceUsed', 'allocatedTotal', 'amount', 'bankAccountId', 'confirmedAt', 'confirmedBy', 'createdAt', 'createdBy', 'currency', 'customerId', 'decisionReason', 'fiscalNumber', 'id', 'invoiceId', 'legalEntityId', 'method', 'notes', 'number', 'purpose', 'receivedDate', 'reference', 'requestHash', 'requestKey', 'seriesId', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = SalesReceiptSchema.$columns
+  @column()
+  declare advanceTotal: string
+  @column()
+  declare advanceUsed: string
+  @column()
+  declare allocatedTotal: string
+  @column()
+  declare amount: string
+  @column()
+  declare bankAccountId: string | null
+  @column.dateTime()
+  declare confirmedAt: DateTime | null
+  @column()
+  declare confirmedBy: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare customerId: string
+  @column()
+  declare decisionReason: string | null
+  @column()
+  declare fiscalNumber: number | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceId: string | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare method: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column()
+  declare purpose: string
+  @column.date()
+  declare receivedDate: DateTime
+  @column()
+  declare reference: string | null
+  @column()
+  declare requestHash: string
+  @column()
+  declare requestKey: string
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
 }
 
 export class StatementNoteSchema extends BaseModel {

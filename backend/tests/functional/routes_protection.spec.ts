@@ -812,6 +812,26 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
   'POST /api/v1/sales/invoices/:id/discard':
     'âmbito RBAC de sales.invoices.read/manage/issue por entidade legal, verificado no serviço',
+  'GET /api/v1/sales/receipts':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/receipts/options':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/receipts/search/customers':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/receipts/open-items/:legalEntityId/:customerId':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/receipts':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/receipts/:id':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/receipts/:id/confirm':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/receipts/:id/reject':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/receipts/:id/cancel':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/receipts/:id/apply-advance':
+    'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

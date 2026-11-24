@@ -781,6 +781,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     module: 'sales',
     description: 'Emitir facturas (numeração pela série fiscal; nesta fase só em simulação).',
   },
+  {
+    code: 'sales.receipts.read',
+    module: 'sales',
+    description:
+      'Consultar recebimentos, recibos e adiantamentos de clientes (no âmbito da entidade legal).',
+  },
+  {
+    code: 'sales.receipts.manage',
+    module: 'sales',
+    description:
+      'Registar recebimentos com afectação a facturas (pendentes de confirmação), anulá-los e usar adiantamentos.',
+  },
+  {
+    code: 'sales.receipts.confirm',
+    module: 'sales',
+    description:
+      'Confirmar ou recusar recebimentos registados por outra pessoa (confirmação financeira): só então contam.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

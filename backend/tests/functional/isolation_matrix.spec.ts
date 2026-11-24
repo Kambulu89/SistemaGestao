@@ -989,8 +989,17 @@ async function populate(client: any) {
       [tenant.id, le.id, customer.id]
     )
   ).rows[0] as { id: string }
+  // Recebimento pendente da empresa A (10.7), inserido directamente.
+  const salesReceipt = (
+    await owner.rawQuery(
+      `insert into sales_receipts (tenant_id, legal_entity_id, customer_id, purpose, currency, amount, method, received_date,
+         request_key, request_hash) values (?, ?, ?, 'RECEIPT', 'AOA', 100, 'CASH', '2026-06-01', 'isolamento-a', 'x') returning id`,
+      [tenant.id, le.id, customer.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    salesReceipt,
     salesInvoice,
     taxCode,
     taxRate,
@@ -1905,6 +1914,31 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'cliente sobre terceiro alheio',
         B.post('/api/v1/sales/customers', { partnerId: a.supplier.partner.id, currency: 'AOA' }),
       ],
+      ['GET recebimento alheio', B.get(`/api/v1/sales/receipts/${a.salesReceipt.id}`)],
+      [
+        'confirmar recebimento alheio',
+        B.post(`/api/v1/sales/receipts/${a.salesReceipt.id}/confirm`, v),
+      ],
+      [
+        'recusar recebimento alheio',
+        B.post(`/api/v1/sales/receipts/${a.salesReceipt.id}/reject`, { ...v, reason: 'xxx' }),
+      ],
+      [
+        'anular recebimento alheio',
+        B.post(`/api/v1/sales/receipts/${a.salesReceipt.id}/cancel`, { ...v, reason: 'xxx' }),
+      ],
+      [
+        'adiantamento alheio',
+        B.post(`/api/v1/sales/receipts/${a.salesReceipt.id}/apply-advance`, {
+          ...v,
+          invoiceId: a.salesInvoice.id,
+          amount: '1',
+        }),
+      ],
+      [
+        'pendentes de cliente alheio',
+        B.get(`/api/v1/sales/receipts/open-items/${a.le.id}/${a.customer.id}`),
+      ],
       ['GET factura alheia', B.get(`/api/v1/sales/invoices/${a.salesInvoice.id}`)],
       [
         'alterar factura alheia',
@@ -2774,6 +2808,16 @@ test.group('isolamento | matriz entre empresas', (group) => {
     assert.notInclude(
       (await B.get('/api/v1/sales/invoices')).body().data.map((x: any) => x.id),
       a.salesInvoice.id
+    )
+    crossPricing.push(
+      await B.post('/api/v1/sales/receipts', {
+        legalEntityId: a.le.id,
+        customerId: a.customer.id,
+        amount: '1',
+        method: 'CASH',
+        receivedDate: '2026-06-01',
+        requestKey: 'isolamento-b',
+      })
     )
     for (const r of crossPricing) {
       assert.include([404, 422], r.status())

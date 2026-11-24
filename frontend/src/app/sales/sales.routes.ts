@@ -24,6 +24,12 @@ const INVOICE_PERMISSIONS = [
   'sales.invoices.issue',
 ];
 
+const RECEIPT_PERMISSIONS = [
+  'sales.receipts.read',
+  'sales.receipts.manage',
+  'sales.receipts.confirm',
+];
+
 const FISCAL_PERMISSIONS = ['sales.fiscal.read', 'sales.fiscal.manage', 'sales.fiscal.confirm'];
 
 const PRICE_PERMISSIONS = ['sales.prices.read', 'sales.prices.manage', 'sales.prices.approve'];
@@ -290,6 +296,33 @@ export const SALES_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'sales.invoices.manage', anyScope: true },
         loadComponent: () => import('./invoice-form').then((m) => m.InvoiceFormPage),
+      },
+    ],
+  },
+  {
+    path: 'recebimentos',
+    title: 'Recebimentos',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: RECEIPT_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./receipts').then((m) => m.Receipts),
+      },
+      {
+        path: 'novo',
+        title: 'Registar recebimento',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.receipts.manage', anyScope: true },
+        loadComponent: () => import('./receipt-form').then((m) => m.ReceiptFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Recebimento',
+        canActivate: [accessGuard],
+        data: { anyOf: RECEIPT_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./receipt-detail').then((m) => m.ReceiptDetail),
       },
     ],
   },

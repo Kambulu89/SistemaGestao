@@ -19,6 +19,7 @@ import {
 } from './invoice-model';
 
 interface Form {
+  documentKind: 'INVOICE' | 'INVOICE_RECEIPT';
   legalEntityId: string;
   branchId: string;
   customerId: string;
@@ -58,6 +59,24 @@ interface Form {
       (retry)="load()"
     >
       <app-form-section title="Cabeçalho">
+        @if (isNew()) {
+          <app-field
+            label="Documento"
+            [required]="true"
+            hint="A factura-recibo só é emitida quando a tesouraria confirma o recebimento."
+          >
+            <select
+              appControl
+              class="input"
+              name="kind"
+              data-testid="if-kind"
+              [(ngModel)]="f.documentKind"
+            >
+              <option value="INVOICE">Factura</option>
+              <option value="INVOICE_RECEIPT">Factura-recibo</option>
+            </select>
+          </app-field>
+        }
         <app-field
           label="Entidade emitente"
           [required]="true"
@@ -338,6 +357,7 @@ export class InvoiceFormPage implements HasUnsavedChanges {
 
   private blank(): Form {
     return {
+      documentKind: 'INVOICE',
       legalEntityId: '',
       branchId: '',
       customerId: '',
@@ -370,6 +390,7 @@ export class InvoiceFormPage implements HasUnsavedChanges {
         const plain = (v: string) =>
           v.includes('.') ? v.replace(/0+$/, '').replace(/\.$/, '') : v;
         this.f = {
+          documentKind: x.documentKind,
           legalEntityId: x.legalEntity.id,
           branchId: x.branch?.id ?? '',
           customerId: x.customer.id,
@@ -448,6 +469,7 @@ export class InvoiceFormPage implements HasUnsavedChanges {
           })
         : this.api.post<Invoice>('sales/invoices', {
             ...head,
+            documentKind: this.f.documentKind,
             legalEntityId: this.f.legalEntityId,
             lines,
           }),

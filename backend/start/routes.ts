@@ -67,6 +67,7 @@ const QuotesController = () => import('#modules/sales/http/quotes_controller')
 const OrdersController = () => import('#modules/sales/http/orders_controller')
 const FiscalController = () => import('#modules/sales/http/fiscal_controller')
 const SalesInvoicesController = () => import('#modules/sales/http/sales_invoices_controller')
+const SalesReceiptsController = () => import('#modules/sales/http/sales_receipts_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
@@ -1209,6 +1210,22 @@ router
                 router.patch('invoices/:id', [SalesInvoicesController, 'update'])
                 router.post('invoices/:id/issue', [SalesInvoicesController, 'issue'])
                 router.post('invoices/:id/discard', [SalesInvoicesController, 'discard'])
+                router.get('receipts', [SalesReceiptsController, 'index'])
+                router.get('receipts/options', [SalesReceiptsController, 'options'])
+                router.get('receipts/search/customers', [
+                  SalesReceiptsController,
+                  'searchCustomers',
+                ])
+                router.get('receipts/open-items/:legalEntityId/:customerId', [
+                  SalesReceiptsController,
+                  'openItems',
+                ])
+                router.post('receipts', [SalesReceiptsController, 'store'])
+                router.get('receipts/:id', [SalesReceiptsController, 'show'])
+                router.post('receipts/:id/confirm', [SalesReceiptsController, 'confirm'])
+                router.post('receipts/:id/reject', [SalesReceiptsController, 'reject'])
+                router.post('receipts/:id/cancel', [SalesReceiptsController, 'cancel'])
+                router.post('receipts/:id/apply-advance', [SalesReceiptsController, 'applyAdvance'])
                 router.get('orders', [OrdersController, 'index'])
                 router.get('orders/options', [OrdersController, 'options'])
                 router.get('orders/addresses/:customerId', [OrdersController, 'addresses'])

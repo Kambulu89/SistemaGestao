@@ -53,7 +53,15 @@ export interface Invoice {
   status: string;
   fiscalStatus: string | null;
   collectionStatus: string | null;
+  documentKind: 'INVOICE' | 'INVOICE_RECEIPT';
   simulation: boolean;
+  payments: {
+    receiptId: string;
+    number: string | null;
+    date: string;
+    amount: string;
+    kind: string;
+  }[];
   legalEntity: { id: string; code: string; name: string; taxId: string | null };
   branch: { id: string; code: string; name: string } | null;
   customer: { id: string; code: string; name: string; status: string };
@@ -137,6 +145,7 @@ export const INVOICE_EVENT: Record<string, string> = {
   CREATED_FROM_ORDER: 'Criada a partir da encomenda',
   ISSUED: 'Emitida',
   DISCARDED: 'Descartada',
+  PAYMENT: 'Pagamento recebido',
 };
 
 export function invoiceTone(s: string | null): string {
