@@ -45,3 +45,9 @@ export {
   type ReceiptView,
 } from '#modules/sales/application/receipt_service'
 export { noteAccess, NoteService, type NoteView } from '#modules/sales/application/note_service'
+export {
+  enqueueFiscalDocument,
+  FiscalIntegrationService,
+  type FiscalSubmissionView,
+  processFiscalQueue,
+} from '#modules/sales/application/fiscal_integration_service'

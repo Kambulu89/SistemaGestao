@@ -15,6 +15,7 @@ import { EntityFormPage } from '../ui/templates';
 import { ToastService } from '../ui/toasts';
 import { money } from '../inventory/valuation-model';
 import { ratePct, SIMULATION_NOTICE } from './fiscal-model';
+import { SUBMISSION_STATUS } from './fiscal-integration-model';
 import { qty } from './pricing-model';
 import { METHOD } from './receipt-model';
 import {
@@ -80,6 +81,14 @@ type Dialog =
               status(n.status)
             }}</span>
             <span class="text-sm" data-testid="nd-kind">{{ kind(n.kind) }}</span>
+            @if (fiscalSub(); as fs) {
+              <a
+                class="link text-sm"
+                data-testid="nd-fiscal-link"
+                [routerLink]="['/vendas/fiscal/submissoes', fs.id]"
+                >Comunicação: {{ subStatus(fs.status) }}</a
+              >
+            }
           </div>
           <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <div>
@@ -515,6 +524,8 @@ export class NoteDetail {
   protected readonly x = signal<Note | null>(null);
   protected readonly opts = signal<NoteOptions | null>(null);
   protected readonly loadError = signal<ApiError | null>(null);
+  protected readonly fiscalSub = signal<{ id: string; status: string } | null>(null);
+  protected readonly subStatus = (s: string) => SUBMISSION_STATUS[s] ?? s;
   protected readonly dialog = signal<Dialog>(null);
   protected readonly target = signal<Refund | null>(null);
   protected readonly act = new Action();
@@ -614,6 +625,10 @@ export class NoteDetail {
   }
   private set(n: Note) {
     this.x.set(n);
+    void this.api
+      .get<{ id: string; status: string }>(`sales/fiscal/submissions/document/SALES_NOTE/${n.id}`)
+      .then((x) => this.fiscalSub.set(x))
+      .catch(() => this.fiscalSub.set(null));
     this.breadcrumbs.setCurrent(n.number ?? 'Rascunho');
   }
   protected back() {

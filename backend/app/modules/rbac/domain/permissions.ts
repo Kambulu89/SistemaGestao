@@ -757,7 +757,7 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     code: 'sales.fiscal.manage',
     module: 'sales',
     description:
-      'Preparar impostos, taxas e isenções (com a fonte legal), arredondamento e séries fiscais (só em simulação).',
+      'Preparar impostos, taxas e isenções (com a fonte legal), arredondamento, séries fiscais e a integração fiscal electrónica (contingência, fila), só em simulação.',
   },
   {
     code: 'sales.fiscal.confirm',

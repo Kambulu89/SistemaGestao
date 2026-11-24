@@ -830,6 +830,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Vendas',
       },
       {
+        label: 'Integração fiscal',
+        path: '/vendas/fiscal/integracao',
+        icon: 'globe',
+        anyOf: ['sales.fiscal.read', 'sales.fiscal.manage'],
+        feature: 'sales',
+        anyScope: true,
+        section: 'Vendas',
+      },
+      {
         label: 'Simulação fiscal',
         path: '/vendas/fiscal/simulacao',
         icon: 'search',

@@ -1345,3 +1345,85 @@ A contabilização dos três (10.12) e a ligação à conciliação bancária (P
 fazer a devolução para quarentena ou bloqueado (hoje a mercadoria entra como livre) e a nota sobre a factura-recibo
 com reembolso imediato.
 
+## D-067 Integração fiscal electrónica: contrato do adaptador, fila e contingência; só o simulador local (aceite)
+
+**Contexto.** O 10.9 pede:
+- adaptadores `FiscalIntegrationProvider`;
+- validação e o payload oficial conforme a especificação;
+- fila, tentativas, idempotência e contingência;
+- respostas e estados;
+- um mock local marcado como tal.
+
+Também proíbe comunicar com a AGT em produção e declarar certificação.
+
+**O que foi verificado (24/11/2026, fontes secundárias e índice oficial):**
+- A AGT publica documentação técnica da facturação electrónica no portal `quiosqueagt.minfin.gov.ao`. Pelo resumo da
+  pesquisa, descreve:
+  - uma API para software certificado;
+  - assinatura JWS e controlo de séries;
+  - processamento assíncrono: o envio devolve um `requestID` e o resultado consulta-se depois; as notificações por
+    callback ficam para versões futuras.
+- O DP 71/25 remete a estrutura de dados e as especificações técnicas para decreto executivo do Ministério das
+  Finanças; fontes de mercado citam o DE 683/25.
+- A obrigatoriedade começou em 1/1/2026 para grandes contribuintes e fornecedores do Estado.
+- O portal **não é acessível a partir deste ambiente** (DNS/rede). A especificação não foi lida, pelo que não se
+  conhecem os serviços, os campos, os códigos de resposta nem a assinatura.
+
+**Decisão.**
+- **Contrato.** `FiscalIntegrationProvider` tem:
+  - `availability()`;
+  - `submit()`: idempotente por chave, devolve um identificador de pedido, ou falha transitória, ou rejeição;
+  - `poll()`: o resultado assíncrono.
+
+  O contrato segue a forma descrita (envio → identificador → consulta), sem inventar nomes de serviços, campos ou
+  códigos.
+- **Fornecedores:**
+  - `LOCAL_SIMULATOR`: disponível; guarda os pedidos na própria base e responde `SIM-…` conforme o cenário (aceitar,
+    rejeitar, aceitar com atraso, indisponível);
+  - `AGT_OFFICIAL`: registado mas **indisponível**; a configuração recusa-o (`PROVIDER_UNAVAILABLE`) e qualquer
+    chamada é recusada.
+- **Payload.** Formato **interno** `SG-SIM-1`, marcado `simulation: true`. É fotografado na emissão (imutável, com
+  impressão digital). Não é o formato oficial: o adaptador oficial terá de fazer a sua própria transformação a partir
+  dos documentos emitidos.
+- **Fila (outbox).** A emissão da factura, da factura-recibo ou da nota cria a submissão na mesma transacção. Há uma
+  só submissão por documento, com chave de idempotência derivada do documento e da impressão digital.
+- **Validação local antes de enviar:**
+  - número, código fiscal da série e NIF do emitente;
+  - nome do cliente;
+  - data não futura e moeda;
+  - linhas e totais coerentes;
+  - isenção nas taxas de 0 %;
+  - referência ao original nas notas.
+
+  Se falhar, a submissão fica `INVALID` e a correcção faz-se por nota.
+- **Processamento separado da emissão:**
+  1. reclama submissões vencidas com `FOR UPDATE SKIP LOCKED` numa transacção curta, com reserva de 5 minutos para
+     envios interrompidos;
+  2. chama o fornecedor fora dessa transacção;
+  3. grava o resultado.
+
+  Falhas transitórias repetem com espera de 1, 2, 4… até 60 minutos, até ao máximo de tentativas configurado
+  (`FAILED`); a repetição exige motivo. A decisão final (`ACCEPTED`/`REJECTED`) actualiza o estado fiscal do documento
+  e não volta atrás (gatilho). Cada envio e consulta fica registado, só de acréscimo.
+- **Quem processa:**
+  - o comando `fiscal:process`, para o agendador: percorre todos os tenants no contexto de quem emitiu;
+  - o botão "Processar a fila" ou "Processar agora", com `sales.fiscal.manage` no âmbito da entidade.
+- **Contingência por entidade (com motivo).** Os documentos emitidos ficam `CONTINGENCY`, e o estado fiscal do
+  documento também. Ao terminar (com motivo), voltam à fila e são enviados; a marca "emitido em contingência" fica.
+- **Sem Redis.** A fila vive no PostgreSQL.
+
+**Consequências.**
+- Nada sai do sistema.
+- "Aceite" significa aceite **pelo simulador** e nunca é apresentado como validação da AGT.
+- Para operação real ficam por fazer: ler e verificar a especificação oficial (serviços, campos, JWS, códigos),
+  certificar o software, guardar com segurança as credenciais e chaves, implementar o adaptador oficial e testá-lo no
+  ambiente de testes da AGT.
+- O QR e a representação impressa ficam para o 10.13, também sem inventar.
+
+**Fontes consultadas:**
+- [Introdução :: Facturação Electrónica (AGT)](https://quiosqueagt.minfin.gov.ao/doc-agt/faturacao-electronica/1/index.html)
+  — só o resumo da pesquisa; a página não foi lida a partir deste ambiente.
+- [Decreto Presidencial n.º 71/25 — Regime Jurídico das Facturas (Angolex)](https://angolex.com/paginas/decreto-presidencial/regime-juridico-das-facturas-71a-25a.html)
+- [AGT começa a aplicar facturação electrónica em 1 de Janeiro de 2026 (Novo Jornal)](https://www.novojornal.co.ao/economia/detalhe/agt-comeca-a-aplicar-facturacao-electronica-em-1-de-janeiro-de-2026-68608.html)
+- [Facturação Electrónica em Angola: prazos e requisitos do RJFDE (Sisgesc)](https://sisgesc.net/blog/posts/facturacao-electronica-prazos-requisitos-rjfde)
+

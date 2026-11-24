@@ -2016,6 +2016,39 @@ export class FeatureSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class FiscalIntegrationSettingSchema extends BaseModel {
+  static $columns = ['contingencyActive', 'contingencyReason', 'contingencySince', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'maxAttempts', 'provider', 'simulatorScenario', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FiscalIntegrationSettingSchema.$columns
+  @column()
+  declare contingencyActive: boolean
+  @column()
+  declare contingencyReason: string | null
+  @column.dateTime()
+  declare contingencySince: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare maxAttempts: number
+  @column()
+  declare provider: string
+  @column()
+  declare simulatorScenario: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class FiscalNumberSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'documentId', 'documentType', 'formatted', 'id', 'issueDate', 'number', 'seriesId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = FiscalNumberSchema.$columns
@@ -2121,6 +2154,133 @@ export class FiscalSerySchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class FiscalSimulatorRequestSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'idempotencyKey', 'payloadHash', 'polls', 'requestId', 'scenario', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FiscalSimulatorRequestSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare payloadHash: string
+  @column()
+  declare polls: number
+  @column()
+  declare requestId: string
+  @column()
+  declare scenario: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class FiscalSubmissionAttemptSchema extends BaseModel {
+  static $columns = ['action', 'attemptNo', 'code', 'createdAt', 'createdBy', 'durationMs', 'id', 'message', 'outcome', 'submissionId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FiscalSubmissionAttemptSchema.$columns
+  @column()
+  declare action: string
+  @column()
+  declare attemptNo: number
+  @column()
+  declare code: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare durationMs: number | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare message: string | null
+  @column()
+  declare outcome: string
+  @column()
+  declare submissionId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class FiscalSubmissionSchema extends BaseModel {
+  static $columns = ['attempts', 'createdAt', 'createdBy', 'decidedAt', 'documentId', 'documentNumber', 'documentType', 'environment', 'failures', 'id', 'idempotencyKey', 'inContingency', 'legalEntityId', 'nextAttemptAt', 'payload', 'payloadFormat', 'payloadHash', 'provider', 'requestId', 'requestedMembershipId', 'response', 'resultCode', 'resultMessage', 'sentAt', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validationIssues', 'version'] as const
+  $columns = FiscalSubmissionSchema.$columns
+  @column()
+  declare attempts: number
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.dateTime()
+  declare decidedAt: DateTime | null
+  @column()
+  declare documentId: string
+  @column()
+  declare documentNumber: string
+  @column()
+  declare documentType: string
+  @column()
+  declare environment: string
+  @column()
+  declare failures: number
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare idempotencyKey: string
+  @column()
+  declare inContingency: boolean
+  @column()
+  declare legalEntityId: string
+  @column.dateTime()
+  declare nextAttemptAt: DateTime | null
+  @column()
+  declare payload: any
+  @column()
+  declare payloadFormat: string
+  @column()
+  declare payloadHash: string
+  @column()
+  declare provider: string
+  @column()
+  declare requestId: string | null
+  @column()
+  declare requestedMembershipId: string
+  @column()
+  declare response: any | null
+  @column()
+  declare resultCode: string | null
+  @column()
+  declare resultMessage: string | null
+  @column.dateTime()
+  declare sentAt: DateTime | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare validationIssues: any | null
   @column()
   declare version: number
 }

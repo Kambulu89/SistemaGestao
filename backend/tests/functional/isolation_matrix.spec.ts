@@ -1012,8 +1012,19 @@ async function populate(client: any) {
       [tenant.id, salesInvoice.id, le.id, customer.id, customerVersion.id]
     )
   ).rows[0] as { id: string }
+  // Submissão fiscal da empresa A (10.9), falhada, inserida directamente.
+  const fiscalSubmission = (
+    await owner.rawQuery(
+      `insert into fiscal_submissions (tenant_id, legal_entity_id, document_type, document_id, document_number, provider,
+         payload_format, payload, payload_hash, idempotency_key, status, requested_membership_id)
+       values (?, ?, 'SALES_INVOICE', ?, 'FT SA/1', 'LOCAL_SIMULATOR', 'SG-SIM-1', '{}', 'x', 'isolamento-a', 'FAILED',
+               (select id from tenant_memberships where tenant_id = ? limit 1)) returning id`,
+      [tenant.id, le.id, salesInvoice.id, tenant.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    fiscalSubmission,
     salesNote,
     salesReceipt,
     salesInvoice,
@@ -1955,6 +1966,36 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'pendentes de cliente alheio',
         B.get(`/api/v1/sales/receipts/open-items/${a.le.id}/${a.customer.id}`),
       ],
+      [
+        'GET submissão fiscal alheia',
+        B.get(`/api/v1/sales/fiscal/submissions/${a.fiscalSubmission.id}`),
+      ],
+      [
+        'submissão de documento alheio',
+        B.get(`/api/v1/sales/fiscal/submissions/document/SALES_INVOICE/${a.salesInvoice.id}`),
+      ],
+      [
+        'processar submissão alheia',
+        B.post(`/api/v1/sales/fiscal/submissions/${a.fiscalSubmission.id}/process`, {}),
+      ],
+      [
+        'repetir submissão alheia',
+        B.post(`/api/v1/sales/fiscal/submissions/${a.fiscalSubmission.id}/requeue`, {
+          ...v,
+          reason: 'xxx',
+        }),
+      ],
+      [
+        'configurar integração de entidade alheia',
+        B.put(`/api/v1/sales/fiscal/integration/${a.le.id}`, { provider: 'LOCAL_SIMULATOR' }),
+      ],
+      [
+        'contingência de entidade alheia',
+        B.post(`/api/v1/sales/fiscal/integration/${a.le.id}/contingency`, {
+          active: true,
+          reason: 'xxx',
+        }),
+      ],
       ['GET nota alheia', B.get(`/api/v1/sales/notes/${a.salesNote.id}`)],
       [
         'alterar nota alheia',
@@ -2887,6 +2928,18 @@ test.group('isolamento | matriz entre empresas', (group) => {
       (await B.get('/api/v1/sales/notes')).body().data.map((x: any) => x.id),
       a.salesNote.id
     )
+    assert.notInclude(
+      (await B.get('/api/v1/sales/fiscal/submissions')).body().data.map((x: any) => x.id),
+      a.fiscalSubmission.id
+    )
+    // A fila de B nunca processa a submissão de A.
+    await B.post('/api/v1/sales/fiscal/submissions/process', {})
+    const aSub = await db
+      .connection('owner')
+      .rawQuery(`select status, attempts from fiscal_submissions where id = ?`, [
+        a.fiscalSubmission.id,
+      ])
+    assert.deepEqual([aSub.rows[0].status, aSub.rows[0].attempts], ['FAILED', 0])
     for (const r of crossPricing) {
       assert.include([404, 422], r.status())
       assert.notInclude(JSON.stringify(r.body()), 'PL-A')

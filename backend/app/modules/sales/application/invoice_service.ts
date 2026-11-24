@@ -10,6 +10,7 @@ import { resolvePrices, searchSalesRefs } from '#modules/sales/application/prici
 import { customerActive, customerRow } from '#modules/sales/application/quote_service'
 import { invoiceableOrder, recordInvoiced } from '#modules/sales/application/order_service'
 import { allocateFiscalNumber, resolveTaxes } from '#modules/sales/application/fiscal_service'
+import { enqueueFiscalDocument } from '#modules/sales/application/fiscal_integration_service'
 import {
   dbScaled,
   PCT_SCALE,
@@ -662,6 +663,8 @@ export async function issueDraft(scope: TenantScope, i: any, seriesInput: unknow
     issued_by: context.userId,
     issued_at: new Date(),
   })
+  // Comunicação fiscal (10.9): fila na mesma transacção, só em simulação.
+  await enqueueFiscalDocument(scope, { documentType: 'SALES_INVOICE', documentId: id })
   await event(scope, id, 'ISSUED', null, {
     number: fiscalNo.formatted,
     mode: fiscalNo.mode,

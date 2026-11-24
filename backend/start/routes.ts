@@ -69,6 +69,8 @@ const FiscalController = () => import('#modules/sales/http/fiscal_controller')
 const SalesInvoicesController = () => import('#modules/sales/http/sales_invoices_controller')
 const SalesReceiptsController = () => import('#modules/sales/http/sales_receipts_controller')
 const SalesNotesController = () => import('#modules/sales/http/sales_notes_controller')
+const FiscalIntegrationController = () =>
+  import('#modules/sales/http/fiscal_integration_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
 const StockDocumentsController = () => import('#modules/inventory/http/stock_documents_controller')
 
@@ -1198,6 +1200,33 @@ router
                 router.post('fiscal/series/:id/activate', [FiscalController, 'activateSeries'])
                 router.post('fiscal/series/:id/close', [FiscalController, 'closeSeries'])
                 router.post('fiscal/simulate', [FiscalController, 'simulate'])
+                router.get('fiscal/integration', [FiscalIntegrationController, 'settings'])
+                router.put('fiscal/integration/:legalEntityId', [
+                  FiscalIntegrationController,
+                  'updateSettings',
+                ])
+                router.post('fiscal/integration/:legalEntityId/contingency', [
+                  FiscalIntegrationController,
+                  'contingency',
+                ])
+                router.get('fiscal/submissions', [FiscalIntegrationController, 'index'])
+                router.post('fiscal/submissions/process', [
+                  FiscalIntegrationController,
+                  'processQueue',
+                ])
+                router.get('fiscal/submissions/document/:type/:documentId', [
+                  FiscalIntegrationController,
+                  'forDocument',
+                ])
+                router.get('fiscal/submissions/:id', [FiscalIntegrationController, 'show'])
+                router.post('fiscal/submissions/:id/process', [
+                  FiscalIntegrationController,
+                  'processOne',
+                ])
+                router.post('fiscal/submissions/:id/requeue', [
+                  FiscalIntegrationController,
+                  'requeue',
+                ])
                 router.get('invoices', [SalesInvoicesController, 'index'])
                 router.get('invoices/options', [SalesInvoicesController, 'options'])
                 router.get('invoices/search/customers', [

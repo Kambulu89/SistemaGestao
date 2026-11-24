@@ -862,6 +862,24 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
   'POST /api/v1/sales/orders/:id/returns':
     'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'GET /api/v1/sales/fiscal/integration':
+    'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
+  'PUT /api/v1/sales/fiscal/integration/:legalEntityId':
+    'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
+  'POST /api/v1/sales/fiscal/integration/:legalEntityId/contingency':
+    'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
+  'GET /api/v1/sales/fiscal/submissions':
+    'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
+  'POST /api/v1/sales/fiscal/submissions/process':
+    'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
+  'GET /api/v1/sales/fiscal/submissions/document/:type/:documentId':
+    'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
+  'GET /api/v1/sales/fiscal/submissions/:id':
+    'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
+  'POST /api/v1/sales/fiscal/submissions/:id/process':
+    'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
+  'POST /api/v1/sales/fiscal/submissions/:id/requeue':
+    'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

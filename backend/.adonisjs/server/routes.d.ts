@@ -647,6 +647,15 @@ export type ScannedRoutes = {
     'fiscal.activate_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.close_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.simulate': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.settings': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.update_settings': { paramsTuple: [ParamValue]; params: {'legalEntityId': ParamValue} }
+    'fiscal_integration.contingency': { paramsTuple: [ParamValue]; params: {'legalEntityId': ParamValue} }
+    'fiscal_integration.index': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.process_queue': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.for_document': { paramsTuple: [ParamValue,ParamValue]; params: {'type': ParamValue,'documentId': ParamValue} }
+    'fiscal_integration.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal_integration.process_one': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal_integration.requeue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.index': { paramsTuple?: []; params?: {} }
     'sales_invoices.options': { paramsTuple?: []; params?: {} }
     'sales_invoices.search_customers': { paramsTuple?: []; params?: {} }
@@ -976,6 +985,10 @@ export type ScannedRoutes = {
     'fiscal.settings': { paramsTuple?: []; params?: {} }
     'fiscal.series': { paramsTuple?: []; params?: {} }
     'fiscal.series_numbers': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal_integration.settings': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.index': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.for_document': { paramsTuple: [ParamValue,ParamValue]; params: {'type': ParamValue,'documentId': ParamValue} }
+    'fiscal_integration.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.index': { paramsTuple?: []; params?: {} }
     'sales_invoices.options': { paramsTuple?: []; params?: {} }
     'sales_invoices.search_customers': { paramsTuple?: []; params?: {} }
@@ -1253,6 +1266,10 @@ export type ScannedRoutes = {
     'fiscal.settings': { paramsTuple?: []; params?: {} }
     'fiscal.series': { paramsTuple?: []; params?: {} }
     'fiscal.series_numbers': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal_integration.settings': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.index': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.for_document': { paramsTuple: [ParamValue,ParamValue]; params: {'type': ParamValue,'documentId': ParamValue} }
+    'fiscal_integration.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.index': { paramsTuple?: []; params?: {} }
     'sales_invoices.options': { paramsTuple?: []; params?: {} }
     'sales_invoices.search_customers': { paramsTuple?: []; params?: {} }
@@ -1591,6 +1608,10 @@ export type ScannedRoutes = {
     'fiscal.activate_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.close_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.simulate': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.contingency': { paramsTuple: [ParamValue]; params: {'legalEntityId': ParamValue} }
+    'fiscal_integration.process_queue': { paramsTuple?: []; params?: {} }
+    'fiscal_integration.process_one': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal_integration.requeue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.store': { paramsTuple?: []; params?: {} }
     'sales_invoices.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.discard': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1754,6 +1775,7 @@ export type ScannedRoutes = {
     'invoices.set_tolerances': { paramsTuple?: []; params?: {} }
     'pricing.set_limit': { paramsTuple?: []; params?: {} }
     'fiscal.set_rounding': { paramsTuple: [ParamValue]; params: {'legalEntityId': ParamValue} }
+    'fiscal_integration.update_settings': { paramsTuple: [ParamValue]; params: {'legalEntityId': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

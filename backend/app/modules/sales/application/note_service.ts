@@ -5,6 +5,7 @@ import { runInTenant, type TenantContext, type TenantScope } from '#modules/tena
 import { audit } from '#modules/audit/index'
 import { permissionScope, type PermissionScope } from '#modules/rbac/index'
 import { allocateFiscalNumber } from '#modules/sales/application/fiscal_service'
+import { enqueueFiscalDocument } from '#modules/sales/application/fiscal_integration_service'
 import {
   adjustInvoice,
   applyInvoicePayment,
@@ -906,6 +907,7 @@ export class NoteService {
         fields.applied_total = scaledText(applied, 2)
       } else await adjustInvoice(scope, n.invoice_id, { debit: payable, note: no.formatted })
       await setNote(scope, id, fields)
+      await enqueueFiscalDocument(scope, { documentType: 'SALES_NOTE', documentId: id })
       if (n.return_id && inv.i.order_id)
         await recordReturnCredit(
           scope,

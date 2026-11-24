@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 a 10.8 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-066. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 a 10.9 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-067. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -883,3 +883,119 @@ Também cobertos:
 - Conciliação bancária dos reembolsos (Prompt 11).
 - PDF das notas (10.13).
 - Devolução para quarentena ou bloqueado: o contrato do Inventário hoje devolve para livre.
+
+## 10.9 Integração fiscal electrónica (simulação)
+
+Só simulação: nada é enviado à AGT. O portal técnico da AGT não é acessível a partir deste ambiente, por isso a
+especificação oficial não foi lida (D-067). O adaptador oficial está registado e bloqueado.
+
+### Modelo
+
+Migração `0062_create_fiscal_integration`:
+
+- `fiscal_integration_settings` — por entidade:
+  - o fornecedor: só o simulador; o oficial é recusado;
+  - o cenário do simulador e o máximo de tentativas;
+  - a contingência, com motivo e data.
+- `fiscal_submissions` — uma por documento:
+  - o payload `SG-SIM-1` fotografado e a sua impressão digital;
+  - a chave de idempotência;
+  - o estado: `QUEUED`, `SENDING`, `AWAITING`, `ACCEPTED`, `REJECTED`, `FAILED`, `INVALID` ou `CONTINGENCY`;
+  - as tentativas e as falhas seguidas, e a próxima tentativa;
+  - o identificador do pedido e a resposta;
+  - os erros da validação local e a marca de contingência.
+
+  Gatilhos: o payload, a chave e o fornecedor não mudam; a decisão final não volta atrás; não se apaga.
+
+- `fiscal_submission_attempts` — validação, envio, consulta, reposição e contingência, com o código, a mensagem e a
+  duração. Só de acréscimo.
+- `fiscal_simulator_requests` — o "servidor" do simulador, por chave de idempotência.
+
+### Backend e API (`/api/v1/sales/fiscal`)
+
+- `GET integration`: fornecedores com a disponibilidade, cenários e definições por entidade, com contagens.
+- `PUT integration/:legalEntityId`; `POST integration/:legalEntityId/contingency`.
+- `GET submissions` (filtros estado, tipo, número); `GET submissions/:id`;
+  `GET submissions/document/:type/:documentId`.
+- `POST submissions/process` (a fila vencida das entidades que gere); `POST submissions/:id/process`;
+  `POST submissions/:id/requeue`.
+- `enqueueFiscalDocument` é chamado na emissão da factura, da factura-recibo e da nota.
+- `processFiscalQueue` serve o comando `node ace fiscal:process` (agendador, todos os tenants).
+- Permissões `sales.fiscal.read|manage` no âmbito da entidade. Auditoria `fiscal_integration.*` (definições e
+  contingência) e `fiscal_submission.*` (aceite, rejeitada, repetida).
+- Erros: `PROVIDER_UNAVAILABLE`, `INVALID_STATE`, `VERSION_CONFLICT`, `OUT_OF_SCOPE`, `VALIDATION_ERROR`.
+
+### Ecrãs
+
+- **Integração fiscal** (`/vendas/fiscal/integracao`):
+  - aviso de simulação;
+  - por entidade: o fornecedor (o oficial aparece desactivado, com o motivo), o cenário, as tentativas, a
+    contingência com motivo e as contagens;
+  - a fila com filtros e "Processar a fila".
+- **Comunicação** (`/vendas/fiscal/submissoes/:id`):
+  - estado, documento, ambiente e formato ("interno, não oficial");
+  - tentativas, pedido, resposta, chave e erros de validação;
+  - "Processar agora" e "Repetir" com motivo;
+  - histórico das tentativas e o payload fotografado.
+- **Factura e nota** — ligação "Comunicação: <estado>".
+
+### Testes e evidências
+
+**Backend**
+
+`tests/unit/sales_fiscal_integration_domain.spec.ts` (2 testes):
+
+- validação local: totais, NIF, data, isenção, referência da nota e retenção;
+- espera crescente com tecto;
+- adaptador oficial indisponível.
+
+`tests/functional/sales_fiscal_integration.spec.ts` (2 testes):
+
+- **Fila e simulador:**
+  - o oficial é recusado; quem só consulta não configura nem processa;
+  - emissão → `QUEUED` com o payload interno (FT, número, NIF, 550,00);
+  - processar: envio e consulta, `ACCEPTED` `SIM-000`, factura "aceite";
+  - cenário rejeitar: `REJECTED` `SIM-422`, sem repetição;
+  - indisponível com 2 tentativas: `QUEUED` com espera (o periódico não lhe toca), depois `FAILED`; a repetição exige
+    motivo; repetida → `ACCEPTED`;
+  - atraso: `AWAITING` e depois `ACCEPTED`;
+  - resposta perdida: o reenvio com a mesma chave devolve o mesmo pedido (1 registo no simulador);
+  - envio interrompido retomado depois do prazo;
+  - dois processamentos em paralelo: um só envio por documento;
+  - a base recusa alterar o payload, voltar atrás na decisão e apagar submissões ou tentativas.
+- **Contingência e notas:**
+  - activar sem motivo é recusado;
+  - factura retida em `CONTINGENCY`; o processamento não a envia;
+  - terminar liberta 1; a factura é aceite com a marca de contingência e o histórico
+    contingência → reposição → envio → consulta;
+  - nota de crédito na fila (NC com referência e 110,00), aceite;
+  - lista filtrada; auditoria.
+
+Também cobertos:
+
+- `isolation_matrix`: 6 tentativas sobre a submissão e a entidade de outra empresa (consultar, por documento,
+  processar, repetir, configurar, contingência), todas com 404; a lista não mostra a submissão alheia; a fila de B não
+  processa a de A.
+- `routes_protection`.
+- O comando `node ace fiscal:process` foi corrido na base de desenvolvimento.
+
+**Frontend:** `fiscal-integration-model.spec.ts`.
+
+**Browser (`p1009`):** 5 passos.
+
+- preparação;
+- página com o aviso de simulação e o adaptador oficial desactivado; cenário "indisponível" com 2 tentativas;
+- factura → "Comunicação: Na fila" → payload `SG-SIM-1`; processar: `SIM-503` e depois "Falhou"; com o cenário
+  "aceitar", repetir com motivo (sem motivo é recusado), "A aguardar" e depois "Aceite (simulação)"; a factura fica
+  "Fiscal: aceite";
+- contingência activada com motivo → factura "contingência" e "Retida em contingência" → terminada (de volta à fila)
+  → processada → aceite com "Emitido em contingência";
+- telemóvel sem deslocamento horizontal.
+
+### Pendências
+
+- Ler e verificar a especificação oficial da AGT (o portal não é acessível a partir deste ambiente), certificar o
+  software e implementar o adaptador oficial com credenciais e assinatura guardadas com segurança. Até lá nada é
+  enviado.
+- Agendar `fiscal:process` na infra-estrutura (cron) quando houver ambiente de produção.
+- QR e impressão (10.13). Contabilização (10.12).

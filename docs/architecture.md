@@ -499,7 +499,7 @@ por período no âmbito do membro; publicação no âmbito da empresa como fotog
 
 ## Vendas e facturação (módulo `sales`, Prompt 10)
 
-Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-066). Clientes (10.1): o cliente é o papel de venda de um
+Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-067). Clientes (10.1): o cliente é o papel de venda de um
 terceiro do módulo `partners` (um por terceiro, partilhado com o fornecedor), com moeda, prazo, segmento, limite de
 crédito (permissão própria, com motivo) e estado (activo, bloqueado ou inactivo com motivo); moradas de facturação e
 entrega (uma por omissão de cada tipo, índice único parcial); contactos no terceiro; versões só de acréscimo da
@@ -542,5 +542,11 @@ débito sobre a factura original (linhas da factura por quantidade ou valor dent
 original, série `CREDIT_NOTE`/`DEBIT_NOTE` em simulação, a de crédito emitida por outra pessoa, imutável); e o
 reembolso do crédito restante, confirmado por outra pessoa. A factura emitida nunca muda: passa a corrigida e ganha
 `credited_total`/`debited_total` (nunca descem); em dívida = a pagar + débitos − créditos − recebido. Permissões
-`sales.notes.read|manage|issue`.
+`sales.notes.read|manage|issue`. Integração fiscal electrónica (10.9), só simulação: contrato `FiscalIntegrationProvider` (envio
+idempotente → identificador de pedido → consulta assíncrona); disponível só o simulador local, com o adaptador AGT
+registado e bloqueado; a emissão põe o documento na fila (`fiscal_submissions`, outbox na mesma transacção, um por
+documento) com payload interno `SG-SIM-1` fotografado e validado; o processamento reclama com `SKIP LOCKED`, chama o
+fornecedor fora da transacção e grava o resultado; falhas transitórias com espera crescente até ao máximo; decisão
+final imutável que actualiza o estado fiscal do documento; contingência por entidade retém e depois liberta; comando
+`fiscal:process` para o agendador.
 

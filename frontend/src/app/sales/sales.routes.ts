@@ -270,6 +270,20 @@ export const SALES_ROUTES: Routes = [
         data: { anyOf: FISCAL_PERMISSIONS },
         loadComponent: () => import('./tax-simulator').then((m) => m.TaxSimulator),
       },
+      {
+        path: 'integracao',
+        title: 'Integração fiscal',
+        canActivate: [accessGuard],
+        data: { anyOf: ['sales.fiscal.read', 'sales.fiscal.manage'], anyScope: true },
+        loadComponent: () => import('./fiscal-integration').then((m) => m.FiscalIntegrationPage),
+      },
+      {
+        path: 'submissoes/:id',
+        title: 'Comunicação fiscal',
+        canActivate: [accessGuard],
+        data: { anyOf: ['sales.fiscal.read', 'sales.fiscal.manage'], anyScope: true },
+        loadComponent: () => import('./fiscal-submission').then((m) => m.FiscalSubmissionPage),
+      },
     ],
   },
   {

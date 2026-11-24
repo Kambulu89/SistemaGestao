@@ -16,6 +16,7 @@ import { EntityFormPage } from '../ui/templates';
 import { ToastService } from '../ui/toasts';
 import { money } from '../inventory/valuation-model';
 import { ratePct, SIMULATION_NOTICE } from './fiscal-model';
+import { SUBMISSION_STATUS } from './fiscal-integration-model';
 import { percent, price, qty } from './pricing-model';
 import {
   COLLECTION_STATE,
@@ -82,6 +83,14 @@ import {
               <span class="badge" [class]="tone(v.fiscalStatus)" data-testid="id-fiscal">{{
                 fiscal(v.fiscalStatus)
               }}</span>
+            }
+            @if (fiscalSub(); as fs) {
+              <a
+                class="link text-sm"
+                data-testid="id-fiscal-link"
+                [routerLink]="['/vendas/fiscal/submissoes', fs.id]"
+                >Comunicação: {{ subStatus(fs.status) }}</a
+              >
             }
             @if (v.collectionStatus) {
               <span class="badge" [class]="tone(v.collectionStatus)" data-testid="id-collection">{{
@@ -433,6 +442,8 @@ export class InvoiceDetail {
   protected readonly x = signal<Invoice | null>(null);
   protected readonly opts = signal<InvoiceOptions | null>(null);
   protected readonly loadError = signal<ApiError | null>(null);
+  protected readonly fiscalSub = signal<{ id: string; status: string } | null>(null);
+  protected readonly subStatus = (s: string) => SUBMISSION_STATUS[s] ?? s;
   protected readonly dialog = signal<'issue' | 'discard' | null>(null);
   protected readonly act = new Action();
   protected readonly notice = SIMULATION_NOTICE;
@@ -506,6 +517,12 @@ export class InvoiceDetail {
   }
   private set(v: Invoice) {
     this.x.set(v);
+    void this.api
+      .get<{ id: string; status: string }>(
+        `sales/fiscal/submissions/document/SALES_INVOICE/${v.id}`,
+      )
+      .then((x) => this.fiscalSub.set(x))
+      .catch(() => this.fiscalSub.set(null));
     this.breadcrumbs.setCurrent(v.number ?? 'Rascunho');
   }
   protected back() {
