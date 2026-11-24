@@ -21,3 +21,9 @@ export {
   type QuoteView,
 } from '#modules/sales/application/quote_service'
 export { orderAccess, OrderService, type OrderView } from '#modules/sales/application/order_service'
+export {
+  allocateFiscalNumber,
+  FiscalService,
+  resolveTaxes,
+  type TaxRequest,
+} from '#modules/sales/application/fiscal_service'

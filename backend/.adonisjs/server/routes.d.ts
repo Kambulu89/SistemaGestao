@@ -624,6 +624,29 @@ export type ScannedRoutes = {
     'pricing.remove_limit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'pricing.resolve': { paramsTuple?: []; params?: {} }
     'pricing.options': { paramsTuple?: []; params?: {} }
+    'fiscal.codes': { paramsTuple?: []; params?: {} }
+    'fiscal.create_code': { paramsTuple?: []; params?: {} }
+    'fiscal.code': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.update_code': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.add_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.update_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.delete_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.confirm_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.retire_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.exemptions': { paramsTuple?: []; params?: {} }
+    'fiscal.create_exemption': { paramsTuple?: []; params?: {} }
+    'fiscal.update_exemption': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.confirm_exemption': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.retire_exemption': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.settings': { paramsTuple?: []; params?: {} }
+    'fiscal.set_rounding': { paramsTuple: [ParamValue]; params: {'legalEntityId': ParamValue} }
+    'fiscal.series': { paramsTuple?: []; params?: {} }
+    'fiscal.create_series': { paramsTuple?: []; params?: {} }
+    'fiscal.series_numbers': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.update_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.activate_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.close_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.simulate': { paramsTuple?: []; params?: {} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -912,6 +935,12 @@ export type ScannedRoutes = {
     'pricing.show_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'pricing.limits': { paramsTuple?: []; params?: {} }
     'pricing.options': { paramsTuple?: []; params?: {} }
+    'fiscal.codes': { paramsTuple?: []; params?: {} }
+    'fiscal.code': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.exemptions': { paramsTuple?: []; params?: {} }
+    'fiscal.settings': { paramsTuple?: []; params?: {} }
+    'fiscal.series': { paramsTuple?: []; params?: {} }
+    'fiscal.series_numbers': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -1167,6 +1196,12 @@ export type ScannedRoutes = {
     'pricing.show_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'pricing.limits': { paramsTuple?: []; params?: {} }
     'pricing.options': { paramsTuple?: []; params?: {} }
+    'fiscal.codes': { paramsTuple?: []; params?: {} }
+    'fiscal.code': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.exemptions': { paramsTuple?: []; params?: {} }
+    'fiscal.settings': { paramsTuple?: []; params?: {} }
+    'fiscal.series': { paramsTuple?: []; params?: {} }
+    'fiscal.series_numbers': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -1478,6 +1513,17 @@ export type ScannedRoutes = {
     'pricing.reject_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'pricing.deactivate_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'pricing.resolve': { paramsTuple?: []; params?: {} }
+    'fiscal.create_code': { paramsTuple?: []; params?: {} }
+    'fiscal.add_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.confirm_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.retire_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.create_exemption': { paramsTuple?: []; params?: {} }
+    'fiscal.confirm_exemption': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.retire_exemption': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.create_series': { paramsTuple?: []; params?: {} }
+    'fiscal.activate_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.close_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.simulate': { paramsTuple?: []; params?: {} }
     'orders.store': { paramsTuple?: []; params?: {} }
     'orders.from_quote': { paramsTuple?: []; params?: {} }
     'orders.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1523,6 +1569,7 @@ export type ScannedRoutes = {
     'rfqs.uninvite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'pricing.remove_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
     'pricing.remove_limit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.delete_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.remove_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
@@ -1585,6 +1632,10 @@ export type ScannedRoutes = {
     'pricing.update_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'pricing.update_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
     'pricing.update_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.update_code': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.update_rate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.update_exemption': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'fiscal.update_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'quotes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1616,6 +1667,7 @@ export type ScannedRoutes = {
     'evaluations.set_weights': { paramsTuple?: []; params?: {} }
     'invoices.set_tolerances': { paramsTuple?: []; params?: {} }
     'pricing.set_limit': { paramsTuple?: []; params?: {} }
+    'fiscal.set_rounding': { paramsTuple: [ParamValue]; params: {'legalEntityId': ParamValue} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

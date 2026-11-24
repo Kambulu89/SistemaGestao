@@ -747,6 +747,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Reservar, libertar e expedir encomendas pelo Inventário; dar serviços por prestados.',
   },
+  {
+    code: 'sales.fiscal.read',
+    module: 'sales',
+    description:
+      'Consultar impostos, taxas, isenções, arredondamento e séries fiscais; simular o cálculo.',
+  },
+  {
+    code: 'sales.fiscal.manage',
+    module: 'sales',
+    description:
+      'Preparar impostos, taxas e isenções (com a fonte legal), arredondamento e séries fiscais (só em simulação).',
+  },
+  {
+    code: 'sales.fiscal.confirm',
+    module: 'sales',
+    description:
+      'Confirmar ou retirar taxas e isenções preparadas por outra pessoa, depois de verificadas na fonte oficial.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

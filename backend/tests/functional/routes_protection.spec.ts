@@ -746,6 +746,52 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
   'POST /api/v1/sales/orders/:id/cancel':
     'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'GET /api/v1/sales/fiscal/tax-codes':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/tax-codes':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/fiscal/tax-codes/:id':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'PATCH /api/v1/sales/fiscal/tax-codes/:id':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/tax-codes/:id/rates':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'PATCH /api/v1/sales/fiscal/tax-rates/:id':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'DELETE /api/v1/sales/fiscal/tax-rates/:id':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/tax-rates/:id/confirm':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/tax-rates/:id/retire':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/fiscal/exemptions':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/exemptions':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'PATCH /api/v1/sales/fiscal/exemptions/:id':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/exemptions/:id/confirm':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/exemptions/:id/retire':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/fiscal/settings':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'PUT /api/v1/sales/fiscal/settings/:legalEntityId':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/fiscal/series':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/series':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/fiscal/series/:id/numbers':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'PATCH /api/v1/sales/fiscal/series/:id':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/series/:id/activate':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/series/:id/close':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
+  'POST /api/v1/sales/fiscal/simulate':
+    'configuração fiscal da empresa: sales.fiscal.read/manage/confirm verificados no serviço (confirmar exige outra pessoa)',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

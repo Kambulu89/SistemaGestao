@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 a 10.4 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-062. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 a 10.5 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-063. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -402,3 +402,125 @@ Também cobertos:
   indicadas.
 - Devoluções de clientes (10.8, com `returnFromSale`).
 - Guia de transporte fiscal (10.5 e 10.6).
+
+## 10.5 Motor fiscal e séries
+
+### Verificação das fontes
+
+A verificação está registada em D-063.
+
+| Item                                                                      | Verificado                                           | Fonte                                                   |
+| ------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| Decreto Presidencial n.º 71/25 (20/03/2025), regime jurídico das facturas | Existência, âmbito e e-factura por software validado | Secundárias: EY, PwC, Cegid, Afriwise, Abreu Advogados  |
+| Decreto Executivo n.º 683/25 (estrutura de dados / modelo)                | Existência                                           | Secundária                                              |
+| Datas de entrada em vigor                                                 | **Não**: as fontes divergem                          | —                                                       |
+| Especificação técnica da AGT (assinatura, hash, QR, séries, códigos)      | **Não obtida**                                       | —                                                       |
+| Taxas e códigos de isenção                                                | **Não configurados**                                 | A empresa introduz e confirma a partir da fonte oficial |
+
+Fontes consultadas: [EY — Novo Regime Jurídico das Facturas](https://www.ey.com/pt_ao/technical/tax-alerts/novo-regime-juridico-das-facturas),
+[EY — Facturação Electrónica a partir de 1 de Janeiro de 2026](https://www.ey.com/pt_ao/technical/tax-alerts/facturacao-electronica-a-partir-de-1-de-janeiro-de-2026),
+[PwC — Implementação de facturas electrónicas](https://www.pwc.com/ao/pt/servicos/advisory/consulting/facturacao-electronica.html),
+[Cegid — Facturação electrónica](https://www.cegid.com/ao/blog/obrigatoriedade-faturacao-eletronica-angola/),
+[Afriwise — Angola: New Invoicing Rules](https://www.afriwise.com/blog/angola-new-invoicing-rules),
+[Abreu Advogados — Novidades Fiscais 2026](https://abreuadvogados.com/wp-content/uploads/2026/02/NL-Novidades-Fiscais-e-Legais-para-o-ano-de-2026-PT.pdf).
+
+### Modelo
+
+Migração `0058_create_fiscal_engine`:
+
+- `tax_codes` — país, código, nome, natureza (imposto ou retenção), tipo, estado.
+- `tax_rates` — taxa (4 casas), do país ou de uma entidade, vigência, base mínima (retenções) e fonte legal obrigatória.
+  Rascunho → confirmada → retirada. A base exige que quem confirma não seja quem preparou.
+- `tax_exemptions` — código e descrição como na fonte, fonte legal; mesma confirmação.
+- `tax_settings` — nível de arredondamento por entidade.
+- `fiscal_series` — entidade, tipo de documento, código fiscal, série, ano, prefixo, dígitos, próximo número, última
+  data de emissão, referência manual à autoridade. `mode = 'SIMULATION'` obrigatório (`CHECK`).
+- `fiscal_numbers` — número atribuído (único por série e por documento), só de acréscimo.
+
+Gatilhos na base:
+
+- valores confirmados ou retirados não mudam nem se apagam;
+- retirado é final;
+- a série só avança de um em um, fixa a configuração ao activar e, fechada, é final.
+
+### Backend e API (`/api/v1/sales/fiscal`)
+
+- Impostos e taxas:
+  - `GET|POST /tax-codes`, `GET|PATCH /tax-codes/:id`, `POST /tax-codes/:id/rates`;
+  - `PATCH|DELETE /tax-rates/:id`, `POST /tax-rates/:id/{confirm|retire}`.
+- Isenções: `GET|POST /exemptions`, `PATCH /exemptions/:id`, `POST /exemptions/:id/{confirm|retire}`.
+- Arredondamento: `GET /settings`, `PUT /settings/:legalEntityId`.
+- Séries:
+  - `GET|POST /series`, `PATCH /series/:id`, `POST /series/:id/{activate|close}`;
+  - `GET /series/:id/numbers`.
+- Simulação: `POST /simulate`.
+- Contratos para 10.6+: `resolveTaxes(scope, {legalEntityId, date, lines})` e
+  `allocateFiscalNumber(scope, {seriesId, legalEntityId, documentKind, issueDate, documentType, documentId})`.
+- Permissões `sales.fiscal.read|manage|confirm`. Auditoria `tax_code.*`, `tax_rate.*`, `tax_exemption.*`,
+  `tax_settings.updated` e `fiscal_series.*`.
+- Erros:
+  - `SELF_CONFIRMATION`, `OVERLAP`, `NO_RATE`, `EXEMPTION_REQUIRED`, `NOT_APPLICABLE`, `COUNTRY_MISMATCH`;
+  - `SERIES_NOT_ACTIVE`, `SERIES_MISMATCH`, `ISSUE_DATE`, `ALREADY_NUMBERED`, `NOT_AVAILABLE` (modo de produção);
+  - `CODE_TAKEN`, `INVALID_STATE`, `VERSION_CONFLICT`.
+
+### Ecrãs (`/vendas/fiscal`)
+
+- **Impostos e retenções** — lista e criação; arredondamento por entidade.
+- **Ficha do imposto** — taxas por vigência com fonte legal, quem preparou e quem confirmou. Editar e apagar só em
+  rascunho. Confirmar pede outra pessoa e lembra a fonte; retirar exige motivo. Auditoria.
+- **Motivos de isenção** — preparar, confirmar por outra pessoa, retirar.
+- **Séries fiscais** — aviso de simulação, criar, editar (rascunho), activar com confirmação, fechar com motivo e ver
+  os números atribuídos.
+- **Simulação fiscal** — linhas com base, impostos e motivo de isenção. Mostra o resumo por imposto, os totais (com
+  retenção e a pagar) e as taxas usadas com a fonte.
+
+### Testes e evidências
+
+**Backend**
+
+`tests/unit/sales_fiscal_domain.spec.ts` (5 testes), com valores ilustrativos e não legais:
+
+- validação;
+- sequência cronológica;
+- linha e documento iguais sem meios cêntimos;
+- meios cêntimos: 0,03 por linha contra 0,02 por documento;
+- vários impostos por linha;
+- retenção com base mínima.
+
+`tests/functional/sales_fiscal.spec.ts` (2 testes):
+
+- **Taxas:** fonte obrigatória; rascunho não conta; quem prepara não confirma (`SELF_CONFIRMATION`); outra pessoa
+  confirma; confirmada não muda pela API nem na base; `OVERLAP`; a taxa escolhe-se pela vigência na data.
+- **Isenção e retenção:** 0 % sem isenção confirmada recusado; retenção acima e abaixo da base mínima.
+- **Arredondamento e retirada:** arredondamento por documento contra por linha; retirada que deixa de valer.
+- **Séries:** só simulação; configuração fixa ao activar; 20 atribuições simultâneas em duas séries dão 1..10 em cada,
+  sem saltos nem repetições.
+- **Números:** uma emissão falhada não gasta o número; recusa de data anterior, ano errado, tipo errado e documento
+  repetido.
+- **Protecção na base:** recuar, saltar, alterar o registo ou passar a produção é recusado; fechar com motivo.
+
+Também cobertos:
+
+- `isolation_matrix`: 11 tentativas sobre o imposto, taxa, isenção, série e arredondamento de outra empresa, todas
+  com 404; simulação e série com a entidade alheia recusadas; a lista de séries não mostra as alheias.
+- `routes_protection`.
+
+**Frontend:** `fiscal-model.spec.ts`.
+
+**Browser (`p1005`):** 7 passos.
+
+- imposto pela navegação e taxa com fonte obrigatória;
+- quem preparou não vê "Confirmar"; outra pessoa confirma;
+- isenção confirmada por outra pessoa;
+- simulação com o aviso visível: a linha a 0 % sem isenção é recusada, e com a isenção dá 150,00 de líquido e 160,00
+  de total, com a fonte mostrada;
+- série criada em simulação e activada, ainda sem números;
+- telemóvel sem deslocamento horizontal.
+
+### Pendências e bloqueios
+
+- **Bloqueio:** a operação real exige o texto oficial (Diário da República), a especificação técnica da AGT e
+  software certificado. Até lá, só simulação.
+- Os documentos fiscais (10.6–10.8) vão usar `resolveTaxes` e `allocateFiscalNumber`. O imposto por linha de
+  orçamentos e encomendas passará a vir do motor no 10.6.
+- Contingência e comunicação com a AGT ficam para o 10.9, com adaptador e simulador identificado.

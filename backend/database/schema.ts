@@ -2016,6 +2016,37 @@ export class FeatureSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class FiscalNumberSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'documentId', 'documentType', 'formatted', 'id', 'issueDate', 'number', 'seriesId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FiscalNumberSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare documentId: string
+  @column()
+  declare documentType: string
+  @column()
+  declare formatted: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare issueDate: DateTime
+  @column()
+  declare number: number
+  @column()
+  declare seriesId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class FiscalPeriodSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'endDate', 'fiscalYearId', 'id', 'kind', 'name', 'number', 'startDate', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = FiscalPeriodSchema.$columns
@@ -2037,6 +2068,51 @@ export class FiscalPeriodSchema extends BaseModel {
   declare number: number
   @column.date()
   declare startDate: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class FiscalSerySchema extends BaseModel {
+  static $columns = ['authorityReference', 'closedReason', 'code', 'createdAt', 'createdBy', 'documentKind', 'fiscalCode', 'fiscalYear', 'id', 'lastIssueDate', 'legalEntityId', 'mode', 'nextNumber', 'padding', 'prefix', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = FiscalSerySchema.$columns
+  @column()
+  declare authorityReference: string | null
+  @column()
+  declare closedReason: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare documentKind: string
+  @column()
+  declare fiscalCode: string
+  @column()
+  declare fiscalYear: number
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare lastIssueDate: DateTime | null
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare mode: string
+  @column()
+  declare nextNumber: number
+  @column()
+  declare padding: number
+  @column()
+  declare prefix: string
   @column()
   declare status: string
   @column()
@@ -8395,6 +8471,138 @@ export class SupplierSchema extends BaseModel {
   declare status: string
   @column()
   declare supplierType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class TaxCodeSchema extends BaseModel {
+  static $columns = ['code', 'countryCode', 'createdAt', 'createdBy', 'id', 'kind', 'name', 'status', 'taxType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = TaxCodeSchema.$columns
+  @column()
+  declare code: string
+  @column()
+  declare countryCode: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare name: string
+  @column()
+  declare status: string
+  @column()
+  declare taxType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class TaxExemptionSchema extends BaseModel {
+  static $columns = ['code', 'confirmedAt', 'confirmedBy', 'countryCode', 'createdAt', 'createdBy', 'description', 'id', 'legalSource', 'retiredReason', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = TaxExemptionSchema.$columns
+  @column()
+  declare code: string
+  @column.dateTime()
+  declare confirmedAt: DateTime | null
+  @column()
+  declare confirmedBy: string | null
+  @column()
+  declare countryCode: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalSource: string
+  @column()
+  declare retiredReason: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class TaxRateSchema extends BaseModel {
+  static $columns = ['confirmedAt', 'confirmedBy', 'createdAt', 'createdBy', 'id', 'legalEntityId', 'legalSource', 'minBase', 'notes', 'rate', 'retiredReason', 'status', 'taxCodeId', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = TaxRateSchema.$columns
+  @column.dateTime()
+  declare confirmedAt: DateTime | null
+  @column()
+  declare confirmedBy: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string | null
+  @column()
+  declare legalSource: string
+  @column()
+  declare minBase: string | null
+  @column()
+  declare notes: string | null
+  @column()
+  declare rate: string
+  @column()
+  declare retiredReason: string | null
+  @column()
+  declare status: string
+  @column()
+  declare taxCodeId: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class TaxSettingSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'legalEntityId', 'roundingLevel', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = TaxSettingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare roundingLevel: string
   @column()
   declare tenantId: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })

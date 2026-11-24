@@ -18,6 +18,8 @@ const ORDER_PERMISSIONS = [
   'sales.orders.fulfil',
 ];
 
+const FISCAL_PERMISSIONS = ['sales.fiscal.read', 'sales.fiscal.manage', 'sales.fiscal.confirm'];
+
 const PRICE_PERMISSIONS = ['sales.prices.read', 'sales.prices.manage', 'sales.prices.approve'];
 
 type Load = NonNullable<Route['loadComponent']>;
@@ -205,6 +207,48 @@ export const SALES_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'sales.orders.manage', anyScope: true },
         loadComponent: () => import('./order-form').then((m) => m.OrderFormPage),
+      },
+    ],
+  },
+  {
+    path: 'fiscal',
+    title: 'Fiscal',
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'impostos' },
+      {
+        path: 'impostos',
+        title: 'Impostos e retenções',
+        canActivate: [accessGuard],
+        data: { anyOf: FISCAL_PERMISSIONS },
+        loadComponent: () => import('./tax-codes').then((m) => m.TaxCodes),
+      },
+      {
+        path: 'impostos/:id',
+        title: 'Imposto',
+        canActivate: [accessGuard],
+        data: { anyOf: FISCAL_PERMISSIONS },
+        loadComponent: () => import('./tax-code-detail').then((m) => m.TaxCodeDetail),
+      },
+      {
+        path: 'isencoes',
+        title: 'Motivos de isenção',
+        canActivate: [accessGuard],
+        data: { anyOf: FISCAL_PERMISSIONS },
+        loadComponent: () => import('./tax-exemptions').then((m) => m.TaxExemptions),
+      },
+      {
+        path: 'series',
+        title: 'Séries fiscais',
+        canActivate: [accessGuard],
+        data: { anyOf: FISCAL_PERMISSIONS },
+        loadComponent: () => import('./fiscal-series').then((m) => m.FiscalSeriesPage),
+      },
+      {
+        path: 'simulacao',
+        title: 'Simulação fiscal',
+        canActivate: [accessGuard],
+        data: { anyOf: FISCAL_PERMISSIONS },
+        loadComponent: () => import('./tax-simulator').then((m) => m.TaxSimulator),
       },
     ],
   },

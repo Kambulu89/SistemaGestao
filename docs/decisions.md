@@ -1144,3 +1144,45 @@ convertido. A base protege preços e produtos depois do rascunho, a numeração,
 **Conversão.** `POST /sales/orders/from-quote` exige `sales.orders.manage` no âmbito do orçamento. Chama o contrato do
 10.3 na mesma transacção: com duas conversões simultâneas, uma dá 201 e a outra 409 (`ALREADY_CONVERTED`). A encomenda
 herda cliente, condições, linhas e preços, que não se alteram (`LINES_FROM_QUOTE`).
+
+## D-063 Motor fiscal configurável sem valores pré-carregados; séries fiscais só em simulação (aceite)
+
+**Verificação das fontes (24/11/2026).** Confirmei por fontes secundárias (EY, PwC, Cegid, Afriwise, Abreu Advogados):
+- o Decreto Presidencial n.º 71/25, de 20 de Março (regime jurídico das facturas), que substitui o regime anterior e
+  torna obrigatória a facturação electrónica por software validado pela AGT;
+- o Decreto Executivo n.º 683/25 (estrutura de dados e modelo da facturação electrónica);
+- a exigência de comunicar as séries à AGT e de prever um regime de contingência.
+
+**Não obtive** o texto oficial no Diário da República nem a especificação técnica da AGT (estrutura, assinatura, hash,
+QR, códigos de isenção, validação de séries). As fontes secundárias divergem nas datas de entrada em vigor. Por isso:
+- **Nenhuma taxa, isenção, retenção, código de documento ou regra de arredondamento vem pré-carregada.** A empresa
+  introduz cada valor com a fonte legal (diploma, artigo, publicação). Uma **outra pessoa** (`sales.fiscal.confirm`)
+  confirma-o depois de o verificar na fonte oficial; a base impede quem prepara de confirmar. Confirmado, o valor
+  não muda: retira-se com motivo e cria-se nova vigência. Vigências confirmadas do mesmo imposto e âmbito não se
+  sobrepõem (`OVERLAP`).
+- Só valores **confirmados e em vigor na data** entram nos cálculos. A taxa da entidade prevalece sobre a do país.
+  Uma taxa de imposto a 0 % exige um motivo de isenção confirmado.
+- **As séries fiscais só existem em modo `SIMULATION`** (`CHECK` na base). A operação real fica bloqueada até haver
+  software certificado e a especificação oficial; não há comunicação com a AGT, assinatura, hash ou QR.
+- A "referência da comunicação à autoridade" é um registo manual, nunca verificado. Os ecrãs mostram o aviso de
+  simulação.
+
+**Cálculo.** Inteiros escalados com arredondamento a metade para cima:
+- **Por linha:** cada imposto de cada linha a 2 casas, somados.
+- **Por documento:** o total de cada imposto e taxa arredondado uma vez. O nível escolhe-se por entidade, e a empresa
+  deve confirmá-lo na fonte oficial.
+- **Retenções:** sobre a base do documento sujeita a cada uma, a partir da base mínima configurada.
+- **Totais:** líquido, imposto, bruto, retenção e a pagar.
+
+**Sequência.** `allocateFiscalNumber` corre na transacção do documento e bloqueia a série.
+- Exige série activa, da entidade e do tipo do documento, com data dentro do ano fiscal e não anterior à última
+  emissão.
+- Regista o número em `fiscal_numbers`, só de acréscimo, único por série e por documento.
+- Uma emissão que falha desfaz a atribuição, por isso não há saltos.
+- A base impede recuar ou saltar a numeração, alterar a configuração de uma série activa e reabrir uma fechada.
+- Várias séries do mesmo tipo podem estar activas em simultâneo; o documento escolhe-a explicitamente.
+
+**Pendente:**
+- verificar o texto oficial e a especificação da AGT;
+- só depois configurar valores reais e implementar o adaptador de comunicação (10.9), que nesta fase só terá
+  simulador identificado.

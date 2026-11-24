@@ -956,8 +956,38 @@ async function populate(client: any) {
       [tenant.id, salesOrder.id, product.id]
     )
   ).rows[0] as { id: string }
+  // Configuração fiscal da empresa A (10.5): imposto com taxa em rascunho, isenção e série, inseridos directamente.
+  const taxCode = (
+    await owner.rawQuery(
+      `insert into tax_codes (tenant_id, country_code, code, name, kind, tax_type) values (?, 'AO', 'TA', 'Teste A', 'TAX', 'VAT') returning id`,
+      [tenant.id]
+    )
+  ).rows[0] as { id: string }
+  const taxRate = (
+    await owner.rawQuery(
+      `insert into tax_rates (tenant_id, tax_code_id, valid_from, rate, legal_source) values (?, ?, '2026-01-01', 10, 'Fonte de teste') returning id`,
+      [tenant.id, taxCode.id]
+    )
+  ).rows[0] as { id: string }
+  const taxExemption = (
+    await owner.rawQuery(
+      `insert into tax_exemptions (tenant_id, country_code, code, description, legal_source) values (?, 'AO', 'XA', 'Isenção A', 'Fonte de teste') returning id`,
+      [tenant.id]
+    )
+  ).rows[0] as { id: string }
+  const fiscalSeries = (
+    await owner.rawQuery(
+      `insert into fiscal_series (tenant_id, legal_entity_id, document_kind, fiscal_code, code, fiscal_year, prefix)
+       values (?, ?, 'INVOICE', 'FT', 'SA', 2026, 'FT SA/') returning id`,
+      [tenant.id, le.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    taxCode,
+    taxRate,
+    taxExemption,
+    fiscalSeries,
     salesOrder,
     salesOrderLine,
     salesQuote,
@@ -1867,6 +1897,51 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'cliente sobre terceiro alheio',
         B.post('/api/v1/sales/customers', { partnerId: a.supplier.partner.id, currency: 'AOA' }),
       ],
+      ['GET imposto alheio', B.get(`/api/v1/sales/fiscal/tax-codes/${a.taxCode.id}`)],
+      [
+        'alterar imposto alheio',
+        B.patch(`/api/v1/sales/fiscal/tax-codes/${a.taxCode.id}`, { ...v, name: 'Outro' }),
+      ],
+      [
+        'taxa em imposto alheio',
+        B.post(`/api/v1/sales/fiscal/tax-codes/${a.taxCode.id}/rates`, {
+          rate: '1',
+          validFrom: '2026-01-01',
+          legalSource: 'Fonte de teste',
+        }),
+      ],
+      [
+        'alterar taxa alheia',
+        B.patch(`/api/v1/sales/fiscal/tax-rates/${a.taxRate.id}`, { ...v, rate: '1' }),
+      ],
+      ['apagar taxa alheia', B.delete(`/api/v1/sales/fiscal/tax-rates/${a.taxRate.id}`)],
+      [
+        'confirmar taxa alheia',
+        B.post(`/api/v1/sales/fiscal/tax-rates/${a.taxRate.id}/confirm`, v),
+      ],
+      [
+        'alterar isenção alheia',
+        B.patch(`/api/v1/sales/fiscal/exemptions/${a.taxExemption.id}`, {
+          ...v,
+          description: 'Outra',
+        }),
+      ],
+      [
+        'confirmar isenção alheia',
+        B.post(`/api/v1/sales/fiscal/exemptions/${a.taxExemption.id}/confirm`, v),
+      ],
+      [
+        'activar série alheia',
+        B.post(`/api/v1/sales/fiscal/series/${a.fiscalSeries.id}/activate`, v),
+      ],
+      [
+        'números de série alheia',
+        B.get(`/api/v1/sales/fiscal/series/${a.fiscalSeries.id}/numbers`),
+      ],
+      [
+        'arredondamento de entidade alheia',
+        B.put(`/api/v1/sales/fiscal/settings/${a.le.id}`, { roundingLevel: 'DOCUMENT' }),
+      ],
       ['GET encomenda alheia', B.get(`/api/v1/sales/orders/${a.salesOrder.id}`)],
       [
         'alterar encomenda alheia',
@@ -2645,6 +2720,22 @@ test.group('isolamento | matriz entre empresas', (group) => {
       (await B.get('/api/v1/sales/quotes')).body().data.map((x: any) => x.id),
       a.salesQuote.id
     )
+    crossPricing.push(
+      await B.post('/api/v1/sales/fiscal/simulate', {
+        legalEntityId: a.le.id,
+        date: '2026-06-01',
+        lines: [{ netAmount: '1.00', taxCodeIds: [a.taxCode.id] }],
+      }),
+      await B.post('/api/v1/sales/fiscal/series', {
+        legalEntityId: a.le.id,
+        documentKind: 'INVOICE',
+        fiscalCode: 'FT',
+        code: 'X',
+        fiscalYear: 2026,
+        prefix: 'X/',
+      })
+    )
+    assert.lengthOf((await B.get('/api/v1/sales/fiscal/series')).body().data.items, 0)
     for (const r of crossPricing) {
       assert.include([404, 422], r.status())
       assert.notInclude(JSON.stringify(r.body()), 'PL-A')
