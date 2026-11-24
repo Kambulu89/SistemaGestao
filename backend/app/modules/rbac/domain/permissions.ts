@@ -723,6 +723,30 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Aprovar ou devolver orçamentos com descontos acima do limite ou preço manual, submetidos por outra pessoa.',
   },
+  {
+    code: 'sales.orders.read',
+    module: 'sales',
+    description:
+      'Consultar encomendas de venda (no âmbito: empresa, entidade legal ou só as próprias).',
+  },
+  {
+    code: 'sales.orders.manage',
+    module: 'sales',
+    description:
+      'Criar encomendas (também a partir de orçamentos aceites), submeter, fechar o resto e anular com motivo.',
+  },
+  {
+    code: 'sales.orders.approve',
+    module: 'sales',
+    description:
+      'Aprovar ou devolver encomendas com excepções de preço ou acima do limite de crédito, submetidas por outra pessoa.',
+  },
+  {
+    code: 'sales.orders.fulfil',
+    module: 'sales',
+    description:
+      'Reservar, libertar e expedir encomendas pelo Inventário; dar serviços por prestados.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

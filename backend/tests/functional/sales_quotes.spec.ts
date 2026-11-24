@@ -339,7 +339,18 @@ test.group('Vendas | orçamentos (10.3)', (group) => {
     // Conversão única (contrato para as encomendas do 10.4): duas tentativas simultâneas, só uma passa.
     const a = await runInTenant(o.context, (scope) => acceptedQuote(scope, q.id))
     assert.equal(a.quote.grossTotal, '331.74')
-    const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']
+    // Duas encomendas candidatas (a FK exige encomendas reais), inseridas directamente.
+    const ids: string[] = []
+    for (let i = 0; i < 2; i++)
+      ids.push(
+        (
+          await owner().rawQuery(
+            `insert into sales_orders (tenant_id, legal_entity_id, customer_id, salesperson_membership_id, order_date, currency)
+             values (?, ?, ?, ?, current_date, 'AOA') returning id`,
+            [o.tenant.id, o.leA.id, o.c1.id, o.context.membershipId]
+          )
+        ).rows[0].id
+      )
     const res = await Promise.allSettled(
       ids.map((orderId, i) =>
         runInTenant({ ...o.context, requestId: `c${i}` }, (scope) =>

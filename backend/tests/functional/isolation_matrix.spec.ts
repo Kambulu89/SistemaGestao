@@ -941,8 +941,25 @@ async function populate(client: any) {
        price_source, pricing) values (?, ?, 1, ?, 'Linha A', 1, 14, 'CATALOG', '{}')`,
     [tenant.id, salesQuote.id, product.id]
   )
+  // Encomenda de venda da empresa A (10.4), em rascunho com uma linha, inserida directamente.
+  const salesOrder = (
+    await owner.rawQuery(
+      `insert into sales_orders (tenant_id, legal_entity_id, customer_id, salesperson_membership_id, order_date, currency)
+       values (?, ?, ?, (select id from tenant_memberships where tenant_id = ? limit 1), '2026-06-01', 'AOA') returning id`,
+      [tenant.id, le.id, customer.id, tenant.id]
+    )
+  ).rows[0] as { id: string }
+  const salesOrderLine = (
+    await owner.rawQuery(
+      `insert into sales_order_lines (tenant_id, order_id, line_no, product_id, description, is_stock, quantity, tax_rate,
+         price_source, pricing) values (?, ?, 1, ?, 'Linha A', true, 1, 14, 'CATALOG', '{}') returning id`,
+      [tenant.id, salesOrder.id, product.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    salesOrder,
+    salesOrderLine,
     salesQuote,
     priceList,
     priceListLine,
@@ -1850,6 +1867,31 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'cliente sobre terceiro alheio',
         B.post('/api/v1/sales/customers', { partnerId: a.supplier.partner.id, currency: 'AOA' }),
       ],
+      ['GET encomenda alheia', B.get(`/api/v1/sales/orders/${a.salesOrder.id}`)],
+      [
+        'alterar encomenda alheia',
+        B.patch(`/api/v1/sales/orders/${a.salesOrder.id}`, { ...v, notes: 'x' }),
+      ],
+      ['submeter encomenda alheia', B.post(`/api/v1/sales/orders/${a.salesOrder.id}/submit`, v)],
+      ['reservar encomenda alheia', B.post(`/api/v1/sales/orders/${a.salesOrder.id}/reserve`, v)],
+      [
+        'expedir encomenda alheia',
+        B.post(`/api/v1/sales/orders/${a.salesOrder.id}/deliver`, {
+          ...v,
+          requestKey: 'isolamento-01',
+          deliveryDate: '2026-06-02',
+          lines: [{ lineId: a.salesOrderLine.id, quantity: '1' }],
+        }),
+      ],
+      [
+        'anular encomenda alheia',
+        B.post(`/api/v1/sales/orders/${a.salesOrder.id}/cancel`, { ...v, reason: 'xxx' }),
+      ],
+      [
+        'converter orçamento alheio',
+        B.post('/api/v1/sales/orders/from-quote', { quoteId: a.salesQuote.id }),
+      ],
+      ['moradas de cliente alheio', B.get(`/api/v1/sales/orders/addresses/${a.customer.id}`)],
       ['GET orçamento alheio', B.get(`/api/v1/sales/quotes/${a.salesQuote.id}`)],
       [
         'alterar orçamento alheio',
@@ -2586,6 +2628,18 @@ test.group('isolamento | matriz entre empresas', (group) => {
         validUntil: '2026-06-30',
         lines: [],
       })
+    )
+    crossPricing.push(
+      await B.post('/api/v1/sales/orders', {
+        legalEntityId: a.le.id,
+        customerId: a.customer.id,
+        orderDate: '2026-06-01',
+        lines: [],
+      })
+    )
+    assert.notInclude(
+      (await B.get('/api/v1/sales/orders')).body().data.map((x: any) => x.id),
+      a.salesOrder.id
     )
     assert.notInclude(
       (await B.get('/api/v1/sales/quotes')).body().data.map((x: any) => x.id),

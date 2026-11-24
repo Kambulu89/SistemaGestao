@@ -712,6 +712,40 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
   'POST /api/v1/sales/quotes/:id/cancel':
     'âmbito RBAC de sales.quotes.read/manage/approve (empresa, entidade legal ou próprios) verificado no serviço',
+  'GET /api/v1/sales/orders':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'GET /api/v1/sales/orders/options':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'GET /api/v1/sales/orders/addresses/:customerId':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'GET /api/v1/sales/orders/search/customers':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'GET /api/v1/sales/orders/search/products':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders/from-quote':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'GET /api/v1/sales/orders/:id':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'PATCH /api/v1/sales/orders/:id':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders/:id/submit':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders/:id/approve':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders/:id/reject':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders/:id/reserve':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders/:id/release':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders/:id/deliver':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders/:id/close':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
+  'POST /api/v1/sales/orders/:id/cancel':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

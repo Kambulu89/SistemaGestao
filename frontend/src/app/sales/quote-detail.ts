@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Api, ApiError } from '../core/api';
 import { Breadcrumbs } from '../core/breadcrumbs';
+import { Workspace } from '../core/workspace';
 import { Attachments } from '../ui/attachments';
 import { AuditHistory } from '../ui/audit-history';
 import { ConfirmService } from '../ui/confirm';
@@ -26,7 +27,7 @@ import {
   SEND_CHANNEL,
 } from './quote-model';
 
-type Dialog = 'reject' | 'send' | 'accept' | 'decline' | 'revise' | 'cancel' | null;
+type Dialog = 'reject' | 'send' | 'accept' | 'decline' | 'revise' | 'cancel' | 'convert' | null;
 
 /**
  * Orçamento: linhas com a origem do preço (tabela, regra, desconto e limite), totais, aprovação dos descontos acima do
@@ -188,6 +189,24 @@ type Dialog = 'reject' | 'send' | 'accept' | 'decline' | 'revise' | 'cancel' | n
                 Anular
               </button>
             }
+            @if (q.status === 'ACCEPTED' && canConvert()) {
+              <button
+                type="button"
+                class="btn-primary"
+                data-testid="qd-convert"
+                (click)="openConvert()"
+              >
+                Converter em encomenda
+              </button>
+            }
+            @if (q.convertedOrderId) {
+              <a
+                class="link self-center"
+                data-testid="qd-order"
+                [routerLink]="['/vendas/encomendas', q.convertedOrderId]"
+                >Ver a encomenda</a
+              >
+            }
           </div>
         </section>
 
@@ -311,6 +330,30 @@ type Dialog = 'reject' | 'send' | 'accept' | 'decline' | 'revise' | 'cancel' | n
               />
             </app-field>
           }
+          @case ('convert') {
+            <p class="text-sm">
+              A encomenda fica em rascunho com as linhas e os preços aceites pelo cliente; o
+              orçamento passa a convertido (uma única vez).
+            </p>
+            <app-field
+              label="Armazém"
+              hint="De onde sai a mercadoria (pode escolher depois)."
+              [error]="act.field('warehouseId')"
+            >
+              <select
+                appControl
+                class="input"
+                name="cwh"
+                data-testid="qd-c-warehouse"
+                [(ngModel)]="convertWarehouse"
+              >
+                <option value="">—</option>
+                @for (w of warehouses(); track w.id) {
+                  <option [value]="w.id">{{ w.code }} — {{ w.name }}</option>
+                }
+              </select>
+            </app-field>
+          }
           @case ('accept') {
             <p class="text-sm">Aceitação da versão {{ x()?.versionNo }} enviada.</p>
             <app-field
@@ -392,6 +435,10 @@ export class QuoteDetail {
   private readonly toasts = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly breadcrumbs = inject(Breadcrumbs);
+  private readonly workspace = inject(Workspace);
+  protected readonly canConvert = computed(() => this.workspace.canAny('sales.orders.manage'));
+  protected readonly warehouses = signal<{ id: string; code: string; name: string }[]>([]);
+  protected convertWarehouse = '';
   protected readonly x = signal<Quote | null>(null);
   protected readonly opts = signal<QuoteOptions | null>(null);
   protected readonly loadError = signal<ApiError | null>(null);
@@ -470,6 +517,7 @@ export class QuoteDetail {
       (
         {
           reject: 'Devolver para correcção',
+          convert: 'Converter em encomenda',
           send: 'Enviar ao cliente',
           accept: 'Aceitação do cliente',
           decline: 'Recusa do cliente',
@@ -571,6 +619,32 @@ export class QuoteDetail {
         return this.post('revise', { reason: this.reason }, 'Nova versão em rascunho.');
       case 'cancel':
         return this.post('cancel', { reason: this.reason }, 'Orçamento anulado.');
+      case 'convert': {
+        const r = await this.act.run(() =>
+          this.api.post<{ id: string }>('sales/orders/from-quote', {
+            quoteId: q.id,
+            warehouseId: nz(this.convertWarehouse),
+          }),
+        );
+        if (!r) return;
+        this.dialog.set(null);
+        this.toasts.show('Encomenda criada a partir do orçamento.');
+        await this.router.navigate(['/vendas/encomendas', r.id]);
+        return;
+      }
     }
+  }
+
+  protected async openConvert() {
+    this.convertWarehouse = '';
+    this.open('convert');
+    const o = await this.api
+      .get<{ warehouses: { id: string; code: string; name: string; legalEntityId: string }[] }>(
+        'sales/orders/options',
+      )
+      .catch(() => null);
+    this.warehouses.set(
+      (o?.warehouses ?? []).filter((w) => w.legalEntityId === this.x()?.legalEntity.id),
+    );
   }
 }

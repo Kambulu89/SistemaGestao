@@ -153,7 +153,7 @@ async function setQuote(scope: TenantScope, id: string, fields: Record<string, u
   )
 }
 
-async function customerRow(scope: TenantScope, id: string) {
+export async function customerRow(scope: TenantScope, id: string) {
   return (
     ((
       await scope.trx.rawQuery(
@@ -165,7 +165,7 @@ async function customerRow(scope: TenantScope, id: string) {
     ).rows[0] as any) ?? null
   )
 }
-const customerActive = (c: any) => {
+export const customerActive = (c: any) => {
   if (c.status !== 'ACTIVE')
     throw ApiError.conflict(
       'CUSTOMER_BLOCKED',
@@ -174,7 +174,7 @@ const customerActive = (c: any) => {
 }
 
 /** Preços das linhas pelo motor do 10.2 (à data do orçamento) e totais. */
-async function priced(
+export async function priced(
   scope: TenantScope,
   h: { customerId: string; currency: string; date: string; legalEntityId: string },
   lines: LineInput[]
@@ -430,7 +430,7 @@ async function detail(
 export type QuoteView = Awaited<ReturnType<typeof detail>>
 
 /** Comercial: membro activo da empresa (por omissão, quem cria). */
-async function salespersonOk(scope: TenantScope, id: string) {
+export async function salespersonOk(scope: TenantScope, id: string) {
   const m = (
     await scope.trx.rawQuery(
       `select status from tenant_memberships where tenant_id = ? and id = ?`,

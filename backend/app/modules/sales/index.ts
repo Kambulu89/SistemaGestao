@@ -20,3 +20,4 @@ export {
   QuoteService,
   type QuoteView,
 } from '#modules/sales/application/quote_service'
+export { orderAccess, OrderService, type OrderView } from '#modules/sales/application/order_service'

@@ -11,6 +11,13 @@ const CUSTOMER_PERMISSIONS = [
 
 const QUOTE_PERMISSIONS = ['sales.quotes.read', 'sales.quotes.manage', 'sales.quotes.approve'];
 
+const ORDER_PERMISSIONS = [
+  'sales.orders.read',
+  'sales.orders.manage',
+  'sales.orders.approve',
+  'sales.orders.fulfil',
+];
+
 const PRICE_PERMISSIONS = ['sales.prices.read', 'sales.prices.manage', 'sales.prices.approve'];
 
 type Load = NonNullable<Route['loadComponent']>;
@@ -163,6 +170,41 @@ export const SALES_ROUTES: Routes = [
         canDeactivate: [unsavedChangesGuard],
         data: { permission: 'sales.quotes.manage', anyScope: true },
         loadComponent: () => import('./quote-form').then((m) => m.QuoteFormPage),
+      },
+    ],
+  },
+  {
+    path: 'encomendas',
+    title: 'Encomendas de venda',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: ORDER_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./orders').then((m) => m.Orders),
+      },
+      {
+        path: 'nova',
+        title: 'Nova encomenda',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.orders.manage', anyScope: true },
+        loadComponent: () => import('./order-form').then((m) => m.OrderFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Encomenda',
+        canActivate: [accessGuard],
+        data: { anyOf: ORDER_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./order-detail').then((m) => m.OrderDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar encomenda',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.orders.manage', anyScope: true },
+        loadComponent: () => import('./order-form').then((m) => m.OrderFormPage),
       },
     ],
   },

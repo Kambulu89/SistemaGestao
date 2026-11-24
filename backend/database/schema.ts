@@ -6381,6 +6381,247 @@ export class RoleSchema extends BaseModel {
   declare version: number
 }
 
+export class SalesOrderDeliverySchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'deliveryDate', 'id', 'notes', 'orderId', 'reference', 'requestHash', 'requestKey', 'seq', 'stockEventId', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = SalesOrderDeliverySchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column.date()
+  declare deliveryDate: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare orderId: string
+  @column()
+  declare reference: string
+  @column()
+  declare requestHash: string
+  @column()
+  declare requestKey: string
+  @column()
+  declare seq: number
+  @column()
+  declare stockEventId: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string | null
+}
+
+export class SalesOrderDeliveryLineSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'deliveryId', 'id', 'orderLineId', 'quantity', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = SalesOrderDeliveryLineSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare deliveryId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare orderLineId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class SalesOrderEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'details', 'id', 'kind', 'orderId', 'reason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = SalesOrderEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare orderId: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class SalesOrderLineSchema extends BaseModel {
+  static $columns = ['basePrice', 'closedQty', 'createdAt', 'createdBy', 'deliveredQty', 'description', 'grossAmount', 'id', 'invoicedQty', 'isStock', 'lineNo', 'manualDiscountPct', 'manualUnitPrice', 'netAmount', 'netUnitPrice', 'orderId', 'priceSource', 'pricing', 'productId', 'quantity', 'quoteLineNo', 'requiresApproval', 'reservedQty', 'taxAmount', 'taxExemptionReason', 'taxRate', 'tenantId', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = SalesOrderLineSchema.$columns
+  @column()
+  declare basePrice: string | null
+  @column()
+  declare closedQty: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare deliveredQty: string
+  @column()
+  declare description: string
+  @column()
+  declare grossAmount: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoicedQty: string
+  @column()
+  declare isStock: boolean
+  @column()
+  declare lineNo: number
+  @column()
+  declare manualDiscountPct: string | null
+  @column()
+  declare manualUnitPrice: string | null
+  @column()
+  declare netAmount: string
+  @column()
+  declare netUnitPrice: string | null
+  @column()
+  declare orderId: string
+  @column()
+  declare priceSource: string
+  @column()
+  declare pricing: any
+  @column()
+  declare productId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare quoteLineNo: number | null
+  @column()
+  declare requiresApproval: boolean
+  @column()
+  declare reservedQty: string
+  @column()
+  declare taxAmount: string
+  @column()
+  declare taxExemptionReason: string | null
+  @column()
+  declare taxRate: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class SalesOrderSchema extends BaseModel {
+  static $columns = ['approvalReasons', 'approvalStatus', 'approvedAt', 'approvedBy', 'closedReason', 'confirmedAt', 'createdAt', 'createdBy', 'creditCheck', 'currency', 'customerId', 'customerReference', 'customerVersionId', 'deliveryAddressId', 'deliveryStatus', 'grossTotal', 'id', 'invoicingStatus', 'legalEntityId', 'netTotal', 'notes', 'number', 'orderDate', 'paymentTermsDays', 'pricingHash', 'quoteId', 'requestedDate', 'reservationSeq', 'reservationStatus', 'salespersonMembershipId', 'seriesId', 'status', 'submittedAt', 'submittedBy', 'taxTotal', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'warehouseId'] as const
+  $columns = SalesOrderSchema.$columns
+  @column()
+  declare approvalReasons: any
+  @column()
+  declare approvalStatus: string
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare closedReason: string | null
+  @column.dateTime()
+  declare confirmedAt: DateTime | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare creditCheck: any | null
+  @column()
+  declare currency: string
+  @column()
+  declare customerId: string
+  @column()
+  declare customerReference: string | null
+  @column()
+  declare customerVersionId: string | null
+  @column()
+  declare deliveryAddressId: string | null
+  @column()
+  declare deliveryStatus: string
+  @column()
+  declare grossTotal: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoicingStatus: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare netTotal: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string | null
+  @column.date()
+  declare orderDate: DateTime
+  @column()
+  declare paymentTermsDays: number
+  @column()
+  declare pricingHash: string | null
+  @column()
+  declare quoteId: string | null
+  @column.date()
+  declare requestedDate: DateTime | null
+  @column()
+  declare reservationSeq: number
+  @column()
+  declare reservationStatus: string
+  @column()
+  declare salespersonMembershipId: string
+  @column()
+  declare seriesId: string | null
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare taxTotal: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare warehouseId: string | null
+}
+
 export class SalesQuoteEventSchema extends BaseModel {
   static $columns = ['createdAt', 'createdBy', 'details', 'fromStatus', 'id', 'kind', 'quoteId', 'reason', 'tenantId', 'toStatus', 'updatedAt', 'updatedBy', 'version', 'versionNo'] as const
   $columns = SalesQuoteEventSchema.$columns

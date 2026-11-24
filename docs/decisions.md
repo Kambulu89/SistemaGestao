@@ -1099,3 +1099,48 @@ a versão do cliente e a impressão digital da versão aceite. `markQuoteConvert
 `UPDATE … WHERE status = 'ACCEPTED' AND converted_order_id IS NULL`, e o índice único em `converted_order_id` garante
 uma encomenda por orçamento. Duas conversões simultâneas: uma passa, a outra recebe `ALREADY_CONVERTED`. O botão
 "Converter em encomenda" chega com o 10.4: não há encomenda provisória.
+
+## D-062 Encomendas de venda: estados separados, crédito na confirmação e stock só pelos contratos do Inventário (aceite)
+
+**Estados.** Uma encomenda tem cinco estados independentes:
+- ciclo: rascunho, confirmada, fechada ou anulada;
+- aprovação: não exigida, pendente, aprovada ou devolvida;
+- reserva: nenhuma, parcial, total ou não aplicável (só serviços);
+- entrega: nenhuma, parcial ou total;
+- facturação: nenhuma, parcial ou total.
+
+Reserva, entrega e facturação derivam das quantidades das linhas (encomendada, reservada em aberto, entregue,
+facturada e fechada sem entrega), com `encomendada ≥ reservada + entregue + fechada` garantido por `CHECK`. A
+facturação é actualizada pelo 10.6; até lá fica "por facturar".
+
+**Confirmação.** Submeter recalcula os preços pelo motor do 10.2, excepto numa encomenda vinda de orçamento, que mantém
+os preços aceites. Verifica também o limite de crédito do cliente:
+
+- Exposição = valor por facturar das outras encomendas confirmadas + esta. O valor por facturar é o total da linha ×
+  (encomendada − facturada − fechada) / encomendada. Tudo convertido para a moeda do cliente pelo câmbio da data.
+- Sem câmbio, a encomenda pede aprovação (`NO_RATE`).
+- As contas a receber entram na exposição quando existirem Finanças (10.10).
+
+Sem excepções (preço, crédito ou câmbio), a encomenda fica confirmada logo, com número da série `SALES_ORDER`. Com
+várias séries activas, a escolha é explícita. A encomenda fica também ligada à versão imutável dos dados do cliente.
+Com excepções, aguarda `sales.orders.approve` de **outra pessoa** e mostra os motivos e o cálculo do crédito. Cliente
+bloqueado ou inactivo impede submeter, aprovar e expedir.
+
+**Stock.** A encomenda nunca escreve stock: chama os contratos idempotentes do Inventário com o número como referência
+e chaves derivadas da encomenda.
+- **Reservar:** `reserveForSale`. Recusa acima do livre (`OVER_RESERVED`).
+- **Libertar:** `releaseSaleReservation`.
+- **Expedir:** `deliverSale`. Consome a reserva da encomenda e sai por FEFO.
+
+Os serviços não passam pelo inventário: a expedição dá-os por prestados. Cada expedição é idempotente pela chave do
+pedido (`IDEMPOTENCY_MISMATCH` com outro conteúdo). Fica só de acréscimo, com referência interna `número/En` e o
+evento do Inventário; não é um documento fiscal de transporte. Expedições simultâneas são ordenadas pelo bloqueio da
+encomenda: o excesso dá `OVER_DELIVERY`. Kits ainda não se vendem (`KIT_NOT_SUPPORTED`).
+
+**Fecho e anulação.** Fechar o resto exige motivo e entregas: liberta as reservas e fecha o que falta. Anular só é
+possível em rascunho ou numa confirmada sem entregas, e também liberta as reservas. O orçamento de origem continua
+convertido. A base protege preços e produtos depois do rascunho, a numeração, os estados finais e as expedições.
+
+**Conversão.** `POST /sales/orders/from-quote` exige `sales.orders.manage` no âmbito do orçamento. Chama o contrato do
+10.3 na mesma transacção: com duas conversões simultâneas, uma dá 201 e a outra 409 (`ALREADY_CONVERTED`). A encomenda
+herda cliente, condições, linhas e preços, que não se alteram (`LINES_FROM_QUOTE`).

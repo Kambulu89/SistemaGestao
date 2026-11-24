@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 a 10.3 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-061. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 a 10.4 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-062. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -285,3 +285,120 @@ Também cobertos:
   fontes oficiais.
 - O PDF e o envio por e-mail ficam para o 10.13.
 - A expiração é calculada na leitura (sem agendador).
+
+## 10.4 Encomendas de venda
+
+### Modelo
+
+Migração `0057_create_sales_orders`:
+
+- `sales_orders` — guarda:
+  - entidade, cliente e versão dos dados do cliente na confirmação;
+  - comercial, armazém, morada de entrega e orçamento de origem (único);
+  - série e número, datas, moeda, prazo e referência;
+  - os cinco estados separados, os motivos de aprovação e a verificação de crédito (`jsonb`);
+  - os totais.
+
+  A FK `sales_quotes.converted_order_id → sales_orders` passa a existir.
+
+- `sales_order_lines` — quantidades encomendada, reservada, entregue, facturada e fechada (`CHECK` de coerência);
+  indicação de stock ou serviço; preço e imposto como no orçamento; linha do orçamento de origem.
+- `sales_order_deliveries` e linhas — expedições com chave e impressão digital do pedido, referência `número/En` e
+  evento do Inventário. Só de acréscimo.
+- `sales_order_events` — cronologia, só de acréscimo.
+
+Gatilhos na base:
+
+- conteúdo do cabeçalho e preços das linhas só mudam em rascunho; depois só as quantidades do cumprimento;
+- número fixo depois de atribuído;
+- fechada e anulada são finais;
+- confirmada não volta a rascunho;
+- nada se apaga.
+
+### Backend e API (`/api/v1/sales/orders`)
+
+- `GET /orders`, com os filtros estado, aprovação, entrega, cliente e pesquisa.
+- `GET /orders/options`, `GET /orders/addresses/:customerId`, `GET /orders/search/{customers|products}`.
+- `POST /orders`, `POST /orders/from-quote`, `GET|PATCH /orders/:id`.
+- `POST /orders/:id/{submit|approve|reject|reserve|release|deliver|close|cancel}`.
+- Permissões `sales.orders.read|manage|approve|fulfil`, com âmbito de empresa, entidade legal ou OWN. Anexos com o
+  assunto `sales_order`. Auditoria `sales_order.*` na mesma transacção.
+- Integração com o Inventário só pelos contratos `reserveForSale`, `releaseSaleReservation` e `deliverSale`
+  (idempotentes, com a encomenda como referência).
+- Erros:
+  - `NO_LINES`, `NO_PRICE`, `NO_SERIES`, `SERIES_REQUIRED`;
+  - `CUSTOMER_BLOCKED`, `SELF_APPROVAL`;
+  - `NOTHING_TO_RESERVE`, `OVER_RESERVE`, `OVER_RESERVED` (do Inventário);
+  - `OVER_DELIVERY`, `OVER_RELEASE`, `NOTHING_RESERVED`, `NOTHING_DELIVERED`, `IDEMPOTENCY_MISMATCH`;
+  - `LINES_FROM_QUOTE`, `ALREADY_CONVERTED`, `NOT_ACCEPTED`, `KIT_NOT_SUPPORTED`;
+  - `INVALID_STATE`, `VERSION_CONFLICT`, `OUT_OF_SCOPE`.
+
+### Ecrãs (`/vendas/encomendas`)
+
+- **Lista** — número, cliente, data, total, estado, aprovação, entrega e facturação.
+- **Formulário** — entidade, cliente, armazém da entidade, morada de entrega do cliente (a por omissão é proposta),
+  datas e comercial. As linhas só aparecem quando não há orçamento; numa encomenda vinda de orçamento, cliente,
+  condições e linhas ficam bloqueados.
+- **Ficha** — os cinco estados em distintivos; os motivos de aprovação e a verificação de crédito; linhas com as
+  quantidades; expedições; anexos, cronologia e auditoria. Acções:
+  - submeter (com série se houver várias), aprovar (outra pessoa, com confirmação) e devolver;
+  - reservar e libertar (com confirmação);
+  - expedir (quantidades por linha, propostas com o que falta);
+  - fechar o resto e anular com motivo.
+- **Orçamento aceite** — "Converter em encomenda" com escolha do armazém; depois, a ligação "Ver a encomenda".
+
+### Testes e evidências
+
+**Backend**
+
+`tests/unit/sales_orders_domain.spec.ts` (4 testes):
+
+- cabeçalho;
+- estados derivados;
+- limite de crédito;
+- pedidos de expedição e reserva.
+
+`tests/functional/sales_orders.spec.ts` (2 testes):
+
+- **Crédito e aprovação:** stock e serviço; armazém obrigatório; limite de crédito (1 070 > 1 000) pendente; aprovação
+  só por outra pessoa e confirmação numerada.
+- **Reserva e expedição:** reserva no Inventário (saldo reservado = 5); expedição parcial idempotente (repetição e
+  `IDEMPOTENCY_MISMATCH`); excesso recusado; saldo livre = 5.
+- **Libertação e fecho:** libertação parcial; fecho do resto que liberta tudo (reservado = 0).
+- **Imutabilidade na base.**
+- **Conversão:** duas conversões simultâneas do mesmo orçamento (201 e 409); linhas bloqueadas; confirmação sem
+  excepções.
+- **Stock e expedições simultâneas:** `OVER_RESERVED` acima do livre; reserva parcial; anulação que liberta; duas
+  expedições simultâneas sobre o mesmo resto, das quais só uma passa.
+- **Cliente:** exposição com encomendas em aberto (456 + 456 = 912 > 500); devolução volta a editável; cliente
+  bloqueado não expede.
+
+Também cobertos:
+
+- O teste do 10.3 passou a criar encomendas reais para a conversão (a FK existe).
+- `isolation_matrix`: 8 tentativas sobre a encomenda, linha, orçamento e moradas de outra empresa, todas com 404;
+  criação com entidade e cliente alheios recusada; a lista não mostra a encomenda alheia.
+- `routes_protection`.
+
+**Frontend:** `order-model.spec.ts`.
+
+**Browser (`p1004`):** 7 passos.
+
+- encomenda pela navegação com produto e serviço: 798,00;
+- limite de 500 ultrapassado: aprovação pendente com o motivo e a exposição; quem submeteu não vê "Aprovar"; outra
+  pessoa aprova e a encomenda fica numerada;
+- reserva no Inventário: "Reservada";
+- expedição de 3 de 4 mais o serviço: entrega parcial e referência `/E1`;
+- fecho do resto com motivo;
+- conversão do orçamento aceite (228,00), com a ligação ao orçamento; o orçamento fica "Convertido" e o botão
+  desaparece;
+- telemóvel sem deslocamento horizontal.
+
+### Pendências
+
+- Facturação a partir da encomenda (10.6): actualiza as quantidades facturadas e o estado de facturação.
+- Contas a receber na exposição de crédito (10.10).
+- Kits, lotes e séries escolhidos na expedição: o motor do Inventário escolhe por FEFO; as séries passam quando
+  indicadas.
+- Devoluções de clientes (10.8, com `returnFromSale`).
+- Guia de transporte fiscal (10.5 e 10.6).
