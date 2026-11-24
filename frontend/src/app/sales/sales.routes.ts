@@ -1,4 +1,4 @@
-import type { Routes } from '@angular/router';
+import type { Route, Routes } from '@angular/router';
 import { accessGuard } from '../core/guards';
 import { unsavedChangesGuard } from '../core/unsaved';
 
@@ -8,6 +8,52 @@ const CUSTOMER_PERMISSIONS = [
   'sales.customers.manage',
   'sales.customers.credit',
 ];
+
+const PRICE_PERMISSIONS = ['sales.prices.read', 'sales.prices.manage', 'sales.prices.approve'];
+
+type Load = NonNullable<Route['loadComponent']>;
+
+const crud = (
+  path: string,
+  title: string,
+  list: Load,
+  form: Load,
+  detail: Load,
+  newTitle: string,
+): Route => ({
+  path,
+  title,
+  children: [
+    {
+      path: '',
+      canActivate: [accessGuard],
+      data: { anyOf: PRICE_PERMISSIONS },
+      loadComponent: list,
+    },
+    {
+      path: 'novo',
+      title: newTitle,
+      canActivate: [accessGuard],
+      canDeactivate: [unsavedChangesGuard],
+      data: { permission: 'sales.prices.manage' },
+      loadComponent: form,
+    },
+    {
+      path: ':id',
+      canActivate: [accessGuard],
+      data: { anyOf: PRICE_PERMISSIONS },
+      loadComponent: detail,
+    },
+    {
+      path: ':id/editar',
+      title: 'Editar',
+      canActivate: [accessGuard],
+      canDeactivate: [unsavedChangesGuard],
+      data: { permission: 'sales.prices.manage' },
+      loadComponent: form,
+    },
+  ],
+});
 
 export const SALES_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'clientes' },
@@ -52,5 +98,35 @@ export const SALES_ROUTES: Routes = [
     canActivate: [accessGuard],
     data: { anyOf: [...CUSTOMER_PERMISSIONS, 'sales.settings'] },
     loadComponent: () => import('./segments').then((m) => m.CustomerSegments),
+  },
+  crud(
+    'precos',
+    'Tabelas de preços',
+    () => import('./price-lists').then((m) => m.PriceLists),
+    () => import('./price-list-form').then((m) => m.PriceListFormPage),
+    () => import('./price-list-detail').then((m) => m.PriceListDetail),
+    'Nova tabela de preços',
+  ),
+  crud(
+    'descontos',
+    'Regras de desconto',
+    () => import('./discount-rules').then((m) => m.DiscountRules),
+    () => import('./discount-rule-form').then((m) => m.DiscountRuleFormPage),
+    () => import('./discount-rule-detail').then((m) => m.DiscountRuleDetail),
+    'Nova regra de desconto',
+  ),
+  {
+    path: 'limites-desconto',
+    title: 'Limites de desconto',
+    canActivate: [accessGuard],
+    data: { anyOf: PRICE_PERMISSIONS },
+    loadComponent: () => import('./discount-limits').then((m) => m.DiscountLimits),
+  },
+  {
+    path: 'consulta-precos',
+    title: 'Consulta de preços',
+    canActivate: [accessGuard],
+    data: { anyOf: PRICE_PERMISSIONS },
+    loadComponent: () => import('./price-check').then((m) => m.PriceCheck),
   },
 ];

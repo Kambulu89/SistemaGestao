@@ -899,8 +899,40 @@ async function populate(client: any) {
       [tenant.id, customer.id]
     )
   ).rows[0] as { id: string }
+  // Preços da empresa A (10.2): tabela em rascunho com uma linha, regra e limite de desconto, inseridos directamente.
+  const owner = db.connection('owner')
+  const priceList = (
+    await owner.rawQuery(
+      `insert into price_lists (tenant_id, code, name, currency, target_type, valid_from)
+       values (?, 'PL-A', 'Tabela A', 'AOA', 'GENERAL', '2026-01-01') returning id`,
+      [tenant.id]
+    )
+  ).rows[0] as { id: string }
+  const priceListLine = (
+    await owner.rawQuery(
+      `insert into price_list_lines (tenant_id, price_list_id, product_id, unit_price) values (?, ?, ?, 10) returning id`,
+      [tenant.id, priceList.id, product.id]
+    )
+  ).rows[0] as { id: string }
+  const discountRule = (
+    await owner.rawQuery(
+      `insert into discount_rules (tenant_id, code, name, target_type, discount_pct, valid_from)
+       values (?, 'DR-A', 'Regra A', 'ALL', 5, '2026-01-01') returning id`,
+      [tenant.id]
+    )
+  ).rows[0] as { id: string }
+  const discountLimit = (
+    await owner.rawQuery(
+      `insert into discount_limits (tenant_id, target_type, max_pct) values (?, 'GENERAL', 5) returning id`,
+      [tenant.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    priceList,
+    priceListLine,
+    discountRule,
+    discountLimit,
     customerSegment,
     customer,
     customerAddress,
@@ -1803,6 +1835,47 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'cliente sobre terceiro alheio',
         B.post('/api/v1/sales/customers', { partnerId: a.supplier.partner.id, currency: 'AOA' }),
       ],
+      ['GET tabela de preços alheia', B.get(`/api/v1/sales/price-lists/${a.priceList.id}`)],
+      [
+        'alterar tabela de preços alheia',
+        B.patch(`/api/v1/sales/price-lists/${a.priceList.id}`, { ...v, name: 'Outra' }),
+      ],
+      [
+        'linha em tabela alheia',
+        B.post(`/api/v1/sales/price-lists/${a.priceList.id}/lines`, {
+          productId: a.product.id,
+          unitPrice: '1',
+        }),
+      ],
+      [
+        'alterar linha de tabela alheia',
+        B.patch(`/api/v1/sales/price-lists/${a.priceList.id}/lines/${a.priceListLine.id}`, {
+          ...v,
+          unitPrice: '1',
+        }),
+      ],
+      [
+        'apagar linha de tabela alheia',
+        B.delete(`/api/v1/sales/price-lists/${a.priceList.id}/lines/${a.priceListLine.id}`),
+      ],
+      ['submeter tabela alheia', B.post(`/api/v1/sales/price-lists/${a.priceList.id}/submit`, v)],
+      [
+        'copiar tabela alheia',
+        B.post(`/api/v1/sales/price-lists/${a.priceList.id}/copy`, {
+          code: 'COPIA',
+          validFrom: '2026-01-01',
+        }),
+      ],
+      ['GET regra de desconto alheia', B.get(`/api/v1/sales/discount-rules/${a.discountRule.id}`)],
+      [
+        'alterar regra alheia',
+        B.patch(`/api/v1/sales/discount-rules/${a.discountRule.id}`, { ...v, name: 'Outra' }),
+      ],
+      [
+        'submeter regra alheia',
+        B.post(`/api/v1/sales/discount-rules/${a.discountRule.id}/submit`, v),
+      ],
+      ['apagar limite alheio', B.delete(`/api/v1/sales/discount-limits/${a.discountLimit.id}`)],
       [
         'alterar segmento alheio',
         B.patch(`/api/v1/sales/segments/${a.customerSegment.id}`, { ...v, name: 'Outro' }),
@@ -2453,6 +2526,37 @@ test.group('isolamento | matriz entre empresas', (group) => {
       if (status !== 404) wrong.push(`${name} → ${status}`)
     }
     assert.deepEqual(wrong, [])
+
+    // Preços: o cliente, o produto e o segmento de A não servem a B (recusados sem revelar dados de A).
+    const crossPricing = [
+      await B.post('/api/v1/sales/pricing/resolve', {
+        customerId: a.customer.id,
+        currency: 'AOA',
+        date: '2026-06-01',
+        lines: [{ productId: a.product.id, quantity: '1' }],
+      }),
+      await B.post('/api/v1/sales/price-lists', {
+        code: 'X-B',
+        name: 'Tabela B',
+        currency: 'AOA',
+        targetType: 'SEGMENT',
+        segmentId: a.customerSegment.id,
+        validFrom: '2026-01-01',
+      }),
+      await B.put('/api/v1/sales/discount-limits', {
+        targetType: 'CUSTOMER',
+        customerId: a.customer.id,
+        maxPct: '50',
+      }),
+    ]
+    for (const r of crossPricing) {
+      assert.include([404, 422], r.status())
+      assert.notInclude(JSON.stringify(r.body()), 'PL-A')
+    }
+    const aLimit = await db
+      .connection('owner')
+      .rawQuery(`select max_pct from discount_limits where id = ?`, [a.discountLimit.id])
+    assert.equal(Number(aLimit.rows[0].max_pct), 5)
 
     // Referências a ids de A em escritas de B: recusadas (nunca ligam linhas de empresas diferentes).
     const crossRun = await B.post('/api/v1/hr/payroll/runs', {

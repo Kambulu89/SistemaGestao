@@ -628,6 +628,60 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
   'GET /api/v1/sales/customers/:id/current-version':
     'clientes da empresa: sales.customers.read/manage/credit verificados no serviço',
+  'GET /api/v1/sales/price-lists':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/price-lists':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'GET /api/v1/sales/price-lists/:id':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'PATCH /api/v1/sales/price-lists/:id':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/price-lists/:id/lines':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'PATCH /api/v1/sales/price-lists/:id/lines/:lineId':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'DELETE /api/v1/sales/price-lists/:id/lines/:lineId':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/price-lists/:id/copy':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/price-lists/:id/submit':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/price-lists/:id/approve':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/price-lists/:id/reject':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/price-lists/:id/deactivate':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'GET /api/v1/sales/discount-rules':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/discount-rules':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'GET /api/v1/sales/discount-rules/:id':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'PATCH /api/v1/sales/discount-rules/:id':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/discount-rules/:id/submit':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/discount-rules/:id/approve':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/discount-rules/:id/reject':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/discount-rules/:id/deactivate':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'GET /api/v1/sales/discount-limits':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'PUT /api/v1/sales/discount-limits':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'DELETE /api/v1/sales/discount-limits/:id':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'POST /api/v1/sales/pricing/resolve':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'GET /api/v1/sales/pricing/options':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'GET /api/v1/sales/pricing/search/customers':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
+  'GET /api/v1/sales/pricing/search/products':
+    'preços da empresa: sales.prices.read/manage/approve verificados no serviço (aprovar exige outra pessoa)',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

@@ -1026,3 +1026,41 @@ documentos emitidos. Alterar só condições comerciais não cria versão.
 
 **Fiscal.** Este bloco não configura nada fiscal: códigos de isenção, regimes e requisitos da AGT (Decreto Presidencial
 n.º 71/25 e regulamentação) ficam para os blocos 10.5 e 10.9, depois de verificados nas fontes oficiais.
+
+## D-060 Preços e descontos: tabelas aprovadas e imutáveis, uma regra por linha e limite do desconto manual (aceite)
+
+**Tabelas.** Uma tabela de preços (`price_lists`) é geral, de um segmento ou de um cliente, numa moeda, de uma entidade
+legal (ou de todas), num período, com prioridade (0–1000). Tem preços por produto (ou variante) e escalão de quantidade
+mínima, na unidade base e sem impostos, com 4 casas (`numeric`). Prepara-se em rascunho (`sales.prices.manage`), é
+submetida e só fica activa com a aprovação de **outra pessoa** (`sales.prices.approve`; `CHECK` na base). Activa, a
+tabela e as suas linhas não mudam nem se apagam (gatilhos): para mudar preços copia-se para um rascunho novo e
+inactiva-se a antiga com motivo. Assim, o preço que um documento guardou continua explicável pela tabela de onde veio.
+Duas tabelas activas com o mesmo destino, moeda, entidade e prioridade não podem ter períodos sobrepostos: a aprovação
+recusa-o (`OVERLAP`) sob advisory lock, para que a prioridade decida sempre.
+
+**Resolução.** Ganha a tabela mais específica (cliente > segmento > geral), depois a de maior prioridade, depois a que
+começou mais tarde; dentro dela, a linha da variante antes da do produto e o maior escalão atingido. Sem tabela, vale o
+preço de venda do catálogo, se estiver na mesma moeda. Sem nenhum, o preço é manual e exige aprovação; sem preço manual,
+a linha fica `NO_PRICE`. Não há conversão de moeda nos preços.
+
+**Descontos automáticos.** As regras (`discount_rules`) dão uma percentagem a todos, a um segmento ou a um cliente, num
+produto, numa categoria (incluindo as subcategorias) ou em tudo, a partir de uma quantidade, num período. Têm o mesmo
+ciclo de aprovação. Numa linha aplica-se **uma só** regra (não acumulam): a de maior prioridade, depois a do destino e
+do âmbito mais específicos.
+
+**Desconto manual.** Aplica-se sobre o preço já com a regra. O limite sem aprovação (`discount_limits`, definido por quem
+aprova preços) é o do cliente, senão o do segmento, senão o geral; **sem nenhum, é 0 %** (qualquer desconto manual pede
+aprovação). O limite da linha da tabela, quando menor, prevalece. O desconto da regra não conta para o limite, porque a
+regra já foi aprovada. Um preço manual abaixo do preço com a regra conta como desconto, com a percentagem implícita
+arredondada para cima. Acima do limite, `requiresApproval`; a aprovação em si acontece nos documentos (10.3+).
+
+**Snapshot.** `resolvePrices` (contrato do módulo) não grava nada. Devolve por linha a origem (tabela, linha e escalão,
+ou catálogo, ou manual), o preço base, a regra e a percentagem, o desconto manual, o limite e a sua origem, o preço
+líquido (4 casas, arredondado a metade para cima), o valor (2 casas) e os motivos de aprovação. Devolve ainda uma
+impressão digital sha256 do conjunto, igual para o mesmo pedido com os mesmos dados. Os documentos de venda guardam este
+snapshot nas linhas.
+
+Ficam para depois:
+- limites de desconto por vendedor ou perfil;
+- preços noutra unidade que não a base;
+- promoções que acumulam.

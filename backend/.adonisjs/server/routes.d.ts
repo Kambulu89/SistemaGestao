@@ -599,6 +599,33 @@ export type ScannedRoutes = {
     'customers.segments': { paramsTuple?: []; params?: {} }
     'customers.create_segment': { paramsTuple?: []; params?: {} }
     'customers.update_segment': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.lists': { paramsTuple?: []; params?: {} }
+    'pricing.create_list': { paramsTuple?: []; params?: {} }
+    'pricing.show_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.update_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.add_line': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.update_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
+    'pricing.remove_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
+    'pricing.copy_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.submit_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.approve_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.reject_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.deactivate_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.rules': { paramsTuple?: []; params?: {} }
+    'pricing.create_rule': { paramsTuple?: []; params?: {} }
+    'pricing.show_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.update_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.submit_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.approve_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.reject_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.deactivate_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.limits': { paramsTuple?: []; params?: {} }
+    'pricing.set_limit': { paramsTuple?: []; params?: {} }
+    'pricing.remove_limit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.resolve': { paramsTuple?: []; params?: {} }
+    'pricing.options': { paramsTuple?: []; params?: {} }
+    'pricing.search_customers': { paramsTuple?: []; params?: {} }
+    'pricing.search_products': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -847,6 +874,14 @@ export type ScannedRoutes = {
     'customers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'customers.current_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'customers.segments': { paramsTuple?: []; params?: {} }
+    'pricing.lists': { paramsTuple?: []; params?: {} }
+    'pricing.show_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.rules': { paramsTuple?: []; params?: {} }
+    'pricing.show_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.limits': { paramsTuple?: []; params?: {} }
+    'pricing.options': { paramsTuple?: []; params?: {} }
+    'pricing.search_customers': { paramsTuple?: []; params?: {} }
+    'pricing.search_products': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -1083,6 +1118,14 @@ export type ScannedRoutes = {
     'customers.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'customers.current_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'customers.segments': { paramsTuple?: []; params?: {} }
+    'pricing.lists': { paramsTuple?: []; params?: {} }
+    'pricing.show_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.rules': { paramsTuple?: []; params?: {} }
+    'pricing.show_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.limits': { paramsTuple?: []; params?: {} }
+    'pricing.options': { paramsTuple?: []; params?: {} }
+    'pricing.search_customers': { paramsTuple?: []; params?: {} }
+    'pricing.search_products': { paramsTuple?: []; params?: {} }
     'attachments.index': { paramsTuple?: []; params?: {} }
     'attachments.download': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.features': { paramsTuple?: []; params?: {} }
@@ -1368,6 +1411,19 @@ export type ScannedRoutes = {
     'customers.add_address': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'customers.add_contact': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'customers.create_segment': { paramsTuple?: []; params?: {} }
+    'pricing.create_list': { paramsTuple?: []; params?: {} }
+    'pricing.add_line': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.copy_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.submit_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.approve_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.reject_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.deactivate_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.create_rule': { paramsTuple?: []; params?: {} }
+    'pricing.submit_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.approve_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.reject_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.deactivate_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.resolve': { paramsTuple?: []; params?: {} }
     'attachments.store': { paramsTuple?: []; params?: {} }
     'platform.create_plan': { paramsTuple?: []; params?: {} }
     'platform.publish_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1392,6 +1448,8 @@ export type ScannedRoutes = {
     'payroll.delete_rule_set': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'terminations.remove_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
     'rfqs.uninvite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.remove_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
+    'pricing.remove_limit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'attachments.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.remove_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
@@ -1451,6 +1509,9 @@ export type ScannedRoutes = {
     'customers.update_address': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'addressId': ParamValue} }
     'customers.update_contact': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'contactId': ParamValue} }
     'customers.update_segment': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.update_list': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'pricing.update_line': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'lineId': ParamValue} }
+    'pricing.update_rule': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_tenant': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
@@ -1479,6 +1540,7 @@ export type ScannedRoutes = {
     'procurement_finance.update_budget': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'evaluations.set_weights': { paramsTuple?: []; params?: {} }
     'invoices.set_tolerances': { paramsTuple?: []; params?: {} }
+    'pricing.set_limit': { paramsTuple?: []; params?: {} }
     'platform.set_override': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'feature': ParamValue} }
   }
 }

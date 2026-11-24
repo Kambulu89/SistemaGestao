@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 feito, no branch `claude/pensive-clarke-5gm075`. Decisão D-059. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 e 10.2 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 e D-060. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -75,3 +75,108 @@ Migração `0054_create_customers`:
 
 - A regra "bloqueado não recebe documentos" e o controlo do limite de crédito são aplicados pelos documentos (10.3–10.7).
 - Listas oficiais de províncias/municípios continuam texto livre (pendência do Prompt 05).
+
+## 10.2 Preços e descontos
+
+### Modelo
+
+Migração `0055_create_sales_pricing`:
+
+- `price_lists` — código único, nome, moeda, destino (`GENERAL|SEGMENT|CUSTOMER`, `CHECK` de coerência), entidade
+  legal opcional, período, prioridade 0–1000, estado `DRAFT|PENDING|ACTIVE|INACTIVE`, quem submeteu e quem aprovou
+  (diferentes, `CHECK`), motivo de inactivação, origem da cópia.
+- `price_list_lines` — produto, variante opcional, quantidade mínima, preço `numeric(20,4)`, desconto manual máximo
+  opcional. O escalão é único por produto/variante (índice único).
+- `discount_rules` — destino (`ALL|SEGMENT|CUSTOMER`), produto **ou** categoria (ou nenhum), quantidade mínima,
+  percentagem, período, prioridade e o mesmo ciclo de aprovação.
+- `discount_limits` — desconto manual máximo, um por destino (índice único).
+- `pricing_events` — cronologia, só de acréscimo.
+
+Gatilhos na base:
+
+- fora do rascunho, o conteúdo de tabelas e regras não muda;
+- uma tabela ou regra inactiva não volta a activa;
+- nada se apaga;
+- as linhas só mudam enquanto a tabela está em rascunho.
+
+### Backend e API (`/api/v1/sales`)
+
+- `GET|POST /price-lists`, `GET|PATCH /price-lists/:id`, `POST /price-lists/:id/lines`,
+  `PATCH|DELETE /price-lists/:id/lines/:lineId`, `POST /price-lists/:id/{submit|approve|reject|deactivate|copy}`.
+- `GET|POST /discount-rules`, `GET|PATCH /discount-rules/:id`, `POST /discount-rules/:id/{submit|approve|reject|deactivate}`.
+- `GET|PUT /discount-limits`, `DELETE /discount-limits/:id`.
+- `POST /pricing/resolve` (snapshot sem gravar), `GET /pricing/options`, `GET /pricing/search/{customers|products}`
+  (só identificação, para os formulários de quem não tem permissões de clientes ou de inventário).
+- Contrato para 10.3+: `resolvePrices(scope, {customerId, currency, date, legalEntityId?, lines[]})`.
+- Regras: resolução e limites como em D-060; aprovação segregada (`SELF_APPROVAL`); sobreposição na aprovação
+  (`OVERLAP`, sob advisory lock); concorrência optimista com `expectedVersion`; códigos e escalões únicos convertidos de
+  `23505` em 409 (D-058).
+- Permissões `sales.prices.read|manage|approve`. Auditoria `price_list.*`, `discount_rule.*` e `discount_limit.*` na mesma
+  transacção.
+- Erros: `CODE_TAKEN`, `TIER_EXISTS`, `NO_LINES`, `INVALID_STATE`, `SELF_APPROVAL`, `OVERLAP`, `VERSION_CONFLICT`,
+  `OUT_OF_SCOPE`.
+
+### Ecrãs (`/vendas`)
+
+- **Tabelas de preços** — lista com filtros de estado e destino; cabeçalho com destino, moeda, entidade, prioridade e
+  período.
+- **Ficha da tabela** — preços com produto por pesquisa, variante, escalão e desconto máximo; submeter, aprovar (só
+  outra pessoa, com confirmação), devolver e inactivar com motivo, copiar para nova tabela; cronologia e auditoria.
+- **Regras de desconto** — lista, formulário (clientes, produtos ou categoria, quantidade, período, prioridade) e ficha
+  com o mesmo ciclo de aprovação.
+- **Limites de desconto** — tabela e modal; só quem aprova preços os altera.
+- **Consulta de preços** — o motor real sem gravar. Por linha mostra a origem, o preço base, a regra, o desconto manual,
+  o limite e de onde vem, o preço líquido, o valor e se precisa de aprovação, mais a impressão digital do snapshot.
+
+### Testes e evidências
+
+**Backend**
+
+`tests/unit/sales_pricing_domain.spec.ts` (6 testes):
+
+- decimais e arredondamento;
+- validação;
+- escolha da tabela e do escalão;
+- escolha da regra;
+- preço líquido, limites e aprovação;
+- catálogo, preço manual e linha sem preço.
+
+`tests/functional/sales_pricing.spec.ts` (3 testes):
+
+- **Ciclo da tabela:** escalões; devolução com motivo; aprovação por quem submete recusada; imutabilidade pela API e na
+  base.
+- **Resolução:** cliente, segmento e geral; período, moeda e catálogo; cópia com novo preço; `OVERLAP` até inactivar a
+  antiga.
+- **Regras e limites:** regra por categoria-mãe e por prioridade; limites cliente, segmento, geral e linha; preço manual;
+  hash estável; pesquisas; erros por linha; permissões.
+- **Concorrência:** três aprovações simultâneas de tabelas sobrepostas, das quais só uma fica activa.
+
+Também cobertos:
+
+- `isolation_matrix`: 11 tentativas sobre tabela, linha, regra e limite de outra empresa, todas com 404; resolve e
+  referências cruzadas recusados sem revelar dados.
+- `routes_protection`.
+
+**Frontend:** `pricing-model.spec.ts`.
+
+**Browser (`p1002`):** 8 passos, 4 execuções seguidas sem falhas nem erros de consola.
+
+- tabela do segmento com dois escalões pela navegação;
+- quem submete não vê "Aprovar" e outra pessoa aprova;
+- a tabela activa deixa de ser editável;
+- regra de 10 % aprovada por outra pessoa;
+- limite do segmento de 5 %;
+- na consulta, escalão 10 → 90 − 10 % − 6 % = 76,14 (913,68 para 12), com "Desconto acima do limite"; com 5 % → 76,95
+  sem aprovação;
+- cópia para rascunho com os preços e inactivação da antiga com motivo;
+- telemóvel sem deslocamento horizontal.
+
+**Regressão:** `p1001` voltou a passar.
+
+### Pendências
+
+- A aprovação de um desconto acima do limite e a guarda do snapshot acontecem nos documentos (10.3 em diante).
+- Ficam para depois:
+  - limites por vendedor ou perfil;
+  - preços noutra unidade;
+  - promoções acumuláveis.

@@ -499,13 +499,18 @@ por período no âmbito do membro; publicação no âmbito da empresa como fotog
 
 ## Vendas e facturação (módulo `sales`, Prompt 10)
 
-Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059). Clientes (10.1): o cliente é o papel de venda de um
+Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 e D-060). Clientes (10.1): o cliente é o papel de venda de um
 terceiro do módulo `partners` (um por terceiro, partilhado com o fornecedor), com moeda, prazo, segmento, limite de
 crédito (permissão própria, com motivo) e estado (activo, bloqueado ou inactivo com motivo); moradas de facturação e
 entrega (uma por omissão de cada tipo, índice único parcial); contactos no terceiro; versões só de acréscimo da
 identidade fiscal e da morada de facturação, criadas quando a impressão digital muda, e o contrato `customerSnapshot`
 para os documentos de venda guardarem a versão usada; segmentos configuráveis (`sales.settings`). Permissões
 `sales.customers.read|manage|credit` e `sales.settings` no âmbito da empresa; funcionalidade `sales`; anexos com o
-assunto `customer`. O módulo não escreve em Inventário, Finanças nem Contabilidade: os blocos seguintes usam os contratos
-desses módulos (`index.ts`).
+assunto `customer`. Preços e descontos (10.2): tabelas de preços (geral, segmento ou cliente; moeda, entidade, período, prioridade) com
+preços por produto/variante e escalão, e regras de desconto automático; ambas activas só com a aprovação de outra
+pessoa, imutáveis depois (gatilhos), copiadas para mudar preços; sobreposição com a mesma prioridade recusada na
+aprovação; limites do desconto manual (cliente > segmento > geral, 0 % sem nenhum; a linha da tabela pode reduzir). O
+contrato `resolvePrices` devolve o snapshot de preço por linha com impressão digital, sem gravar; permissões
+`sales.prices.read|manage|approve`. O módulo não escreve em Inventário, Finanças nem Contabilidade: os blocos seguintes
+usam os contratos desses módulos (`index.ts`).
 

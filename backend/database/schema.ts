@@ -1358,6 +1358,90 @@ export class DisciplinaryEventSchema extends BaseModel {
   declare version: number
 }
 
+export class DiscountLimitSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'customerId', 'id', 'maxPct', 'segmentId', 'targetType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = DiscountLimitSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare customerId: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare maxPct: string
+  @column()
+  declare segmentId: string | null
+  @column()
+  declare targetType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class DiscountRuleSchema extends BaseModel {
+  static $columns = ['approvedAt', 'approvedBy', 'categoryId', 'code', 'createdAt', 'createdBy', 'customerId', 'discountPct', 'id', 'inactiveReason', 'minQuantity', 'name', 'notes', 'priority', 'productId', 'segmentId', 'status', 'submittedAt', 'submittedBy', 'targetType', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = DiscountRuleSchema.$columns
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare categoryId: string | null
+  @column()
+  declare code: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare customerId: string | null
+  @column()
+  declare discountPct: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare inactiveReason: string | null
+  @column()
+  declare minQuantity: string
+  @column()
+  declare name: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare priority: number
+  @column()
+  declare productId: string | null
+  @column()
+  declare segmentId: string | null
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare targetType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
 export class DocumentSerySchema extends BaseModel {
   static $columns = ['branchId', 'code', 'createdAt', 'createdBy', 'documentType', 'fiscalYear', 'id', 'legalEntityId', 'nextNumber', 'padding', 'prefix', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
   $columns = DocumentSerySchema.$columns
@@ -3925,6 +4009,121 @@ export class PostingRuleSchema extends BaseModel {
   declare validFrom: DateTime
   @column.date()
   declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class PriceListLineSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'id', 'maxDiscountPct', 'minQuantity', 'priceListId', 'productId', 'tenantId', 'unitPrice', 'updatedAt', 'updatedBy', 'variantId', 'version'] as const
+  $columns = PriceListLineSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare maxDiscountPct: string | null
+  @column()
+  declare minQuantity: string
+  @column()
+  declare priceListId: string
+  @column()
+  declare productId: string
+  @column()
+  declare tenantId: string
+  @column()
+  declare unitPrice: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare variantId: string | null
+  @column()
+  declare version: number
+}
+
+export class PriceListSchema extends BaseModel {
+  static $columns = ['approvedAt', 'approvedBy', 'code', 'copiedFromId', 'createdAt', 'createdBy', 'currency', 'customerId', 'id', 'inactiveReason', 'legalEntityId', 'name', 'notes', 'priority', 'segmentId', 'status', 'submittedAt', 'submittedBy', 'targetType', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'validTo', 'version'] as const
+  $columns = PriceListSchema.$columns
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare code: string
+  @column()
+  declare copiedFromId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare customerId: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare inactiveReason: string | null
+  @column()
+  declare legalEntityId: string | null
+  @column()
+  declare name: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare priority: number
+  @column()
+  declare segmentId: string | null
+  @column()
+  declare status: string
+  @column.dateTime()
+  declare submittedAt: DateTime | null
+  @column()
+  declare submittedBy: string | null
+  @column()
+  declare targetType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
+  @column.date()
+  declare validTo: DateTime | null
+  @column()
+  declare version: number
+}
+
+export class PricingEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'details', 'id', 'kind', 'reason', 'subjectId', 'subjectType', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = PricingEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare details: any | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare reason: string | null
+  @column()
+  declare subjectId: string
+  @column()
+  declare subjectType: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
   @column()
   declare version: number
 }

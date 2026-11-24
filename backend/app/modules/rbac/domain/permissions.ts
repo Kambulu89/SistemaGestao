@@ -688,6 +688,23 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     module: 'sales',
     description: 'Configurar as vendas: segmentos de clientes.',
   },
+  {
+    code: 'sales.prices.read',
+    module: 'sales',
+    description: 'Consultar tabelas de preços, regras e limites de desconto, e simular preços.',
+  },
+  {
+    code: 'sales.prices.manage',
+    module: 'sales',
+    description:
+      'Preparar tabelas de preços e regras de desconto em rascunho, submetê-las, copiá-las e inactivá-las com motivo.',
+  },
+  {
+    code: 'sales.prices.approve',
+    module: 'sales',
+    description:
+      'Aprovar ou devolver tabelas de preços e regras de desconto submetidas por outra pessoa, e definir os limites de desconto manual.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))
