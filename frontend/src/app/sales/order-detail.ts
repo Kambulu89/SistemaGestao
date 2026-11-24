@@ -22,17 +22,20 @@ import {
   APPROVAL_STATUS,
   DELIVERY_STATUS,
   INVOICING_STATUS,
+  invoiceableUnits,
   type Order,
   ORDER_EVENT,
   ORDER_STATUS,
   type OrderLine,
   type OrderOptions,
   orderTone,
+  qtyUnits,
   RESERVATION_STATUS,
   subTone,
+  unitsText,
 } from './order-model';
 
-type Dialog = 'submit' | 'reject' | 'deliver' | 'close' | 'cancel' | 'invoice' | null;
+type Dialog = 'submit' | 'reject' | 'deliver' | 'close' | 'cancel' | 'invoice' | 'return' | null;
 
 /**
  * Encomenda: estados separados (ciclo, aprovação, reserva, entrega, facturação), quantidades por linha, verificação do
@@ -223,6 +226,16 @@ type Dialog = 'submit' | 'reject' | 'deliver' | 'close' | 'cancel' | 'invoice' |
                 Anular
               </button>
             }
+            @if (o.can.returnGoods) {
+              <button
+                type="button"
+                class="btn-secondary"
+                data-testid="od-return"
+                (click)="openReturn(o)"
+              >
+                Devolução de mercadoria
+              </button>
+            }
             @if (canInvoice(o)) {
               <button
                 type="button"
@@ -270,6 +283,27 @@ type Dialog = 'submit' | 'reject' | 'deliver' | 'close' | 'cancel' | 'invoice' |
                   @if (d.stockEventId) {
                     · saída de stock registada
                   }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        @if (o.returns.length) {
+          <section class="card" aria-labelledby="od-r-title">
+            <h2 id="od-r-title" class="mb-2 font-semibold">Devoluções</h2>
+            <p class="mb-2 text-sm text-muted">
+              Entrada física no armazém. O valor corrige-se com uma nota de crédito sobre a factura.
+            </p>
+            <ul class="space-y-1 text-sm" data-testid="od-returns">
+              @for (r of o.returns; track r.id) {
+                <li>
+                  <strong>{{ r.reference }}</strong> · {{ r.returnDate
+                  }}{{ r.by ? ' · ' + r.by : '' }} ·
+                  @for (l of r.lines; track l.lineNo; let last = $last) {
+                    linha {{ l.lineNo }}: {{ qty(l.quantity) }}{{ last ? '' : ', ' }}
+                  }
+                  · <em>{{ r.reason }}</em>
                 </li>
               }
             </ul>
@@ -396,6 +430,45 @@ type Dialog = 'submit' | 'reject' | 'deliver' | 'close' | 'cancel' | 'invoice' |
               <input appControl class="input" name="dnotes" [(ngModel)]="delivery.notes" />
             </app-field>
           }
+          @case ('return') {
+            <p class="mb-3 text-sm">
+              A mercadoria volta ao armazém ao custo a que saiu e deixa de poder ser facturada. Não
+              altera a factura: o crédito ao cliente faz-se com uma nota de crédito.
+            </p>
+            <app-field
+              label="Data da devolução"
+              [required]="true"
+              [error]="act.field('returnDate')"
+            >
+              <input appControl class="input" type="date" name="rd" [(ngModel)]="ret.date" />
+            </app-field>
+            @for (l of ret.lines; track l.lineId; let i = $index) {
+              <app-field
+                [label]="
+                  'Linha ' + l.lineNo + ' · ' + l.label + ' (expedido por devolver ' + l.max + ')'
+                "
+                [error]="act.field('lines.' + i + '.quantity')"
+              >
+                <input
+                  appControl
+                  class="input w-36"
+                  inputmode="decimal"
+                  [name]="'r' + i"
+                  data-testid="od-r-qty"
+                  [(ngModel)]="l.quantity"
+                />
+              </app-field>
+            }
+            <app-field label="Motivo" [required]="true" [error]="act.field('reason')">
+              <textarea
+                appControl
+                class="input min-h-16"
+                name="rreason"
+                data-testid="od-r-reason"
+                [(ngModel)]="ret.reason"
+              ></textarea>
+            </app-field>
+          }
           @default {
             <app-field label="Motivo" [required]="true" [error]="act.field('reason')">
               <textarea
@@ -479,6 +552,12 @@ export class OrderDetail {
       quantity: string;
     }[],
   };
+  protected ret = {
+    key: '',
+    date: '',
+    reason: '',
+    lines: [] as { lineId: string; lineNo: number; label: string; max: string; quantity: string }[],
+  };
   protected readonly columns: Column<OrderLine>[] = [
     {
       key: 'description',
@@ -495,6 +574,13 @@ export class OrderDetail {
       value: (l) => (l.isStock ? qty(l.reservedQty) : '—'),
     },
     { key: 'delivered', label: 'Entregue', align: 'end', value: (l) => qty(l.deliveredQty) },
+    {
+      key: 'returned',
+      label: 'Devolvida',
+      align: 'end',
+      hideOnMobile: true,
+      value: (l) => (l.isStock ? qty(l.returnedQty) : '—'),
+    },
     {
       key: 'invoiced',
       label: 'Facturada',
@@ -527,6 +613,7 @@ export class OrderDetail {
           submit: 'Submeter a encomenda',
           reject: 'Devolver a encomenda',
           deliver: 'Expedir',
+          return: 'Devolução de mercadoria',
           invoice: 'Facturar o entregue',
           close: 'Fechar o resto da encomenda',
           cancel: 'Anular a encomenda',
@@ -583,6 +670,24 @@ export class OrderDetail {
     this.open('deliver');
   }
 
+  protected openReturn(o: Order) {
+    this.ret = {
+      key: `ui-${crypto.randomUUID()}`,
+      date: new Date().toISOString().slice(0, 10),
+      reason: '',
+      lines: o.lines
+        .filter((l) => l.isStock && qtyUnits(l.deliveredQty) > qtyUnits(l.returnedQty))
+        .map((l) => ({
+          lineId: l.id,
+          lineNo: l.lineNo,
+          label: l.product.sku,
+          max: qty(unitsText(qtyUnits(l.deliveredQty) - qtyUnits(l.returnedQty))),
+          quantity: '',
+        })),
+    };
+    this.open('return');
+  }
+
   private async post(action: string, body: Record<string, unknown>, done: string) {
     const o = this.x()!;
     const r = await this.act.run(() =>
@@ -635,6 +740,19 @@ export class OrderDetail {
           },
           'Expedição registada.',
         );
+      case 'return':
+        return this.post(
+          'returns',
+          {
+            requestKey: this.ret.key,
+            returnDate: this.ret.date,
+            reason: this.ret.reason,
+            lines: this.ret.lines
+              .filter((l) => nz(l.quantity) && !/^0+([.,]0*)?$/.test(l.quantity.trim()))
+              .map((l) => ({ lineId: l.lineId, quantity: l.quantity.trim().replace(',', '.') })),
+          },
+          'Devolução registada: a mercadoria entrou no armazém.',
+        );
       case 'reject':
         return this.post('reject', { reason: this.reason }, 'Encomenda devolvida.');
       case 'close':
@@ -671,7 +789,7 @@ export class OrderDetail {
     return (
       ['CONFIRMED', 'CLOSED'].includes(o.status) &&
       this.workspace.canAny('sales.invoices.manage') &&
-      o.lines.some((l) => l.deliveredQty !== l.invoicedQty)
+      o.lines.some((l) => invoiceableUnits(l) > 0n)
     );
   }
 

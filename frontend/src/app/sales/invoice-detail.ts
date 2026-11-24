@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Api, ApiError } from '../core/api';
 import { Breadcrumbs } from '../core/breadcrumbs';
+import { Workspace } from '../core/workspace';
 import { Attachments } from '../ui/attachments';
 import { AuditHistory } from '../ui/audit-history';
 import { type Column, DataTable } from '../ui/data-table';
@@ -189,6 +190,22 @@ import {
                 >Emite-se quando a tesouraria confirmar o recebimento.</span
               >
             }
+            @if (correctable(v)) {
+              <a
+                class="btn-secondary"
+                data-testid="id-credit-note"
+                routerLink="/vendas/notas/nova"
+                [queryParams]="{ invoiceId: v.id, kind: 'CREDIT' }"
+                >Nota de crédito</a
+              >
+              <a
+                class="btn-secondary"
+                data-testid="id-debit-note"
+                routerLink="/vendas/notas/nova"
+                [queryParams]="{ invoiceId: v.id, kind: 'DEBIT' }"
+                >Nota de débito</a
+              >
+            }
             @if (v.can.discard) {
               <button
                 type="button"
@@ -257,15 +274,42 @@ import {
           }
         </section>
 
+        @if (v.correctionNotes.length) {
+          <section class="card" aria-labelledby="id-n-title">
+            <h2 id="id-n-title" class="mb-2 font-semibold">Correcções</h2>
+            <p class="mb-2 text-sm text-muted">
+              A factura emitida não muda: as correcções fazem-se por notas de crédito e débito.
+            </p>
+            <ul class="space-y-1 text-sm" data-testid="id-notes">
+              @for (n of v.correctionNotes; track n.id) {
+                <li>
+                  <a class="link" [routerLink]="['/vendas/notas', n.id]">{{
+                    n.number ??
+                      (n.kind === 'CREDIT' ? 'Nota de crédito' : 'Nota de débito') + ' (rascunho)'
+                  }}</a>
+                  · {{ n.date }} · {{ n.kind === 'CREDIT' ? '−' : '+'
+                  }}{{ money(n.payable, v.currency) }}
+                </li>
+              }
+            </ul>
+          </section>
+        }
         @if (v.payments.length) {
           <section class="card" aria-labelledby="id-p-title">
             <h2 id="id-p-title" class="mb-2 font-semibold">Recebimentos</h2>
             <ul class="space-y-1 text-sm" data-testid="id-payments">
               @for (p of v.payments; track $index) {
                 <li>
-                  <a class="link" [routerLink]="['/vendas/recebimentos', p.receiptId]">{{
-                    p.number ?? (p.kind === 'INVOICE_RECEIPT' ? 'Factura-recibo' : 'Recebimento')
-                  }}</a>
+                  <a
+                    class="link"
+                    [routerLink]="[
+                      p.kind === 'CREDIT_NOTE' ? '/vendas/notas' : '/vendas/recebimentos',
+                      p.receiptId,
+                    ]"
+                    >{{
+                      p.number ?? (p.kind === 'INVOICE_RECEIPT' ? 'Factura-recibo' : 'Recebimento')
+                    }}</a
+                  >
                   · {{ p.date }} · {{ money(p.amount, v.currency)
                   }}{{ p.kind === 'ADVANCE' ? ' (adiantamento)' : '' }}
                 </li>
@@ -274,6 +318,24 @@ import {
             <p class="mt-1 text-sm">
               Pago: {{ money(v.paidTotal, v.currency) }} de {{ money(v.payableTotal, v.currency) }}
             </p>
+          </section>
+        }
+        @if (v.openTotal !== null) {
+          <section class="card" aria-label="Em dívida">
+            <dl class="grid max-w-md grid-cols-2 gap-1 text-sm" data-testid="id-balance">
+              <dt class="text-muted">A pagar</dt>
+              <dd class="text-right">{{ money(v.payableTotal, v.currency) }}</dd>
+              <dt class="text-muted">Notas de débito</dt>
+              <dd class="text-right">+{{ money(v.debitedTotal, v.currency) }}</dd>
+              <dt class="text-muted">Notas de crédito</dt>
+              <dd class="text-right">−{{ money(v.creditedTotal, v.currency) }}</dd>
+              <dt class="text-muted">Recebido</dt>
+              <dd class="text-right">−{{ money(v.paidTotal, v.currency) }}</dd>
+              <dt class="font-semibold">Em dívida</dt>
+              <dd class="text-right font-semibold" data-testid="id-open">
+                {{ money(v.openTotal, v.currency) }}
+              </dd>
+            </dl>
           </section>
         }
         <app-attachments
@@ -361,6 +423,13 @@ export class InvoiceDetail {
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
   private readonly breadcrumbs = inject(Breadcrumbs);
+  private readonly workspace = inject(Workspace);
+  protected correctable(v: Invoice) {
+    return (
+      (v.status === 'ISSUED' || v.status === 'CORRECTED') &&
+      this.workspace.canAny('sales.notes.manage')
+    );
+  }
   protected readonly x = signal<Invoice | null>(null);
   protected readonly opts = signal<InvoiceOptions | null>(null);
   protected readonly loadError = signal<ApiError | null>(null);

@@ -36,6 +36,7 @@ import {
   invoiceAccess,
   orderAccess,
   quoteAccess,
+  noteAccess,
   receiptAccess,
 } from '#modules/sales/index'
 
@@ -208,6 +209,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.sales_receipt = {
     feature: 'sales',
     access: (scope, id) => receiptAccess(scope, id),
+  }
+  // Nota de crédito/débito (evidência da devolução, correspondência): o âmbito da nota.
+  map.sales_note = {
+    feature: 'sales',
+    access: (scope, id) => noteAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

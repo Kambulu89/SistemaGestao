@@ -799,6 +799,23 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
     description:
       'Confirmar ou recusar recebimentos registados por outra pessoa (confirmação financeira): só então contam.',
   },
+  {
+    code: 'sales.notes.read',
+    module: 'sales',
+    description: 'Consultar notas de crédito e débito e reembolsos (no âmbito da entidade legal).',
+  },
+  {
+    code: 'sales.notes.manage',
+    module: 'sales',
+    description:
+      'Preparar notas de crédito/débito sobre facturas emitidas, descartá-las e aplicar o crédito a outras facturas.',
+  },
+  {
+    code: 'sales.notes.issue',
+    module: 'sales',
+    description:
+      'Emitir notas de crédito/débito (série fiscal em simulação); a de crédito nunca por quem a preparou.',
+  },
 ]
 
 export const PERMISSION_CODES: ReadonlySet<string> = new Set(PERMISSIONS.map((p) => p.code))

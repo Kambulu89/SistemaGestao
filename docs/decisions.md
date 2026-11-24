@@ -1262,3 +1262,86 @@ ainda não existe.
 bancária (Prompt 11) ligam-se a `CONFIRMED`. Devoluções de adiantamentos e estornos de recebimentos confirmados ficam
 para as notas de crédito (10.8) e a Tesouraria.
 
+## D-066 Notas de crédito/débito, devolução física e reembolso: três documentos distintos (aceite)
+
+**Contexto.** O 10.8 pede notas de crédito e débito com:
+- referência à factura original;
+- motivo;
+- linhas, valores e imposto elegíveis;
+- devolução física distinta da correcção fiscal e do reembolso financeiro.
+
+A factura emitida é imutável (D-064).
+
+**Decisão.**
+
+- **Três documentos.** Cada um tem o seu documento, as suas permissões e a sua auditoria:
+  - **devolução física**: na encomenda, entra no stock pelo `returnFromSale` do Inventário;
+  - **correcção fiscal**: a nota;
+  - **reembolso financeiro**: o reembolso confirmado.
+
+  Nenhum dos três cria os outros automaticamente.
+
+- **Devolução física** (`sales_returns`):
+  - só linhas de stock, nunca acima do expedido ainda não devolvido (`OVER_RETURN`), com motivo;
+  - idempotente por chave e impressão digital;
+  - só de acréscimo.
+
+  O devolvido deixa de ser facturável: facturável = entregue − devolvido − facturado + devolvido já creditado. O
+  último termo é a parte do devolvido que uma nota ligada à devolução creditou depois de facturada. A encomenda fecha
+  quando o facturado líquido cobre o que ficou com o cliente.
+
+- **Nota** (`sales_notes`):
+  - referencia sempre uma factura emitida ou já corrigida e copia dela:
+    - a entidade e o cliente;
+    - a fotografia fiscal do cliente;
+    - a moeda e o câmbio da factura;
+    - o nível de arredondamento.
+  - o motivo vem de uma lista por tipo, com descrição obrigatória;
+  - cada linha referencia uma linha da factura:
+    - crédito por quantidade (devolução, quebra) ou por valor (preço, desconto);
+    - débito só por valor: mais quantidade é uma nova factura.
+  - o elegível conta só as notas de crédito emitidas, por quantidade e por valor;
+  - creditar toda a quantidade que resta credita exactamente o valor que resta, o que evita resíduos de
+    arredondamento.
+
+- **Imposto.** Usam-se os códigos e as taxas da linha original, nunca os de hoje, calculados pelo motor fiscal do
+  10.5. Uma retenção só entra se foi aplicada na factura.
+
+- **Ligação à devolução** (opcional, só crédito). O crédito por quantidade não passa o que voltou nessa devolução e
+  ainda não foi creditado (`OVER_RETURNED`).
+
+- **Emissão:**
+  - bloqueia a factura e recalcula o elegível;
+  - a nota de crédito é emitida por outra pessoa que não quem a preparou (`SELF_ISSUE`, também na base);
+  - numera pela série `CREDIT_NOTE`/`DEBIT_NOTE` em simulação, sem gastar número quando falha;
+  - fixa uma impressão digital interna.
+
+  Duas emissões concorrentes sobre o mesmo resto: uma passa, a outra é recusada.
+
+- **Efeito na factura.** A factura passa a corrigida e ganha `credited_total`/`debited_total`, que nunca descem.
+  Em dívida = a pagar + débitos − créditos − recebido.
+  - O crédito abate o que está em dívida.
+  - O resto fica como **crédito do cliente** na nota: pode compensar outra factura do mesmo cliente, entidade e moeda,
+    ou ser reembolsado.
+  - O débito aumenta a dívida, que os recibos do 10.7 cobram.
+
+- **Reembolso** (`sales_refunds`):
+  - registo idempotente com `sales.receipts.manage`;
+  - um reembolso pendente reserva o crédito;
+  - só conta quando outra pessoa o confirma com `sales.receipts.confirm`, como nos recebimentos; até à Tesouraria do
+    Prompt 11 a confirmação é manual;
+  - recusa e anulação exigem motivo.
+
+- **Fiscal.** Os tipos de nota e o modo de as comunicar não foram verificados na especificação oficial da AGT (D-063).
+  Fica só a simulação, sem qualquer declaração de conformidade.
+
+**Consequências.**
+- A factura original nunca muda.
+- O histórico fiscal fica nas notas.
+- O stock só se movimenta pela devolução.
+- O dinheiro só sai pelo reembolso confirmado.
+
+A contabilização dos três (10.12) e a ligação à conciliação bancária (Prompt 11) ficam por fazer. Também ficam por
+fazer a devolução para quarentena ou bloqueado (hoje a mercadoria entra como livre) e a nota sobre a factura-recibo
+com reembolso imediato.
+

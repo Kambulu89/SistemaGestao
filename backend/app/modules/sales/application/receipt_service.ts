@@ -365,9 +365,10 @@ export class ReceiptService {
       if (!exists.rows[0]) throw ApiError.notFound()
       const inv = (
         await scope.trx.rawQuery(
-          `select id, number, invoice_date::text as d, due_date::text as due, currency, payable_total, paid_total, document_kind
+          `select id, number, invoice_date::text as d, due_date::text as due, currency, payable_total, paid_total, document_kind,
+                  credited_total, debited_total
              from sales_invoices where tenant_id = ? and legal_entity_id = ? and customer_id = ? and status in ('ISSUED','CORRECTED')
-              and paid_total < payable_total order by due_date, number`,
+              and paid_total + credited_total < payable_total + debited_total order by due_date, number`,
           [t, legalEntityId, customerId]
         )
       ).rows as any[]
@@ -392,7 +393,13 @@ export class ReceiptService {
           invoiceDate: i.d as string,
           dueDate: i.due as string,
           currency: String(i.currency).trim(),
-          open: scaledText(cents(i.payable_total) - cents(i.paid_total), 2),
+          open: scaledText(
+            cents(i.payable_total) +
+              cents(i.debited_total) -
+              cents(i.credited_total) -
+              cents(i.paid_total),
+            2
+          ),
         })),
         invoiceReceiptDrafts: drafts.map((d) => ({
           id: d.id as string,

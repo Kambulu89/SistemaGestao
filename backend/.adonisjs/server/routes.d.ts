@@ -667,6 +667,20 @@ export type ScannedRoutes = {
     'sales_receipts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.apply_advance': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.index': { paramsTuple?: []; params?: {} }
+    'sales_notes.options': { paramsTuple?: []; params?: {} }
+    'sales_notes.search_invoices': { paramsTuple?: []; params?: {} }
+    'sales_notes.eligible': { paramsTuple: [ParamValue]; params: {'invoiceId': ParamValue} }
+    'sales_notes.store': { paramsTuple?: []; params?: {} }
+    'sales_notes.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.discard': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.apply_credit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.store_refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.confirm_refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.reject_refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.cancel_refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -682,6 +696,7 @@ export type ScannedRoutes = {
     'orders.reserve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.release': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.deliver': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'orders.return_goods': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'quotes.index': { paramsTuple?: []; params?: {} }
@@ -972,6 +987,11 @@ export type ScannedRoutes = {
     'sales_receipts.search_customers': { paramsTuple?: []; params?: {} }
     'sales_receipts.open_items': { paramsTuple: [ParamValue,ParamValue]; params: {'legalEntityId': ParamValue,'customerId': ParamValue} }
     'sales_receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.index': { paramsTuple?: []; params?: {} }
+    'sales_notes.options': { paramsTuple?: []; params?: {} }
+    'sales_notes.search_invoices': { paramsTuple?: []; params?: {} }
+    'sales_notes.eligible': { paramsTuple: [ParamValue]; params: {'invoiceId': ParamValue} }
+    'sales_notes.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -1244,6 +1264,11 @@ export type ScannedRoutes = {
     'sales_receipts.search_customers': { paramsTuple?: []; params?: {} }
     'sales_receipts.open_items': { paramsTuple: [ParamValue,ParamValue]; params: {'legalEntityId': ParamValue,'customerId': ParamValue} }
     'sales_receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.index': { paramsTuple?: []; params?: {} }
+    'sales_notes.options': { paramsTuple?: []; params?: {} }
+    'sales_notes.search_invoices': { paramsTuple?: []; params?: {} }
+    'sales_notes.eligible': { paramsTuple: [ParamValue]; params: {'invoiceId': ParamValue} }
+    'sales_notes.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.index': { paramsTuple?: []; params?: {} }
     'orders.options': { paramsTuple?: []; params?: {} }
     'orders.addresses': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -1574,6 +1599,14 @@ export type ScannedRoutes = {
     'sales_receipts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.apply_advance': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.store': { paramsTuple?: []; params?: {} }
+    'sales_notes.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.discard': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.apply_credit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.store_refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.confirm_refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.reject_refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.cancel_refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.store': { paramsTuple?: []; params?: {} }
     'orders.from_quote': { paramsTuple?: []; params?: {} }
     'orders.submit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1582,6 +1615,7 @@ export type ScannedRoutes = {
     'orders.reserve': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.release': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.deliver': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'orders.return_goods': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.close': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'quotes.store': { paramsTuple?: []; params?: {} }
@@ -1687,6 +1721,7 @@ export type ScannedRoutes = {
     'fiscal.update_exemption': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.update_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'sales_notes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'quotes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'platform.update_plan': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

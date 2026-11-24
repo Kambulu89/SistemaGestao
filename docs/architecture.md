@@ -499,7 +499,7 @@ por período no âmbito do membro; publicação no âmbito da empresa como fotog
 
 ## Vendas e facturação (módulo `sales`, Prompt 10)
 
-Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-065). Clientes (10.1): o cliente é o papel de venda de um
+Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-066). Clientes (10.1): o cliente é o papel de venda de um
 terceiro do módulo `partners` (um por terceiro, partilhado com o fornecedor), com moeda, prazo, segmento, limite de
 crédito (permissão própria, com motivo) e estado (activo, bloqueado ou inactivo com motivo); moradas de facturação e
 entrega (uma por omissão de cada tipo, índice único parcial); contactos no terceiro; versões só de acréscimo da
@@ -536,5 +536,11 @@ afectações só a facturas emitidas do mesmo cliente, entidade e moeda, nunca a
 adiantamento com saldo protegido (`advance_used ≤ advance_total`, aplicações só de acréscimo sob bloqueio); a
 factura-recibo é um rascunho emitido na confirmação do seu recebimento (valor exacto, um só activo); registo
 idempotente por chave e impressão digital; recibos numerados pela série `RECEIPT` em simulação; permissões
-`sales.receipts.read|manage|confirm`.
+`sales.receipts.read|manage|confirm`. Notas e devoluções (10.8), três documentos distintos: a devolução física (`sales_returns`, só linhas
+de stock, idempotente, pelo `returnFromSale` do Inventário; o devolvido deixa de ser facturável); a nota de crédito ou
+débito sobre a factura original (linhas da factura por quantidade ou valor dentro do que resta, impostos da linha
+original, série `CREDIT_NOTE`/`DEBIT_NOTE` em simulação, a de crédito emitida por outra pessoa, imutável); e o
+reembolso do crédito restante, confirmado por outra pessoa. A factura emitida nunca muda: passa a corrigida e ganha
+`credited_total`/`debited_total` (nunca descem); em dívida = a pagar + débitos − créditos − recebido. Permissões
+`sales.notes.read|manage|issue`.
 

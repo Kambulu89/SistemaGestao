@@ -28,6 +28,7 @@ import {
   normalizeInvoiceHeader,
   normalizeInvoiceLines,
 } from '#modules/sales/domain/invoices'
+import { collectionOf } from '#modules/sales/domain/notes'
 
 /*
  * Facturas de venda (10.6), emissão DEMONSTRATIVA. Permissões no âmbito da entidade legal: `sales.invoices.read`,
@@ -41,6 +42,10 @@ const fail = (issues: ErrorDetail[]) => {
   if (issues.length) throw ApiError.validation(issues)
 }
 const money = (v: unknown) => scaledText(dbScaled(v, 2), 2)
+const cents = (v: unknown) => dbScaled(v, 2)
+/** Em dívida: a pagar + débitos − créditos − pago (10.8). */
+const openOf = (i: any) =>
+  cents(i.payable_total) + cents(i.debited_total) - cents(i.credited_total) - cents(i.paid_total)
 const num = (v: unknown, scale: number) =>
   v === null || v === undefined ? null : scaledText(dbScaled(v, scale), scale)
 
@@ -394,8 +399,19 @@ async function detail(scope: TenantScope, id: string, g?: ReturnType<typeof righ
        union all
        select r.id, r.number, r.received_date::text as d, r.amount, 'INVOICE_RECEIPT' as kind from sales_receipts r
         where r.tenant_id = ? and r.invoice_id = ? and r.purpose = 'INVOICE_RECEIPT' and r.status = 'CONFIRMED'
+       union all
+       select n.id, n.number, x.created_at::date::text as d, x.amount, 'CREDIT_NOTE' as kind from sales_note_applications x
+         join sales_notes n on n.tenant_id = x.tenant_id and n.id = x.note_id
+        where x.tenant_id = ? and x.invoice_id = ?
        order by d`,
-      [t, id, t, id, t, id]
+      [t, id, t, id, t, id, t, id]
+    )
+  ).rows as any[]
+  const notes = (
+    await scope.trx.rawQuery(
+      `select id, kind, number, status, note_date::text as d, payable_total, reason_code from sales_notes
+        where tenant_id = ? and invoice_id = ? and status <> 'DISCARDED' order by created_at`,
+      [t, id]
     )
   ).rows as any[]
   const a = g ?? rights(await scopesOf(scope), i.legal_entity_id)
@@ -444,6 +460,18 @@ async function detail(scope: TenantScope, id: string, g?: ReturnType<typeof righ
     withholdingTotal: money(i.withholding_total),
     payableTotal: money(i.payable_total),
     paidTotal: money(i.paid_total),
+    creditedTotal: money(i.credited_total),
+    debitedTotal: money(i.debited_total),
+    openTotal: i.status === 'ISSUED' || i.status === 'CORRECTED' ? scaledText(openOf(i), 2) : null,
+    correctionNotes: notes.map((n) => ({
+      id: n.id as string,
+      kind: n.kind as string,
+      number: (n.number as string) ?? null,
+      status: n.status as string,
+      date: n.d as string,
+      payable: money(n.payable_total),
+      reasonCode: n.reason_code as string,
+    })),
     taxSummary: (i.tax_summary as Record<string, unknown>) ?? null,
     documentHash: (i.document_hash as string) ?? null,
     issuedAt: i.issued_at ? new Date(i.issued_at).toISOString() : null,
@@ -722,6 +750,8 @@ export class InvoiceService {
           currency: String(i.currency).trim(),
           payableTotal: money(i.payable_total),
           paidTotal: money(i.paid_total),
+          openTotal:
+            i.status === 'ISSUED' || i.status === 'CORRECTED' ? scaledText(openOf(i), 2) : null,
           status: i.status as string,
           fiscalStatus: (i.fiscal_status as string) ?? null,
           collectionStatus: collectionView(i.status, i.collection_status, i.ddate, today()),
@@ -1076,19 +1106,24 @@ export async function applyInvoicePayment(scope: TenantScope, invoiceId: string,
   const i = await load(scope, invoiceId, true)
   if (i.status !== 'ISSUED' && i.status !== 'CORRECTED')
     throw ApiError.conflict('INVOICE_NOT_ISSUED', 'Só se recebe de facturas emitidas.')
-  const paid = dbScaled(i.paid_total, 2) + dbScaled(amount, 2)
-  const payable = dbScaled(i.payable_total, 2)
-  if (paid > payable)
+  const open = openOf(i)
+  if (dbScaled(amount, 2) > open)
     throw ApiError.conflict(
       'OVER_PAYMENT',
-      `A factura ${i.number} só tem ${scaledText(payable - dbScaled(i.paid_total, 2), 2)} por receber.`
+      `A factura ${i.number} só tem ${scaledText(open, 2)} por receber.`
     )
+  const paid = cents(i.paid_total) + dbScaled(amount, 2)
   await setInvoice(scope, invoiceId, {
     paid_total: scaledText(paid, 2),
-    collection_status: paid === payable ? 'PAID' : 'PARTIAL',
+    collection_status: collectionOf(
+      cents(i.payable_total),
+      cents(i.debited_total),
+      cents(i.credited_total),
+      paid
+    ),
   })
   await event(scope, invoiceId, 'PAYMENT', null, { amount, paid: scaledText(paid, 2) })
-  return { number: i.number as string, open: scaledText(payable - paid, 2) }
+  return { number: i.number as string, open: scaledText(open - dbScaled(amount, 2), 2) }
 }
 
 /** Valores de uma factura para afectação: emitida, cliente, entidade, moeda e o que falta receber. */
@@ -1096,8 +1131,8 @@ export async function invoiceForPayment(scope: TenantScope, invoiceId: string) {
   if (!isUuid(invoiceId)) return null
   const i = (
     await scope.trx.rawQuery(
-      `select id, number, status, document_kind, legal_entity_id, customer_id, currency, payable_total, paid_total
-         from sales_invoices where tenant_id = ? and id = ?`,
+      `select id, number, status, document_kind, legal_entity_id, customer_id, currency, payable_total, paid_total,
+              credited_total, debited_total from sales_invoices where tenant_id = ? and id = ?`,
       [scope.context.tenantId, invoiceId]
     )
   ).rows[0] as any
@@ -1111,11 +1146,66 @@ export async function invoiceForPayment(scope: TenantScope, invoiceId: string) {
     customerId: i.customer_id as string,
     currency: String(i.currency).trim(),
     payable: money(i.payable_total),
-    open: scaledText(dbScaled(i.payable_total, 2) - dbScaled(i.paid_total, 2), 2),
+    open: scaledText(openOf(i), 2),
   }
 }
 
 /** Rascunho de factura bloqueado para a emissão pela confirmação do recebimento (factura-recibo). */
 export async function lockDraftInvoice(scope: TenantScope, invoiceId: string) {
   return load(scope, invoiceId, true)
+}
+
+/** Factura original de uma nota (10.8), com as linhas, bloqueada se pedido. */
+export async function invoiceForNote(scope: TenantScope, invoiceId: string, lock = false) {
+  if (!isUuid(invoiceId)) return null
+  const i = (
+    await scope.trx.rawQuery(
+      `select *, invoice_date::text as idate from sales_invoices where tenant_id = ? and id = ?${lock ? ' for update' : ''}`,
+      [scope.context.tenantId, invoiceId]
+    )
+  ).rows[0] as any
+  if (!i) return null
+  const lines = (
+    await scope.trx.rawQuery(
+      `select l.*, p.sku from sales_invoice_lines l join products p on p.tenant_id = l.tenant_id and p.id = l.product_id
+        where l.tenant_id = ? and l.invoice_id = ? order by l.line_no`,
+      [scope.context.tenantId, invoiceId]
+    )
+  ).rows as any[]
+  return { i, lines, open: openOf(i) }
+}
+
+/**
+ * Efeito de uma nota emitida na factura original (na transacção de quem chama, com a factura bloqueada): a factura
+ * passa a corrigida; o crédito abate o que está em dívida (`credit`, nunca acima) e o débito aumenta-o. Os totais
+ * nunca descem (gatilho).
+ */
+export async function adjustInvoice(
+  scope: TenantScope,
+  invoiceId: string,
+  change: { credit?: bigint; debit?: bigint; note: string }
+) {
+  const i = await load(scope, invoiceId, true)
+  if (i.status !== 'ISSUED' && i.status !== 'CORRECTED')
+    throw ApiError.conflict('INVOICE_NOT_ISSUED', 'Só se corrige uma factura emitida.')
+  const credit = change.credit ?? 0n
+  const debit = change.debit ?? 0n
+  if (credit > openOf(i))
+    throw ApiError.conflict(
+      'OVER_CREDIT',
+      `A factura ${i.number} só tem ${scaledText(openOf(i), 2)} em dívida.`
+    )
+  const credited = cents(i.credited_total) + credit
+  const debited = cents(i.debited_total) + debit
+  await setInvoice(scope, invoiceId, {
+    status: 'CORRECTED',
+    credited_total: scaledText(credited, 2),
+    debited_total: scaledText(debited, 2),
+    collection_status: collectionOf(cents(i.payable_total), debited, credited, cents(i.paid_total)),
+  })
+  await event(scope, invoiceId, debit > 0n ? 'DEBITED' : 'CREDITED', null, {
+    note: change.note,
+    amount: scaledText(debit > 0n ? debit : credit, 2),
+  })
+  return { number: i.number as string }
 }

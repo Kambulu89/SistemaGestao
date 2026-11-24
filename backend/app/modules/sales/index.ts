@@ -26,6 +26,7 @@ export {
   OrderService,
   type OrderView,
   recordInvoiced,
+  returnForNote,
 } from '#modules/sales/application/order_service'
 export {
   allocateFiscalNumber,
@@ -43,3 +44,4 @@ export {
   ReceiptService,
   type ReceiptView,
 } from '#modules/sales/application/receipt_service'
+export { noteAccess, NoteService, type NoteView } from '#modules/sales/application/note_service'

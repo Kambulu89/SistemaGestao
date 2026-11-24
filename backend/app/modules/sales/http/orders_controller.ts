@@ -88,6 +88,9 @@ export default class OrdersController {
   async deliver(ctx: HttpContext) {
     return ok(ctx, await orders.deliver(ctx.tenantContext!, param(ctx), await body(ctx)))
   }
+  async returnGoods(ctx: HttpContext) {
+    return ok(ctx, await orders.returnGoods(ctx.tenantContext!, param(ctx), await body(ctx)))
+  }
   async close(ctx: HttpContext) {
     return ok(ctx, await orders.close(ctx.tenantContext!, param(ctx), await vbody(ctx)))
   }

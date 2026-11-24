@@ -30,6 +30,14 @@ const RECEIPT_PERMISSIONS = [
   'sales.receipts.confirm',
 ];
 
+const NOTE_PERMISSIONS = [
+  'sales.notes.read',
+  'sales.notes.manage',
+  'sales.notes.issue',
+  'sales.receipts.manage',
+  'sales.receipts.confirm',
+];
+
 const FISCAL_PERMISSIONS = ['sales.fiscal.read', 'sales.fiscal.manage', 'sales.fiscal.confirm'];
 
 const PRICE_PERMISSIONS = ['sales.prices.read', 'sales.prices.manage', 'sales.prices.approve'];
@@ -323,6 +331,41 @@ export const SALES_ROUTES: Routes = [
         canActivate: [accessGuard],
         data: { anyOf: RECEIPT_PERMISSIONS, anyScope: true },
         loadComponent: () => import('./receipt-detail').then((m) => m.ReceiptDetail),
+      },
+    ],
+  },
+  {
+    path: 'notas',
+    title: 'Notas de crédito e débito',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: NOTE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./notes').then((m) => m.Notes),
+      },
+      {
+        path: 'nova',
+        title: 'Nova nota',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.notes.manage', anyScope: true },
+        loadComponent: () => import('./note-form').then((m) => m.NoteFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Nota',
+        canActivate: [accessGuard],
+        data: { anyOf: NOTE_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./note-detail').then((m) => m.NoteDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar nota',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.notes.manage', anyScope: true },
+        loadComponent: () => import('./note-form').then((m) => m.NoteFormPage),
       },
     ],
   },

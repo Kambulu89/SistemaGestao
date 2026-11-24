@@ -10,6 +10,7 @@ export interface InvoiceRow {
   currency: string;
   payableTotal: string;
   paidTotal: string;
+  openTotal: string | null;
   status: string;
   fiscalStatus: string | null;
   collectionStatus: string | null;
@@ -88,6 +89,18 @@ export interface Invoice {
   withholdingTotal: string;
   payableTotal: string;
   paidTotal: string;
+  creditedTotal: string;
+  debitedTotal: string;
+  openTotal: string | null;
+  correctionNotes: {
+    id: string;
+    kind: 'CREDIT' | 'DEBIT';
+    number: string | null;
+    status: string;
+    date: string;
+    payable: string;
+    reasonCode: string;
+  }[];
   taxSummary: {
     summary: (InvoiceTax & { applied: boolean })[];
     ratesUsed: { code: string; rate: string; legalSource: string }[];
@@ -146,6 +159,8 @@ export const INVOICE_EVENT: Record<string, string> = {
   ISSUED: 'Emitida',
   DISCARDED: 'Descartada',
   PAYMENT: 'Pagamento recebido',
+  CREDITED: 'Nota de crédito emitida',
+  DEBITED: 'Nota de débito emitida',
 };
 
 export function invoiceTone(s: string | null): string {

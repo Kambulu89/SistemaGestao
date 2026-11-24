@@ -97,6 +97,10 @@ export interface QtyLine {
   delivered: string | bigint
   invoiced: string | bigint
   closed: string | bigint
+  /** Devolvido fisicamente (10.8): deixa de ser facturável. */
+  returned?: string | bigint
+  /** Do devolvido, o já creditado por nota ligada à devolução (10.8). */
+  returnCredited?: string | bigint
 }
 
 /** O que falta entregar (encomendado − entregue − fechado). */
@@ -120,7 +124,12 @@ export function deliveryStatus(lines: QtyLine[]) {
 export function invoicingStatus(lines: QtyLine[]) {
   const inv = lines.reduce((a, l) => a + q(l.invoiced), 0n)
   if (inv === 0n) return 'NONE'
-  return lines.every((l) => q(l.invoiced) >= q(l.quantity) - q(l.closed)) ? 'FULL' : 'PARTIAL'
+  return lines.every(
+    (l) =>
+      q(l.invoiced) - q(l.returnCredited ?? 0n) >= q(l.quantity) - q(l.closed) - q(l.returned ?? 0n)
+  )
+    ? 'FULL'
+    : 'PARTIAL'
 }
 
 /**

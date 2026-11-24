@@ -832,6 +832,36 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
   'POST /api/v1/sales/receipts/:id/apply-advance':
     'âmbito RBAC de sales.receipts.read/manage/confirm por entidade legal, verificado no serviço (confirmar exige outra pessoa)',
+  'GET /api/v1/sales/notes':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'GET /api/v1/sales/notes/options':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'GET /api/v1/sales/notes/search/invoices':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'GET /api/v1/sales/notes/eligible/:invoiceId':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'POST /api/v1/sales/notes':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'GET /api/v1/sales/notes/:id':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'PATCH /api/v1/sales/notes/:id':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'POST /api/v1/sales/notes/:id/issue':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'POST /api/v1/sales/notes/:id/discard':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'POST /api/v1/sales/notes/:id/apply-credit':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'POST /api/v1/sales/notes/:id/refunds':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'POST /api/v1/sales/refunds/:id/confirm':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'POST /api/v1/sales/refunds/:id/reject':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'POST /api/v1/sales/refunds/:id/cancel':
+    'âmbito RBAC de sales.notes.read/manage/issue (reembolsos: sales.receipts.manage/confirm) por entidade legal, verificado no serviço (a nota de crédito e o reembolso exigem outra pessoa)',
+  'POST /api/v1/sales/orders/:id/returns':
+    'âmbito RBAC de sales.orders.read/manage/approve/fulfil (empresa, entidade legal ou próprias) verificado no serviço',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

@@ -997,8 +997,24 @@ async function populate(client: any) {
       [tenant.id, le.id, customer.id]
     )
   ).rows[0] as { id: string }
+  // Nota de crédito em rascunho da empresa A (10.8) sobre a factura, inserida directamente.
+  const customerVersion = (
+    await owner.rawQuery(
+      `insert into customer_versions (tenant_id, customer_id, version_no, data, hash) values (?, ?, 1, '{}', 'x') returning id`,
+      [tenant.id, customer.id]
+    )
+  ).rows[0] as { id: string }
+  const salesNote = (
+    await owner.rawQuery(
+      `insert into sales_notes (tenant_id, kind, invoice_id, legal_entity_id, customer_id, reason_code, reason, note_date,
+         currency, functional_currency, exchange_rate, customer_version_id, customer_snapshot, rounding_level)
+       values (?, 'CREDIT', ?, ?, ?, 'OTHER', 'Teste A', '2026-06-01', 'AOA', 'AOA', 1, ?, '{}', 'LINE') returning id`,
+      [tenant.id, salesInvoice.id, le.id, customer.id, customerVersion.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    salesNote,
     salesReceipt,
     salesInvoice,
     taxCode,
@@ -1939,6 +1955,44 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'pendentes de cliente alheio',
         B.get(`/api/v1/sales/receipts/open-items/${a.le.id}/${a.customer.id}`),
       ],
+      ['GET nota alheia', B.get(`/api/v1/sales/notes/${a.salesNote.id}`)],
+      [
+        'alterar nota alheia',
+        B.patch(`/api/v1/sales/notes/${a.salesNote.id}`, { ...v, reason: 'xxx' }),
+      ],
+      ['emitir nota alheia', B.post(`/api/v1/sales/notes/${a.salesNote.id}/issue`, v)],
+      [
+        'descartar nota alheia',
+        B.post(`/api/v1/sales/notes/${a.salesNote.id}/discard`, { ...v, reason: 'xxx' }),
+      ],
+      [
+        'crédito de nota alheia',
+        B.post(`/api/v1/sales/notes/${a.salesNote.id}/apply-credit`, {
+          ...v,
+          invoiceId: a.salesInvoice.id,
+          amount: '1',
+        }),
+      ],
+      [
+        'reembolso de nota alheia',
+        B.post(`/api/v1/sales/notes/${a.salesNote.id}/refunds`, {
+          requestKey: 'isolamento-r',
+          amount: '1',
+          method: 'CASH',
+          refundDate: '2026-06-01',
+        }),
+      ],
+      ['elegível de factura alheia', B.get(`/api/v1/sales/notes/eligible/${a.salesInvoice.id}`)],
+      [
+        'devolução em encomenda alheia',
+        B.post(`/api/v1/sales/orders/${a.salesOrder.id}/returns`, {
+          ...v,
+          requestKey: 'isolamento-d',
+          returnDate: '2026-06-01',
+          reason: 'xxx',
+          lines: [{ lineId: a.salesOrderLine.id, quantity: '1' }],
+        }),
+      ],
       ['GET factura alheia', B.get(`/api/v1/sales/invoices/${a.salesInvoice.id}`)],
       [
         'alterar factura alheia',
@@ -2818,6 +2872,20 @@ test.group('isolamento | matriz entre empresas', (group) => {
         receivedDate: '2026-06-01',
         requestKey: 'isolamento-b',
       })
+    )
+    crossPricing.push(
+      await B.post('/api/v1/sales/notes', {
+        kind: 'CREDIT',
+        invoiceId: a.salesInvoice.id,
+        reasonCode: 'OTHER',
+        reason: 'Isolamento',
+        noteDate: '2026-06-01',
+        lines: [{ invoiceLineId: a.salesInvoice.id, mode: 'VALUE', amount: '1' }],
+      })
+    )
+    assert.notInclude(
+      (await B.get('/api/v1/sales/notes')).body().data.map((x: any) => x.id),
+      a.salesNote.id
     )
     for (const r of crossPricing) {
       assert.include([404, 422], r.status())

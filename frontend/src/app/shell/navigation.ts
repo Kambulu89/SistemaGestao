@@ -748,6 +748,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Vendas',
       },
       {
+        label: 'Notas de crédito e débito',
+        path: '/vendas/notas',
+        icon: 'file',
+        anyOf: ['sales.notes.read', 'sales.notes.manage', 'sales.notes.issue'],
+        feature: 'sales',
+        anyScope: true,
+        section: 'Vendas',
+      },
+      {
         label: 'Recebimentos',
         path: '/vendas/recebimentos',
         icon: 'card',

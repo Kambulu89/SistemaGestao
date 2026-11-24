@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 a 10.7 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-065. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 a 10.8 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-066. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -732,3 +732,154 @@ Também cobertos:
 - A confirmação é manual até à Tesouraria/conciliação bancária (Prompt 11). Estornos de recebimentos confirmados e
   devolução de adiantamentos ficam para as notas de crédito (10.8) e a Tesouraria. A contabilização é do 10.12 e o PDF
   do 10.13.
+
+## 10.8 Notas de crédito e débito, devolução física e reembolso
+
+São três documentos distintos (D-066):
+
+- **Devolução física**: na encomenda, entra no stock.
+- **Correcção fiscal**: a nota, sobre a factura.
+- **Reembolso financeiro**: confirmado por outra pessoa.
+
+### Modelo
+
+Migração `0061_create_sales_notes`:
+
+- `sales_invoices` ganha `credited_total` e `debited_total`. Um gatilho impede que desçam. O `CHECK` passa a ser
+  `pago + creditado ≤ a pagar + debitado`.
+- `sales_order_lines` ganha `returned_qty` e `return_credited_qty`, ambas com `CHECK`: nunca acima do expedido nem do
+  facturado.
+- `sales_returns` e `sales_return_lines`:
+  - referência `<encomenda>/D<n>`, data, armazém e motivo;
+  - evento de stock do Inventário;
+  - chave e impressão digital do pedido;
+  - só de acréscimo.
+- `sales_notes` — guarda:
+  - tipo (crédito ou débito), a factura original, a entidade e o cliente;
+  - a devolução ligada;
+  - código e descrição do motivo, e a data;
+  - moeda, moeda funcional e câmbio, como na factura;
+  - a versão e a fotografia do cliente, e o nível de arredondamento;
+  - estado (rascunho, emitida, descartada) e estado fiscal;
+  - série e número;
+  - totais e resumo dos impostos;
+  - crédito aplicado e reembolsado;
+  - impressão digital, emissão e motivo do descarte.
+
+  `CHECK`s de coerência. A base impede que a nota de crédito seja emitida por quem a criou. Emitida, é imutável.
+
+- `sales_note_lines` — a linha da factura, o modo (quantidade ou valor), a quantidade, o valor líquido, o imposto e os
+  impostos usados. Só mudam em rascunho.
+- `sales_note_applications` — crédito abatido em facturas. Só de acréscimo.
+- `sales_refunds` — reembolso:
+  - valor, meio, conta, referência e data;
+  - chave e impressão digital do pedido;
+  - estado: pendente, confirmado, recusado ou anulado;
+  - quem confirma tem de ser diferente de quem registou.
+
+  Depois de decidido, não muda.
+
+### Backend e API
+
+- `POST /sales/orders/:id/returns` (permissão `sales.orders.fulfil`): devolução idempotente pelo contrato
+  `returnFromSale`. O devolvido deixa de ser facturável; o devolvido que uma nota ligada creditou volta a contar.
+- `/sales/notes`:
+  - `GET` lista, `GET options`, `GET search/invoices`;
+  - `GET eligible/:invoiceId`: o que resta por linha e as devoluções da encomenda;
+  - `POST` cria, `GET|PATCH :id`;
+  - `POST :id/{issue|discard|apply-credit|refunds}`.
+- `/sales/refunds/:id/{confirm|reject|cancel}`.
+- Contratos na factura e na encomenda:
+  - `invoiceForNote` e `adjustInvoice`: a factura passa a corrigida, o crédito abate até ao que está em dívida e o
+    débito aumenta-a;
+  - `returnForNote` e `recordReturnCredit`.
+- Recibos e adiantamentos do 10.7 passam a usar o valor em dívida, que inclui créditos e débitos.
+- Permissões novas `sales.notes.read|manage|issue`. O reembolso usa `sales.receipts.manage|confirm`.
+- Anexos com o assunto `sales_note`. Auditoria `sales_note.*`, `sales_refund.*` e `sales_order.returned`.
+- Erros:
+  - `OVER_CREDIT`, `OVER_RETURNED`, `OVER_RETURN`, `NOTHING_TO_CREDIT`, `NOT_STOCK`;
+  - `SELF_ISSUE`, `SELF_CONFIRMATION`, `OVER_REFUND`;
+  - `INVOICE_NOT_ISSUED`, `BEFORE_INVOICE`, `FUTURE`;
+  - `IDEMPOTENCY_MISMATCH`, `SERIES_REQUIRED`, `NO_SERIES`.
+
+### Ecrãs
+
+- **Encomenda** — "Devolução de mercadoria": quantidades por linha de stock, data e motivo. Mostra a coluna
+  "Devolvida" e a lista de devoluções.
+- **Factura** — botões "Nota de crédito" e "Nota de débito". Secção "Correcções". Balanço: a pagar, débitos,
+  créditos, recebido e em dívida.
+- **Notas** (`/vendas/notas`) — lista com filtros por tipo, estado e crédito disponível.
+- **Formulário da nota** — a factura original (fixa quando vem da factura), o motivo do tipo, a descrição, a data e a
+  devolução ligada. Por linha: o que resta e a correcção por quantidade ou valor. O débito é só por valor.
+- **Ficha da nota**:
+  - aviso de simulação, a factura e a devolução, o motivo, o cliente como na factura, a moeda e o câmbio;
+  - linhas com os impostos originais e os totais;
+  - acções: emitir (outra pessoa, para crédito; série se houver várias) e descartar;
+  - crédito: abatido, reembolsado, pendente e disponível; usar o crédito noutra factura; registar reembolso;
+  - por reembolso: confirmar, recusar ou anular;
+  - anexos e auditoria.
+
+### Testes e evidências
+
+**Backend**
+
+`tests/unit/sales_notes_domain.spec.ts` (3 testes):
+
+- cabeçalho e linhas;
+- elegível exacto: o resto todo credita o valor que falta; nunca acima;
+- impostos originais e retenção aplicada;
+- estado de cobrança com créditos e débitos.
+
+`tests/functional/sales_notes.spec.ts` (2 testes):
+
+- **Notas e reembolso:**
+  - motivo do outro tipo, quantidade acima do facturado e valor acima do líquido recusados; factura em rascunho
+    `INVOICE_NOT_ISSUED`;
+  - crédito de 1 unidade a 550,00 com a taxa da linha original e a fotografia do cliente;
+  - quem preparou não emite (`SELF_ISSUE`); emitida `NC A/1`; a factura fica corrigida com 550,00 em dívida e o
+    conteúdo intacto;
+  - elegível 1 unidade e 500,00;
+  - duas emissões simultâneas do mesmo resto: uma passa, a outra é recusada sem gastar número (`NC A/2`);
+  - nota de débito por valor (`ND A/1`, 110,00); débito por quantidade recusado; dívida 660,00;
+  - factura paga por recibo e depois creditada em 220,00: tudo fica como crédito;
+  - 100,00 usados noutra factura;
+  - reembolso acima do disponível `OVER_REFUND`; transferência sem referência recusada; idempotente; o pendente
+    reserva o crédito; confirmado por outra pessoa;
+  - a base recusa alterar ou apagar a nota emitida, as linhas, as aplicações, a descida dos totais e a alteração do
+    reembolso.
+- **Devolução física:**
+  - serviço `NOT_STOCK`; acima do expedido recusado;
+  - devolução 1: stock de 7 para 8; idempotente; outra chave com outro corpo recusada; a factura não muda;
+  - nota ligada à devolução: 2 recusadas, 1 aceite (110,00); a factura fica com 770,00 em dívida;
+  - nova expedição e nova devolução antes de facturar: 1 facturável;
+  - facturada, a encomenda fica toda facturada e fechada;
+  - a base recusa apagar ou alterar devoluções e passar o devolvido.
+
+Também cobertos:
+
+- `isolation_matrix`: 8 tentativas sobre a nota, a factura e a encomenda de outra empresa (consultar, alterar,
+  emitir, descartar, crédito, reembolso, elegível, devolução), todas com 404; criação recusada; a lista não mostra a
+  nota alheia.
+- `routes_protection`.
+
+**Frontend:** `note-model.spec.ts`.
+
+**Browser (`p1008`):** 7 passos.
+
+- preparação: imposto, séries FT/NC/ND/RC, encomenda expedida e facturada (880,00);
+- devolução de 1 unidade pela encomenda; a factura não muda;
+- nota de crédito a partir da factura, ligada à devolução: 2 recusadas na linha, 1 aceite; rascunho de 110,00; quem
+  preparou não vê "Emitir";
+- outra pessoa emite: número NC, aviso de simulação; a factura fica "Corrigida" com 770,00 em dívida e a nota listada;
+- nota de débito na linha do serviço, só por valor (50 + 10 %): ND, dívida 825,00;
+- factura paga; nova nota de crédito de 110,00 fica disponível; reembolso registado (disponível 0,00; quem registou
+  não confirma); outra pessoa confirma: "Pago";
+- lista das notas e telemóvel sem deslocamento horizontal.
+
+### Pendências
+
+- O tratamento das notas na especificação da AGT continua por verificar (D-063, D-066); as séries ficam em simulação.
+- Contabilização das notas, devoluções e reembolsos (10.12).
+- Conciliação bancária dos reembolsos (Prompt 11).
+- PDF das notas (10.13).
+- Devolução para quarentena ou bloqueado: o contrato do Inventário hoje devolve para livre.

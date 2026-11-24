@@ -6,7 +6,12 @@ import { audit } from '#modules/audit/index'
 import { permissionScope, type PermissionScope } from '#modules/rbac/index'
 import { legalEntityFacts } from '#modules/organization/index'
 import { documentSeriesFacts, rateOn, reserveDocumentNumber } from '#modules/settings/index'
-import { deliverSale, releaseSaleReservation, reserveForSale } from '#modules/inventory/index'
+import {
+  deliverSale,
+  releaseSaleReservation,
+  reserveForSale,
+  returnFromSale,
+} from '#modules/inventory/index'
 import { customerSnapshot } from '#modules/sales/application/customer_service'
 import { searchSalesRefs } from '#modules/sales/application/pricing_service'
 import {
@@ -168,6 +173,8 @@ const asQty = (l: any): QtyLine => ({
   delivered: qty(l.delivered_qty),
   invoiced: qty(l.invoiced_qty),
   closed: qty(l.closed_qty),
+  returned: qty(l.returned_qty),
+  returnCredited: qty(l.return_credited_qty),
 })
 
 /** Recalcula os estados de reserva, entrega e facturação a partir das linhas. */
@@ -468,6 +475,17 @@ async function detail(scope: TenantScope, id: string, g?: Rights) {
       [t, id]
     )
   ).rows as any[]
+  const returns = (
+    await scope.trx.rawQuery(
+      `select r.*, r.return_date::text as rd, u.full_name,
+              (select json_agg(json_build_object('lineNo', l.line_no, 'quantity', rl.quantity::text) order by l.line_no)
+                 from sales_return_lines rl join sales_order_lines l on l.tenant_id = rl.tenant_id and l.id = rl.order_line_id
+                where rl.tenant_id = r.tenant_id and rl.return_id = r.id) as lines
+         from sales_returns r left join users u on u.id = r.created_by
+        where r.tenant_id = ? and r.order_id = ? order by r.seq`,
+      [t, id]
+    )
+  ).rows as any[]
   const events = (
     await scope.trx.rawQuery(
       `select e.*, u.full_name from sales_order_events e left join users u on u.id = e.created_by
@@ -481,6 +499,7 @@ async function detail(scope: TenantScope, id: string, g?: Rights) {
   const toReserve = q.some((l) => l.isStock && openQty(l) > (l.reserved as bigint))
   const anyReserved = q.some((l) => (l.reserved as bigint) > 0n)
   const anyDelivered = q.some((l) => (l.delivered as bigint) > 0n)
+  const returnable = lines.some((l) => l.is_stock && qty(l.delivered_qty) > qty(l.returned_qty))
   const draft = o.status === 'DRAFT'
   const confirmed = o.status === 'CONFIRMED'
   const pending = o.approval_status === 'PENDING'
@@ -542,6 +561,8 @@ async function detail(scope: TenantScope, id: string, g?: Rights) {
       reservedQty: num(l.reserved_qty, QTY_SCALE)!,
       deliveredQty: num(l.delivered_qty, QTY_SCALE)!,
       invoicedQty: num(l.invoiced_qty, QTY_SCALE)!,
+      returnedQty: num(l.returned_qty, QTY_SCALE)!,
+      returnCreditedQty: num(l.return_credited_qty, QTY_SCALE)!,
       closedQty: num(l.closed_qty, QTY_SCALE)!,
       openQty: qtyText(openQty(q[i])),
       manualDiscountPct: num(l.manual_discount_pct, PCT_SCALE),
@@ -572,6 +593,20 @@ async function detail(scope: TenantScope, id: string, g?: Rights) {
       at: new Date(d.created_at).toISOString(),
       by: (d.full_name as string) ?? null,
     })),
+    returns: returns.map((r) => ({
+      id: r.id as string,
+      seq: Number(r.seq),
+      reference: r.reference as string,
+      returnDate: r.rd as string,
+      reason: r.reason as string,
+      stockEventId: (r.stock_event_id as string) ?? null,
+      lines: ((r.lines as any[]) ?? []).map((x) => ({
+        lineNo: Number(x.lineNo),
+        quantity: scaledText(dbScaled(x.quantity, QTY_SCALE), QTY_SCALE),
+      })),
+      at: new Date(r.created_at).toISOString(),
+      by: (r.full_name as string) ?? null,
+    })),
     history: events.map((e) => ({
       kind: e.kind as string,
       reason: (e.reason as string) ?? null,
@@ -580,6 +615,7 @@ async function detail(scope: TenantScope, id: string, g?: Rights) {
       by: (e.full_name as string) ?? null,
     })),
     can: {
+      returnGoods: a.fulfil && (confirmed || o.status === 'CLOSED') && returnable,
       edit: a.manage && draft && !pending,
       editLines: a.manage && draft && !pending && !o.quote_id,
       submit: a.manage && draft && !pending,
@@ -1387,6 +1423,170 @@ export class OrderService {
     })
   }
 
+  /**
+   * Devolução física (10.8): mercadoria expedida que volta ao armazém pelo contrato `returnFromSale` do Inventário
+   * (idempotente, ao custo a que saiu). Só linhas de stock, nunca acima do expedido e ainda não devolvido. Não mexe em
+   * valores: a correcção fiscal é a nota de crédito e o dinheiro é o reembolso. O devolvido deixa de ser facturável.
+   */
+  returnGoods(context: TenantContext, id: string, input: Record<string, unknown>) {
+    return runInTenant(context, async (scope) => {
+      const { o } = await authorized(scope, id, 'fulfil', true)
+      const d = normalizeDelivery({ ...input, deliveryDate: input.returnDate })
+      const issues = d.issues.map((x) =>
+        x.path === 'deliveryDate' ? { ...x, path: 'returnDate', message: 'Data da devolução.' } : x
+      )
+      fail(issues)
+      const reason = reasonOf(input.reason)
+      if (d.date > today())
+        fail([{ path: 'returnDate', code: 'FUTURE', message: 'A data não pode ser futura.' }])
+      const hash = createHash('sha256')
+        .update(
+          JSON.stringify({
+            d: d.date,
+            r: reason,
+            l: d.lines.map((l) => [l.lineId, qtyText(l.quantity), l.serials]),
+          })
+        )
+        .digest('hex')
+      const prev = (
+        await scope.trx.rawQuery(
+          `select request_hash from sales_returns where tenant_id = ? and order_id = ? and request_key = ?`,
+          [context.tenantId, id, d.key]
+        )
+      ).rows[0] as any
+      if (prev) {
+        if (prev.request_hash !== hash)
+          throw ApiError.conflict(
+            'IDEMPOTENCY_MISMATCH',
+            'Esta chave já foi usada numa devolução diferente.'
+          )
+        return detail(scope, id)
+      }
+      versionCheck(o, input.expectedVersion)
+      conflict(
+        o.status === 'CONFIRMED' || o.status === 'CLOSED',
+        'Só se devolve mercadoria de uma encomenda confirmada ou fechada.'
+      )
+      const lines = await lineRows(scope, id, true)
+      const per = new Map<string, bigint>()
+      const bad: ErrorDetail[] = []
+      d.lines.forEach((x, i) => {
+        const l = lines.find((y) => y.id === x.lineId)
+        if (!l)
+          return bad.push({
+            path: `lines.${i}.lineId`,
+            code: 'NOT_FOUND',
+            message: 'Linha inexistente nesta encomenda.',
+          })
+        if (!l.is_stock)
+          return bad.push({
+            path: `lines.${i}.lineId`,
+            code: 'NOT_STOCK',
+            message: 'Um serviço não se devolve fisicamente: corrija com nota de crédito.',
+          })
+        const total = (per.get(l.id) ?? 0n) + x.quantity
+        const can = qty(l.delivered_qty) - qty(l.returned_qty)
+        if (total > can)
+          bad.push({
+            path: `lines.${i}.quantity`,
+            code: 'OVER_RETURN',
+            message: `Só há ${qtyText(can)} expedido por devolver nesta linha.`,
+          })
+        per.set(l.id, total)
+      })
+      fail(bad)
+      const seq =
+        Number(
+          (
+            (
+              await scope.trx.rawQuery(
+                `select count(*)::int as n from sales_returns where tenant_id = ? and order_id = ?`,
+                [context.tenantId, id]
+              )
+            ).rows[0] as any
+          ).n
+        ) + 1
+      const reference = `${o.number}/D${seq}`
+      const customer = await customerRow(scope, o.customer_id)
+      const ev = await returnFromSale(scope, {
+        idempotencyKey: `so-${id}-r-${d.key}`.slice(0, 100),
+        warehouseId: o.warehouse_id,
+        orderRef: o.number,
+        documentRef: reference,
+        counterpartyRef: customer.code,
+        lines: d.lines.map((x) => {
+          const l = lines.find((y) => y.id === x.lineId)!
+          return {
+            productId: l.product_id,
+            variantId: l.variant_id,
+            quantity: qtyText(x.quantity),
+            serials: x.serials.length ? x.serials : null,
+          }
+        }),
+      })
+      const ins = await scope.trx.rawQuery(
+        `insert into sales_returns (tenant_id, order_id, seq, reference, request_key, request_hash, return_date, warehouse_id,
+           stock_event_id, reason, created_by, updated_by) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
+        [
+          context.tenantId,
+          id,
+          seq,
+          reference,
+          d.key,
+          hash,
+          d.date,
+          o.warehouse_id,
+          ev.id,
+          reason,
+          context.userId,
+          context.userId,
+        ] as never[]
+      )
+      const returnId = (ins.rows[0] as any).id as string
+      for (const [lineId, quantity] of per) {
+        await scope.trx.rawQuery(
+          `insert into sales_return_lines (tenant_id, return_id, order_line_id, quantity, created_by, updated_by)
+           values (?, ?, ?, ?, ?, ?)`,
+          [
+            context.tenantId,
+            returnId,
+            lineId,
+            qtyText(quantity),
+            context.userId,
+            context.userId,
+          ] as never[]
+        )
+        const l = lines.find((y) => y.id === lineId)!
+        await scope.trx.rawQuery(
+          `update sales_order_lines set returned_qty = ?, version = version + 1, updated_at = now(), updated_by = ?
+            where tenant_id = ? and id = ?`,
+          [
+            qtyText(qty(l.returned_qty) + quantity),
+            context.userId,
+            context.tenantId,
+            lineId,
+          ] as never[]
+        )
+      }
+      await refreshStatuses(scope, id)
+      const after = await load(scope, id)
+      if (
+        after.status === 'CONFIRMED' &&
+        after.delivery_status === 'FULL' &&
+        after.invoicing_status === 'FULL'
+      )
+        await setOrder(scope, id, { status: 'CLOSED' })
+      await event(scope, id, 'RETURNED', reason, { reference, stockEventId: ev.id })
+      await audit(scope, {
+        action: 'sales_order.returned',
+        entityType: 'sales_order',
+        entityId: id,
+        metadata: { reference, stockEventId: ev.id, reason },
+      })
+      return detail(scope, id)
+    })
+  }
+
   /** Fechar o resto: liberta as reservas e dá por fechado o que falta entregar, com motivo. */
   close(context: TenantContext, id: string, input: Record<string, unknown>) {
     return runInTenant(context, async (scope) => {
@@ -1520,7 +1720,8 @@ export async function invoiceableOrder(scope: TenantScope, orderId: string) {
   if (!['CONFIRMED', 'CLOSED'].includes(o.status))
     throw ApiError.conflict('INVALID_STATE', 'Só se factura uma encomenda confirmada ou fechada.')
   const lines = (await lineRows(scope, orderId)).map((l) => {
-    const pending = qty(l.delivered_qty) - qty(l.invoiced_qty)
+    const pending =
+      qty(l.delivered_qty) - qty(l.returned_qty) - qty(l.invoiced_qty) + qty(l.return_credited_qty)
     return {
       id: l.id as string,
       lineNo: Number(l.line_no),
@@ -1567,7 +1768,8 @@ export async function recordInvoiced(
         message: 'Linha inexistente nesta encomenda.',
       })
     const total = (per.get(l.id) ?? 0n) + qty(x.quantity)
-    const can = qty(l.delivered_qty) - qty(l.invoiced_qty)
+    const can =
+      qty(l.delivered_qty) - qty(l.returned_qty) - qty(l.invoiced_qty) + qty(l.return_credited_qty)
     if (total > can)
       issues.push({
         path: `lines.${i}.quantity`,
@@ -1597,4 +1799,63 @@ export async function recordInvoiced(
     invoice: invoiceRef,
     lines: [...per].map(([l, q]) => ({ lineId: l, quantity: qtyText(q) })),
   })
+}
+
+/**
+ * Devolução física para uma nota de crédito (10.8): a encomenda, o cliente e as quantidades devolvidas por linha da
+ * encomenda (para validar que a nota não credita por devolução mais do que voltou).
+ */
+export async function returnForNote(scope: TenantScope, returnId: string) {
+  if (!isUuid(returnId)) return null
+  const r = (
+    await scope.trx.rawQuery(
+      `select r.id, r.reference, r.order_id, o.customer_id, o.legal_entity_id from sales_returns r
+         join sales_orders o on o.tenant_id = r.tenant_id and o.id = r.order_id where r.tenant_id = ? and r.id = ?`,
+      [scope.context.tenantId, returnId]
+    )
+  ).rows[0] as any
+  if (!r) return null
+  const lines = (
+    await scope.trx.rawQuery(
+      `select order_line_id, quantity from sales_return_lines where tenant_id = ? and return_id = ?`,
+      [scope.context.tenantId, returnId]
+    )
+  ).rows as any[]
+  return {
+    id: r.id as string,
+    reference: r.reference as string,
+    orderId: r.order_id as string,
+    customerId: r.customer_id as string,
+    legalEntityId: r.legal_entity_id as string,
+    lines: new Map(lines.map((l) => [l.order_line_id as string, qty(l.quantity)])),
+  }
+}
+
+/**
+ * Nota de crédito ligada a uma devolução (10.8), na emissão: o devolvido e creditado volta a contar como não facturado
+ * (o cliente já não o tem nem o paga), sem nunca passar o devolvido nem o facturado (verificação na base).
+ */
+export async function recordReturnCredit(
+  scope: TenantScope,
+  orderId: string,
+  lines: { orderLineId: string; quantity: bigint }[]
+) {
+  await load(scope, orderId, true)
+  const rows = await lineRows(scope, orderId, true)
+  for (const x of lines) {
+    const l = rows.find((r) => r.id === x.orderLineId)
+    if (!l) continue
+    const next = qty(l.return_credited_qty) + x.quantity
+    if (next > qty(l.returned_qty))
+      throw ApiError.conflict(
+        'OVER_RETURNED',
+        `Da linha ${l.line_no} só voltou ${qtyText(qty(l.returned_qty))}.`
+      )
+    await scope.trx.rawQuery(
+      `update sales_order_lines set return_credited_qty = ?, version = version + 1, updated_at = now(), updated_by = ?
+        where tenant_id = ? and id = ?`,
+      [qtyText(next), scope.context.userId, scope.context.tenantId, l.id] as never[]
+    )
+  }
+  await refreshStatuses(scope, orderId)
 }

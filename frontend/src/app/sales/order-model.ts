@@ -30,6 +30,8 @@ export interface OrderLine {
   reservedQty: string;
   deliveredQty: string;
   invoicedQty: string;
+  returnedQty: string;
+  returnCreditedQty: string;
   closedQty: string;
   openQty: string;
   manualDiscountPct: string | null;
@@ -94,6 +96,17 @@ export interface Order {
     at: string;
     by: string | null;
   }[];
+  returns: {
+    id: string;
+    seq: number;
+    reference: string;
+    returnDate: string;
+    reason: string;
+    stockEventId: string | null;
+    lines: { lineNo: number; quantity: string }[];
+    at: string;
+    by: string | null;
+  }[];
   history: {
     kind: string;
     reason: string | null;
@@ -111,7 +124,8 @@ export interface Order {
     | 'release'
     | 'deliver'
     | 'close'
-    | 'cancel',
+    | 'cancel'
+    | 'returnGoods',
     boolean
   >;
 }
@@ -167,6 +181,7 @@ export const ORDER_EVENT: Record<string, string> = {
   RESERVED: 'Reservada',
   RELEASED: 'Reserva libertada',
   DELIVERED: 'Expedida',
+  RETURNED: 'Mercadoria devolvida',
   INVOICED: 'Facturada',
   CLOSED: 'Fechada',
   CANCELLED: 'Anulada',
@@ -282,3 +297,26 @@ export function orderPayload(f: OrderForm, creating: boolean, withLines: boolean
       : {}),
   };
 }
+
+/** Quantidade (texto com 6 casas) em unidades inteiras, para comparar sem `float`. */
+export const qtyUnits = (v: string) => {
+  const [i, f = ''] = v.split('.');
+  return BigInt(i) * 1_000_000n + BigInt((f + '000000').slice(0, 6));
+};
+/** Unidades inteiras de volta a texto com 6 casas. */
+export const unitsText = (u: bigint) => {
+  const neg = u < 0n;
+  const a = neg ? -u : u;
+  return `${neg ? '-' : ''}${a / 1_000_000n}.${(a % 1_000_000n).toString().padStart(6, '0')}`;
+};
+/** Entregue ainda por facturar: entregue − devolvido − facturado + devolvido já creditado. */
+export const invoiceableUnits = (l: {
+  deliveredQty: string;
+  returnedQty: string;
+  invoicedQty: string;
+  returnCreditedQty: string;
+}) =>
+  qtyUnits(l.deliveredQty) -
+  qtyUnits(l.returnedQty) -
+  qtyUnits(l.invoicedQty) +
+  qtyUnits(l.returnCreditedQty);
