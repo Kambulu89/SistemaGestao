@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 a 10.9 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-067. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 a 10.10 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-068. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -999,3 +999,99 @@ Também cobertos:
   enviado.
 - Agendar `fiscal:process` na infra-estrutura (cron) quando houver ambiente de produção.
 - QR e impressão (10.13). Contabilização (10.12).
+
+## 10.10 Cobranças
+
+Não há módulo Finanças (Prompt 11). As contas a receber são um contrato calculado dos documentos de venda, sem livro
+provisório (D-068).
+
+### Modelo
+
+Migração `0063_create_collections`:
+
+- `collection_promises` — entidade, cliente, moeda, valor, data prometida, facturas (`uuid[]`), quem prometeu e
+  notas; anulação com motivo. Um gatilho só deixa anular; o resto é fixo e nada se apaga.
+- `collection_activities` — tipo, pessoa, resultado, notas, próxima acção e promessa ligada. Só de acréscimo.
+
+### Backend e API
+
+- Contratos:
+  - `customerReceivables`: facturas em dívida com vencimento, atraso e antiguidade; adiantamentos e crédito de notas
+    por usar; resumo por entidade e moeda;
+  - `creditExposure`: exposição na moeda do cliente.
+- O limite de crédito da encomenda passa a somar as contas a receber líquidas (`creditCheck.receivables`).
+- Rotas:
+  - `GET /sales/collections` — lista de cobrança, com filtros (só vencidos, entidade, cliente);
+  - `GET /sales/collections/:customerId` — extracto: limite e exposição, contactos do terceiro, contas a receber,
+    promessas com o estado calculado, contactos de cobrança;
+  - `POST /sales/collections/:customerId/promises`;
+  - `POST /sales/collections/:customerId/activities`;
+  - `POST /sales/collection-promises/:id/cancel`.
+- Permissões novas `sales.collections.read|manage`. Auditoria `collection.*`.
+- Erros: `OVER_PROMISE`, `NOTHING_OWED`, `INVALID_STATE`, `VALIDATION_ERROR`, `OUT_OF_SCOPE`.
+
+### Ecrãs
+
+- **Cobranças** (`/vendas/cobrancas`) — lista: cliente, entidade, em dívida, vencido, maior atraso, último contacto,
+  próxima acção, promessas. Filtro "só com vencido".
+- **Ficha do cliente:**
+  - limite, a receber líquido, encomendas por facturar, exposição, disponível e contactos;
+  - por entidade e moeda: em dívida, vencido, antiguidade, adiantamentos, crédito e líquido;
+  - facturas em dívida com a antiguidade;
+  - adiantamentos e notas com crédito;
+  - promessas, com o estado e a anulação com motivo;
+  - contactos;
+  - acções "Registar promessa" (facturas opcionais) e "Registar contacto".
+
+### Testes e evidências
+
+**Backend**
+
+`tests/unit/sales_collections_domain.spec.ts` (3 testes):
+
+- atraso e antiguidade nos limites dos intervalos;
+- estados da promessa;
+- validação de promessas e contactos.
+
+`tests/functional/sales_collections.spec.ts` (2 testes):
+
+- **Contas a receber e limite:**
+  - sem permissão, 403;
+  - 3 facturas de 550 (há 100 e 40 dias, e hoje): em dívida 1 650, vencido 1 100, antiguidade 550/550/550, limite
+    2 000;
+  - recibo de 700 confirmado: em dívida 1 100, vencido 550, adiantamento 150, líquido 950;
+  - facturas com antiguidade e 10 dias de atraso;
+  - exposição 950 e disponível 1 050;
+  - encomenda de 1 100: aprovação por exceder (a receber 950, exposição 2 050);
+  - filtro "só com vencido".
+- **Promessas e contactos:**
+  - leitor 403; data passada e valor acima do devido recusados;
+  - promessa em aberto, sem mudar saldos nem o pago da factura;
+  - recebimento confirmado → cumprida (550);
+  - promessa com a data passada → falhada; não se anula; contada na lista;
+  - anulação exige motivo → anulada;
+  - contacto com próxima acção e promessa; data passada recusada; reflectido na lista e no extracto;
+  - a base recusa alterar ou apagar promessas e contactos;
+  - auditoria.
+
+Também cobertos:
+
+- `isolation_matrix`: 4 tentativas sobre o cliente e a promessa de outra empresa, todas com 404.
+- `routes_protection`.
+- `sales_orders.spec.ts` continua a passar com o novo cálculo da exposição.
+
+**Frontend:** `collections-model.spec.ts`.
+
+**Browser (`p1010`):** 6 passos.
+
+- preparação: cliente com limite 2 000 e facturas de 550 (vencida há 10 dias e por vencer);
+- lista → ficha: em dívida 1 100,00, vencido 550,00, "1–30 dias (10 d)", exposição 1 100,00, disponível 900,00;
+- promessa na factura vencida: "Em aberto", a dívida mantém-se; contacto "Prometeu pagar" com próxima acção;
+- recebimento confirmado: promessa "Cumprida", dívida 550,00, vencido 0,00;
+- promessa anulada com motivo;
+- telemóvel sem deslocamento horizontal.
+
+### Pendências
+
+- O módulo Finanças (Prompt 11) passa a servir o contrato: razão de clientes e conciliação.
+- Juros de mora, cartas de cobrança e bloqueio automático por atraso, se pedidos.

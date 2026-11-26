@@ -383,4 +383,23 @@ export const SALES_ROUTES: Routes = [
       },
     ],
   },
+  {
+    path: 'cobrancas',
+    title: 'Cobranças',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: ['sales.collections.read', 'sales.collections.manage'], anyScope: true },
+        loadComponent: () => import('./collections').then((m) => m.Collections),
+      },
+      {
+        path: ':customerId',
+        title: 'Cobrança do cliente',
+        canActivate: [accessGuard],
+        data: { anyOf: ['sales.collections.read', 'sales.collections.manage'], anyScope: true },
+        loadComponent: () => import('./collection-detail').then((m) => m.CollectionDetail),
+      },
+    ],
+  },
 ];

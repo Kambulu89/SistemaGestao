@@ -962,6 +962,80 @@ export class CloseTaskSchema extends BaseModel {
   declare version: number
 }
 
+export class CollectionActivitySchema extends BaseModel {
+  static $columns = ['contactName', 'createdAt', 'createdBy', 'customerId', 'id', 'kind', 'legalEntityId', 'nextActionDate', 'notes', 'outcome', 'promiseId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CollectionActivitySchema.$columns
+  @column()
+  declare contactName: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare customerId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare kind: string
+  @column()
+  declare legalEntityId: string
+  @column.date()
+  declare nextActionDate: DateTime | null
+  @column()
+  declare notes: string
+  @column()
+  declare outcome: string
+  @column()
+  declare promiseId: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class CollectionPromiseSchema extends BaseModel {
+  static $columns = ['amount', 'cancelReason', 'cancelled', 'contactName', 'createdAt', 'createdBy', 'currency', 'customerId', 'id', 'invoiceIds', 'legalEntityId', 'notes', 'promisedDate', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = CollectionPromiseSchema.$columns
+  @column()
+  declare amount: string
+  @column()
+  declare cancelReason: string | null
+  @column()
+  declare cancelled: boolean
+  @column()
+  declare contactName: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare customerId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare invoiceIds: any
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare notes: string | null
+  @column.date()
+  declare promisedDate: DateTime
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
 export class CompensationProposalLineSchema extends BaseModel {
   static $columns = ['action', 'amount', 'componentId', 'createdAt', 'createdBy', 'id', 'percent', 'proposalId', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
   $columns = CompensationProposalLineSchema.$columns

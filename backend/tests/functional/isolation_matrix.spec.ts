@@ -1022,8 +1022,17 @@ async function populate(client: any) {
       [tenant.id, le.id, salesInvoice.id, tenant.id]
     )
   ).rows[0] as { id: string }
+  // Promessa de pagamento da empresa A (10.10), inserida directamente.
+  const collectionPromise = (
+    await owner.rawQuery(
+      `insert into collection_promises (tenant_id, legal_entity_id, customer_id, currency, amount, promised_date)
+       values (?, ?, ?, 'AOA', 100, '2099-01-01') returning id`,
+      [tenant.id, le.id, customer.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    collectionPromise,
     fiscalSubmission,
     salesNote,
     salesReceipt,
@@ -1993,6 +2002,31 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'contingência de entidade alheia',
         B.post(`/api/v1/sales/fiscal/integration/${a.le.id}/contingency`, {
           active: true,
+          reason: 'xxx',
+        }),
+      ],
+      ['cobrança de cliente alheio', B.get(`/api/v1/sales/collections/${a.customer.id}`)],
+      [
+        'promessa para cliente alheio',
+        B.post(`/api/v1/sales/collections/${a.customer.id}/promises`, {
+          legalEntityId: a.le.id,
+          amount: '1',
+          promisedDate: '2099-01-01',
+        }),
+      ],
+      [
+        'contacto com cliente alheio',
+        B.post(`/api/v1/sales/collections/${a.customer.id}/activities`, {
+          legalEntityId: a.le.id,
+          kind: 'CALL',
+          outcome: 'OTHER',
+          notes: 'xxxx',
+        }),
+      ],
+      [
+        'anular promessa alheia',
+        B.post(`/api/v1/sales/collection-promises/${a.collectionPromise.id}/cancel`, {
+          ...v,
           reason: 'xxx',
         }),
       ],

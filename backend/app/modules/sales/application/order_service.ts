@@ -13,6 +13,7 @@ import {
   returnFromSale,
 } from '#modules/inventory/index'
 import { customerSnapshot } from '#modules/sales/application/customer_service'
+import { creditExposure } from '#modules/sales/application/collection_service'
 import { searchSalesRefs } from '#modules/sales/application/pricing_service'
 import {
   acceptedQuote,
@@ -376,42 +377,24 @@ async function seriesFor(scope: TenantScope, le: string, wanted: unknown, on: st
   return ser[0].id as string
 }
 
-/** Limite de crédito: encomendas confirmadas por facturar do cliente (na moeda do cliente) + esta. */
+/** Limite de crédito (10.10): contas a receber líquidas + encomendas confirmadas por facturar (na moeda do cliente) + esta. */
 async function credit(scope: TenantScope, o: any) {
-  const c = (
-    await scope.trx.rawQuery(
-      `select currency, credit_limit from customers where tenant_id = ? and id = ?`,
-      [scope.context.tenantId, o.customer_id]
-    )
-  ).rows[0] as any
-  const cur = String(c.currency).trim()
-  const rows = (
-    await scope.trx.rawQuery(
-      `select so.currency, round(sum(l.gross_amount * (l.quantity - l.invoiced_qty - l.closed_qty) / l.quantity), 2)::text as open
-         from sales_orders so join sales_order_lines l on l.tenant_id = so.tenant_id and l.order_id = so.id
-        where so.tenant_id = ? and so.customer_id = ? and so.status = 'CONFIRMED' and so.id <> ?
-        group by so.currency`,
-      [scope.context.tenantId, o.customer_id, o.id]
-    )
-  ).rows as any[]
-  const missing: string[] = []
-  const toCustomer = async (amount: bigint, from: string) => {
-    if (from === cur) return amount
-    const r = await rateOn(scope, from, cur, o.od)
+  const e = await creditExposure(scope, o.customer_id, o.od, o.id)
+  let mine = dbScaled(o.gross_total, 2)
+  const missing = [...e.missingRates]
+  const from = String(o.currency).trim()
+  if (from !== e.currency) {
+    const r = await rateOn(scope, from, e.currency, o.od)
     if (!r) {
       missing.push(from)
-      return 0n
-    }
-    // taxa em texto com até 10 casas
-    const rate = dbScaled(r.rate, 10)
-    return divRound(amount * rate, 10n ** 10n)
+      mine = 0n
+    } else mine = divRound(mine * dbScaled(r.rate, 10), 10n ** 10n)
   }
-  let open = 0n
-  for (const r of rows)
-    open += await toCustomer(dbScaled(r.open ?? '0', 2), String(r.currency).trim())
-  const mine = await toCustomer(dbScaled(o.gross_total, 2), String(o.currency).trim())
-  const limit = c.credit_limit === null ? null : dbScaled(c.credit_limit, 2)
-  return { ...creditCheck(limit, open, mine), currency: cur, missingRates: [...new Set(missing)] }
+  return {
+    ...creditCheck(e.limit, e.openOrders, mine, e.receivables),
+    currency: e.currency,
+    missingRates: [...new Set(missing)],
+  }
 }
 
 /** Confirma: número da série, versão imutável dos dados do cliente, estados derivados. */

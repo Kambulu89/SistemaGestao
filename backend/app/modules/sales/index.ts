@@ -51,3 +51,8 @@ export {
   type FiscalSubmissionView,
   processFiscalQueue,
 } from '#modules/sales/application/fiscal_integration_service'
+export {
+  CollectionService,
+  creditExposure,
+  customerReceivables,
+} from '#modules/sales/application/collection_service'

@@ -64,6 +64,7 @@ test.group('Vendas | encomendas — regras (10.4)', () => {
     const c = creditCheck(1000_00n, 456_00n, 456_00n)
     assert.deepEqual(c, {
       limit: '1000.00',
+      receivables: '0.00',
       openOrders: '456.00',
       thisOrder: '456.00',
       exposure: '912.00',
@@ -71,6 +72,10 @@ test.group('Vendas | encomendas — regras (10.4)', () => {
     })
     assert.isTrue(creditCheck(1000_00n, 600_00n, 400_01n).exceeded)
     assert.isFalse(creditCheck(1000_00n, 600_00n, 400_00n).exceeded)
+    // 10.10: as contas a receber líquidas também contam (e um saldo a favor do cliente reduz).
+    const r = creditCheck(1000_00n, 300_00n, 400_00n, 300_01n)
+    assert.deepEqual([r.receivables, r.exposure, r.exceeded], ['300.01', '1000.01', true])
+    assert.isFalse(creditCheck(1000_00n, 600_00n, 500_00n, -100_00n).exceeded)
   })
 
   test('pedidos de expedição e de reserva', ({ assert }) => {

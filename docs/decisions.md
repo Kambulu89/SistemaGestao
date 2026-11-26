@@ -1427,3 +1427,50 @@ Também proíbe comunicar com a AGT em produção e declarar certificação.
 - [AGT começa a aplicar facturação electrónica em 1 de Janeiro de 2026 (Novo Jornal)](https://www.novojornal.co.ao/economia/detalhe/agt-comeca-a-aplicar-facturacao-electronica-em-1-de-janeiro-de-2026-68608.html)
 - [Facturação Electrónica em Angola: prazos e requisitos do RJFDE (Sisgesc)](https://sisgesc.net/blog/posts/facturacao-electronica-prazos-requisitos-rjfde)
 
+## D-068 Cobranças: contas a receber como contrato calculado dos documentos; promessa ≠ pagamento (aceite)
+
+**Contexto.** O 10.10 pede:
+- contas a receber em Finanças, ou só o contrato se o módulo ainda não existir;
+- saldos e vencimentos;
+- promessa de pagamento distinta de pagamento;
+- limites de crédito, contactos, crédito e adiantamentos.
+
+O módulo Finanças (Prompt 11) ainda não existe.
+
+**Decisão.**
+- **Sem livro de contas a receber provisório.** Não se cria um razão de clientes paralelo que depois tivesse de ser
+  migrado. As contas a receber são um **contrato de leitura** calculado dos documentos de venda:
+  - `customerReceivables(scope, customerId, entidades?, data?)` devolve:
+    - as facturas emitidas com valor em dívida (a pagar + débitos − créditos − recebido), com vencimento, dias de
+      atraso e antiguidade (por vencer, 1–30, 31–60, 61–90, >90);
+    - os adiantamentos por usar (10.7);
+    - o crédito de notas por usar (10.8), descontados os reembolsos pendentes;
+    - o resumo por entidade e moeda, com o líquido.
+  - `creditExposure(scope, customerId, data, encomenda?)` devolve, na moeda do cliente:
+    - as contas a receber líquidas e as encomendas confirmadas por facturar, convertidas ao câmbio da data;
+    - as moedas sem câmbio ficam indicadas, nunca são inventadas.
+
+  O módulo Finanças passará a servir o mesmo contrato.
+- **Limite de crédito.** A verificação na confirmação da encomenda (10.4) passa a contar também as contas a receber
+  líquidas: exposição = a receber + encomendas por facturar + esta encomenda.
+- **Promessa de pagamento** (`collection_promises`):
+  - registo: valor, data (não passada), facturas a que se refere (opcional), quem prometeu e notas;
+  - nunca acima do que está em dívida nessas facturas, ou na entidade e moeda (`OVER_PROMISE`);
+  - **não altera saldos**;
+  - o estado calcula-se:
+    - anulada, se foi anulada;
+    - cumprida, quando os recebimentos **confirmados** depois da promessa chegam ao valor (nas facturas indicadas,
+      ou do cliente na entidade e moeda);
+    - falhada, quando passou a data sem isso;
+    - senão, em aberto.
+  - só se anula em aberto e com motivo; o resto é imutável (gatilho).
+- **Contactos de cobrança** (`collection_activities`): tipo, pessoa, resultado, notas, próxima acção (data futura) e
+  promessa ligada. Só de acréscimo.
+- **Lista de cobrança.** Por cliente, entidade e moeda: em dívida, vencido, antiguidade, maior atraso, último contacto,
+  próxima acção, promessas em aberto e falhadas. Ordenada pelo vencido.
+- **Permissões** `sales.collections.read|manage` no âmbito da entidade legal.
+
+**Consequências.**
+- O Prompt 11 troca a fonte do contrato (razão de clientes, conciliação bancária) sem mudar quem o usa.
+- Ficam por fazer: juros de mora, cartas de cobrança e bloqueio automático por atraso.
+

@@ -800,6 +800,18 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Confirmar ou recusar recebimentos registados por outra pessoa (confirmação financeira): só então contam.',
   },
   {
+    code: 'sales.collections.read',
+    module: 'sales',
+    description:
+      'Consultar cobranças: contas a receber, antiguidade, limite e exposição, promessas e contactos (por entidade legal).',
+  },
+  {
+    code: 'sales.collections.manage',
+    module: 'sales',
+    description:
+      'Registar promessas de pagamento (não são pagamentos) e contactos de cobrança, e anular promessas em aberto.',
+  },
+  {
     code: 'sales.notes.read',
     module: 'sales',
     description: 'Consultar notas de crédito e débito e reembolsos (no âmbito da entidade legal).',

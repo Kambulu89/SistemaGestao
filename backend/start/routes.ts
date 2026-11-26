@@ -69,6 +69,7 @@ const FiscalController = () => import('#modules/sales/http/fiscal_controller')
 const SalesInvoicesController = () => import('#modules/sales/http/sales_invoices_controller')
 const SalesReceiptsController = () => import('#modules/sales/http/sales_receipts_controller')
 const SalesNotesController = () => import('#modules/sales/http/sales_notes_controller')
+const CollectionsController = () => import('#modules/sales/http/collections_controller')
 const FiscalIntegrationController = () =>
   import('#modules/sales/http/fiscal_integration_controller')
 const IntegrationsController = () => import('#modules/inventory/http/integrations_controller')
@@ -1256,6 +1257,20 @@ router
                 router.post('receipts/:id/reject', [SalesReceiptsController, 'reject'])
                 router.post('receipts/:id/cancel', [SalesReceiptsController, 'cancel'])
                 router.post('receipts/:id/apply-advance', [SalesReceiptsController, 'applyAdvance'])
+                router.get('collections', [CollectionsController, 'index'])
+                router.get('collections/:customerId', [CollectionsController, 'show'])
+                router.post('collections/:customerId/promises', [
+                  CollectionsController,
+                  'storePromise',
+                ])
+                router.post('collections/:customerId/activities', [
+                  CollectionsController,
+                  'storeActivity',
+                ])
+                router.post('collection-promises/:id/cancel', [
+                  CollectionsController,
+                  'cancelPromise',
+                ])
                 router.get('notes', [SalesNotesController, 'index'])
                 router.get('notes/options', [SalesNotesController, 'options'])
                 router.get('notes/search/invoices', [SalesNotesController, 'searchInvoices'])

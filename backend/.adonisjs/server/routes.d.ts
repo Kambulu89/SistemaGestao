@@ -676,6 +676,11 @@ export type ScannedRoutes = {
     'sales_receipts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.apply_advance': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'collections.index': { paramsTuple?: []; params?: {} }
+    'collections.show': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
+    'collections.store_promise': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
+    'collections.store_activity': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
+    'collections.cancel_promise': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_notes.index': { paramsTuple?: []; params?: {} }
     'sales_notes.options': { paramsTuple?: []; params?: {} }
     'sales_notes.search_invoices': { paramsTuple?: []; params?: {} }
@@ -1000,6 +1005,8 @@ export type ScannedRoutes = {
     'sales_receipts.search_customers': { paramsTuple?: []; params?: {} }
     'sales_receipts.open_items': { paramsTuple: [ParamValue,ParamValue]; params: {'legalEntityId': ParamValue,'customerId': ParamValue} }
     'sales_receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'collections.index': { paramsTuple?: []; params?: {} }
+    'collections.show': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
     'sales_notes.index': { paramsTuple?: []; params?: {} }
     'sales_notes.options': { paramsTuple?: []; params?: {} }
     'sales_notes.search_invoices': { paramsTuple?: []; params?: {} }
@@ -1281,6 +1288,8 @@ export type ScannedRoutes = {
     'sales_receipts.search_customers': { paramsTuple?: []; params?: {} }
     'sales_receipts.open_items': { paramsTuple: [ParamValue,ParamValue]; params: {'legalEntityId': ParamValue,'customerId': ParamValue} }
     'sales_receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'collections.index': { paramsTuple?: []; params?: {} }
+    'collections.show': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
     'sales_notes.index': { paramsTuple?: []; params?: {} }
     'sales_notes.options': { paramsTuple?: []; params?: {} }
     'sales_notes.search_invoices': { paramsTuple?: []; params?: {} }
@@ -1620,6 +1629,9 @@ export type ScannedRoutes = {
     'sales_receipts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.apply_advance': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'collections.store_promise': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
+    'collections.store_activity': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
+    'collections.cancel_promise': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_notes.store': { paramsTuple?: []; params?: {} }
     'sales_notes.issue': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_notes.discard': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

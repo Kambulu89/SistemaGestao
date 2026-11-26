@@ -880,6 +880,16 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
   'POST /api/v1/sales/fiscal/submissions/:id/requeue':
     'âmbito RBAC de sales.fiscal.read/manage por entidade legal, verificado no serviço (integração fiscal só em simulação; o adaptador oficial está bloqueado)',
+  'GET /api/v1/sales/collections':
+    'âmbito RBAC de sales.collections.read/manage por entidade legal, verificado no serviço (contas a receber calculadas dos documentos; promessa não é pagamento)',
+  'GET /api/v1/sales/collections/:customerId':
+    'âmbito RBAC de sales.collections.read/manage por entidade legal, verificado no serviço (contas a receber calculadas dos documentos; promessa não é pagamento)',
+  'POST /api/v1/sales/collections/:customerId/promises':
+    'âmbito RBAC de sales.collections.read/manage por entidade legal, verificado no serviço (contas a receber calculadas dos documentos; promessa não é pagamento)',
+  'POST /api/v1/sales/collections/:customerId/activities':
+    'âmbito RBAC de sales.collections.read/manage por entidade legal, verificado no serviço (contas a receber calculadas dos documentos; promessa não é pagamento)',
+  'POST /api/v1/sales/collection-promises/:id/cancel':
+    'âmbito RBAC de sales.collections.read/manage por entidade legal, verificado no serviço (contas a receber calculadas dos documentos; promessa não é pagamento)',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

@@ -133,13 +133,20 @@ export function invoicingStatus(lines: QtyLine[]) {
 }
 
 /**
- * Verificação do limite de crédito (valores na moeda do cliente, 2 casas): exposição = encomendas confirmadas por
- * facturar + esta encomenda. Sem limite definido, não há verificação; ultrapassar exige aprovação.
+ * Verificação do limite de crédito (valores na moeda do cliente, 2 casas): exposição = contas a receber líquidas (em
+ * dívida − adiantamentos − crédito de notas, 10.10) + encomendas confirmadas por facturar + esta encomenda. Sem limite
+ * definido, não há verificação; ultrapassar exige aprovação.
  */
-export function creditCheck(limit: bigint | null, openOrders: bigint, thisOrder: bigint) {
-  const exposure = openOrders + thisOrder
+export function creditCheck(
+  limit: bigint | null,
+  openOrders: bigint,
+  thisOrder: bigint,
+  receivables = 0n
+) {
+  const exposure = receivables + openOrders + thisOrder
   return {
     limit: limit === null ? null : scaledText(limit, 2),
+    receivables: scaledText(receivables, 2),
     openOrders: scaledText(openOrders, 2),
     thisOrder: scaledText(thisOrder, 2),
     exposure: scaledText(exposure, 2),

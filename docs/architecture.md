@@ -499,7 +499,7 @@ por período no âmbito do membro; publicação no âmbito da empresa como fotog
 
 ## Vendas e facturação (módulo `sales`, Prompt 10)
 
-Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-067). Clientes (10.1): o cliente é o papel de venda de um
+Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-068). Clientes (10.1): o cliente é o papel de venda de um
 terceiro do módulo `partners` (um por terceiro, partilhado com o fornecedor), com moeda, prazo, segmento, limite de
 crédito (permissão própria, com motivo) e estado (activo, bloqueado ou inactivo com motivo); moradas de facturação e
 entrega (uma por omissão de cada tipo, índice único parcial); contactos no terceiro; versões só de acréscimo da
@@ -548,5 +548,9 @@ registado e bloqueado; a emissão põe o documento na fila (`fiscal_submissions`
 documento) com payload interno `SG-SIM-1` fotografado e validado; o processamento reclama com `SKIP LOCKED`, chama o
 fornecedor fora da transacção e grava o resultado; falhas transitórias com espera crescente até ao máximo; decisão
 final imutável que actualiza o estado fiscal do documento; contingência por entidade retém e depois liberta; comando
-`fiscal:process` para o agendador.
+`fiscal:process` para o agendador. Cobranças (10.10): sem Finanças, as contas a receber são o contrato de leitura
+`customerReceivables`/`creditExposure` calculado dos documentos (em dívida por factura com antiguidade, adiantamentos e
+crédito de notas por usar, exposição na moeda do cliente), que o limite de crédito das encomendas passa a usar;
+promessas de pagamento (nunca são pagamentos; estado cumprida/falhada calculado dos recebimentos confirmados) e
+contactos de cobrança só de acréscimo; permissões `sales.collections.read|manage`.
 

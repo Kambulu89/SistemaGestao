@@ -748,6 +748,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Vendas',
       },
       {
+        label: 'Cobranças',
+        path: '/vendas/cobrancas',
+        icon: 'clock',
+        anyOf: ['sales.collections.read', 'sales.collections.manage'],
+        feature: 'sales',
+        anyScope: true,
+        section: 'Vendas',
+      },
+      {
         label: 'Notas de crédito e débito',
         path: '/vendas/notas',
         icon: 'file',
