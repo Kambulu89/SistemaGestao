@@ -676,6 +676,23 @@ export type ScannedRoutes = {
     'sales_receipts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.apply_advance': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.index': { paramsTuple?: []; params?: {} }
+    'recurring.options': { paramsTuple?: []; params?: {} }
+    'recurring.search_customers': { paramsTuple?: []; params?: {} }
+    'recurring.search_products': { paramsTuple?: []; params?: {} }
+    'recurring.generate_all': { paramsTuple?: []; params?: {} }
+    'recurring.store': { paramsTuple?: []; params?: {} }
+    'recurring.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.add_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.resume': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.end': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.generate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.update_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.approve_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.discard_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'collections.index': { paramsTuple?: []; params?: {} }
     'collections.show': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
     'collections.store_promise': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
@@ -1005,6 +1022,11 @@ export type ScannedRoutes = {
     'sales_receipts.search_customers': { paramsTuple?: []; params?: {} }
     'sales_receipts.open_items': { paramsTuple: [ParamValue,ParamValue]; params: {'legalEntityId': ParamValue,'customerId': ParamValue} }
     'sales_receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.index': { paramsTuple?: []; params?: {} }
+    'recurring.options': { paramsTuple?: []; params?: {} }
+    'recurring.search_customers': { paramsTuple?: []; params?: {} }
+    'recurring.search_products': { paramsTuple?: []; params?: {} }
+    'recurring.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'collections.index': { paramsTuple?: []; params?: {} }
     'collections.show': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
     'sales_notes.index': { paramsTuple?: []; params?: {} }
@@ -1288,6 +1310,11 @@ export type ScannedRoutes = {
     'sales_receipts.search_customers': { paramsTuple?: []; params?: {} }
     'sales_receipts.open_items': { paramsTuple: [ParamValue,ParamValue]; params: {'legalEntityId': ParamValue,'customerId': ParamValue} }
     'sales_receipts.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.index': { paramsTuple?: []; params?: {} }
+    'recurring.options': { paramsTuple?: []; params?: {} }
+    'recurring.search_customers': { paramsTuple?: []; params?: {} }
+    'recurring.search_products': { paramsTuple?: []; params?: {} }
+    'recurring.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'collections.index': { paramsTuple?: []; params?: {} }
     'collections.show': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
     'sales_notes.index': { paramsTuple?: []; params?: {} }
@@ -1629,6 +1656,16 @@ export type ScannedRoutes = {
     'sales_receipts.reject': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_receipts.apply_advance': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.generate_all': { paramsTuple?: []; params?: {} }
+    'recurring.store': { paramsTuple?: []; params?: {} }
+    'recurring.add_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.activate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.suspend': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.resume': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.end': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.generate': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.approve_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.discard_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'collections.store_promise': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
     'collections.store_activity': { paramsTuple: [ParamValue]; params: {'customerId': ParamValue} }
     'collections.cancel_promise': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -1754,6 +1791,8 @@ export type ScannedRoutes = {
     'fiscal.update_exemption': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'fiscal.update_series': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_invoices.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'recurring.update_version': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'sales_notes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'orders.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'quotes.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

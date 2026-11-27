@@ -1,6 +1,6 @@
 # Relatório — Prompt 10 (vendas e facturação)
 
-Estado: **Prompt 10 em curso** — 10.1 a 10.10 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-068. Antes de começar
+Estado: **Prompt 10 em curso** — 10.1 a 10.11 feitos, no branch `claude/pensive-clarke-5gm075`. Decisões D-059 a D-069. Antes de começar
 foi feita a revisão dos Prompts 01–09 (`docs/reports/revisao-prompts-01-09.md`).
 
 ## Diagnóstico AS-IS → TO-BE e dependências
@@ -1095,3 +1095,112 @@ Também cobertos:
 
 - O módulo Finanças (Prompt 11) passa a servir o contrato: razão de clientes e conciliação.
 - Juros de mora, cartas de cobrança e bloqueio automático por atraso, se pedidos.
+
+## 10.11 Facturação recorrente
+
+Os contratos têm versões de preço aprovadas por outra pessoa. A geração é segura e cria **só rascunhos**: nada é
+emitido sem uma pessoa autorizada (D-069).
+
+### Modelo
+
+Migração `0064_create_recurring_billing`:
+
+- `sales_recurring_contracts` — referência única e descrição; entidade, cliente e moeda; periodicidade e momento da
+  facturação; início, fim e prazo; índice do próximo período; estado com motivo; membro dono.
+  Gatilho: o índice só avança; activo, o essencial não muda; terminado é final.
+- `sales_recurring_versions` — número, vigência, estado (por aprovar, aprovada, descartada), aprovador (≠ criador) e
+  motivo. Índice único das aprovadas por vigência. Aprovada é imutável.
+- `sales_recurring_version_lines` — serviço (único por versão), descrição, quantidade, preço fixo opcional, impostos e
+  isenção. Só mudam em rascunho.
+- `sales_recurring_runs` — período (índice, início, fim, data da factura), versão, factura, estado (gerado ou falhado,
+  com motivo). Um só gerado por índice. Só de acréscimo.
+- `sales_invoices.recurring_version_id`. A origem de preço `CONTRACT` entra no `CHECK` das linhas.
+
+### Backend e API (`/api/v1/sales`)
+
+- `GET recurring` (filtros estado e pesquisa), `GET recurring/options`, `GET recurring/search/{customers|products}`.
+- `POST recurring`, `GET|PATCH recurring/:id`.
+- `POST recurring/:id/{versions|activate|suspend|resume|end|generate}`; `POST recurring/generate` (todos os vencidos
+  das entidades que gere).
+- `PATCH recurring-versions/:id`; `POST recurring-versions/:id/{approve|discard}`.
+- Contratos:
+  - `createRecurringDraft` (factura): rascunho com origem `CONTRACT`;
+  - `generateContract` e `generateDueContracts`;
+  - o comando `node ace sales:recurring`.
+- A ficha da factura mostra o contrato e o período. A factura gerada não muda de cliente nem de moeda.
+- Permissões novas `sales.recurring.read|manage|approve`. Anexos `sales_recurring_contract`. Auditoria
+  `sales_recurring.*`.
+- Erros: `NO_VERSION`, `CUSTOMER_BLOCKED`, `SELF_APPROVAL`, `INVALID_DATE`, `VERSION_OVERLAP`, `REFERENCE_TAKEN`,
+  `NOT_SERVICE`, `INVALID_STATE`, `VERSION_CONFLICT`, `OUT_OF_SCOPE`.
+
+### Ecrãs (`/vendas/recorrentes`)
+
+- **Lista** — contrato, cliente, periodicidade, próxima factura e estado; "Gerar rascunhos vencidos".
+- **Formulário** — referência, descrição, entidade, cliente, periodicidade, momento da facturação, início, fim e prazo.
+  O essencial fica bloqueado depois de activo.
+- **Ficha:**
+  - aviso de que só se geram rascunhos;
+  - dados do contrato e acções: editar, nova versão, activar, gerar, suspender, retomar e terminar com motivo;
+  - versões com as linhas (preço fixo ou "da tabela à data"), aprovação por outra pessoa e descarte;
+  - os próximos 6 períodos, com a versão aplicável e "por gerar";
+  - períodos gerados, com a ligação ao rascunho, o valor, "por emitir/emitida" e as falhas com motivo;
+  - anexos e auditoria.
+- **Factura** — ligação "Contrato REF · período".
+
+### Testes e evidências
+
+**Backend**
+
+`tests/unit/sales_recurring_domain.spec.ts` (3 testes):
+
+- meses sem deriva (31/1 → 28/2 → 31/3, ano bissexto);
+- períodos mensal, trimestral e anual, no início e no fim;
+- dentro do contrato;
+- versão aplicável;
+- validação das versões.
+
+`tests/functional/sales_recurring.spec.ts` (2 testes):
+
+- **Versões e geração:**
+  - primeira versão fora do início e produto de stock recusados;
+  - activar sem versão aprovada: `NO_VERSION`;
+  - quem preparou não aprova (`SELF_APPROVAL`); o leitor também não (403);
+  - aprovada é imutável; activo;
+  - versão 2 a partir deste mês; calendário com 3 períodos por gerar (v1, v1, v2);
+  - duas gerações em paralelo somam 3 rascunhos; a seguinte gera 0; índice 3;
+  - todos em rascunho e nada na fila fiscal;
+  - preço `CONTRACT` 1 000 mais tabela 2×500 = 2 200,00; v2 = 2 420,00; contrato e período na factura;
+  - emissão manual por quem tem a permissão (aceita o preço do contrato);
+  - versão antes do próximo período recusada;
+  - a base recusa apagar períodos, recuar o índice, mudar o início do contrato activo e alterar linhas aprovadas.
+- **Falhas, suspensão e fim:**
+  - cliente bloqueado: período falhado com `CUSTOMER_BLOCKED`, sem rascunho; repetir não duplica a falha;
+  - desbloqueado: 2 gerados;
+  - suspender exige motivo; suspenso não gera; retomar; terminar com motivo é final e não se edita;
+  - facturação no fim do período: só o período do mês passado, com data do último dia; preço da tabela 1 980,00;
+  - lista por estado; auditoria.
+
+Também cobertos:
+
+- `isolation_matrix`: 7 tentativas sobre o contrato e a versão de outra empresa, todas com 404.
+- `routes_protection`.
+- `sales_invoices.spec.ts` continua a passar.
+
+**Frontend:** `recurring-model.spec.ts`.
+
+**Browser (`p1011`):** 7 passos.
+
+- preparação;
+- contrato mensal pelo formulário; primeira versão (vigência proposta no início, serviço, preço fixo 1 000, imposto);
+  quem preparou não vê "Aprovar" nem "Activar";
+- outra pessoa aprova; activar; 2 períodos por gerar;
+- gerar: "2 rascunho(s)… Nada foi emitido", dois rascunhos "por emitir", sem mais nada para gerar;
+- o rascunho mostra "Contrato REC-…", estado rascunho e 1 100,00; emitido à mão;
+- suspender com motivo; o período aparece como emitido;
+- telemóvel sem deslocamento horizontal.
+
+### Pendências
+
+- Emissão em lote por quem tem autorização, se for pedida.
+- Rateio de períodos parciais e indexação automática de preços.
+- Agendar `sales:recurring` (cron) quando houver ambiente de produção.

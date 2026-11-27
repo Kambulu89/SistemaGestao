@@ -748,6 +748,15 @@ export const NAVIGATION: NavGroup[] = [
         section: 'Vendas',
       },
       {
+        label: 'Facturação recorrente',
+        path: '/vendas/recorrentes',
+        icon: 'calendar',
+        anyOf: ['sales.recurring.read', 'sales.recurring.manage', 'sales.recurring.approve'],
+        feature: 'sales',
+        anyScope: true,
+        section: 'Vendas',
+      },
+      {
         label: 'Cobranças',
         path: '/vendas/cobrancas',
         icon: 'clock',

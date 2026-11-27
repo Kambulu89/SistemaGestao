@@ -499,7 +499,7 @@ por período no âmbito do membro; publicação no âmbito da empresa como fotog
 
 ## Vendas e facturação (módulo `sales`, Prompt 10)
 
-Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-068). Clientes (10.1): o cliente é o papel de venda de um
+Prompt 10 em curso (ver `docs/reports/prompt-10.md`, D-059 a D-069). Clientes (10.1): o cliente é o papel de venda de um
 terceiro do módulo `partners` (um por terceiro, partilhado com o fornecedor), com moeda, prazo, segmento, limite de
 crédito (permissão própria, com motivo) e estado (activo, bloqueado ou inactivo com motivo); moradas de facturação e
 entrega (uma por omissão de cada tipo, índice único parcial); contactos no terceiro; versões só de acréscimo da
@@ -552,5 +552,9 @@ final imutável que actualiza o estado fiscal do documento; contingência por en
 `customerReceivables`/`creditExposure` calculado dos documentos (em dívida por factura com antiguidade, adiantamentos e
 crédito de notas por usar, exposição na moeda do cliente), que o limite de crédito das encomendas passa a usar;
 promessas de pagamento (nunca são pagamentos; estado cumprida/falhada calculado dos recebimentos confirmados) e
-contactos de cobrança só de acréscimo; permissões `sales.collections.read|manage`.
+contactos de cobrança só de acréscimo; permissões `sales.collections.read|manage`. Facturação recorrente (10.11): contratos com periodicidade e versões de
+preço/linhas datadas, aprovadas por outra pessoa e imutáveis; períodos calculados do início (sem deriva); geração por
+período numa transacção própria com o contrato bloqueado (`SKIP LOCKED`), um só período gerado por índice, falhas
+registadas; cria só rascunhos de factura (origem de preço `CONTRACT`), a emissão é sempre manual; comando
+`sales:recurring`.
 

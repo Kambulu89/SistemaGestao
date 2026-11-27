@@ -37,6 +37,7 @@ import {
   orderAccess,
   quoteAccess,
   noteAccess,
+  recurringAccess,
   receiptAccess,
 } from '#modules/sales/index'
 
@@ -214,6 +215,11 @@ function policies(): Record<string, SubjectPolicy> {
   map.sales_note = {
     feature: 'sales',
     access: (scope, id) => noteAccess(scope, id),
+  }
+  // Contrato recorrente (contrato assinado, condições): o âmbito do contrato.
+  map.sales_recurring_contract = {
+    feature: 'sales',
+    access: (scope, id) => recurringAccess(scope, id),
   }
   for (const type of Object.values(ORGANIZATION_ENTITY_TYPES)) {
     map[type] = {

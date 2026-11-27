@@ -92,6 +92,12 @@ export interface Invoice {
   creditedTotal: string;
   debitedTotal: string;
   openTotal: string | null;
+  recurring: {
+    contractId: string;
+    reference: string;
+    periodStart: string;
+    periodEnd: string;
+  } | null;
   correctionNotes: {
     id: string;
     kind: 'CREDIT' | 'DEBIT';
@@ -160,6 +166,7 @@ export const INVOICE_EVENT: Record<string, string> = {
   DISCARDED: 'Descartada',
   PAYMENT: 'Pagamento recebido',
   CREDITED: 'Nota de crédito emitida',
+  CREATED_RECURRING: 'Gerada pelo contrato recorrente (rascunho)',
   DEBITED: 'Nota de débito emitida',
 };
 

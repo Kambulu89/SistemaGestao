@@ -232,8 +232,33 @@ async function priceLines(
       manualUnitPrice: l.manualUnitPrice,
     })),
   })
+  // Factura de contrato recorrente (10.11): preço fixado na versão aprovada do contrato (origem CONTRACT).
+  const contract = new Map<string, string>()
+  if (inv.recurring_version_id)
+    for (const x of (
+      await scope.trx.rawQuery(
+        `select product_id, unit_price from sales_recurring_version_lines where tenant_id = ? and version_id = ? and unit_price is not null`,
+        [scope.context.tenantId, inv.recurring_version_id]
+      )
+    ).rows as any[])
+      contract.set(x.product_id, scaledText(dbScaled(x.unit_price, PRICE_SCALE), PRICE_SCALE))
   return lines.map((l, i) => {
     const r = snap.lines[i]
+    const fixed = contract.get(l.productId)
+    if (fixed !== undefined && l.manualUnitPrice === null && l.manualDiscountPct === null)
+      return {
+        input: l,
+        productId: l.productId,
+        variantId: l.variantId,
+        description: l.description ?? r.name,
+        uom: prods.get(l.productId)?.uom ?? 'UN',
+        priceSource: 'CONTRACT',
+        basePrice: fixed,
+        netUnitPrice: fixed,
+        netAmount: lineNet(l.quantity, fixed),
+        pricing: { source: 'CONTRACT', versionId: inv.recurring_version_id, unitPrice: fixed },
+        requiresApproval: false,
+      }
     return {
       input: l,
       productId: l.productId,
@@ -408,6 +433,14 @@ async function detail(scope: TenantScope, id: string, g?: ReturnType<typeof righ
       [t, id, t, id, t, id, t, id]
     )
   ).rows as any[]
+  const recurring = (
+    await scope.trx.rawQuery(
+      `select c.id, c.reference, r.period_start::text as ps, r.period_end::text as pe from sales_recurring_runs r
+         join sales_recurring_contracts c on c.tenant_id = r.tenant_id and c.id = r.contract_id
+        where r.tenant_id = ? and r.invoice_id = ? limit 1`,
+      [t, id]
+    )
+  ).rows[0] as any
   const notes = (
     await scope.trx.rawQuery(
       `select id, kind, number, status, note_date::text as d, payable_total, reason_code from sales_notes
@@ -464,6 +497,14 @@ async function detail(scope: TenantScope, id: string, g?: ReturnType<typeof righ
     creditedTotal: money(i.credited_total),
     debitedTotal: money(i.debited_total),
     openTotal: i.status === 'ISSUED' || i.status === 'CORRECTED' ? scaledText(openOf(i), 2) : null,
+    recurring: recurring
+      ? {
+          contractId: recurring.id as string,
+          reference: recurring.reference as string,
+          periodStart: recurring.ps as string,
+          periodEnd: recurring.pe as string,
+        }
+      : null,
     correctionNotes: notes.map((n) => ({
       id: n.id as string,
       kind: n.kind as string,
@@ -992,6 +1033,9 @@ export class InvoiceService {
       const { expectedVersion, legalEntityId, lines: rawLines, ...rest } = input
       for (const k of i.order_id ? ['customerId', 'currency', 'paymentTermsDays'] : [])
         if (k in rest) fail([{ path: k, code: 'NOT_ALLOWED', message: 'Vem da encomenda.' }])
+      for (const k of i.recurring_version_id ? ['customerId', 'currency'] : [])
+        if (k in rest)
+          fail([{ path: k, code: 'NOT_ALLOWED', message: 'Vem do contrato recorrente.' }])
       const { v, issues } = normalizeInvoiceHeader(rest, false)
       const nl = rawLines === undefined ? null : normalizeInvoiceLines(rawLines, !!i.order_id)
       fail([...issues, ...(nl?.issues ?? [])])
@@ -1211,4 +1255,54 @@ export async function adjustInvoice(
     amount: scaledText(debit > 0n ? debit : credit, 2),
   })
   return { number: i.number as string }
+}
+
+/**
+ * Rascunho de factura de um período de contrato recorrente (10.11), na transacção de quem chama. Só rascunho: a emissão
+ * é sempre de uma pessoa com `sales.invoices.issue`. Os preços fixados na versão aprovada entram com origem CONTRACT.
+ */
+export async function createRecurringDraft(
+  scope: TenantScope,
+  d: {
+    legalEntityId: string
+    customerId: string
+    invoiceDate: string
+    currency: string
+    paymentTermsDays: number
+    customerReference: string
+    notes: string
+    versionId: string
+    lines: InvoiceLineInput[]
+  }
+) {
+  const context = scope.context
+  const ins = await scope.trx.rawQuery(
+    `insert into sales_invoices (tenant_id, legal_entity_id, customer_id, invoice_date, currency, payment_terms_days,
+       customer_reference, notes, recurring_version_id, created_by, updated_by)
+     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id`,
+    [
+      context.tenantId,
+      d.legalEntityId,
+      d.customerId,
+      d.invoiceDate,
+      d.currency,
+      d.paymentTermsDays,
+      d.customerReference.slice(0, 60),
+      d.notes.slice(0, 2000),
+      d.versionId,
+      context.userId,
+      context.userId,
+    ] as never[]
+  )
+  const id = (ins.rows[0] as any).id as string
+  await writeLines(scope, await load(scope, id), d.lines)
+  await event(scope, id, 'CREATED_RECURRING', null, { reference: d.customerReference })
+  await audit(scope, {
+    action: 'sales_invoice.created',
+    entityType: 'sales_invoice',
+    entityId: id,
+    changes: { customerId: { from: null, to: d.customerId } },
+    metadata: { recurring: d.customerReference },
+  })
+  return id
 }

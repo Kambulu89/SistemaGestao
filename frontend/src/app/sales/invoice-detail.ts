@@ -84,6 +84,14 @@ import {
                 fiscal(v.fiscalStatus)
               }}</span>
             }
+            @if (v.recurring; as rc) {
+              <a
+                class="link text-sm"
+                data-testid="id-recurring"
+                [routerLink]="['/vendas/recorrentes', rc.contractId]"
+                >Contrato {{ rc.reference }} · {{ rc.periodStart }} a {{ rc.periodEnd }}</a
+              >
+            }
             @if (fiscalSub(); as fs) {
               <a
                 class="link text-sm"

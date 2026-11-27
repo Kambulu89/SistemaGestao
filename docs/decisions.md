@@ -1474,3 +1474,42 @@ O módulo Finanças (Prompt 11) ainda não existe.
 - O Prompt 11 troca a fonte do contrato (razão de clientes, conciliação bancária) sem mudar quem o usa.
 - Ficam por fazer: juros de mora, cartas de cobrança e bloqueio automático por atraso.
 
+## D-069 Facturação recorrente: versões de preço aprovadas e geração só de rascunhos (aceite)
+
+**Contexto.** O 10.11 pede recorrência com agenda de versões de preço ou de contrato, geração segura e nenhuma
+emissão automática definitiva sem autorização.
+
+**Decisão.**
+- **Contrato recorrente.** Tem entidade, cliente, moeda, periodicidade (mensal, trimestral, semestral, anual), início e
+  fim, facturação no início ou no fim do período, e prazo.
+  - Estados: rascunho → activo → suspenso/terminado. Suspender e terminar exigem motivo; terminado é final.
+  - Activo, o essencial do contrato (início, periodicidade, cliente, entidade, moeda, momento da facturação) fica fixo,
+    garantido por gatilho.
+- **Períodos.** Calculam-se do início pelo índice k (início + k×meses, com o dia preso ao fim do mês), sem deriva. Só
+  se gera um período quando a data da factura já chegou.
+- **Versões de preço e linhas, com data de entrada em vigor.**
+  - Linhas só de serviços. Os produtos de stock continuam a facturar-se pela encomenda expedida.
+  - Preço fixo opcional: sem preço, usa-se o motor de preços à data da factura (tabelas do 10.2, também versionadas).
+  - A versão é aprovada por **outra pessoa** (`sales.recurring.approve`) e depois fica imutável (gatilho).
+  - A primeira versão começa no início do contrato. As seguintes nunca começam antes do próximo período por gerar,
+    para que os períodos já gerados não mudem de preço.
+  - A versão aplicável é a última aprovada com vigência até ao início do período.
+- **Geração segura:**
+  - cada período corre na sua transacção, com o contrato bloqueado (`FOR UPDATE SKIP LOCKED`);
+  - um índice único parcial garante um só período GERADO por índice;
+  - o índice só avança;
+  - uma falha (sem versão, cliente bloqueado, sem taxa) fica registada com o motivo, sem repetir a mesma falha
+    seguida, e volta a tentar-se na geração seguinte;
+  - no máximo 24 períodos por chamada.
+- **Só rascunhos, nunca emissão.** Cada período gera um **rascunho** de factura ligado à versão, com a referência do
+  contrato e o período. A emissão é sempre de uma pessoa com `sales.invoices.issue`, no ecrã da factura.
+  - A factura aceita a origem de preço `CONTRACT`. O preço fixado foi aprovado por outra pessoa, pelo que não exige a
+    aprovação de preço manual do 10.6.
+  - Nada vai para a fila fiscal antes da emissão.
+- **Comando** `node ace sales:recurring` para o agendador, no contexto de quem criou o contrato.
+
+**Consequências.**
+- A emissão em lote por quem tem autorização, se for pedida, terá de manter a emissão explícita e auditada.
+- Um rascunho descartado não regenera o período: fica registado como não facturado.
+- Rateio de períodos parciais e indexação automática de preços ficam por fazer, se pedidos.
+

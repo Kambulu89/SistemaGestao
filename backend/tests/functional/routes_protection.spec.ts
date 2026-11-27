@@ -890,6 +890,40 @@ const SELF_AUTHORIZED: Record<string, string> = {
     'âmbito RBAC de sales.collections.read/manage por entidade legal, verificado no serviço (contas a receber calculadas dos documentos; promessa não é pagamento)',
   'POST /api/v1/sales/collection-promises/:id/cancel':
     'âmbito RBAC de sales.collections.read/manage por entidade legal, verificado no serviço (contas a receber calculadas dos documentos; promessa não é pagamento)',
+  'GET /api/v1/sales/recurring':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'GET /api/v1/sales/recurring/options':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'GET /api/v1/sales/recurring/search/customers':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'GET /api/v1/sales/recurring/search/products':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring/generate':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'GET /api/v1/sales/recurring/:id':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'PATCH /api/v1/sales/recurring/:id':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring/:id/versions':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring/:id/activate':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring/:id/suspend':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring/:id/resume':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring/:id/end':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring/:id/generate':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'PATCH /api/v1/sales/recurring-versions/:id':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring-versions/:id/approve':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
+  'POST /api/v1/sales/recurring-versions/:id/discard':
+    'âmbito RBAC de sales.recurring.read/manage/approve por entidade legal, verificado no serviço (versões aprovadas por outra pessoa; a geração só cria rascunhos)',
   'GET /api/v1/sales/segments':
     'segmentos de clientes: só configuração; ler com sales.customers.* ou sales.settings, verificado no serviço',
   'GET /api/v1/procurement/tolerances':

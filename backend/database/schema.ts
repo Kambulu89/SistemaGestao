@@ -6803,7 +6803,7 @@ export class SalesInvoiceLineSchema extends BaseModel {
 }
 
 export class SalesInvoiceSchema extends BaseModel {
-  static $columns = ['branchId', 'collectionStatus', 'createdAt', 'createdBy', 'creditedTotal', 'currency', 'customerId', 'customerReference', 'customerSnapshot', 'customerVersionId', 'debitedTotal', 'discardReason', 'documentHash', 'documentKind', 'dueDate', 'exchangeRate', 'fiscalNumber', 'fiscalStatus', 'functionalCurrency', 'grossTotal', 'id', 'invoiceDate', 'issuedAt', 'issuedBy', 'legalEntityId', 'netTotal', 'notes', 'number', 'orderId', 'paidTotal', 'payableTotal', 'paymentTermsDays', 'roundingLevel', 'seriesId', 'status', 'taxSummary', 'taxTotal', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'withholdingTotal'] as const
+  static $columns = ['branchId', 'collectionStatus', 'createdAt', 'createdBy', 'creditedTotal', 'currency', 'customerId', 'customerReference', 'customerSnapshot', 'customerVersionId', 'debitedTotal', 'discardReason', 'documentHash', 'documentKind', 'dueDate', 'exchangeRate', 'fiscalNumber', 'fiscalStatus', 'functionalCurrency', 'grossTotal', 'id', 'invoiceDate', 'issuedAt', 'issuedBy', 'legalEntityId', 'netTotal', 'notes', 'number', 'orderId', 'paidTotal', 'payableTotal', 'paymentTermsDays', 'recurringVersionId', 'roundingLevel', 'seriesId', 'status', 'taxSummary', 'taxTotal', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'withholdingTotal'] as const
   $columns = SalesInvoiceSchema.$columns
   @column()
   declare branchId: string | null
@@ -6869,6 +6869,8 @@ export class SalesInvoiceSchema extends BaseModel {
   declare payableTotal: string
   @column()
   declare paymentTermsDays: number
+  @column()
+  declare recurringVersionId: string | null
   @column()
   declare roundingLevel: string | null
   @column()
@@ -7563,6 +7565,160 @@ export class SalesReceiptSchema extends BaseModel {
   declare updatedBy: string | null
   @column()
   declare version: number
+}
+
+export class SalesRecurringContractSchema extends BaseModel {
+  static $columns = ['billingTiming', 'createdAt', 'createdBy', 'currency', 'customerId', 'description', 'endDate', 'frequency', 'id', 'legalEntityId', 'ownerMembershipId', 'paymentTermsDays', 'periodsGenerated', 'reference', 'startDate', 'status', 'statusReason', 'tenantId', 'updatedAt', 'updatedBy', 'version'] as const
+  $columns = SalesRecurringContractSchema.$columns
+  @column()
+  declare billingTiming: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare currency: string
+  @column()
+  declare customerId: string
+  @column()
+  declare description: string
+  @column.date()
+  declare endDate: DateTime | null
+  @column()
+  declare frequency: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare legalEntityId: string
+  @column()
+  declare ownerMembershipId: string
+  @column()
+  declare paymentTermsDays: number
+  @column()
+  declare periodsGenerated: number
+  @column()
+  declare reference: string
+  @column.date()
+  declare startDate: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare statusReason: string | null
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+}
+
+export class SalesRecurringRunSchema extends BaseModel {
+  static $columns = ['contractId', 'createdAt', 'createdBy', 'id', 'invoiceDate', 'invoiceId', 'periodEnd', 'periodIndex', 'periodStart', 'reason', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'version', 'versionId'] as const
+  $columns = SalesRecurringRunSchema.$columns
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column.date()
+  declare invoiceDate: DateTime
+  @column()
+  declare invoiceId: string | null
+  @column.date()
+  declare periodEnd: DateTime
+  @column()
+  declare periodIndex: number
+  @column.date()
+  declare periodStart: DateTime
+  @column()
+  declare reason: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare versionId: string | null
+}
+
+export class SalesRecurringVersionLineSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdBy', 'description', 'exemptionCode', 'id', 'lineNo', 'productId', 'quantity', 'taxCodeIds', 'tenantId', 'unitPrice', 'updatedAt', 'updatedBy', 'version', 'versionId'] as const
+  $columns = SalesRecurringVersionLineSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare description: string | null
+  @column()
+  declare exemptionCode: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lineNo: number
+  @column()
+  declare productId: string
+  @column()
+  declare quantity: string
+  @column()
+  declare taxCodeIds: any
+  @column()
+  declare tenantId: string
+  @column()
+  declare unitPrice: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column()
+  declare version: number
+  @column()
+  declare versionId: string
+}
+
+export class SalesRecurringVersionSchema extends BaseModel {
+  static $columns = ['approvedAt', 'approvedBy', 'contractId', 'createdAt', 'createdBy', 'decisionReason', 'id', 'notes', 'status', 'tenantId', 'updatedAt', 'updatedBy', 'validFrom', 'version', 'versionNo'] as const
+  $columns = SalesRecurringVersionSchema.$columns
+  @column.dateTime()
+  declare approvedAt: DateTime | null
+  @column()
+  declare approvedBy: string | null
+  @column()
+  declare contractId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare decisionReason: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare notes: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare updatedBy: string | null
+  @column.date()
+  declare validFrom: DateTime
+  @column()
+  declare version: number
+  @column()
+  declare versionNo: number
 }
 
 export class SalesRefundSchema extends BaseModel {

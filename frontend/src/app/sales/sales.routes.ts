@@ -30,6 +30,12 @@ const RECEIPT_PERMISSIONS = [
   'sales.receipts.confirm',
 ];
 
+const RECURRING_PERMISSIONS = [
+  'sales.recurring.read',
+  'sales.recurring.manage',
+  'sales.recurring.approve',
+];
+
 const NOTE_PERMISSIONS = [
   'sales.notes.read',
   'sales.notes.manage',
@@ -399,6 +405,41 @@ export const SALES_ROUTES: Routes = [
         canActivate: [accessGuard],
         data: { anyOf: ['sales.collections.read', 'sales.collections.manage'], anyScope: true },
         loadComponent: () => import('./collection-detail').then((m) => m.CollectionDetail),
+      },
+    ],
+  },
+  {
+    path: 'recorrentes',
+    title: 'Facturação recorrente',
+    children: [
+      {
+        path: '',
+        canActivate: [accessGuard],
+        data: { anyOf: RECURRING_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./recurring-list').then((m) => m.RecurringList),
+      },
+      {
+        path: 'novo',
+        title: 'Novo contrato recorrente',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.recurring.manage', anyScope: true },
+        loadComponent: () => import('./recurring-form').then((m) => m.RecurringFormPage),
+      },
+      {
+        path: ':id',
+        title: 'Contrato recorrente',
+        canActivate: [accessGuard],
+        data: { anyOf: RECURRING_PERMISSIONS, anyScope: true },
+        loadComponent: () => import('./recurring-detail').then((m) => m.RecurringDetail),
+      },
+      {
+        path: ':id/editar',
+        title: 'Editar contrato recorrente',
+        canActivate: [accessGuard],
+        canDeactivate: [unsavedChangesGuard],
+        data: { permission: 'sales.recurring.manage', anyScope: true },
+        loadComponent: () => import('./recurring-form').then((m) => m.RecurringFormPage),
       },
     ],
   },

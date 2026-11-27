@@ -800,6 +800,24 @@ export const PERMISSIONS: readonly PermissionDefinition[] = [
       'Confirmar ou recusar recebimentos registados por outra pessoa (confirmação financeira): só então contam.',
   },
   {
+    code: 'sales.recurring.read',
+    module: 'sales',
+    description:
+      'Consultar contratos de facturação recorrente, versões e períodos gerados (por entidade legal).',
+  },
+  {
+    code: 'sales.recurring.manage',
+    module: 'sales',
+    description:
+      'Gerir contratos recorrentes e versões em rascunho, activar/suspender/terminar e gerar rascunhos de factura (nunca emite).',
+  },
+  {
+    code: 'sales.recurring.approve',
+    module: 'sales',
+    description:
+      'Aprovar versões de preço/linhas de contratos recorrentes preparadas por outra pessoa.',
+  },
+  {
     code: 'sales.collections.read',
     module: 'sales',
     description:

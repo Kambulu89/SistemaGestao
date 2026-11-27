@@ -1030,8 +1030,25 @@ async function populate(client: any) {
       [tenant.id, le.id, customer.id]
     )
   ).rows[0] as { id: string }
+  // Contrato recorrente da empresa A (10.11) com uma versão em rascunho, inseridos directamente.
+  const recurringContract = (
+    await owner.rawQuery(
+      `insert into sales_recurring_contracts (tenant_id, reference, description, legal_entity_id, customer_id, currency, frequency,
+         start_date, owner_membership_id) values (?, 'REC-A', 'Contrato A', ?, ?, 'AOA', 'MONTHLY', '2026-01-01',
+         (select id from tenant_memberships where tenant_id = ? limit 1)) returning id`,
+      [tenant.id, le.id, customer.id, tenant.id]
+    )
+  ).rows[0] as { id: string }
+  const recurringVersion = (
+    await owner.rawQuery(
+      `insert into sales_recurring_versions (tenant_id, contract_id, version_no, valid_from) values (?, ?, 1, '2026-01-01') returning id`,
+      [tenant.id, recurringContract.id]
+    )
+  ).rows[0] as { id: string }
   const audit = (await as(client, s).get('/api/v1/audit-events?limit=1')).body().data[0]
   return {
+    recurringContract,
+    recurringVersion,
     collectionPromise,
     fiscalSubmission,
     salesNote,
@@ -2002,6 +2019,40 @@ test.group('isolamento | matriz entre empresas', (group) => {
         'contingência de entidade alheia',
         B.post(`/api/v1/sales/fiscal/integration/${a.le.id}/contingency`, {
           active: true,
+          reason: 'xxx',
+        }),
+      ],
+      [
+        'GET contrato recorrente alheio',
+        B.get(`/api/v1/sales/recurring/${a.recurringContract.id}`),
+      ],
+      [
+        'alterar contrato recorrente alheio',
+        B.patch(`/api/v1/sales/recurring/${a.recurringContract.id}`, { ...v, description: 'xxxx' }),
+      ],
+      [
+        'versão em contrato alheio',
+        B.post(`/api/v1/sales/recurring/${a.recurringContract.id}/versions`, {
+          validFrom: '2026-01-01',
+          lines: [],
+        }),
+      ],
+      [
+        'activar contrato alheio',
+        B.post(`/api/v1/sales/recurring/${a.recurringContract.id}/activate`, v),
+      ],
+      [
+        'gerar contrato alheio',
+        B.post(`/api/v1/sales/recurring/${a.recurringContract.id}/generate`, {}),
+      ],
+      [
+        'aprovar versão alheia',
+        B.post(`/api/v1/sales/recurring-versions/${a.recurringVersion.id}/approve`, v),
+      ],
+      [
+        'descartar versão alheia',
+        B.post(`/api/v1/sales/recurring-versions/${a.recurringVersion.id}/discard`, {
+          ...v,
           reason: 'xxx',
         }),
       ],
